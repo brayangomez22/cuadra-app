@@ -1,0 +1,25 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Build output
+/backend/bin/
+*.test
+*.out
+coverage.*
+
+# Frontend
+node_modules/
+dist/
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json

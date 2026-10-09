@@ -9,7 +9,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 
 ## Cimientos
 
-### [ ] T01 · Esqueleto del backend + CI
+### [x] T01 · Esqueleto del backend + CI
 **Alcance:** `go mod init github.com/brayangomez22/cuadra/backend`, `cmd/api/main.go`, `internal/platform/config` (lee variables de entorno, falla rápido si falta alguna), `internal/platform/logger` (slog JSON), `internal/platform/httpx` (servidor con timeouts, apagado elegante, middleware de request-id, recover y logging de requests), endpoints `GET /healthz` (liveness) y `GET /readyz` (readiness; por ahora siempre listo). `docker-compose.yml` con Postgres 16. `Dockerfile` multi-stage (imagen final distroless o alpine, usuario no root). `Makefile` con los comandos del CLAUDE.md. `.golangci.yml`. `.env.example`.
 **CI** (`.github/workflows/ci.yml`): en cada PR y push a `main`: `make lint`, `make test`, `make test-int`, `govulncheck`, `gosec`, build de la imagen Docker y escaneo con Trivy (falla con vulnerabilidades HIGH/CRITICAL). `dependabot.yml` para Go, npm, Docker y GitHub Actions.
 **Tests primero:** `/healthz` responde 200 + JSON; el middleware de recover convierte un panic en 500 con el formato de error estándar; config falla si falta `DATABASE_URL`; el apagado elegante espera las requests en curso.

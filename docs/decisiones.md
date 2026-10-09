@@ -28,3 +28,5 @@ Formato: fecha · decisión · motivo. Las más recientes van al final.
 - 2026-10-09 · Kubernetes como laboratorio de aprendizaje (T46), no como plataforma de producción · Demuestra que la app está lista para Kubernetes (imagen, probes, configuración por entorno, Helm) sin pagar ni operar un clúster.
 - 2026-10-09 · OpenFeature para feature flags, con proveedor propio sobre Postgres · Estándar abierto: se puede cambiar a un servicio externo sin tocar el código que evalúa las flags.
 - 2026-10-09 · Primer vertical: ferreterías (pendiente de validar con llamadas) · Operación compleja, poca competencia especializada. Plan B: talleres mecánicos.
+- 2026-10-09 · Ruta del módulo Go: `github.com/brayangomez22/cuadra-app/backend` · Coincide con el nombre real del repositorio en GitHub (`cuadra-app`); el plan original decía `cuadra`.
+- 2026-10-09 · Las GitHub Actions se fijan por SHA de commit (con la versión en un comentario) y las herramientas de Go por versión exacta · Un tag movido o secuestrado no puede inyectar código en el CI. Dependabot actualiza ambos.
