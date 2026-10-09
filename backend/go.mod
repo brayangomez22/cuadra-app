@@ -1,6 +1,6 @@
 module github.com/brayangomez22/cuadra-app/backend
 
-go 1.27.0
+go 1.27.2
 
 require github.com/stretchr/testify v1.12.1
 
