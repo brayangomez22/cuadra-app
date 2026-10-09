@@ -8,14 +8,14 @@ updates:
       go:
         patterns: ["*"]
 
-  # frontend/ arrives in T12; until then Dependabot finds no manifest here.
-  - package-ecosystem: npm
-    directory: /frontend
-    schedule:
-      interval: weekly
-    groups:
-      npm:
-        patterns: ["*"]
+  # Disabled until frontend/ exists (T12): without a manifest the update fails.
+  # - package-ecosystem: npm
+  #   directory: /frontend
+  #   schedule:
+  #     interval: weekly
+  #   groups:
+  #     npm:
+  #       patterns: ["*"]
 
   - package-ecosystem: docker
     directory: /backend
