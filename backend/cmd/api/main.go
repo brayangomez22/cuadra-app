@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -13,6 +14,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/config"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
@@ -24,6 +27,10 @@ const serviceName = "cuadra-api"
 
 // telemetryShutdownTimeout bounds the final flush of pending telemetry.
 const telemetryShutdownTimeout = 5 * time.Second
+
+// accessTokenTTL is the lifetime of a JWT access token. A role change or a
+// deactivation reaches tokens already issued only when they expire.
+const accessTokenTTL = 15 * time.Minute
 
 func main() {
 	if err := run(); err != nil {
@@ -50,7 +57,7 @@ func run() error {
 		return err
 	}
 
-	log := logger.New(os.Stdout, cfg.LogLevel, serviceName, httpx.RequestIDAttrs).With(slog.String("env", cfg.Env))
+	log := logger.New(os.Stdout, cfg.LogLevel, serviceName, httpx.RequestIDAttrs, auth.PrincipalAttrs).With(slog.String("env", cfg.Env))
 
 	// Export failures are degraded telemetry, not app failures. They go only to
 	// stdout: sending them through OTLP would loop when the log export fails.
@@ -75,8 +82,31 @@ func run() error {
 	}
 	defer database.Close()
 
-	// The API docs are for developers only; other environments do not serve them.
-	handler, err := newHandler(log, otel.GetTracerProvider(), database, cfg.Env == "development")
+	tokens, err := auth.NewJWT(cfg.JWTSecret, accessTokenTTL)
+	if err != nil {
+		return err
+	}
+	identityModule, err := identity.New(identity.Config{
+		DB:             database,
+		Issuer:         tokens,
+		Logger:         log,
+		TracerProvider: otel.GetTracerProvider(),
+		MeterProvider:  otel.GetMeterProvider(),
+	})
+	if err != nil {
+		return err
+	}
+
+	handler, err := newHandler(handlerConfig{
+		Log:            log,
+		TracerProvider: otel.GetTracerProvider(),
+		DB:             database,
+		// The API docs are for developers only; other environments do not serve them.
+		Docs:      cfg.Env == "development",
+		Verifier:  tokens,
+		Authorize: identity.Authorize,
+		Routes:    []func(*http.ServeMux){identityModule.RegisterRoutes},
+	})
 	if err != nil {
 		return err
 	}
