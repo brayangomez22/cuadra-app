@@ -25,7 +25,9 @@ linters:
         - contraseña
         - inventario
         - momento
+        - previos
         - producto
+        - productos
         - secretos
   exclusions:
     rules:

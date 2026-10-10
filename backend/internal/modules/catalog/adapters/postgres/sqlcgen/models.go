@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
 )
 
@@ -16,7 +15,7 @@ type Category struct {
 	ID        uuid.UUID
 	TenantID  uuid.UUID
 	Name      string
-	ParentID  pgtype.UUID
+	ParentID  *uuid.UUID
 	CreatedAt time.Time
 }
 
@@ -28,7 +27,7 @@ type Product struct {
 	Name        string
 	SearchName  string
 	Description string
-	CategoryID  pgtype.UUID
+	CategoryID  *uuid.UUID
 	BaseUnit    string
 	Cost        decimal.Decimal
 	Price       decimal.Decimal

@@ -148,6 +148,12 @@ type TenantSelectionRequired struct {
 	Tenants []TenantOption `json:"tenants"`
 }
 
+// CategoryId defines model for CategoryId.
+type CategoryId = openapi_types.UUID
+
+// ProductId defines model for ProductId.
+type ProductId = openapi_types.UUID
+
 // RefreshCookie defines model for RefreshCookie.
 type RefreshCookie = string
 

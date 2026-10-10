@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for HealthStatusStatus.
@@ -72,6 +74,12 @@ type ReadyStatus struct {
 
 // ReadyStatusStatus defines model for ReadyStatus.Status.
 type ReadyStatusStatus string
+
+// CategoryId defines model for CategoryId.
+type CategoryId = openapi_types.UUID
+
+// ProductId defines model for ProductId.
+type ProductId = openapi_types.UUID
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {

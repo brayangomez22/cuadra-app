@@ -17,6 +17,8 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
@@ -230,5 +232,30 @@ func TestReadyzWithDatabase(t *testing.T) {
 		s.Stop(t)
 
 		require.Equal(t, http.StatusServiceUnavailable, readyz(d))
+	})
+}
+
+func TestQuerySpans(t *testing.T) {
+	t.Run("nombra el span de la query con su nombre de sqlc", func(t *testing.T) {
+		recorder := tracetest.NewSpanRecorder()
+		tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+		t.Cleanup(func() { _ = tp.Shutdown(context.Background()) })
+		d, err := db.Open(t.Context(), dbtest.Shared(t).AppURL, tp, metricnoop.NewMeterProvider())
+		require.NoError(t, err)
+		t.Cleanup(d.Close)
+		ctx, parent := tp.Tracer("test").Start(t.Context(), "parent")
+
+		err = d.WithTx(ctx, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, "-- name: PingQuery :exec\nSELECT 1")
+			return err
+		})
+		parent.End()
+		require.NoError(t, err)
+
+		var names []string
+		for _, s := range recorder.Ended() {
+			names = append(names, s.Name())
+		}
+		require.Contains(t, names, "PingQuery :exec")
 	})
 }

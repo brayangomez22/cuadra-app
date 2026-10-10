@@ -14,6 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/config"
@@ -96,6 +97,16 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	catalogModule, err := catalog.New(catalog.Config{
+		DB:             database,
+		Authorize:      identity.Authorize,
+		Logger:         log,
+		TracerProvider: otel.GetTracerProvider(),
+		MeterProvider:  otel.GetMeterProvider(),
+	})
+	if err != nil {
+		return err
+	}
 
 	handler, err := newHandler(handlerConfig{
 		Log:            log,
@@ -105,7 +116,7 @@ func run() error {
 		Docs:      cfg.Env == "development",
 		Verifier:  tokens,
 		Authorize: identity.Authorize,
-		Routes:    []func(*http.ServeMux){identityModule.RegisterRoutes},
+		Routes:    []func(*http.ServeMux){identityModule.RegisterRoutes, catalogModule.RegisterRoutes},
 	})
 	if err != nil {
 		return err

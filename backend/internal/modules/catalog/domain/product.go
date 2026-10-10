@@ -257,3 +257,41 @@ type ProductSnapshot struct {
 // RehydrateProduct rebuilds a stored product, checking the same invariants
 // as NewProduct so corrupt data surfaces as an error instead of an invalid entity.
 func RehydrateProduct(s ProductSnapshot) (*Product, error) { return newProduct(s) }
+
+// ProductDetails are a product's editable data besides its price, which
+// changes through ChangePrice.
+type ProductDetails struct {
+	SKU         string
+	Barcode     string
+	Name        string
+	Description string
+	CategoryID  *uuid.UUID
+	BaseUnit    UnitOfMeasure
+	Cost        decimal.Decimal
+	TaxRate     TaxRate
+}
+
+// UpdateDetails replaces the product's details with the same rules as
+// NewProduct. On error the product is left unchanged.
+func (p *Product) UpdateDetails(d ProductDetails) error {
+	updated, err := newProduct(ProductSnapshot{
+		ID:          p.id,
+		TenantID:    p.tenantID,
+		SKU:         d.SKU,
+		Barcode:     d.Barcode,
+		Name:        d.Name,
+		Description: d.Description,
+		CategoryID:  d.CategoryID,
+		BaseUnit:    d.BaseUnit,
+		Cost:        d.Cost,
+		Price:       p.price,
+		TaxRate:     d.TaxRate,
+		Active:      p.active,
+		CreatedAt:   p.createdAt,
+	})
+	if err != nil {
+		return err
+	}
+	*p = *updated
+	return nil
+}

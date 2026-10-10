@@ -90,17 +90,17 @@ func NewService(d Deps) (*Service, error) {
 	s := &Service{Deps: d, tracer: d.TracerProvider.Tracer(instrumentationName)}
 	meter := d.MeterProvider.Meter(instrumentationName)
 	var err error
-	if s.logins, err = meter.Int64Counter("cuadra.auth.logins",
+	if s.logins, err = meter.Int64Counter("cuadra.identity.logins",
 		metric.WithDescription("Login attempts, by result (success, failure)."),
 		metric.WithUnit("{attempt}")); err != nil {
 		return nil, err
 	}
-	if s.signups, err = meter.Int64Counter("cuadra.auth.signups",
+	if s.signups, err = meter.Int64Counter("cuadra.identity.signups",
 		metric.WithDescription("Businesses (tenants) registered."),
 		metric.WithUnit("{tenant}")); err != nil {
 		return nil, err
 	}
-	if s.reuseAlerts, err = meter.Int64Counter("cuadra.auth.refresh_reuse_detected",
+	if s.reuseAlerts, err = meter.Int64Counter("cuadra.identity.refresh_reuse_detected",
 		metric.WithDescription("Reused refresh tokens that revoked a live session: a sign of token theft."),
 		metric.WithUnit("{event}")); err != nil {
 		return nil, err
