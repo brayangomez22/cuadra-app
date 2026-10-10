@@ -51,6 +51,7 @@ func Open(ctx context.Context, url string, tp trace.TracerProvider, mp metric.Me
 	cfg.ConnConfig.Tracer = otelpgx.NewTracer(
 		otelpgx.WithTracerProvider(tp),
 		otelpgx.WithMeterProvider(mp),
+		otelpgx.WithSpanNameCtxFunc(querySpanName),
 	)
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)

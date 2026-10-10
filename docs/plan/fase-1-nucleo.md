@@ -52,8 +52,8 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Alcance:** `catalog/domain`: `Product` (SKU único por tenant, código de barras opcional, nombre, descripción, `CategoryID`, `BaseUnit`, `Cost`, `Price`, `TaxRate`, activo), `Category` (árbol simple con padre opcional) y `UnitOfMeasure` (catálogo fijo inicial: und, m, kg, l, caja, rollo, bulto, galón). Precio > 0 y costo ≥ 0, ambos `decimal`. Métodos `ChangePrice`, `Deactivate` y `MarginPercent()`.
 **Tests primero:** precio negativo rechazado; margen calculado sin pérdida de precisión (costo 8.333,33 / precio 10.000); un producto inactivo no puede cambiar de precio (o define la regla y documéntala).
 
-### [ ] T09 · Persistencia y API del catálogo
-**Alcance:** contrato en OpenAPI primero. Migraciones de `categories` y `products` (RLS, índice trigram en nombre, únicos `(tenant_id, sku)` y `(tenant_id, barcode)`). CRUD `/api/v1/products` y `/api/v1/categories`; `GET /api/v1/products?q=` busca por nombre parcial, SKU o código de barras, con paginación.
+### [x] T09 · Persistencia y API del catálogo
+**Alcance:** contrato en OpenAPI primero. Migraciones de `categories` y `products` (RLS, índice trigram en nombre — descartado: RLS impide usarlo, ver `docs/decisiones.md` —, únicos `(tenant_id, sku)` y `(tenant_id, barcode)`). CRUD `/api/v1/products` y `/api/v1/categories`; `GET /api/v1/products?q=` busca por nombre parcial, SKU o código de barras, con paginación.
 **Tests primero:** integración de repositorio + aislamiento; búsqueda "tubo pvc" encuentra "Tubo PVC presión 1/2 pulgada"; test HTTP de crear producto sin permiso → 403.
 **Incluye además (auditoría de librerías, 2026-10-10):**
 - Spans de BD con el nombre de la query de sqlc: `otelpgx.WithSpanNameFunc` en `platform/db` lee el comentario `-- name: GetTenant :one` y nombra el span `GetTenant :one`. Si la query no tiene nombre, conserva el nombre por defecto (`SELECT`, `INSERT`...). Test unitario del parser y un test que verifique el nombre del span.

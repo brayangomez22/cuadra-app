@@ -62,7 +62,7 @@ func TestSignUp(t *testing.T) {
 		require.Equal(t, e.clock.Now().Add(domain.RefreshTokenTTL), session.RefreshExpiresAt)
 		requireUsableRefresh(t, e, session.RefreshToken, user.ID())
 
-		require.EqualValues(t, 1, e.counter(t, "cuadra.auth.signups", "", ""))
+		require.EqualValues(t, 1, e.counter(t, "cuadra.identity.signups", "", ""))
 		span := e.span(t, "identity.SignUp")
 		require.Contains(t, span.Attributes(), attribute.String("tenant.id", tenant.ID().String()))
 		require.Contains(t, span.Attributes(), attribute.String("user.id", user.ID().String()))
@@ -252,7 +252,7 @@ func TestLogin(t *testing.T) {
 		require.Zero(t, e.hasher.Verifies())
 	})
 
-	t.Run("registra cuadra.auth.logins con result success y failure", func(t *testing.T) {
+	t.Run("registra cuadra.identity.logins con result success y failure", func(t *testing.T) {
 		e := newEnv(t)
 		e.seed(t, "caja@eltornillo.co", validPassword, domain.RoleCashier)
 
@@ -345,7 +345,7 @@ func TestRefresh(t *testing.T) {
 		}
 		_, err = e.svc.Refresh(t.Context(), second.RefreshToken)
 		require.ErrorIs(t, err, domain.ErrRefreshTokenReused, "the legitimate successor stops working too")
-		require.EqualValues(t, 1, e.counter(t, "cuadra.auth.refresh_reuse_detected", "", ""),
+		require.EqualValues(t, 1, e.counter(t, "cuadra.identity.refresh_reuse_detected", "", ""),
 			"counted once: when the reuse revoked live tokens")
 	})
 
@@ -442,7 +442,7 @@ func TestLogout(t *testing.T) {
 
 		_, err = e.svc.Refresh(t.Context(), session.RefreshToken)
 		require.Error(t, err)
-		require.Zero(t, e.counter(t, "cuadra.auth.refresh_reuse_detected", "", ""), "a logged-out token is not a theft signal")
+		require.Zero(t, e.counter(t, "cuadra.identity.refresh_reuse_detected", "", ""), "a logged-out token is not a theft signal")
 		e.span(t, "identity.Logout")
 	})
 

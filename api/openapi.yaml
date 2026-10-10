@@ -29,6 +29,9 @@ tags:
       El access token (JWT) dura 15 minutos y se envía en `Authorization: Bearer`. El refresh token
       viaja solo en la cookie `cuadra_refresh` (HttpOnly, Secure, SameSite=Strict, ruta `/api/v1/auth`),
       rota en cada uso y su reutilización cierra todas las sesiones de esa familia.
+  - name: catalog
+    description: |
+      Productos y categorías de la empresa. El dinero viaja como string decimal y el precio no incluye IVA.
 
 # Authorization is declared here and enforced by the API before the request
 # is validated: every operation requires a bearer token unless it says
@@ -233,6 +236,341 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/products:
+    get:
+      tags: [catalog]
+      operationId: listProducts
+      summary: Buscar productos
+      description: |
+        Lista los productos de la empresa. Con `q` busca por nombre (cada palabra debe aparecer, sin
+        importar tildes ni mayúsculas) o por SKU o código de barras exactos, que salen primero.
+        Sin `q`, ordena por nombre.
+      x-permission: catalog:read
+      parameters:
+        - name: q
+          in: query
+          description: Texto a buscar.
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          example: tubo pvc
+        - name: category_id
+          in: query
+          description: Solo los productos de esta categoría.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Productos activos (por defecto), inactivos o todos.
+          required: false
+          schema:
+            type: string
+            enum: [active, inactive, all]
+            default: active
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de productos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [catalog]
+      operationId: createProduct
+      summary: Crear un producto
+      x-permission: catalog:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Producto creado (activo).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: El SKU o el código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Algún dato no cumple las reglas (`invalid_sku`, `invalid_barcode`, `invalid_product_name`,
+            `invalid_description`, `invalid_price`, `invalid_cost`, `invalid_tax_rate`, `category_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/products/{productId}:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      tags: [catalog]
+      operationId: getProduct
+      summary: Ver un producto
+      description: Devuelve el producto aunque esté inactivo.
+      x-permission: catalog:read
+      responses:
+        "200":
+          description: El producto.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags: [catalog]
+      operationId: updateProduct
+      summary: Editar un producto
+      description: Reemplaza todos los datos editables. El precio de un producto inactivo no se puede cambiar.
+      x-permission: catalog:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "200":
+          description: El producto actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: El SKU o el código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Algún dato no cumple las reglas (los mismos códigos de crear un producto) o se cambió el precio
+            de un producto inactivo (`product_inactive`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/products/{productId}/deactivate:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    post:
+      tags: [catalog]
+      operationId: deactivateProduct
+      summary: Desactivar un producto
+      description: El producto deja de venderse, pero se conserva para el historial. Es idempotente.
+      x-permission: catalog:write
+      responses:
+        "200":
+          description: El producto, inactivo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/products/{productId}/activate:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    post:
+      tags: [catalog]
+      operationId: activateProduct
+      summary: Activar un producto
+      description: El producto se puede vender de nuevo. Es idempotente.
+      x-permission: catalog:write
+      responses:
+        "200":
+          description: El producto, activo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/categories:
+    get:
+      tags: [catalog]
+      operationId: listCategories
+      summary: Listar categorías
+      description: Todas las categorías de la empresa, ordenadas por nombre. El árbol se arma con `parent_id`.
+      x-permission: catalog:read
+      responses:
+        "200":
+          description: Las categorías.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [catalog]
+      operationId: createCategory
+      summary: Crear una categoría
+      x-permission: catalog:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "201":
+          description: Categoría creada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: El nombre no es válido (`invalid_category_name`) o el padre no existe (`category_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/categories/{categoryId}:
+    parameters:
+      - $ref: "#/components/parameters/CategoryId"
+    put:
+      tags: [catalog]
+      operationId: updateCategory
+      summary: Editar una categoría
+      description: Cambia el nombre y el padre. Sin `parent_id`, la categoría queda en la raíz.
+      x-permission: catalog:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "200":
+          description: La categoría actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: |
+            El nombre no es válido (`invalid_category_name`), el padre no existe (`category_not_found`), el padre
+            es la misma categoría (`invalid_category_parent`) o el movimiento formaría un ciclo (`category_cycle`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [catalog]
+      operationId: deleteCategory
+      summary: Borrar una categoría
+      description: Solo se puede borrar una categoría sin productos ni subcategorías.
+      x-permission: catalog:write
+      responses:
+        "204":
+          description: Categoría borrada.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: La categoría tiene productos o subcategorías (`category_in_use`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   headers:
     SetRefreshCookie:
@@ -268,6 +606,20 @@ components:
         type: integer
         minimum: 0
         default: 0
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     RefreshCookie:
       name: cuadra_refresh
       in: cookie
@@ -468,3 +820,147 @@ components:
           format: uuid
         name:
           type: string
+    Money:
+      type: string
+      description: Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+      pattern: '^\d{1,14}(\.\d{1,4})?$'
+      example: "12500.00"
+    TaxRate:
+      type: string
+      description: Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
+      pattern: '^0(\.\d{1,4})?$'
+      example: "0.19"
+    UnitOfMeasure:
+      type: string
+      description: Unidad base en la que se cuenta y se vende el producto.
+      enum: [und, m, kg, l, caja, rollo, bulto, galon]
+    ProductInput:
+      type: object
+      required: [sku, name, base_unit, cost, price, tax_rate]
+      additionalProperties: false
+      properties:
+        sku:
+          type: string
+          description: Código interno, único en la empresa. Se guarda en mayúsculas.
+          minLength: 1
+          maxLength: 64
+          example: TUB-PVC-12
+        barcode:
+          type: string
+          description: Código de barras, único en la empresa. Vacío u omitido si no tiene.
+          maxLength: 64
+          example: "7701234567890"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: Tubo PVC presión 1/2 pulgada
+        description:
+          type: string
+          maxLength: 2000
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        base_unit:
+          $ref: "#/components/schemas/UnitOfMeasure"
+        cost:
+          $ref: "#/components/schemas/Money"
+        price:
+          $ref: "#/components/schemas/Money"
+        tax_rate:
+          $ref: "#/components/schemas/TaxRate"
+    Product:
+      type: object
+      required: [id, sku, name, base_unit, price, price_with_tax, tax_rate, active, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          example: TUB-PVC-12
+        barcode:
+          type: string
+          description: Se omite si el producto no tiene.
+        name:
+          type: string
+        description:
+          type: string
+          description: Se omite si está vacía.
+        category_id:
+          type: string
+          format: uuid
+          description: Se omite si el producto no tiene categoría.
+        base_unit:
+          $ref: "#/components/schemas/UnitOfMeasure"
+        cost:
+          $ref: "#/components/schemas/Money"
+        price:
+          $ref: "#/components/schemas/Money"
+        price_with_tax:
+          $ref: "#/components/schemas/Money"
+        tax_rate:
+          $ref: "#/components/schemas/TaxRate"
+        margin_percent:
+          type: string
+          description: Margen sobre el precio de venta, en porcentaje. Es negativo si el precio está por debajo del costo.
+          example: "16.6667"
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      description: |
+        Un producto del catálogo. El precio no incluye IVA; `price_with_tax` lo incluye, redondeado a 2 decimales.
+        `cost` y `margin_percent` solo se envían a quien puede editar el catálogo (`catalog:write`).
+    ProductPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        total:
+          type: integer
+          description: Cantidad total de productos que cumplen el filtro, sin paginar.
+    CategoryInput:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Plomería
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Categoría padre. Omitido o `null`, la categoría queda en la raíz.
+    Category:
+      type: object
+      required: [id, name, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        parent_id:
+          type: string
+          format: uuid
+          description: Se omite si la categoría está en la raíz.
+        created_at:
+          type: string
+          format: date-time
+    CategoryList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"

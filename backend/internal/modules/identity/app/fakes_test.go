@@ -379,10 +379,10 @@ func (e *env) seedUser(t *testing.T, tenantID uuid.UUID, email, password string,
 	return user
 }
 
-// loginCount returns the value of cuadra.auth.logins for result.
+// loginCount returns the value of cuadra.identity.logins for result.
 func (e *env) loginCount(t *testing.T, result string) int64 {
 	t.Helper()
-	return e.counter(t, "cuadra.auth.logins", "result", result)
+	return e.counter(t, "cuadra.identity.logins", "result", result)
 }
 
 // counter returns the sum of the data points of an int64 counter whose
