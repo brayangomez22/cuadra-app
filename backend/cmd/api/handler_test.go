@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/logger"
@@ -31,7 +32,9 @@ func TestHandlerTelemetry(t *testing.T) {
 		t.Cleanup(func() { _ = tp.Shutdown(t.Context()) })
 		var buf bytes.Buffer
 		log := slog.New(logger.NewContextHandler(slog.NewJSONHandler(&buf, nil), httpx.RequestIDAttrs))
-		return newHandler(log, tp, readyDB{}), recorder, &buf
+		handler, err := newHandler(log, tp, readyDB{}, false)
+		require.NoError(t, err)
+		return handler, recorder, &buf
 	}
 
 	t.Run("una request a /healthz produce un span con la ruta y el status", func(t *testing.T) {
@@ -64,5 +67,59 @@ func TestHandlerTelemetry(t *testing.T) {
 		require.Equal(t, "http request", entry["msg"])
 		require.Equal(t, spans[0].SpanContext().TraceID().String(), entry["trace_id"])
 		require.Equal(t, "req-42", entry["request_id"])
+	})
+}
+
+func TestHandlerRouting(t *testing.T) {
+	serve := func(t *testing.T, docs bool, target string) *httptest.ResponseRecorder {
+		t.Helper()
+		handler, err := newHandler(slog.New(slog.DiscardHandler), noop.NewTracerProvider(), readyDB{}, docs)
+		require.NoError(t, err)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, target, nil))
+		return rec
+	}
+	errorCode := func(t *testing.T, rec *httptest.ResponseRecorder) string {
+		t.Helper()
+		var body httpx.ErrorBody
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body), "body: %s", rec.Body.String())
+		return body.Error.Code
+	}
+
+	t.Run("/healthz pasa la validación del spec y responde 200", func(t *testing.T) {
+		rec := serve(t, false, "/healthz")
+
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.JSONEq(t, `{"status": "ok"}`, rec.Body.String())
+	})
+
+	t.Run("/readyz pasa la validación del spec y responde 200", func(t *testing.T) {
+		rec := serve(t, false, "/readyz")
+
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.JSONEq(t, `{"status": "ready"}`, rec.Body.String())
+	})
+
+	t.Run("una ruta que no está en el spec responde 404 con el formato estándar", func(t *testing.T) {
+		rec := serve(t, false, "/api/v1/nope")
+
+		require.Equal(t, http.StatusNotFound, rec.Code)
+		require.Equal(t, "not_found", errorCode(t, rec))
+	})
+
+	t.Run("/docs está disponible en development", func(t *testing.T) {
+		rec := serve(t, true, "/docs")
+
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.Contains(t, rec.Header().Get("Content-Type"), "text/html")
+	})
+
+	t.Run("/docs y /openapi.json no existen fuera de development", func(t *testing.T) {
+		for _, target := range []string{"/docs", "/openapi.json"} {
+			rec := serve(t, false, target)
+
+			require.Equal(t, http.StatusNotFound, rec.Code, target)
+			require.Equal(t, "not_found", errorCode(t, rec), target)
+		}
 	})
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx/healthapi"
 )
 
 // pingerFunc adapts a function to httpx.Pinger.
@@ -18,11 +19,22 @@ type pingerFunc func(context.Context) error
 
 func (f pingerFunc) Ping(ctx context.Context) error { return f(ctx) }
 
+// serveHealth sends a GET to path through the generated health API.
+func serveHealth(t *testing.T, db httpx.Pinger, path string) *httptest.ResponseRecorder {
+	t.Helper()
+	mapper := httpx.NewErrorMapper(discardLogger())
+	strict := healthapi.NewStrictHandlerWithOptions(httpx.NewHealth(discardLogger(), db), nil, healthapi.StrictHTTPServerOptions{
+		RequestErrorHandlerFunc:  mapper.RequestError,
+		ResponseErrorHandlerFunc: mapper.ResponseError,
+	})
+	rec := httptest.NewRecorder()
+	healthapi.Handler(strict).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+	return rec
+}
+
 func TestHealthz(t *testing.T) {
 	t.Run("healthz responde 200 con JSON status ok", func(t *testing.T) {
-		rec := httptest.NewRecorder()
-
-		httpx.Healthz(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+		rec := serveHealth(t, nil, "/healthz")
 
 		require.Equal(t, http.StatusOK, rec.Code)
 		require.Equal(t, "application/json", rec.Header().Get("Content-Type"))
@@ -34,10 +46,9 @@ func TestHealthz(t *testing.T) {
 
 func TestReadyz(t *testing.T) {
 	t.Run("readyz responde 200 cuando la BD responde", func(t *testing.T) {
-		rec := httptest.NewRecorder()
 		db := pingerFunc(func(context.Context) error { return nil })
 
-		httpx.Readyz(discardLogger(), db)(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+		rec := serveHealth(t, db, "/readyz")
 
 		require.Equal(t, http.StatusOK, rec.Code)
 		require.Equal(t, "application/json", rec.Header().Get("Content-Type"))
@@ -47,21 +58,16 @@ func TestReadyz(t *testing.T) {
 	})
 
 	t.Run("readyz responde 503 con el esquema Error cuando la BD falla", func(t *testing.T) {
-		rec := httptest.NewRecorder()
 		db := pingerFunc(func(context.Context) error { return errors.New("connection refused") })
 
-		httpx.Readyz(discardLogger(), db)(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+		rec := serveHealth(t, db, "/readyz")
 
 		require.Equal(t, http.StatusServiceUnavailable, rec.Code)
-		var body httpx.ErrorBody
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-		require.Equal(t, "not_ready", body.Error.Code)
-		require.NotEmpty(t, body.Error.Message)
+		requireErrorBody(t, rec, "not_ready")
 		require.NotContains(t, rec.Body.String(), "connection refused", "no expone detalles internos")
 	})
 
 	t.Run("readyz limita el tiempo de espera de la BD", func(t *testing.T) {
-		rec := httptest.NewRecorder()
 		db := pingerFunc(func(ctx context.Context) error {
 			_, hasDeadline := ctx.Deadline()
 			if !hasDeadline {
@@ -70,7 +76,7 @@ func TestReadyz(t *testing.T) {
 			return nil
 		})
 
-		httpx.Readyz(discardLogger(), db)(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+		rec := serveHealth(t, db, "/readyz")
 
 		require.Equal(t, http.StatusOK, rec.Code)
 	})

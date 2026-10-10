@@ -75,7 +75,12 @@ func run() error {
 	}
 	defer database.Close()
 
-	srv := httpx.NewServer(cfg.HTTPAddr, newHandler(log, otel.GetTracerProvider(), database), cfg.ShutdownTimeout)
+	// The API docs are for developers only; other environments do not serve them.
+	handler, err := newHandler(log, otel.GetTracerProvider(), database, cfg.Env == "development")
+	if err != nil {
+		return err
+	}
+	srv := httpx.NewServer(cfg.HTTPAddr, handler, cfg.ShutdownTimeout)
 
 	log.InfoContext(ctx, "api starting", slog.String("addr", cfg.HTTPAddr))
 	if err := srv.Run(ctx); err != nil {

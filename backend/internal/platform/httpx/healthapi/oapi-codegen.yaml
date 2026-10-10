@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+# Types and strict server interface for the operations tagged "health".
+package: healthapi
+output: healthapi.gen.go
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true
+output-options:
+  include-tags: [health]

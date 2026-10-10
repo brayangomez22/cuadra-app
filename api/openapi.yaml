@@ -1,0 +1,168 @@
+openapi: 3.0.3
+info:
+  title: Cuadra API
+  version: 0.1.0
+  description: |
+    API de Cuadra, el SaaS de gestión para pymes.
+
+    Convenciones:
+    - Los endpoints de negocio viven bajo `/api/v1` y requieren un token Bearer (JWT).
+    - Los errores siempre usan el esquema `Error`: `{"error": {"code": "...", "message": "..."}}`.
+      `code` es estable y legible por máquina; `message` está en español y se puede mostrar al usuario.
+    - El dinero y las cantidades viajan como strings decimales (`"12500.00"`), nunca como números.
+    - La paginación usa `limit` (máximo 100) y `offset`.
+    - Las fechas van en RFC 3339, en UTC.
+servers:
+  - url: http://localhost:8080
+    description: Desarrollo local
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: health
+    description: Probes de liveness y readiness. No requieren autenticación.
+
+paths:
+  /healthz:
+    get:
+      tags: [health]
+      operationId: getHealthz
+      summary: Liveness
+      description: El proceso está vivo. No revisa dependencias.
+      security: []
+      responses:
+        "200":
+          description: El proceso responde.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /readyz:
+    get:
+      tags: [health]
+      operationId: getReadyz
+      summary: Readiness
+      description: Las dependencias (base de datos) responden y la instancia puede recibir tráfico.
+      security: []
+      responses:
+        "200":
+          description: La instancia está lista.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyStatus"
+        "503":
+          description: Alguna dependencia no responde (`code` = `not_ready`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: Cantidad máxima de resultados.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Offset:
+      name: offset
+      in: query
+      description: Cantidad de resultados a saltar.
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  responses:
+    BadRequest:
+      description: La request no cumple el contrato (`code` = `invalid_request`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Falta el token o no es válido (`code` = `unauthorized`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: El usuario no tiene permiso para esta acción (`code` = `forbidden`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: El recurso no existe (`code` = `not_found` u otro más específico).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: La operación choca con el estado actual (por ejemplo, un SKU duplicado).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    UnprocessableEntity:
+      description: La request es válida, pero viola una regla de negocio (por ejemplo, `insufficient_stock`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InternalError:
+      description: Error inesperado del servidor (`code` = `internal_error`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorDetail"
+      example:
+        error:
+          code: insufficient_stock
+          message: No hay stock suficiente de Cemento gris 50kg
+    ErrorDetail:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Código estable, en snake_case, para que el cliente decida qué hacer.
+        message:
+          type: string
+          description: Mensaje en español que se puede mostrar al usuario.
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+    ReadyStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ready]

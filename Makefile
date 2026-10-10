@@ -2,6 +2,8 @@
 
 BACKEND := backend
 SQLC_VERSION := v1.31.1
+OAPI_CODEGEN_VERSION := v2.8.0
+OPENAPI_SPEC := $(CURDIR)/api/openapi.yaml
 
 # Load local environment variables (not committed) if present.
 -include .env
@@ -41,8 +43,11 @@ migrate: ## Apply migrations (goose up) as MIGRATION_DATABASE_URL and set app_us
 sqlc: ## Regenerate sqlc code
 	cd $(BACKEND) && go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION) generate
 
-openapi: ## Regenerate code from api/openapi.yaml
-	@echo "openapi: pendiente (T04)"; exit 1
+openapi: ## Regenerate code from api/openapi.yaml (one package per oapi-codegen.yaml)
+	@cd $(BACKEND) && for cfg in $$(find . -name oapi-codegen.yaml -not -path './vendor/*' | sort); do \
+		echo "oapi-codegen $$cfg"; \
+		(cd "$$(dirname "$$cfg")" && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) -config oapi-codegen.yaml $(OPENAPI_SPEC)) || exit 1; \
+	done
 
 obs-up: ## Start the observability stack (Grafana on :3000)
 	docker compose --profile observability up -d otel-collector prometheus loki tempo grafana
