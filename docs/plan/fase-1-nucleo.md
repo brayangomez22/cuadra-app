@@ -34,7 +34,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Alcance:** módulo `identity/domain`: `Tenant` (nombre, NIT, estado), `User` (email, nombre, hash de contraseña, rol, activo), value objects `Email` (normaliza y valida) y `Role` (owner/admin/cashier/warehouse), y `Permission` con una matriz rol→permisos (`catalog:write`, `inventory:adjust`, `sales:create`, `users:manage`...). Hashing con argon2id detrás de una interfaz `PasswordHasher`. Validación del NIT colombiano con dígito de verificación.
 **Tests primero:** email inválido rechazado; NIT con DV incorrecto rechazado (usa NITs reales públicos como casos); el cajero no tiene `catalog:write`; el owner tiene todos los permisos; la contraseña se verifica contra su hash.
 
-### [ ] T06 · Persistencia de identidad + RLS
+### [x] T06 · Persistencia de identidad + RLS
 **Alcance:** migración de `tenants` y `users` (con `tenant_id`, RLS + FORCE, índice único `(tenant_id, email)`). Queries sqlc y repositorios en `identity/adapters/postgres`.
 **Tests primero (integración):** crear y leer un usuario; **aislamiento**: un usuario del tenant A no aparece al consultar con el tenant B, y un UPDATE desde B no lo afecta; el email duplicado en el mismo tenant falla con un error de dominio.
 **Revisa tú:** las políticas RLS línea por línea.

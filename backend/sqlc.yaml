@@ -1,23 +1,21 @@
 # sqlc: one entry per module that has a postgres adapter (`make sqlc`).
 # The schema is always the full set of migrations; queries live next to the
-# repository that uses them. The first module is added in T06, until then
-# `make sqlc` reports "no packages".
+# repository that uses them.
 version: "2"
-sql: []
-# Template for a module (T06 onwards):
-#   - engine: postgresql
-#     schema: migrations
-#     queries: internal/modules/identity/adapters/postgres/queries
-#     gen:
-#       go:
-#         package: sqlcgen
-#         out: internal/modules/identity/adapters/postgres/sqlcgen
-#         sql_package: pgx/v5
-#         emit_pointers_for_null_types: true
-#         overrides:
-#           - db_type: uuid
-#             go_type: github.com/google/uuid.UUID
-#           - db_type: pg_catalog.numeric
-#             go_type: github.com/shopspring/decimal.Decimal
-#           - db_type: timestamptz
-#             go_type: time.Time
+sql:
+  - engine: postgresql
+    schema: migrations
+    queries: internal/modules/identity/adapters/postgres/queries
+    gen:
+      go:
+        package: sqlcgen
+        out: internal/modules/identity/adapters/postgres/sqlcgen
+        sql_package: pgx/v5
+        emit_pointers_for_null_types: true
+        overrides:
+          - db_type: uuid
+            go_type: github.com/google/uuid.UUID
+          - db_type: pg_catalog.numeric
+            go_type: github.com/shopspring/decimal.Decimal
+          - db_type: timestamptz
+            go_type: time.Time
