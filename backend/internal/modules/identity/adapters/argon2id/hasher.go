@@ -43,6 +43,9 @@ func New(p Params) *Hasher { return &Hasher{params: p} }
 
 var b64 = base64.RawStdEncoding
 
+// maxKeyLength bounds the key length accepted from a stored hash (ours use 32).
+const maxKeyLength = 64
+
 // Hash returns plain hashed in PHC string format:
 // $argon2id$v=19$m=<memory>,t=<iterations>,p=<parallelism>$<salt>$<key>.
 func (h *Hasher) Hash(plain string) (string, error) {
@@ -63,7 +66,11 @@ func (h *Hasher) Verify(plain, hash string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	got := argon2.IDKey([]byte(plain), salt, p.Iterations, p.Memory, p.Parallelism, uint32(len(key))) //nolint:gosec // len(key) comes from a decoded hash, far below MaxUint32
+	keyLength := len(key)
+	if keyLength > maxKeyLength {
+		return false, ErrMalformedHash
+	}
+	got := argon2.IDKey([]byte(plain), salt, p.Iterations, p.Memory, p.Parallelism, uint32(keyLength))
 	return subtle.ConstantTimeCompare(got, key) == 1, nil
 }
 
@@ -91,7 +98,7 @@ func decode(hash string) (p Params, salt, key []byte, err error) {
 		return Params{}, nil, nil, ErrMalformedHash
 	}
 	key, err = b64.DecodeString(parts[5])
-	if err != nil || len(key) == 0 {
+	if err != nil || len(key) == 0 || len(key) > maxKeyLength {
 		return Params{}, nil, nil, ErrMalformedHash
 	}
 	return p, salt, key, nil

@@ -64,14 +64,15 @@ func TestHasher(t *testing.T) {
 			"",
 			"texto-plano",
 			"$2a$10$abcdefghijklmnopqrstuv", // bcrypt
-			"$argon2i$v=19$m=64,t=1,p=1$c2FsdHNhbHRzYWx0$aGFzaA",   // argon2i, not argon2id
-			"$argon2id$v=16$m=64,t=1,p=1$c2FsdHNhbHRzYWx0$aGFzaA",  // old version
-			"$argon2id$v=19$m=64,t=0,p=1$c2FsdHNhbHRzYWx0$aGFzaA",  // zero iterations
-			"$argon2id$v=19$m=64,t=1,p=0$c2FsdHNhbHRzYWx0$aGFzaA",  // zero parallelism
-			"$argon2id$v=19$m=64,t=1,p=1$no-es-base64!$aGFzaA",     // bad salt
-			"$argon2id$v=19$m=64,t=1,p=1$c2FsdHNhbHRzYWx0$",        // empty key
-			"$argon2id$v=19$m=abc,t=1,p=1$c2FsdHNhbHRzYWx0$aGFzaA", // bad params
-			"$argon2id$v=19$m=64,t=1,p=1x$c2FsdHNhbHRzYWx0$aGFzaA", // trailing garbage
+			"$argon2i$v=19$m=64,t=1,p=1$c2FsdHNhbHRzYWx0$aGFzaA",                      // argon2i, not argon2id
+			"$argon2id$v=16$m=64,t=1,p=1$c2FsdHNhbHRzYWx0$aGFzaA",                     // old version
+			"$argon2id$v=19$m=64,t=0,p=1$c2FsdHNhbHRzYWx0$aGFzaA",                     // zero iterations
+			"$argon2id$v=19$m=64,t=1,p=0$c2FsdHNhbHRzYWx0$aGFzaA",                     // zero parallelism
+			"$argon2id$v=19$m=64,t=1,p=1$no-es-base64!$aGFzaA",                        // bad salt
+			"$argon2id$v=19$m=64,t=1,p=1$c2FsdHNhbHRzYWx0$",                           // empty key
+			"$argon2id$v=19$m=abc,t=1,p=1$c2FsdHNhbHRzYWx0$aGFzaA",                    // bad params
+			"$argon2id$v=19$m=64,t=1,p=1x$c2FsdHNhbHRzYWx0$aGFzaA",                    // trailing garbage
+			"$argon2id$v=19$m=64,t=1,p=1$c2FsdHNhbHRzYWx0$" + strings.Repeat("A", 88), // key longer than 64 bytes
 		} {
 			ok, err := h.Verify("cemento-gris-50kg", hash)
 			require.ErrorIs(t, err, argon2id.ErrMalformedHash, hash)
