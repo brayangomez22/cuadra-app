@@ -27,6 +27,12 @@ jobs:
           version: v2.14.0
           working-directory: backend
           install-only: true
+      - name: Generated code is up to date with api/openapi.yaml
+        run: |
+          make openapi
+          git diff --exit-code
+          untracked="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$untracked" ]; then echo "Generated files not committed:"; echo "$untracked"; exit 1; fi
       - run: make lint
       - run: make test
       - run: make test-int

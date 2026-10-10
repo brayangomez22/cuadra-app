@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+# The whole spec, embedded: the request validator and /docs read it at runtime.
+package: apispec
+output: spec.gen.go
+generate:
+  embedded-spec: true

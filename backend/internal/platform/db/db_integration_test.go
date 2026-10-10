@@ -22,6 +22,7 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/dbtest"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx/healthapi"
 	"github.com/brayangomez22/cuadra-app/backend/migrations"
 )
 
@@ -212,7 +213,8 @@ func TestReadyzWithDatabase(t *testing.T) {
 	log := slog.New(slog.DiscardHandler)
 	readyz := func(d *db.DB) int {
 		rec := httptest.NewRecorder()
-		httpx.Readyz(log, d)(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+		health := healthapi.Handler(healthapi.NewStrictHandler(httpx.NewHealth(log, d), nil))
+		health.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
 		return rec.Code
 	}
 

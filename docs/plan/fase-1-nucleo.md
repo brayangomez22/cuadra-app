@@ -25,7 +25,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Tests primero (integración):** `WithTenantTx` deja `app.tenant_id` visible dentro de la transacción y no fuera; un error dentro de `fn` hace rollback; `/readyz` responde 503 si la BD no está disponible.
 **Revisa tú:** que la app NO se conecte como superusuario.
 
-### [ ] T04 · Contrato de API (OpenAPI) y convenciones HTTP
+### [x] T04 · Contrato de API (OpenAPI) y convenciones HTTP
 **Alcance:** `api/openapi.yaml` (OpenAPI 3.0.x) con la base común: info, servidores, esquema de seguridad (Bearer JWT), esquema `Error` estándar, parámetros de paginación reutilizables y respuestas comunes (400, 401, 403, 404, 409, 422, 500). `oapi-codegen` configurado para generar, por módulo, los tipos y la interfaz *strict server* sobre `net/http` (`make openapi`). Documentación navegable de la API en `/docs` solo en desarrollo. Middleware que valida las requests contra el spec. Paso de CI que regenera el código y falla si hay diferencias (`git diff --exit-code`).
 **Tests primero:** una request que no cumple el spec recibe 400 con el formato de error estándar; un error de dominio mapeado devuelve el status y el `code` correctos.
 **Aceptación:** `/healthz` y `/readyz` están descritos en el spec y el código se genera sin diferencias.

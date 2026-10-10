@@ -75,7 +75,7 @@ func Recover(logger *slog.Logger) func(http.Handler) http.Handler {
 					slog.Any("panic", rec),
 					slog.String("stack", string(debug.Stack())),
 				)
-				WriteError(w, http.StatusInternalServerError, "internal_error", "Ocurrió un error inesperado. Intenta de nuevo.")
+				WriteError(w, http.StatusInternalServerError, "internal_error", InternalErrorMessage)
 			}()
 			next.ServeHTTP(w, r)
 		})
