@@ -1,4 +1,4 @@
-# Fase 5 — V2: crecimiento
+# Fase 7 — V2: crecimiento
 
 Funciones para retener a los pilotos y convertirlos en clientes que pagan, y para atraer a ferreterías más grandes. **Se definen como épicas**: cuando esta fase se active, cada épica se divide en tareas con los siguientes IDs disponibles, alcance y tests, priorizadas según lo que pidan los pilotos.
 
@@ -8,7 +8,7 @@ Funciones para retener a los pilotos y convertirlos en clientes que pagan, y par
 Cotización con vigencia, enviada en PDF (y por WhatsApp, ver V2-6); se convierte en venta con un clic y **reserva** el inventario mientras está vigente; seguimiento de cotizaciones abiertas, ganadas y perdidas.
 
 ### Épica V2-2 · Órdenes de compra y cuentas por pagar
-Orden de compra al proveedor (sugerida desde la lista de reposición de T34), recepción total o parcial contra la orden, cuentas por pagar con vencimientos y pagos, y reporte de compras por proveedor.
+Orden de compra al proveedor (sugerida desde la lista de reposición de T28), recepción total o parcial contra la orden, cuentas por pagar con vencimientos y pagos, y reporte de compras por proveedor.
 
 ### Épica V2-3 · Listas de precios
 Listas por tipo de cliente (público, maestro de obra, contratista, empresa) aplicadas automáticamente en el POS; **actualización masiva** ("el proveedor X subió 8%") con recálculo según el margen y vista previa antes de aplicar; historial de precios.

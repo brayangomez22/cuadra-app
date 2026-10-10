@@ -55,6 +55,9 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 ### [ ] T09 · Persistencia y API del catálogo
 **Alcance:** contrato en OpenAPI primero. Migraciones de `categories` y `products` (RLS, índice trigram en nombre, únicos `(tenant_id, sku)` y `(tenant_id, barcode)`). CRUD `/api/v1/products` y `/api/v1/categories`; `GET /api/v1/products?q=` busca por nombre parcial, SKU o código de barras, con paginación.
 **Tests primero:** integración de repositorio + aislamiento; búsqueda "tubo pvc" encuentra "Tubo PVC presión 1/2 pulgada"; test HTTP de crear producto sin permiso → 403.
+**Incluye además (auditoría de librerías, 2026-10-10):**
+- Spans de BD con el nombre de la query de sqlc: `otelpgx.WithSpanNameFunc` en `platform/db` lee el comentario `-- name: GetTenant :one` y nombra el span `GetTenant :one`. Si la query no tiene nombre, conserva el nombre por defecto (`SELECT`, `INSERT`...). Test unitario del parser y un test que verifique el nombre del span.
+- Renombrar las métricas de `identity` de `cuadra.auth.*` a `cuadra.identity.*` (`logins`, `signups`, `refresh_reuse_detected`) para cumplir la regla `cuadra.<modulo>.<cosa>`, y actualizar sus referencias en `docs/decisiones.md`.
 
 ### [ ] T10 · Dominio de inventario (kardex)
 **Alcance:** `inventory/domain`: `Location` (sede o bodega), `StockMovement` inmutable (tipo: `purchase_in`, `sale_out`, `adjustment`, `transfer_out`, `transfer_in`; cantidad decimal, costo unitario, referencia al documento, usuario y fecha), `StockLevel` por producto y sede. Regla configurable por tenant: permitir o no stock negativo (por defecto NO). Cálculo de **costo promedio ponderado** en las entradas.

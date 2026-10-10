@@ -2,95 +2,104 @@
 
 Este directorio es lo único que cambia de fase en fase. `CLAUDE.md` contiene las reglas permanentes del proyecto; **aquí** está qué se construye ahora y qué queda fuera.
 
+**El número de cada tarea es su orden de ejecución:** T01 primero, T53 último. Las fases van una después de otra.
+
 ## Fase activa
 
 > **Fase 1 — Núcleo** → [`fase-1-nucleo.md`](fase-1-nucleo.md)
 
-## Todas las fases
+## Fases en orden
 
-| Fase | Archivo | Estado | Objetivo |
-|---|---|---|---|
-| 1 · Núcleo | `fase-1-nucleo.md` | 🟡 activa | Cimientos técnicos y núcleo genérico: identidad, catálogo, inventario, UI base y dominio de ventas (T01–T17) |
-| 2 · Operación | `fase-2-operacion.md` | ⚪ pendiente | Dashboards y alertas, outbox + River, Sentry, E2E, pruebas de carga, README de portafolio, demo, laboratorio de Kubernetes (T18–T23, T45–T46) |
-| 3 · Producción | `fase-3-produccion.md` | ⚪ pendiente | Terraform en Azure, CD, observabilidad en producción, backups, seguridad, feature flags, analítica, export de datos y legal (T24–T28, T47–T50) |
-| 4 · MVP del piloto | `fase-4-mvp-piloto.md` | ⚪ pendiente | POS, caja, fraccionamiento, escáner con cámara, toma de inventario, clientes y cartera, compras, DIAN, usuarios, reportes, tablero y primeros pasos (T29–T44, T51–T53) |
-| 5 · V2 | `fase-5-v2.md` | ⚪ épicas | Cotizaciones, órdenes de compra, listas de precios, multi-sede, modo sin internet, WhatsApp, diferenciadores del nicho, suscripciones, pagos con QR |
-| 6 · V3 | `fase-6-v3.md` | ⚪ épicas | App del dueño, catálogo en línea, IA, exportación contable, nómina, talleres, multi-país |
-
-### Orden de ejecución
+| # | Fase | Tareas | Archivo | Estado | Qué se logra |
+|---|---|---|---|---|---|
+| 1 | Núcleo | T01–T17 | `fase-1-nucleo.md` | 🟡 activa | Cimientos técnicos (CI, observabilidad, BD multi-tenant, OpenAPI), identidad, catálogo, inventario, UI base y dominio de ventas |
+| 2 | Vender | T18–T25 | `fase-2-vender.md` | ⚪ | River, Sentry, API y pantalla del POS, tirilla, caja, dashboards y E2E |
+| 3 | Inventario, clientes y compras | T26–T34 | `fase-3-inventario-clientes.md` | ⚪ | Fraccionamiento, escáner con cámara, stock mínimo, importación de Excel, toma física, clientes, fiados, compras y demo |
+| 4 | Facturación, control y reportes | T35–T44 | `fase-4-facturacion-control.md` | ⚪ | DIAN, seguridad, feature flags, analítica, usuarios y auditoría, reportes, tablero y primeros pasos |
+| 5 | Producción y piloto | T45–T50 | `fase-5-produccion-piloto.md` | ⚪ | Terraform, CD, monitoreo en producción, backups, exportación de datos y legal → **arranca el piloto** |
+| 6 | Portafolio | T51–T53 | `fase-6-portafolio.md` | ⚪ | Pruebas de carga, README final y laboratorio de Kubernetes (opcional) |
+| 7 | V2 | épicas | `fase-7-v2.md` | ⚪ | Cotizaciones, órdenes de compra, listas de precios, multi-sede, modo sin internet, WhatsApp, diferenciadores, suscripciones, pagos con QR |
+| 8 | V3 | épicas | `fase-8-v3.md` | ⚪ | App del dueño, catálogo en línea, IA, exportación contable, nómina, talleres, multi-país |
 
 ```
-Fase 1 ──► Fase 4 (MVP) ───────────────► Piloto ──► Fase 5 (V2) ──► Fase 6 (V3)
-      └──► Fase 2 y 3 intercaladas ──┘
+Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durante el piloto) → Fase 7 (V2) → Fase 8 (V3)
 ```
 
-- Las fases 2 y 3 se intercalan con la 4. Algunas tareas del MVP dependen de ellas (por ejemplo, la DIAN necesita T19 y la auditoría necesita T28); cada tarea lo indica en **Depende de**.
-- **El piloto arranca cuando las fases 3 y 4 están completas** y `docs/negocio.md` tiene respondidas sus preguntas (precio, costos, métricas del piloto y soporte). T46 (Kubernetes) es opcional y no bloquea nada.
-- Los IDs se asignan en orden de creación, no de ejecución. Por eso T45–T53 aparecen en fases anteriores a T29–T44: se agregaron después.
-- Las fases 5 y 6 son épicas: se dividen en tareas (con IDs nuevos) cuando se activan, priorizadas con lo que pidan los pilotos y los clientes.
+**Hitos**
+- **Al terminar la fase 2:** ya puedes mostrar una venta real de punta a punta.
+- **Al terminar la fase 3:** la demo (T34) está lista para visitas de venta y para el portafolio.
+- **Al terminar la fase 5:** arranca el piloto con 3 a 5 ferreterías.
+
+**Excepciones al orden**
+- **T35** (selección del proveedor DIAN) es investigación, no código. Conviene adelantarla durante las fases 2 o 3, porque el costo por documento afecta el precio de Cuadra.
+- **T52** (README) conviene irlo actualizando desde antes; la tarea es la versión final.
+- **T53** (Kubernetes) es opcional y no bloquea nada.
+- Antes de la fase 2, repriorizar con lo aprendido en las visitas (`docs/negocio.md`, "Insumos de la validación").
 
 ## Mapa de funcionalidades
 
-Dónde está cada funcionalidad del producto:
-
 | Funcionalidad | Dónde |
 |---|---|
-| Usuarios, roles y seguridad | T05–T07 (auth y permisos), T28 (endurecimiento y auditoría), T42 (gestión de usuarios y pantalla de auditoría) |
-| Catálogo | T08–T09, T16 · unidades y fraccionamiento: T33 · importación: T35 |
-| Inventario y kardex | T10–T11, T16 · stock mínimo: T34 · **toma física de inventario: T52** · multi-sede completo: V2-4 |
-| Escáner de códigos con la cámara | T51 (usado en el POS y en la toma de inventario) |
-| Ventas y POS | T17 (dominio), T29 (API), T30 (pantalla), T31 (tirilla) |
-| Pagos con QR (Bre-B, Nequi) | V2-10 |
-| Caja | T32 |
-| Clientes y cartera | T36 (clientes), T37 (crédito, abonos, cartera por edades) |
-| Compras y proveedores | T38 (proveedores y compras) · órdenes de compra y cuentas por pagar: V2-2 |
-| Facturación electrónica DIAN | T39 (selección del proveedor), T40 (emisión), T41 (notas crédito) · depende de T19 |
-| Reportes y tablero | T43 (reportes del negocio), T44 (tablero del dueño) |
-| Cotizaciones | V2-1 |
-| Listas de precios | V2-3 |
-| Modo sin internet | V2-5 |
-| WhatsApp (facturas, cobros, resumen diario) | V2-6 |
-| Referencias cruzadas, kits, despachos, garantías, pedidos por obra | V2-7 |
-| Cobro de la suscripción del SaaS | V2-9 |
-| App del dueño | V3-1 |
-| Catálogo en línea | V3-2 |
-| IA (reabastecimiento, asistente MCP, lectura de facturas) | V3-3 |
-| Exportación contable | V3-4 |
-| Nómina electrónica | V3-5 |
-| Segundo vertical: talleres | V3-6 |
-| Primeros pasos para un cliente nuevo | T53 |
-| Tenant de demostración (ventas y portafolio) | T45 |
-| Feature flags por tenant | T47 |
-| Analítica de uso y comentarios | T48 |
+| Usuarios, roles y seguridad | T05–T07 (auth y permisos), T38 (endurecimiento y auditoría), T41 (gestión de usuarios y pantalla de auditoría) |
+| Catálogo | T08–T09, T16 · unidades y fraccionamiento: T26 · importación de Excel: T29 |
+| Inventario y kardex | T10–T11, T16 · stock mínimo: T28 · toma física: T30 · multi-sede completo: V2-4 |
+| Escáner de códigos con la cámara | T27 (usado en el POS y en la toma de inventario) |
+| Ventas y POS | T17 (dominio), T20 (API), T21 (pantalla), T22 (tirilla) |
+| Caja | T23 |
+| Clientes y cartera | T31 (clientes), T32 (crédito, abonos, cartera por edades) |
+| Compras y proveedores | T33 · órdenes de compra y cuentas por pagar: V2-2 |
+| Facturación electrónica DIAN | T35 (selección del proveedor), T36 (emisión), T37 (notas crédito) |
+| Reportes y tablero | T42 (reportes del negocio), T43 (tablero del dueño) |
+| Primeros pasos para un cliente nuevo | T44 |
+| Tenant de demostración | T34 |
+| Feature flags por tenant | T39 |
+| Analítica de uso y comentarios | T40 |
 | Exportación de datos y cierre de cuenta | T49 |
 | Legal y protección de datos (Ley 1581) | T50 · decisiones de negocio en `docs/negocio.md` |
-| Observabilidad de la plataforma (Grafana, para el equipo) | T02, T18, T26 |
-| Kubernetes (laboratorio, no producción) | T46 |
+| Observabilidad (Grafana, para el equipo) | T02, T24, T47 |
+| Trabajos en segundo plano (River) | T18 |
+| Pruebas end-to-end y de carga | T25 (Playwright), T51 (k6) |
+| Kubernetes (laboratorio, no producción) | T53 |
+| Cotizaciones · listas de precios · multi-sede | V2-1 · V2-3 · V2-4 |
+| Modo sin internet · WhatsApp · pagos con QR | V2-5 · V2-6 · V2-10 |
+| Referencias cruzadas, kits, despachos, garantías, pedidos por obra | V2-7 |
+| Cobro de la suscripción del SaaS | V2-9 |
+| App del dueño · catálogo en línea · IA | V3-1 · V3-2 · V3-3 |
+| Exportación contable · nómina · talleres · multi-país | V3-4 · V3-5 · V3-6 · V3-7 |
 
 ## Alcance de la fase activa
 
 **Sí se construye:** lo listado en `fase-1-nucleo.md`.
 
 **No se implementa todavía**, pero el modelo no debe bloquearlo:
-- Fraccionamiento de unidades (T33) → `Product` ya tiene `base_unit` y las cantidades son decimales.
-- Clientes y crédito (T36–T37) → `Sale` debe poder referenciar un cliente opcional.
-- Facturación DIAN (T39–T41) → los totales de venta se calculan con la precisión necesaria y el IVA se guarda discriminado por tasa.
+- Fraccionamiento de unidades (T26) → `Product` ya tiene `base_unit` y las cantidades son decimales.
+- Clientes y crédito (T31–T32) → `Sale` debe poder referenciar un cliente opcional.
+- Facturación DIAN (T35–T37) → los totales de venta se calculan con la precisión necesaria y el IVA se guarda discriminado por tasa.
 - Multi-sede (V2-4) → stock, ventas y cajas siempre referencian una `Location`.
 - Modo sin internet (V2-5) → los IDs son UUID v7 y las operaciones de escritura deben poder hacerse idempotentes.
 
 ## Cómo se trabaja
 
-- IDs de tarea **únicos y globales** (T01, T02...). No se reutilizan ni se renumeran. Las épicas (V2-1, V3-3...) reciben IDs de tarea cuando se dividen.
 - Una tarea = una rama (`feat/T05-identity-domain`) = un PR con CI en verde.
 - El ciclo de cada tarea:
   ```
   /tarea TXX       → crea la rama, plan, apruebas, tests en rojo, implementación, verificación
   git diff         → revisas tú
   /cerrar-tarea    → make check, commit, push, PR, espera el CI y, si pasa completo,
-                     gh pr merge --squash --delete-branch && git switch main && git pull
+                     merge con squash, borra la rama y vuelve a main actualizada
   /clear           → contexto limpio para la siguiente tarea
   ```
 - Al terminar una tarea se marca `[x]` en el archivo de su fase (lo hace `/tarea`).
+
+## Numeración de tareas
+
+- Los IDs siguen el orden de ejecución.
+- **Una vez que una tarea se empezó** (tiene rama, commits con `Refs: TXX` o PR), su ID ya no cambia.
+- Una tarea nueva que se agrega más adelante:
+  - si va **al final** del plan, toma el siguiente número;
+  - si va **en medio** de tareas que aún no se empiezan, se renumeran las pendientes para mantener el orden (`docs/decisiones.md` registra el cambio);
+  - si va antes de tareas ya empezadas, usa un sufijo (`T23a`) para no tocar los IDs existentes.
+- Las épicas de V2 y V3 reciben IDs (T54 en adelante) cuando se dividen en tareas.
 
 ## Cómo cambiar de fase
 

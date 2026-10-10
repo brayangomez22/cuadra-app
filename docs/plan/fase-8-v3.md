@@ -1,4 +1,4 @@
-# Fase 6 — V3: expansión
+# Fase 8 — V3: expansión
 
 Funciones para escalar el producto y abrir mercados nuevos. **Épicas a alto nivel**: se detallan cuando V2 esté estable y haya clientes que paguen. Cada una empieza con un spike y un ADR.
 
@@ -13,7 +13,7 @@ Catálogo público por tenant sincronizado con inventario y precios (subdominio 
 ### Épica V3-3 · Inteligencia artificial
 - **Predicción de reabastecimiento** según el histórico y la temporada.
 - **Asistente para el dueño** con preguntas en lenguaje natural ("¿cuánto vendí de cemento este mes comparado con el anterior?"), expuesto como **servidor MCP** sobre la API de reportes, con permisos del usuario y aislamiento por tenant.
-- **Lectura automática de facturas de proveedor** (foto o PDF) para precargar compras en T38.
+- **Lectura automática de facturas de proveedor** (foto o PDF) para precargar compras en T33.
 
 ### Épica V3-4 · Exportación contable
 Exportación de ventas, compras, cartera y cierres en los formatos de importación de los programas contables más usados por los contadores de los clientes (definir cuáles con ellos), más un formato genérico.
