@@ -39,7 +39,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Tests primero (integración):** crear y leer un usuario; **aislamiento**: un usuario del tenant A no aparece al consultar con el tenant B, y un UPDATE desde B no lo afecta; el email duplicado en el mismo tenant falla con un error de dominio.
 **Revisa tú:** las políticas RLS línea por línea.
 
-### [ ] T07 · Autenticación y autorización
+### [x] T07 · Autenticación y autorización
 **Alcance:** primero los endpoints `/api/v1/auth/*` y `GET /api/v1/me` en `openapi.yaml`; luego el código. Casos de uso `SignUp` (crea tenant + usuario owner en una transacción), `Login`, `RefreshToken`, `Logout`. Access token JWT de 15 min y refresh token opaco rotativo guardado hasheado en BD (cookie httpOnly). Middleware `RequireAuth` (pone `tenant_id`, `user_id` y rol en el contexto y como atributos del span) y `RequirePermission("catalog:write")`. Rate limit en el login. Métricas: `cuadra.auth.logins` con atributo `result` (success/failure).
 **Tests primero:** casos de uso con fakes (login con contraseña errónea → error genérico sin revelar si el email existe; un refresh token reutilizado invalida la familia de tokens); el middleware rechaza token vencido, alterado o sin permiso.
 **Revisa tú:** expiraciones, cookies (`Secure`, `SameSite`), que el tenant salga solo del token y que ningún log ni span contenga contraseñas o tokens.

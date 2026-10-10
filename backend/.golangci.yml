@@ -24,6 +24,8 @@ linters:
       ignore-rules:
         - contraseña
         - inventario
+        - momento
+        - secretos
   exclusions:
     rules:
       - path: _test\.go

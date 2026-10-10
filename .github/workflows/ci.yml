@@ -54,7 +54,9 @@ jobs:
       - name: gosec
         # v2.29.0 cannot load Go 1.27.2 export data (securego/gosec#1771).
         # Pinned to the master commit that fixes it; go back to a tag once v2.29.1 is released.
-        run: go run github.com/securego/gosec/v2/cmd/gosec@v2.29.1-0.20261005092323-d2b649ec0182 ./...
+        # Generated code (sqlc, oapi-codegen) is skipped: it cannot carry #nosec, and its
+        # token/credential field names are false positives (G101, G117).
+        run: go run github.com/securego/gosec/v2/cmd/gosec@v2.29.1-0.20261005092323-d2b649ec0182 -exclude-generated ./...
 
   docker:
     name: Docker image and Trivy

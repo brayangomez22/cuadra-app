@@ -22,6 +22,18 @@ security:
 tags:
   - name: health
     description: Probes de liveness y readiness. No requieren autenticación.
+  - name: auth
+    description: |
+      Registro, inicio de sesión y sesión del usuario.
+
+      El access token (JWT) dura 15 minutos y se envía en `Authorization: Bearer`. El refresh token
+      viaja solo en la cookie `cuadra_refresh` (HttpOnly, Secure, SameSite=Strict, ruta `/api/v1/auth`),
+      rota en cada uso y su reutilización cierra todas las sesiones de esa familia.
+
+# Authorization is declared here and enforced by the API before the request
+# is validated: every operation requires a bearer token unless it says
+# `security: []`, and `x-permission` names the permission the user's role
+# must grant (see the permission matrix of the identity module).
 
 paths:
   /healthz:
@@ -59,7 +71,177 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /api/v1/auth/signup:
+    post:
+      tags: [auth]
+      operationId: signUp
+      summary: Registrar una empresa
+      description: Crea la empresa (tenant) y su usuario dueño, e inicia la sesión.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignUpRequest"
+      responses:
+        "201":
+          description: Empresa creada; la sesión queda iniciada.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetRefreshCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          description: |
+            Algún dato no cumple las reglas (`invalid_email`, `invalid_nit`, `invalid_nit_check_digit`,
+            `password_too_short`, `password_too_long`, `invalid_tenant_name`, `invalid_user_name`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Iniciar sesión
+      description: |
+        Si el correo y la contraseña coinciden en varias empresas, responde 409 con la lista de
+        empresas; el cliente repite la request con el `tenant_id` elegido.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Sesión iniciada.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetRefreshCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Correo o contraseña incorrectos (`code` = `invalid_credentials`). No revela si el correo existe.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: La empresa está suspendida (`code` = `tenant_suspended`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Las credenciales son válidas en varias empresas (`code` = `tenant_selection_required`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantSelectionRequired"
+        "429":
+          description: Demasiados intentos (`code` = `too_many_requests`).
+          headers:
+            Retry-After:
+              description: Segundos que hay que esperar antes de intentar de nuevo.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refreshSession
+      summary: Renovar la sesión
+      description: Cambia el refresh token de la cookie por uno nuevo y emite un access token nuevo.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/RefreshCookie"
+      responses:
+        "200":
+          description: Sesión renovada.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetRefreshCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "401":
+          description: Falta la cookie, o el refresh token no es válido, venció o fue reutilizado (`code` = `invalid_session`).
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetRefreshCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Cerrar sesión
+      description: Revoca el refresh token de la cookie (y su familia) y borra la cookie. Es idempotente.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/RefreshCookie"
+      responses:
+        "204":
+          description: Sesión cerrada.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetRefreshCookie"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/me:
+    get:
+      tags: [auth]
+      operationId: getMe
+      summary: Usuario actual
+      description: El usuario autenticado, su empresa y sus permisos.
+      responses:
+        "200":
+          description: El usuario autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
+  headers:
+    SetRefreshCookie:
+      description: |
+        Cookie `cuadra_refresh` con el refresh token (HttpOnly, Secure, SameSite=Strict, ruta `/api/v1/auth`).
+        Al cerrar sesión o si la sesión no es válida, la cookie se borra.
+      schema:
+        type: string
+
   securitySchemes:
     bearerAuth:
       type: http
@@ -86,6 +268,14 @@ components:
         type: integer
         minimum: 0
         default: 0
+    RefreshCookie:
+      name: cuadra_refresh
+      in: cookie
+      description: Refresh token. Lo pone la API; el navegador lo envía solo a `/api/v1/auth`.
+      required: false
+      schema:
+        type: string
+        maxLength: 200
 
   responses:
     BadRequest:
@@ -166,3 +356,115 @@ components:
         status:
           type: string
           enum: [ready]
+    SignUpRequest:
+      type: object
+      required: [tenant_name, nit, name, email, password]
+      additionalProperties: false
+      properties:
+        tenant_name:
+          type: string
+          description: Nombre de la empresa.
+          minLength: 1
+          maxLength: 200
+          example: Ferretería El Tornillo
+        nit:
+          type: string
+          description: NIT con dígito de verificación (`890903938-8`).
+          minLength: 2
+          maxLength: 20
+          example: 890903938-8
+        name:
+          type: string
+          description: Nombre del dueño.
+          minLength: 1
+          maxLength: 200
+          example: Ana Gómez
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+          example: ana@eltornillo.co
+        password:
+          type: string
+          description: Entre 8 y 72 caracteres.
+          format: password
+          minLength: 8
+          maxLength: 72
+    LoginRequest:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+        password:
+          type: string
+          format: password
+          minLength: 1
+          maxLength: 72
+        tenant_id:
+          type: string
+          format: uuid
+          description: Empresa elegida tras una respuesta 409 `tenant_selection_required`.
+    AuthSession:
+      type: object
+      required: [access_token, token_type, expires_in, user]
+      properties:
+        access_token:
+          type: string
+          description: "JWT para el header `Authorization: Bearer`."
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+          description: Segundos de vida del access token.
+          example: 900
+        user:
+          $ref: "#/components/schemas/Me"
+    Me:
+      type: object
+      required: [id, tenant_id, tenant_name, name, email, role, permissions]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        tenant_name:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, cashier, warehouse]
+        permissions:
+          type: array
+          description: Permisos del rol, para mostrar u ocultar acciones en la UI.
+          items:
+            type: string
+          example: [catalog:read, sales:create]
+    TenantSelectionRequired:
+      type: object
+      required: [error, tenants]
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorDetail"
+        tenants:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenantOption"
+    TenantOption:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string

@@ -23,16 +23,7 @@ func NewUserRepository(d *db.DB) *UserRepository { return &UserRepository{db: d}
 // registered in the tenant.
 func (r *UserRepository) Create(ctx context.Context, u *domain.User) error {
 	err := r.db.WithTenantTx(ctx, u.TenantID(), func(tx pgx.Tx) error {
-		return sqlcgen.New(tx).CreateUser(ctx, sqlcgen.CreateUserParams{
-			ID:           u.ID(),
-			TenantID:     u.TenantID(),
-			Email:        u.Email().String(),
-			Name:         u.Name(),
-			PasswordHash: u.PasswordHash(),
-			Role:         u.Role().String(),
-			Active:       u.IsActive(),
-			CreatedAt:    u.CreatedAt(),
-		})
+		return createUser(ctx, sqlcgen.New(tx), u)
 	})
 	switch {
 	case isUniqueViolation(err, usersEmailKey):
@@ -41,6 +32,19 @@ func (r *UserRepository) Create(ctx context.Context, u *domain.User) error {
 		return fmt.Errorf("identity: create user: %w", err)
 	}
 	return nil
+}
+
+func createUser(ctx context.Context, q *sqlcgen.Queries, u *domain.User) error {
+	return q.CreateUser(ctx, sqlcgen.CreateUserParams{
+		ID:           u.ID(),
+		TenantID:     u.TenantID(),
+		Email:        u.Email().String(),
+		Name:         u.Name(),
+		PasswordHash: u.PasswordHash(),
+		Role:         u.Role().String(),
+		Active:       u.IsActive(),
+		CreatedAt:    u.CreatedAt(),
+	})
 }
 
 // GetByID returns domain.ErrUserNotFound when the user does not exist in tenantID.

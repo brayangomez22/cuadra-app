@@ -26,18 +26,41 @@ func NewTenantRepository(d *db.DB) *TenantRepository { return &TenantRepository{
 // Create stores a new tenant.
 func (r *TenantRepository) Create(ctx context.Context, t *domain.Tenant) error {
 	err := r.db.WithTenantTx(ctx, t.ID(), func(tx pgx.Tx) error {
-		return sqlcgen.New(tx).CreateTenant(ctx, sqlcgen.CreateTenantParams{
-			ID:        t.ID(),
-			Name:      t.Name(),
-			Nit:       t.NIT().String(),
-			Status:    string(t.Status()),
-			CreatedAt: t.CreatedAt(),
-		})
+		return createTenant(ctx, sqlcgen.New(tx), t)
 	})
 	if err != nil {
 		return fmt.Errorf("identity: create tenant: %w", err)
 	}
 	return nil
+}
+
+// CreateWithOwner stores a new tenant and its first user in one transaction
+// scoped to the new tenant: either both are stored or neither is.
+func (r *TenantRepository) CreateWithOwner(ctx context.Context, t *domain.Tenant, owner *domain.User) error {
+	err := r.db.WithTenantTx(ctx, t.ID(), func(tx pgx.Tx) error {
+		q := sqlcgen.New(tx)
+		if err := createTenant(ctx, q, t); err != nil {
+			return err
+		}
+		return createUser(ctx, q, owner)
+	})
+	switch {
+	case isUniqueViolation(err, usersEmailKey):
+		return domain.ErrEmailTaken
+	case err != nil:
+		return fmt.Errorf("identity: create tenant with owner: %w", err)
+	}
+	return nil
+}
+
+func createTenant(ctx context.Context, q *sqlcgen.Queries, t *domain.Tenant) error {
+	return q.CreateTenant(ctx, sqlcgen.CreateTenantParams{
+		ID:        t.ID(),
+		Name:      t.Name(),
+		Nit:       t.NIT().String(),
+		Status:    string(t.Status()),
+		CreatedAt: t.CreatedAt(),
+	})
 }
 
 // GetByID returns domain.ErrTenantNotFound when the tenant does not exist.

@@ -8,11 +8,16 @@ import (
 	"time"
 )
 
+// minJWTSecretLength is the minimum HS256 key size (RFC 7518 §3.2).
+const minJWTSecretLength = 32
+
 // Config holds the application configuration.
 type Config struct {
-	Env             string
-	HTTPAddr        string
-	DatabaseURL     string
+	Env         string
+	HTTPAddr    string
+	DatabaseURL string
+	// JWTSecret signs the access tokens (HS256). Never logged.
+	JWTSecret       []byte
 	LogLevel        slog.Level
 	ShutdownTimeout time.Duration
 }
@@ -30,6 +35,16 @@ func Load(getenv func(string) string) (Config, error) {
 
 	if cfg.DatabaseURL == "" {
 		errs = append(errs, errors.New("DATABASE_URL is required"))
+	}
+
+	// The value is never echoed: it is a secret.
+	switch secret := getenv("JWT_SECRET"); {
+	case secret == "":
+		errs = append(errs, errors.New("JWT_SECRET is required"))
+	case len(secret) < minJWTSecretLength:
+		errs = append(errs, fmt.Errorf("JWT_SECRET must have at least %d bytes", minJWTSecretLength))
+	default:
+		cfg.JWTSecret = []byte(secret)
 	}
 
 	if err := cfg.LogLevel.UnmarshalText([]byte(withDefault(getenv("LOG_LEVEL"), "info"))); err != nil {
