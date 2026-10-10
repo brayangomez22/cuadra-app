@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/logger"
 )
 
 func discardLogger() *slog.Logger { return slog.New(slog.DiscardHandler) }
@@ -94,8 +95,8 @@ func TestRequestID(t *testing.T) {
 func TestLogging(t *testing.T) {
 	t.Run("logging registra método, ruta, status y duración con el request_id", func(t *testing.T) {
 		var buf bytes.Buffer
-		logger := slog.New(slog.NewJSONHandler(&buf, nil))
-		handler := httpx.RequestID(httpx.Logging(logger)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		log := slog.New(logger.NewContextHandler(slog.NewJSONHandler(&buf, nil), httpx.RequestIDAttrs))
+		handler := httpx.RequestID(httpx.Logging(log)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusTeapot)
 		})))
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/algo?token=no-se-loguea", nil)

@@ -7,7 +7,7 @@ BACKEND := backend
 export
 
 .DEFAULT_GOAL := help
-.PHONY: help up down run test test-int lint check migrate sqlc openapi obs-up
+.PHONY: help up down run test test-int lint check migrate sqlc openapi obs-up obs-down
 
 help: ## List available commands
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -16,7 +16,7 @@ up: ## Start Postgres (docker compose)
 	docker compose up -d --wait postgres
 
 down: ## Stop local containers
-	docker compose down
+	docker compose --profile observability down
 
 run: ## Run the API on :8080
 	cd $(BACKEND) && go run ./cmd/api
@@ -43,5 +43,8 @@ sqlc: ## Regenerate sqlc code
 openapi: ## Regenerate code from api/openapi.yaml
 	@echo "openapi: pendiente (T04)"; exit 1
 
-obs-up: ## Start the observability stack
-	@echo "obs-up: pendiente (T02)"; exit 1
+obs-up: ## Start the observability stack (Grafana on :3000)
+	docker compose --profile observability up -d otel-collector prometheus loki tempo grafana
+
+obs-down: ## Stop the observability stack
+	docker compose --profile observability stop otel-collector prometheus loki tempo grafana

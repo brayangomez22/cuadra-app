@@ -74,7 +74,6 @@ func Recover(logger *slog.Logger) func(http.Handler) http.Handler {
 				logger.ErrorContext(r.Context(), "panic recovered",
 					slog.Any("panic", rec),
 					slog.String("stack", string(debug.Stack())),
-					slog.String("request_id", RequestIDFromContext(r.Context())),
 				)
 				WriteError(w, http.StatusInternalServerError, "internal_error", "Ocurrió un error inesperado. Intenta de nuevo.")
 			}()
@@ -98,7 +97,6 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 				slog.String("path", r.URL.Path),
 				slog.Int("status", rec.status),
 				slog.Int64("duration_ms", time.Since(start).Milliseconds()),
-				slog.String("request_id", RequestIDFromContext(r.Context())),
 			)
 		})
 	}
@@ -126,3 +124,12 @@ func (r *statusRecorder) Write(b []byte) (int, error) {
 
 // Unwrap lets http.ResponseController reach the underlying writer.
 func (r *statusRecorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
+
+// RequestIDAttrs returns the request ID as a log attribute. It is meant to be
+// registered as a logger.ContextExtractor so every log line carries it.
+func RequestIDAttrs(ctx context.Context) []slog.Attr {
+	if id := RequestIDFromContext(ctx); id != "" {
+		return []slog.Attr{slog.String("request_id", id)}
+	}
+	return nil
+}
