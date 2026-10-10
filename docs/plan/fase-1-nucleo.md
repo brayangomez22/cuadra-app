@@ -20,7 +20,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Tests primero:** el handler de slog incluye `trace_id` cuando hay un span en el contexto y lo omite cuando no; una request a `/healthz` produce un span (usa un exporter en memoria, `tracetest`).
 **Aceptación:** con `make obs-up` + `make run`, una request aparece en Tempo y desde la traza se salta a sus logs en Loki dentro de Grafana.
 
-### [ ] T03 · Base de datos, transacciones y tenant
+### [x] T03 · Base de datos, transacciones y tenant
 **Alcance:** `internal/platform/db`: pool `pgx` instrumentado con OpenTelemetry (`otelpgx`), `WithTx(ctx, fn)` y `WithTenantTx(ctx, tenantID, fn)` (hace `set_config('app.tenant_id', ..., true)`). `/readyz` ahora verifica la BD. Integración de `goose` (`make migrate`) y de `sqlc` (`sqlc.yaml`). Migración inicial: extensiones `pgcrypto` y `pg_trgm`, y creación del rol de aplicación `app_user` sin BYPASSRLS. Helper de tests `internal/platform/dbtest` que levanta Postgres con testcontainers, aplica migraciones y devuelve un pool conectado como `app_user`.
 **Tests primero (integración):** `WithTenantTx` deja `app.tenant_id` visible dentro de la transacción y no fuera; un error dentro de `fn` hace rollback; `/readyz` responde 503 si la BD no está disponible.
 **Revisa tú:** que la app NO se conecte como superusuario.
