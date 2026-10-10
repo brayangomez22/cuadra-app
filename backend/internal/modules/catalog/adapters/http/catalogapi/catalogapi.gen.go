@@ -225,6 +225,9 @@ type CategoryId = openapi_types.UUID
 // Limit defines model for Limit.
 type Limit = int
 
+// LocationId defines model for LocationId.
+type LocationId = openapi_types.UUID
+
 // Offset defines model for Offset.
 type Offset = int
 

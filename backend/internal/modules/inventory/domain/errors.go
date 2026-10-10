@@ -22,4 +22,9 @@ var (
 	ErrAdjustmentReasonTooLong  = errors.New("inventory: adjustment reason is too long")
 	ErrSameLocationTransfer     = errors.New("inventory: transfer to the same location")
 	ErrTransferMismatch         = errors.New("inventory: transfer between different products or tenants")
+	ErrLocationInactive         = errors.New("inventory: location is inactive")
+
+	ErrLocationNotFound  = errors.New("inventory: location not found")
+	ErrLocationNameTaken = errors.New("inventory: location name taken")
+	ErrProductNotFound   = errors.New("inventory: product not found")
 )

@@ -151,6 +151,9 @@ type TenantSelectionRequired struct {
 // CategoryId defines model for CategoryId.
 type CategoryId = openapi_types.UUID
 
+// LocationId defines model for LocationId.
+type LocationId = openapi_types.UUID
+
 // ProductId defines model for ProductId.
 type ProductId = openapi_types.UUID
 
