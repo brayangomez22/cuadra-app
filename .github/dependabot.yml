@@ -8,14 +8,13 @@ updates:
       go:
         patterns: ["*"]
 
-  # Disabled until frontend/ exists (T12): without a manifest the update fails.
-  # - package-ecosystem: npm
-  #   directory: /frontend
-  #   schedule:
-  #     interval: weekly
-  #   groups:
-  #     npm:
-  #       patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      npm:
+        patterns: ["*"]
 
   - package-ecosystem: docker
     directory: /backend
