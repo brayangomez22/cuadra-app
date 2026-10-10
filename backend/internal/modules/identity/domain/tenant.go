@@ -77,3 +77,31 @@ func (t *Tenant) Suspend() { t.status = TenantSuspended }
 
 // Activate reactivates a suspended tenant. Idempotent.
 func (t *Tenant) Activate() { t.status = TenantActive }
+
+// TenantSnapshot holds a stored tenant's fields, for RehydrateTenant.
+type TenantSnapshot struct {
+	ID        uuid.UUID
+	Name      string
+	NIT       NIT
+	Status    TenantStatus
+	CreatedAt time.Time
+}
+
+// RehydrateTenant rebuilds a stored tenant, checking the same invariants as
+// NewTenant so corrupt data surfaces as an error instead of an invalid entity.
+func RehydrateTenant(s TenantSnapshot) (*Tenant, error) {
+	if s.ID == uuid.Nil {
+		return nil, ErrInvalidTenantID
+	}
+	name, err := normalizeName(s.Name, ErrInvalidTenantName)
+	if err != nil {
+		return nil, err
+	}
+	if s.NIT.IsZero() {
+		return nil, ErrInvalidNIT
+	}
+	if s.Status != TenantActive && s.Status != TenantSuspended {
+		return nil, ErrInvalidTenantStatus
+	}
+	return &Tenant{id: s.ID, name: name, nit: s.NIT, status: s.Status, createdAt: s.CreatedAt.UTC()}, nil
+}
