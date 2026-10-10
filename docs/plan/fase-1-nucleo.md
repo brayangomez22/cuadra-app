@@ -48,7 +48,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 
 ## Catálogo e inventario
 
-### [ ] T08 · Dominio del catálogo
+### [x] T08 · Dominio del catálogo
 **Alcance:** `catalog/domain`: `Product` (SKU único por tenant, código de barras opcional, nombre, descripción, `CategoryID`, `BaseUnit`, `Cost`, `Price`, `TaxRate`, activo), `Category` (árbol simple con padre opcional) y `UnitOfMeasure` (catálogo fijo inicial: und, m, kg, l, caja, rollo, bulto, galón). Precio > 0 y costo ≥ 0, ambos `decimal`. Métodos `ChangePrice`, `Deactivate` y `MarginPercent()`.
 **Tests primero:** precio negativo rechazado; margen calculado sin pérdida de precisión (costo 8.333,33 / precio 10.000); un producto inactivo no puede cambiar de precio (o define la regla y documéntala).
 
