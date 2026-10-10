@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/config"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/logger"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/telemetry"
@@ -66,7 +67,15 @@ func run() error {
 		}
 	}()
 
-	srv := httpx.NewServer(cfg.HTTPAddr, newHandler(log, otel.GetTracerProvider()), cfg.ShutdownTimeout)
+	// Fails fast if the database is down or the role could bypass RLS; the
+	// orchestrator restarts the process.
+	database, err := db.Open(ctx, cfg.DatabaseURL, otel.GetTracerProvider(), otel.GetMeterProvider())
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+
+	srv := httpx.NewServer(cfg.HTTPAddr, newHandler(log, otel.GetTracerProvider(), database), cfg.ShutdownTimeout)
 
 	log.InfoContext(ctx, "api starting", slog.String("addr", cfg.HTTPAddr))
 	if err := srv.Run(ctx); err != nil {

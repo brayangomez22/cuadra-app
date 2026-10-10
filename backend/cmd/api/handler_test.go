@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -17,6 +18,11 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/logger"
 )
 
+// readyDB is a database that always answers.
+type readyDB struct{}
+
+func (readyDB) Ping(context.Context) error { return nil }
+
 func TestHandlerTelemetry(t *testing.T) {
 	setup := func(t *testing.T) (http.Handler, *tracetest.SpanRecorder, *bytes.Buffer) {
 		t.Helper()
@@ -25,7 +31,7 @@ func TestHandlerTelemetry(t *testing.T) {
 		t.Cleanup(func() { _ = tp.Shutdown(t.Context()) })
 		var buf bytes.Buffer
 		log := slog.New(logger.NewContextHandler(slog.NewJSONHandler(&buf, nil), httpx.RequestIDAttrs))
-		return newHandler(log, tp), recorder, &buf
+		return newHandler(log, tp, readyDB{}), recorder, &buf
 	}
 
 	t.Run("una request a /healthz produce un span con la ruta y el status", func(t *testing.T) {

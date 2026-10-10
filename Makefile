@@ -1,6 +1,7 @@
 # Cuadra: development commands. See CLAUDE.md.
 
 BACKEND := backend
+SQLC_VERSION := v1.31.1
 
 # Load local environment variables (not committed) if present.
 -include .env
@@ -34,11 +35,11 @@ lint: ## gofmt + go vet + golangci-lint
 
 check: lint test test-int ## Must pass before a task is done
 
-migrate: ## Apply migrations (goose up)
-	@echo "migrate: pendiente (T03)"; exit 1
+migrate: ## Apply migrations (goose up) as MIGRATION_DATABASE_URL and set app_user's password
+	cd $(BACKEND) && go run ./cmd/migrate
 
 sqlc: ## Regenerate sqlc code
-	@echo "sqlc: pendiente (T03)"; exit 1
+	cd $(BACKEND) && go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION) generate
 
 openapi: ## Regenerate code from api/openapi.yaml
 	@echo "openapi: pendiente (T04)"; exit 1
