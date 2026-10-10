@@ -96,3 +96,12 @@ type LocationSnapshot struct {
 // RehydrateLocation rebuilds a stored location, checking the same invariants
 // as NewLocation.
 func RehydrateLocation(s LocationSnapshot) (*Location, error) { return newLocation(s) }
+
+// RequireActive returns ErrLocationInactive if the location is out of use:
+// stock cannot move in or out of it.
+func (l *Location) RequireActive() error {
+	if !l.active {
+		return ErrLocationInactive
+	}
+	return nil
+}

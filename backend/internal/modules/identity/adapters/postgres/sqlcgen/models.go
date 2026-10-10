@@ -20,6 +20,19 @@ type Category struct {
 	CreatedAt time.Time
 }
 
+type InventorySetting struct {
+	TenantID           uuid.UUID
+	AllowNegativeStock bool
+}
+
+type Location struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	Name      string
+	Active    bool
+	CreatedAt time.Time
+}
+
 type Product struct {
 	ID          uuid.UUID
 	TenantID    uuid.UUID
@@ -46,6 +59,32 @@ type RefreshToken struct {
 	ExpiresAt time.Time
 	CreatedAt time.Time
 	RevokedAt *time.Time
+}
+
+type StockLevel struct {
+	TenantID    uuid.UUID
+	ProductID   uuid.UUID
+	LocationID  uuid.UUID
+	Quantity    decimal.Decimal
+	AverageCost decimal.Decimal
+	UpdatedAt   time.Time
+}
+
+type StockMovement struct {
+	ID               uuid.UUID
+	TenantID         uuid.UUID
+	ProductID        uuid.UUID
+	LocationID       uuid.UUID
+	Type             string
+	Quantity         decimal.Decimal
+	UnitCost         decimal.Decimal
+	BalanceAfter     decimal.Decimal
+	AverageCostAfter decimal.Decimal
+	Reason           string
+	ReferenceKind    *string
+	ReferenceID      pgtype.UUID
+	UserID           uuid.UUID
+	OccurredAt       time.Time
 }
 
 type Tenant struct {

@@ -68,3 +68,18 @@ func TestLocation(t *testing.T) {
 		require.ErrorIs(t, err, domain.ErrInvalidLocationID)
 	})
 }
+
+func TestLocationRequireActive(t *testing.T) {
+	t.Run("una sede activa acepta movimientos", func(t *testing.T) {
+		loc, err := domain.NewLocation(newID(), "Sede centro", testNow)
+		require.NoError(t, err)
+		require.NoError(t, loc.RequireActive())
+	})
+
+	t.Run("una sede inactiva rechaza movimientos con ErrLocationInactive", func(t *testing.T) {
+		loc, err := domain.NewLocation(newID(), "Sede centro", testNow)
+		require.NoError(t, err)
+		loc.Deactivate()
+		require.ErrorIs(t, loc.RequireActive(), domain.ErrLocationInactive)
+	})
+}

@@ -32,6 +32,11 @@ tags:
   - name: catalog
     description: |
       Productos y categorías de la empresa. El dinero viaja como string decimal y el precio no incluye IVA.
+  - name: inventory
+    description: |
+      Sedes, existencias y kardex. Las cantidades están en la unidad base del producto y viajan como string decimal.
+      Cada cambio de stock queda como un movimiento inmutable del kardex. Los costos (`average_cost`, `unit_cost`,
+      `average_cost_after`) solo se envían a quien puede editar el catálogo (`catalog:write`).
 
 # Authorization is declared here and enforced by the API before the request
 # is validated: every operation requires a bearer token unless it says
@@ -571,6 +576,259 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/locations:
+    get:
+      tags: [inventory]
+      operationId: listLocations
+      summary: Listar sedes
+      description: Todas las sedes y bodegas de la empresa, activas o no, ordenadas por nombre.
+      x-permission: inventory:read
+      responses:
+        "200":
+          description: Las sedes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocationList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [inventory]
+      operationId: createLocation
+      summary: Crear una sede
+      x-permission: tenant:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LocationInput"
+      responses:
+        "201":
+          description: Sede creada (activa).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Ya existe una sede con ese nombre (`location_name_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: El nombre no es válido (`invalid_location_name`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/locations/{locationId}/stock:
+    parameters:
+      - $ref: "#/components/parameters/LocationId"
+    get:
+      tags: [inventory]
+      operationId: listStock
+      summary: Existencias de una sede
+      description: |
+        Los productos que han tenido movimientos en la sede, con su cantidad y costo promedio. Un producto sin
+        movimientos no aparece (su existencia es cero).
+      x-permission: inventory:read
+      parameters:
+        - name: product_id
+          in: query
+          description: Solo la existencia de este producto.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de existencias.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockLevelPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/products/{productId}/kardex:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      tags: [inventory]
+      operationId: getKardex
+      summary: Kardex de un producto
+      description: |
+        Los movimientos del producto, del más reciente al más antiguo. `balance_after` es el saldo en la sede
+        del movimiento justo después de él.
+      x-permission: inventory:read
+      parameters:
+        - name: location_id
+          in: query
+          description: Solo los movimientos de esta sede.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página del kardex.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMovementPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/inventory/receipts:
+    post:
+      tags: [inventory]
+      operationId: receiveStock
+      summary: Registrar una entrada de mercancía
+      description: |
+        Suma la cantidad a la existencia de la sede y recalcula el costo promedio ponderado. Sirve también para el
+        inventario inicial.
+      x-permission: inventory:adjust
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiptInput"
+      responses:
+        "201":
+          description: El movimiento registrado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMovement"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: |
+            Algún dato no cumple las reglas (`invalid_quantity`, `invalid_unit_cost`, `product_not_found`,
+            `location_not_found`, `location_inactive`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/inventory/adjustments:
+    post:
+      tags: [inventory]
+      operationId: adjustStock
+      summary: Registrar un ajuste de inventario
+      description: |
+        Corrige la existencia en la cantidad indicada (positiva suma, negativa resta) por un motivo obligatorio. Se
+        valora al costo promedio y no lo cambia.
+      x-permission: inventory:adjust
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdjustmentInput"
+      responses:
+        "201":
+          description: El movimiento registrado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMovement"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: |
+            Algún dato no cumple las reglas (`invalid_quantity`, `adjustment_reason_required`,
+            `adjustment_reason_too_long`, `insufficient_stock`, `product_not_found`, `location_not_found`,
+            `location_inactive`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/inventory/transfers:
+    post:
+      tags: [inventory]
+      operationId: transferStock
+      summary: Trasladar mercancía entre sedes
+      description: |
+        Saca la cantidad de la sede de origen y la entra en la de destino, valorada al costo promedio del origen.
+        Los dos movimientos comparten la misma referencia de traslado.
+      x-permission: inventory:adjust
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferInput"
+      responses:
+        "201":
+          description: Los dos movimientos del traslado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: |
+            Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `insufficient_stock`,
+            `product_not_found`, `location_not_found`, `location_inactive`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   headers:
     SetRefreshCookie:
@@ -615,6 +873,13 @@ components:
         format: uuid
     CategoryId:
       name: categoryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    LocationId:
+      name: locationId
       in: path
       required: true
       schema:
@@ -964,3 +1229,190 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Category"
+    Quantity:
+      type: string
+      description: Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
+      pattern: '^\d{1,14}(\.\d{1,4})?$'
+      example: "2.5"
+    SignedQuantity:
+      type: string
+      description: Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).
+      pattern: '^-?\d{1,14}(\.\d{1,4})?$'
+      example: "-3"
+    LocationInput:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Bodega principal
+    Location:
+      type: object
+      required: [id, name, active, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    LocationList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Location"
+    StockLevel:
+      type: object
+      required: [product_id, location_id, quantity]
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        quantity:
+          $ref: "#/components/schemas/SignedQuantity"
+        average_cost:
+          $ref: "#/components/schemas/Money"
+      description: |
+        La existencia de un producto en una sede. `quantity` es negativa solo si la empresa permite vender sin
+        stock. `average_cost` (costo promedio ponderado, sin IVA) solo se envía a quien tiene `catalog:write`.
+    StockLevelPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockLevel"
+        total:
+          type: integer
+          description: Cantidad total de existencias que cumplen el filtro, sin paginar.
+    DocumentRef:
+      type: object
+      required: [kind, id]
+      properties:
+        kind:
+          type: string
+          enum: [purchase, sale, transfer]
+        id:
+          type: string
+          format: uuid
+    StockMovement:
+      type: object
+      required: [id, product_id, location_id, type, quantity, balance_after, user_id, occurred_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [purchase_in, sale_out, adjustment, transfer_out, transfer_in]
+        quantity:
+          $ref: "#/components/schemas/SignedQuantity"
+        unit_cost:
+          $ref: "#/components/schemas/Money"
+        balance_after:
+          $ref: "#/components/schemas/SignedQuantity"
+        average_cost_after:
+          $ref: "#/components/schemas/Money"
+        reason:
+          type: string
+          description: Motivo del ajuste. Se omite en los demás tipos.
+        reference:
+          $ref: "#/components/schemas/DocumentRef"
+        user_id:
+          type: string
+          format: uuid
+          description: Quién registró el movimiento.
+        occurred_at:
+          type: string
+          format: date-time
+      description: |
+        Un movimiento del kardex. `quantity` es positiva si entra y negativa si sale. `unit_cost` y
+        `average_cost_after` solo se envían a quien tiene `catalog:write`. `reference` se omite si no hay documento.
+    StockMovementPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockMovement"
+        total:
+          type: integer
+          description: Cantidad total de movimientos que cumplen el filtro, sin paginar.
+    ReceiptInput:
+      type: object
+      required: [product_id, location_id, quantity, unit_cost]
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+        unit_cost:
+          $ref: "#/components/schemas/Money"
+    AdjustmentInput:
+      type: object
+      required: [product_id, location_id, quantity, reason]
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        quantity:
+          $ref: "#/components/schemas/SignedQuantity"
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: Bulto roto en la bodega
+    TransferInput:
+      type: object
+      required: [product_id, from_location_id, to_location_id, quantity]
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        from_location_id:
+          type: string
+          format: uuid
+        to_location_id:
+          type: string
+          format: uuid
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+    TransferResult:
+      type: object
+      required: [out, in]
+      properties:
+        out:
+          $ref: "#/components/schemas/StockMovement"
+        in:
+          $ref: "#/components/schemas/StockMovement"

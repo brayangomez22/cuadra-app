@@ -63,7 +63,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Alcance:** `inventory/domain`: `Location` (sede o bodega), `StockMovement` inmutable (tipo: `purchase_in`, `sale_out`, `adjustment`, `transfer_out`, `transfer_in`; cantidad decimal, costo unitario, referencia al documento, usuario y fecha), `StockLevel` por producto y sede. Regla configurable por tenant: permitir o no stock negativo (por defecto NO). Cálculo de **costo promedio ponderado** en las entradas.
 **Tests primero (los más importantes del núcleo):** una salida mayor al stock falla con `ErrInsufficientStock`; un traslado genera dos movimientos que suman cero; costo promedio: 10 und a 1.000 + 10 und a 1.200 = 1.100; un ajuste exige motivo; cantidades fraccionarias (2,5 m) se suman sin error de precisión.
 
-### [ ] T11 · Persistencia y API de inventario
+### [x] T11 · Persistencia y API de inventario
 **Alcance:** contrato en OpenAPI primero. Migraciones de `locations`, `stock_movements` (solo INSERT: sin UPDATE ni DELETE) y `stock_levels`. Registrar un movimiento actualiza el nivel en la misma transacción con `SELECT ... FOR UPDATE`. Endpoints: registrar entrada, ajuste y traslado; consultar existencias por sede; consultar kardex de un producto. Métricas: `cuadra.inventory.movements` (atributo `type`) y `cuadra.inventory.insufficient_stock`.
 **Tests primero (integración):** **concurrencia**: dos salidas simultáneas por el total del stock → solo una pasa; aislamiento multi-tenant; el kardex reconstruye el stock actual.
 **Revisa tú:** el bloqueo y el orden de las operaciones dentro de la transacción.
