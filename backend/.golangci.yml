@@ -23,6 +23,7 @@ linters:
       locale: US
       ignore-rules:
         - contraseña
+        - inventario
   exclusions:
     rules:
       - path: _test\.go

@@ -30,7 +30,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Tests primero:** una request que no cumple el spec recibe 400 con el formato de error estándar; un error de dominio mapeado devuelve el status y el `code` correctos.
 **Aceptación:** `/healthz` y `/readyz` están descritos en el spec y el código se genera sin diferencias.
 
-### [ ] T05 · Dominio de identidad
+### [x] T05 · Dominio de identidad
 **Alcance:** módulo `identity/domain`: `Tenant` (nombre, NIT, estado), `User` (email, nombre, hash de contraseña, rol, activo), value objects `Email` (normaliza y valida) y `Role` (owner/admin/cashier/warehouse), y `Permission` con una matriz rol→permisos (`catalog:write`, `inventory:adjust`, `sales:create`, `users:manage`...). Hashing con argon2id detrás de una interfaz `PasswordHasher`. Validación del NIT colombiano con dígito de verificación.
 **Tests primero:** email inválido rechazado; NIT con DV incorrecto rechazado (usa NITs reales públicos como casos); el cajero no tiene `catalog:write`; el owner tiene todos los permisos; la contraseña se verifica contra su hash.
 
