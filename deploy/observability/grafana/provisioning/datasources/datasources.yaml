@@ -1,0 +1,53 @@
+# Grafana datasources (local), with logs ↔ traces correlation:
+# - Tempo → Loki: "Logs for this span" queries Loki by the trace ID. With OTLP
+#   the trace ID is structured metadata, not part of the log line, so the
+#   default line filter (filterByTraceID) would find nothing.
+# `$$` escapes `$` from Grafana's environment variable expansion.
+# - Loki → Tempo: the trace_id structured metadata links to the trace.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+        tags:
+          - key: service.name
+            value: service_name
+        customQuery: true
+        query: '{$${__tags}} | trace_id="$${__span.traceId}"'
+      tracesToMetrics:
+        datasourceUid: prometheus
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: loki
+
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      derivedFields:
+        - name: TraceID
+          matcherType: label
+          matcherRegex: trace_id
+          datasourceUid: tempo
+          url: "$${__value.raw}"
+          urlDisplayLabel: Ver traza

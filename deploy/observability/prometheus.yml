@@ -1,0 +1,16 @@
+# Prometheus (local). Metrics arrive from the Collector through the native OTLP
+# receiver (--web.enable-otlp-receiver); nothing is scraped yet.
+global:
+  scrape_interval: 15s
+
+otlp:
+  # Copy these resource attributes to every series so they can be filtered on.
+  promote_resource_attributes:
+    - service.name
+    - service.version
+    - deployment.environment.name
+
+storage:
+  tsdb:
+    # OTLP pushes can arrive slightly out of order.
+    out_of_order_time_window: 30m

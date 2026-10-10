@@ -15,7 +15,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Tests primero:** `/healthz` responde 200 + JSON; el middleware de recover convierte un panic en 500 con el formato de error estándar; config falla si falta `DATABASE_URL`; el apagado elegante espera las requests en curso.
 **Aceptación:** `make up && make run` responde en `/healthz`; el primer PR pasa el CI.
 
-### [ ] T02 · Observabilidad base (OpenTelemetry + stack Grafana local)
+### [x] T02 · Observabilidad base (OpenTelemetry + stack Grafana local)
 **Alcance:** `internal/platform/telemetry`: inicializa el SDK de OpenTelemetry (traces, métricas y logs vía OTLP), con nombre de servicio, versión y ambiente como atributos de recurso, y lo apaga de forma ordenada. Middleware `otelhttp` en el servidor. Handler de `slog` que agrega `trace_id`, `span_id` y `request_id` a cada log (y bridge `otelslog` para enviarlos por OTLP). En `deploy/observability/`: configuración del **OpenTelemetry Collector**, **Prometheus**, **Loki**, **Tempo** y **Grafana**, con datasources provisionados y la correlación logs ↔ trazas configurada. `docker compose --profile observability up` (`make obs-up`). Con `OTEL_SDK_DISABLED=true` la app funciona igual sin el stack.
 **Tests primero:** el handler de slog incluye `trace_id` cuando hay un span en el contexto y lo omite cuando no; una request a `/healthz` produce un span (usa un exporter en memoria, `tracetest`).
 **Aceptación:** con `make obs-up` + `make run`, una request aparece en Tempo y desde la traza se salta a sus logs en Loki dentro de Grafana.
