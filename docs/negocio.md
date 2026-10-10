@@ -22,7 +22,7 @@ Decisiones de negocio que el código no resuelve pero de las que depende. **Toda
 | Concepto | Costo mensual estimado por tenant |
 |---|---|
 | Infraestructura (Azure: cómputo + BD + almacenamiento, prorrateado) | [POR CALCULAR] |
-| Documentos DIAN (costo por documento × documentos/mes de una ferretería típica) | [POR CALCULAR tras T39] |
+| Documentos DIAN (costo por documento × documentos/mes de una ferretería típica) | [POR CALCULAR tras T35] |
 | WhatsApp (mensajes por plantilla, V2) | [POR CALCULAR] |
 | Observabilidad, correo, Sentry, analítica | [POR CALCULAR] |
 | **Total** | |
@@ -32,7 +32,7 @@ Decisiones de negocio que el código no resuelve pero de las que depende. **Toda
 
 ## 3. Métricas de éxito del piloto
 
-Se definen **antes** de empezar. Al final del piloto se comparan con lo medido (T48).
+Se definen **antes** de empezar. Al final del piloto se comparan con lo medido (T40).
 
 | Métrica | Propuesta | Meta |
 |---|---|---|
@@ -40,7 +40,7 @@ Se definen **antes** de empezar. Al final del piloto se comparan con lo medido (
 | Retención | ¿Siguen usándolo a diario? | [sí, en la semana 8] |
 | Tiempo hasta la primera venta | Desde el registro | [≤ 3 días] |
 | Velocidad del POS | Tiempo de una venta de 5 productos | [≤ 20 s] |
-| Exactitud de inventario | Diferencia en la primera toma física tras 1 mes (T52) | [≤ 3% del valor] |
+| Exactitud de inventario | Diferencia en la primera toma física tras 1 mes (T30) | [≤ 3% del valor] |
 | Disposición a pagar | Al final del piloto, ¿aceptan el precio? | [≥ 2 de 3–5 pilotos] |
 | NPS / comentario cualitativo | "¿Volverías a tu sistema anterior?" | |
 
@@ -57,8 +57,8 @@ Se definen **antes** de empezar. Al final del piloto se comparan con lo medido (
 
 1. Firma de términos, política de datos y acuerdo de encargo de tratamiento (T50).
 2. Configuración de la resolución DIAN y del proveedor tecnológico.
-3. Importación de productos e inventario (T35), idealmente hecha por Brayan con el cliente.
-4. Toma física inicial para arrancar con el inventario cuadrado (T52).
+3. Importación de productos e inventario (T29), idealmente hecha por Brayan con el cliente.
+4. Toma física inicial para arrancar con el inventario cuadrado (T30).
 5. Capacitación del dueño y los cajeros.
 6. Primera semana con acompañamiento (visita o llamada diaria).
 
@@ -73,7 +73,15 @@ Se definen **antes** de empezar. Al final del piloto se comparan con lo medido (
 
 | Riesgo | Mitigación |
 |---|---|
-| Costo DIAN por documento hace inviable el precio | Calcular en T39 antes de comprometer precios |
-| La ferretería no confía en el inventario del sistema | Toma física inicial (T52) e importación asistida |
-| Caída del sistema en horario de venta | Alertas (T18/T26), runbooks (T27), modo sin internet (V2-5) |
+| Costo DIAN por documento hace inviable el precio | Calcular en T35 antes de comprometer precios |
+| La ferretería no confía en el inventario del sistema | Toma física inicial (T30) e importación asistida |
+| Caída del sistema en horario de venta | Alertas (T24/T47), runbooks (T48), modo sin internet (V2-5) |
 | Un solo desarrollador (bus factor) | Documentación, ADRs, runbooks e infraestructura como código |
+
+## 8. Insumos de la validación
+
+Hallazgos de las visitas a ferreterías (el detalle de cada visita está en la ficha del guion). Se usan para repriorizar antes de la fase 2.
+
+| Hallazgo | Veces | Cita textual | ¿Pilotos interesados? |
+|---|---|---|---|
+| | | | |
