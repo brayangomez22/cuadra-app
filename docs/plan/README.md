@@ -85,8 +85,8 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
   ```
   /tarea TXX       → crea la rama, plan, apruebas, tests en rojo, implementación, verificación
   git diff         → revisas tú
-  /cerrar-tarea    → make check, commit, push, PR y espera el CI (no hace merge)
-  gh pr merge --squash --delete-branch && git switch main && git pull
+  /cerrar-tarea    → make check, commit, push, PR, espera el CI y, si pasa completo,
+                     merge con squash, borra la rama y vuelve a main actualizada
   /clear           → contexto limpio para la siguiente tarea
   ```
 - Al terminar una tarea se marca `[x]` en el archivo de su fase (lo hace `/tarea`).
