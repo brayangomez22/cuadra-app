@@ -72,7 +72,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 
 ## Frontend base
 
-### [ ] T12 · Esqueleto del frontend
+### [x] T12 · Esqueleto del frontend
 **Alcance:** Vite + React + TS en `frontend/`, alias `@/` → `src/` (en Vite y tsconfig), `sass-embedded`, CSS Modules con `localsConvention: 'camelCaseOnly'` y nombres legibles en desarrollo (`generateScopedName`, ver `docs/estilos.md`), tipos para `*.module.scss`, `clsx`, stylelint configurado según `docs/estilos.md` (`npm run lint:styles`), React Router, TanStack Query. **Cliente de API tipado generado desde `api/openapi.yaml`** con `openapi-typescript` + `openapi-fetch` (`npm run gen:api`), con refresh automático del token. Vitest + Testing Library. Estructura vacía de `src/styles/` con `main.scss` importado en `main.tsx`. Job de frontend en el CI (lint, lint:styles, test, build, y verificación de que el cliente generado está al día). **Sin pantallas todavía.**
 **Tests primero:** el cliente reintenta una vez tras refrescar el token ante un 401 y, si el refresh falla, cierra la sesión; stylelint rechaza un color hex dentro de un `.module.scss` y una clase que no esté en camelCase (fixture de prueba).
 
