@@ -116,7 +116,7 @@ PRODUCT.md                   # contexto de producto y usuarios para el diseño d
 4. **Definición de terminado:** `make check` en verde (y los checks del frontend si aplica), spans y métricas del alcance agregados, spec OpenAPI actualizado y código regenerado sin diferencias. No desactives ni saltes tests.
 5. **Dependencias nuevas:** pregunta antes de agregar cualquier librería, incluso si está en el stack de arriba pero aún no se usa.
 6. **Migraciones:** nunca edites una migración ya existente; crea una nueva. Cada migración tiene su `-- +goose Down`.
-7. **Ramas y commits:** una rama por tarea (`feat/T05-identity-domain`, la crea `/tarea`) y un PR con CI en verde. Tú **no** haces commits, push ni PRs salvo que Brayan ejecute `/cerrar-tarea` o te lo pida explícitamente. **Nunca** haces merge, push a `main`, `push --force` ni reescribes historia publicada.
+7. **Ramas y commits:** una rama por tarea (`feat/T05-identity-domain`, la crea `/tarea`) y un PR con CI en verde. Tú **no** haces commits, push ni PRs salvo que Brayan ejecute `/cerrar-tarea` o te lo pida explícitamente. El único merge permitido es el de `/cerrar-tarea`: el PR de la tarea, con squash y solo con el CI completo en verde. **Nunca** haces push directo a `main`, `push --force`, merge con `--admin` ni reescribes historia publicada.
 8. Al terminar: resume qué cambió, qué debe revisar Brayan con lupa (lógica de dinero, stock, permisos, tenant, seguridad) y propone el mensaje de commit (Conventional Commits en inglés: `feat(catalog): add product search`).
 
 ## Convenciones de código

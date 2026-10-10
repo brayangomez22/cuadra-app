@@ -86,8 +86,8 @@ Dónde está cada funcionalidad del producto:
   ```
   /tarea TXX       → crea la rama, plan, apruebas, tests en rojo, implementación, verificación
   git diff         → revisas tú
-  /cerrar-tarea    → make check, commit, push, PR y espera el CI (no hace merge)
-  gh pr merge --squash --delete-branch && git switch main && git pull
+  /cerrar-tarea    → make check, commit, push, PR, espera el CI y, si pasa completo,
+                     gh pr merge --squash --delete-branch && git switch main && git pull
   /clear           → contexto limpio para la siguiente tarea
   ```
 - Al terminar una tarea se marca `[x]` en el archivo de su fase (lo hace `/tarea`).
