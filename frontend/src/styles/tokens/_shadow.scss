@@ -1,0 +1,13 @@
+// Elevation per theme: dark surfaces need a denser shadow to read as raised.
+$light: (
+  'sm': 0 1px 2px rgb(26 25 23 / 8%),
+  'md': 0 2px 8px rgb(26 25 23 / 12%),
+  'lg': 0 8px 24px rgb(26 25 23 / 16%),
+);
+
+// Dark theme.
+$dark: (
+  'sm': 0 1px 2px rgb(0 0 0 / 40%),
+  'md': 0 2px 8px rgb(0 0 0 / 50%),
+  'lg': 0 8px 24px rgb(0 0 0 / 60%),
+);

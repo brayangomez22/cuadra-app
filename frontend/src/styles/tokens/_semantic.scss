@@ -1,0 +1,63 @@
+// Semantic color roles per theme. themes/ emits them as --color-<role>.
+// Every foreground/background pair is listed in styles-check/tokens.test.ts,
+// and its contrast table lives in docs/estilos.md.
+@use 'sass:map';
+@use 'primitives' as p;
+
+$light: (
+  'bg-canvas': map.get(p.$neutral, 100),
+  'bg-surface': map.get(p.$neutral, 0),
+  'bg-subtle': map.get(p.$neutral, 150),
+  'text-default': map.get(p.$neutral, 900),
+  'text-muted': map.get(p.$neutral, 600),
+  'text-on-action': map.get(p.$neutral, 900),
+  'text-on-danger': map.get(p.$neutral, 0),
+  'border-default': map.get(p.$neutral, 200),
+  'border-strong': map.get(p.$neutral, 500),
+  'border-accent': map.get(p.$orange, 650),
+  // Dark text on orange: hover goes lighter and active goes darker, both above 4.5:1.
+  'action-primary': map.get(p.$orange, 550),
+  'action-primary-hover': map.get(p.$orange, 500),
+  'action-primary-active': map.get(p.$orange, 650),
+  'action-danger': map.get(p.$red, 700),
+  'action-danger-hover': map.get(p.$red, 800),
+  'feedback-danger': map.get(p.$red, 700),
+  'feedback-danger-subtle': map.get(p.$red, 50),
+  'feedback-success': map.get(p.$green, 700),
+  'feedback-success-subtle': map.get(p.$green, 50),
+  'feedback-warning': map.get(p.$amber, 800),
+  'feedback-warning-subtle': map.get(p.$amber, 50),
+  'feedback-info': map.get(p.$blue, 700),
+  'feedback-info-subtle': map.get(p.$blue, 50),
+  'focus-ring': map.get(p.$neutral, 900),
+  'overlay': rgb(26 25 23 / 50%),
+);
+
+// Same roles, dark values. The test checks both maps have the same keys.
+$dark: (
+  'bg-canvas': map.get(p.$neutral, 950),
+  'bg-surface': map.get(p.$neutral, 850),
+  'bg-subtle': map.get(p.$neutral, 800),
+  'text-default': map.get(p.$neutral, 50),
+  'text-muted': map.get(p.$neutral, 250),
+  'text-on-action': map.get(p.$neutral, 900),
+  'text-on-danger': map.get(p.$neutral, 900),
+  'border-default': map.get(p.$neutral, 750),
+  'border-strong': map.get(p.$neutral, 550),
+  'border-accent': map.get(p.$orange, 500),
+  'action-primary': map.get(p.$orange, 500),
+  'action-primary-hover': map.get(p.$orange, 400),
+  'action-primary-active': map.get(p.$orange, 600),
+  'action-danger': map.get(p.$red, 400),
+  'action-danger-hover': map.get(p.$red, 300),
+  'feedback-danger': map.get(p.$red, 400),
+  'feedback-danger-subtle': map.get(p.$red, 950),
+  'feedback-success': map.get(p.$green, 400),
+  'feedback-success-subtle': map.get(p.$green, 950),
+  'feedback-warning': map.get(p.$amber, 400),
+  'feedback-warning-subtle': map.get(p.$amber, 950),
+  'feedback-info': map.get(p.$blue, 300),
+  'feedback-info-subtle': map.get(p.$blue, 950),
+  'focus-ring': map.get(p.$orange, 300),
+  'overlay': rgb(0 0 0 / 60%),
+);

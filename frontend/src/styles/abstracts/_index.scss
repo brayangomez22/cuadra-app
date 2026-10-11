@@ -1,0 +1,4 @@
+// What modules import: @use '@/styles/abstracts' as *;
+// Only mixins and functions: it emits no CSS.
+@forward 'functions';
+@forward 'mixins';

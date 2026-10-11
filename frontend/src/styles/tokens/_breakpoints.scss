@@ -1,0 +1,9 @@
+// Mobile-first min-widths, read only by the respond-to() mixin.
+@use '../abstracts/functions' as f;
+
+$breakpoints: (
+  'sm': f.rem(640px),
+  'md': f.rem(768px),
+  'lg': f.rem(1024px),
+  'xl': f.rem(1280px),
+);

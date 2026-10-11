@@ -1,0 +1,12 @@
+@use '../abstracts' as *;
+
+// Fallback ring for anything a component forgot. Components use focus-ring().
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+// Visible only to screen readers. camelCase like every class (stylelint).
+.srOnly {
+  @include visually-hidden;
+}

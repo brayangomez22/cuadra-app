@@ -1,0 +1,58 @@
+// Theme-independent scales as custom properties on :root.
+// Colors and shadows change per theme and live in themes/.
+@use 'sass:map';
+@use '../tokens/spacing';
+@use '../tokens/typography' as type;
+@use '../tokens/radius';
+@use '../tokens/motion';
+@use '../tokens/z-index' as z;
+@use '../tokens/sizes';
+
+:root {
+  @each $step, $value in spacing.$scale {
+    --space-#{$step}: #{$value};
+  }
+
+  --font-family-sans: #{type.$family-sans};
+  --font-family-mono: #{type.$family-mono};
+
+  @each $name, $value in type.$size {
+    --font-size-#{$name}: #{$value};
+  }
+
+  @each $name, $value in type.$weight {
+    --font-weight-#{$name}: #{$value};
+  }
+
+  @each $name, $value in type.$line-height {
+    --line-height-#{$name}: #{$value};
+  }
+
+  @each $name, $value in radius.$scale {
+    --radius-#{$name}: #{$value};
+  }
+
+  @each $name, $value in motion.$duration {
+    --duration-#{$name}: #{$value};
+  }
+
+  --ease-standard: #{motion.$ease-standard};
+
+  @each $name, $value in z.$layers {
+    --z-#{$name}: #{$value};
+  }
+
+  --size-touch-min: #{sizes.$touch-min};
+
+  @each $name, $value in sizes.$pointer-fine {
+    --size-#{$name}: #{$value};
+  }
+}
+
+@media (pointer: coarse) {
+  :root {
+    @each $name, $value in sizes.$pointer-coarse {
+      --size-#{$name}: #{$value};
+    }
+  }
+}

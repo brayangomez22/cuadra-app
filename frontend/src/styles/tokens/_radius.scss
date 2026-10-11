@@ -1,0 +1,8 @@
+@use '../abstracts/functions' as f;
+
+$scale: (
+  'sm': f.rem(4px),
+  'md': f.rem(8px),
+  'lg': f.rem(12px),
+  'full': 9999px,
+);

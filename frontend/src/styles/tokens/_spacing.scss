@@ -1,0 +1,15 @@
+// 4px base. Emitted as --space-<step>.
+@use '../abstracts/functions' as f;
+
+$scale: (
+  1: f.rem(4px),
+  2: f.rem(8px),
+  3: f.rem(12px),
+  4: f.rem(16px),
+  5: f.rem(20px),
+  6: f.rem(24px),
+  8: f.rem(32px),
+  10: f.rem(40px),
+  12: f.rem(48px),
+  16: f.rem(64px),
+);

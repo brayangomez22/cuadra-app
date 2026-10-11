@@ -1,0 +1,70 @@
+@use 'sass:map';
+@use 'sass:string';
+@use '../tokens/breakpoints' as bp;
+@use '../tokens/sizes';
+
+// Mobile-first: styles inside apply from the breakpoint up.
+@mixin respond-to($name) {
+  @if not map.has-key(bp.$breakpoints, $name) {
+    @error 'Unknown breakpoint "#{$name}". Use one of: #{map.keys(bp.$breakpoints)}.';
+  }
+
+  @media (min-width: map.get(bp.$breakpoints, $name)) {
+    @content;
+  }
+}
+
+// Visible ring for keyboard focus only. Use it on everything interactive.
+@mixin focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+// Hidden on screen, still read by screen readers.
+// Hover styles only where hover exists: on touch screens a tap would leave
+// them stuck. Never put an action behind hover alone.
+@mixin hover {
+  @media (hover: hover) {
+    &:hover {
+      @content;
+    }
+  }
+}
+
+@mixin visually-hidden {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// 44 × 44px minimum hit area (WCAG 2.5.5), mandatory on POS controls.
+@mixin touch-target {
+  min-block-size: sizes.$touch-min;
+  min-inline-size: sizes.$touch-min;
+}
+
+// Prices and quantities: tabular figures so columns line up.
+@mixin numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+// Wrap every animation or transition: it only runs if the user allows motion.
+@mixin reduced-motion-safe {
+  @media (prefers-reduced-motion: no-preference) {
+    @content;
+  }
+}

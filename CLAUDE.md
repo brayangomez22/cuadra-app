@@ -134,6 +134,7 @@ La UI es una prioridad del producto, no un detalle. **Antes de tocar cualquier `
 - En los módulos **solo tokens semánticos** (`var(--color-text-muted)`, `var(--space-4)`). Nada de hex, rgb ni px sueltos (excepto `0` y bordes de `1px`).
 - Usa siempre `@use`, nunca `@import`. Anidación máxima de 3 niveles. Sin `!important` ni selectores de ID.
 - Las variantes se expresan con `data-*` (`data-variant="danger"`, `data-size="lg"`). Los estados usan atributos nativos o ARIA (`:disabled`, `[aria-invalid="true"]`, `[aria-expanded="true"]`, `[aria-busy="true"]`, el `[data-state]` de Radix) y no clases sueltas.
+- **Totalmente responsive:** toda pantalla es usable de 360px a 1920px (celular, tablet y PC), en vertical y horizontal y con zoom al 200%, sin scroll horizontal de la página y sin acciones que dependan solo de hover. Las reglas y los anchos de referencia están en `docs/estilos.md` ("Responsive").
 - Mobile-first, con el mixin `respond-to()`. Áreas táctiles de 44px mínimo en el POS. `:focus-visible` siempre visible. Respeta `prefers-reduced-motion`.
 - Antes de crear un componente nuevo, revisa si ya existe en `shared/ui/`. Las pantallas componen componentes de `shared/ui`; no reinventan botones ni inputs.
 - `npm run lint:styles` (stylelint) debe pasar.

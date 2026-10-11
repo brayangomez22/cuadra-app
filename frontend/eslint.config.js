@@ -22,7 +22,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['*.{js,mjs,ts}', 'stylelint/**/*.ts'],
+    files: ['*.{js,mjs,ts}', 'stylelint/**/*.ts', 'styles-check/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
 ]);
