@@ -6,14 +6,14 @@ Este directorio es lo único que cambia de fase en fase. `CLAUDE.md` contiene la
 
 ## Fase activa
 
-> **Fase 1 — Núcleo** → [`fase-1-nucleo.md`](fase-1-nucleo.md)
+> **Fase 2 — Vender** → [`fase-2-vender.md`](fase-2-vender.md)
 
 ## Fases en orden
 
 | # | Fase | Tareas | Archivo | Estado | Qué se logra |
 |---|---|---|---|---|---|
-| 1 | Núcleo | T01–T17 | `fase-1-nucleo.md` | 🟡 activa | Cimientos técnicos (CI, observabilidad, BD multi-tenant, OpenAPI), identidad, catálogo, inventario, UI base y dominio de ventas |
-| 2 | Vender | T18–T25 | `fase-2-vender.md` | ⚪ | River, Sentry, API y pantalla del POS, tirilla, caja, dashboards y E2E |
+| 1 | Núcleo | T01–T17 | `fase-1-nucleo.md` | ✅ completa | Cimientos técnicos (CI, observabilidad, BD multi-tenant, OpenAPI), identidad, catálogo, inventario, UI base y dominio de ventas |
+| 2 | Vender | T18–T25 | `fase-2-vender.md` | 🟡 activa | River, Sentry, API y pantalla del POS, tirilla, caja, dashboards y E2E |
 | 3 | Inventario, clientes y compras | T26–T34 | `fase-3-inventario-clientes.md` | ⚪ | Fraccionamiento, escáner con cámara, stock mínimo, importación de Excel, toma física, clientes, fiados, compras y demo |
 | 4 | Facturación, control y reportes | T35–T44 | `fase-4-facturacion-control.md` | ⚪ | DIAN, seguridad, feature flags, analítica, usuarios y auditoría, reportes, tablero y primeros pasos |
 | 5 | Producción y piloto | T45–T50 | `fase-5-produccion-piloto.md` | ⚪ | Terraform, CD, monitoreo en producción, backups, exportación de datos y legal → **arranca el piloto** |
@@ -69,7 +69,7 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
 
 ## Alcance de la fase activa
 
-**Sí se construye:** lo listado en `fase-1-nucleo.md`.
+**Sí se construye:** lo listado en `fase-2-vender.md`.
 
 **No se implementa todavía**, pero el modelo no debe bloquearlo:
 - Fraccionamiento de unidades (T26) → `Product` ya tiene `base_unit` y las cantidades son decimales.
