@@ -10,7 +10,7 @@ OPENAPI_SPEC := $(CURDIR)/api/openapi.yaml
 export
 
 .DEFAULT_GOAL := help
-.PHONY: help up down run test test-int lint check migrate sqlc openapi obs-up obs-down
+.PHONY: help up down run test test-int lint check migrate sqlc openapi obs-up obs-down jobs-ui
 
 help: ## List available commands
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -19,7 +19,7 @@ up: ## Start Postgres (docker compose)
 	docker compose up -d --wait postgres
 
 down: ## Stop local containers
-	docker compose --profile observability down
+	docker compose --profile observability --profile jobs down
 
 run: ## Run the API on :8080
 	cd $(BACKEND) && go run ./cmd/api
@@ -48,6 +48,9 @@ openapi: ## Regenerate code from api/openapi.yaml (one package per oapi-codegen.
 		echo "oapi-codegen $$cfg"; \
 		(cd "$$(dirname "$$cfg")" && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) -config oapi-codegen.yaml $(OPENAPI_SPEC)) || exit 1; \
 	done
+
+jobs-ui: ## Start River UI to browse background jobs (:8081, development only)
+	docker compose --profile jobs up -d riverui
 
 obs-up: ## Start the observability stack (Grafana on :3000)
 	docker compose --profile observability up -d otel-collector prometheus loki tempo grafana

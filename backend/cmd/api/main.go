@@ -21,6 +21,7 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/config"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/jobs"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/logger"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/telemetry"
 )
@@ -84,6 +85,18 @@ func run() error {
 	}
 	defer database.Close()
 
+	// Workers run in this process. Modules register theirs here when they add a
+	// job kind; until then the client only enqueues.
+	jobClient, err := jobs.New(jobs.Config{
+		DB:             database,
+		Logger:         log,
+		TracerProvider: otel.GetTracerProvider(),
+		MeterProvider:  otel.GetMeterProvider(),
+	})
+	if err != nil {
+		return err
+	}
+
 	tokens, err := auth.NewJWT(cfg.JWTSecret, accessTokenTTL)
 	if err != nil {
 		return err
@@ -137,9 +150,21 @@ func run() error {
 	}
 	srv := httpx.NewServer(cfg.HTTPAddr, handler, cfg.ShutdownTimeout)
 
-	log.InfoContext(ctx, "api starting", slog.String("addr", cfg.HTTPAddr))
-	if err := srv.Run(ctx); err != nil {
+	if err := jobClient.Start(ctx); err != nil {
 		return err
+	}
+	log.InfoContext(ctx, "api starting", slog.String("addr", cfg.HTTPAddr))
+	runErr := srv.Run(ctx)
+
+	// After the HTTP server drains, so no request enqueues while the workers
+	// stop. ctx is canceled by now; the stop gets its own deadline.
+	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), cfg.ShutdownTimeout)
+	defer cancel()
+	if err := jobClient.Stop(stopCtx); err != nil {
+		log.WarnContext(stopCtx, "job workers did not stop cleanly", slog.Any("error", err))
+	}
+	if runErr != nil {
+		return runErr
 	}
 	log.InfoContext(ctx, "api stopped")
 	return nil
