@@ -99,6 +99,6 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 
 ## Ventas
 
-### [ ] T17 · Dominio de ventas (POS sin DIAN todavía)
+### [x] T17 · Dominio de ventas (POS sin DIAN todavía)
 **Alcance:** `sales/domain`: `Sale` con líneas (producto, cantidad decimal, precio unitario, descuento, IVA) y pagos (efectivo, tarjeta, Nequi, Daviplata, transferencia; puede haber varios). Totales: subtotal, descuentos, IVA por tasa y total. La venta solo se confirma si la suma de los pagos ≥ total; se calcula el cambio en efectivo. Al confirmarse, el puerto `StockReserver` (implementado por inventario) registra las salidas.
 **Tests primero:** totales con varias tasas de IVA (0%, 5%, 19%) y redondeo correcto; un descuento mayor al permitido para el rol cajero se rechaza; pago insuficiente → error; cambio correcto con pago mixto.

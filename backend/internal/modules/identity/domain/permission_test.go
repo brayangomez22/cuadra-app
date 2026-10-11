@@ -34,6 +34,8 @@ func TestRolePermissions(t *testing.T) {
 	}{
 		{name: "el cajero no tiene catalog:write", role: domain.RoleCashier, perm: domain.PermCatalogWrite, want: false},
 		{name: "el cajero puede vender", role: domain.RoleCashier, perm: domain.PermSalesCreate, want: true},
+		{name: "el cajero no tiene sales:discount", role: domain.RoleCashier, perm: domain.PermSalesDiscount, want: false},
+		{name: "el admin descuenta sin tope", role: domain.RoleAdmin, perm: domain.PermSalesDiscount, want: true},
 		{name: "el bodeguero puede ajustar inventario", role: domain.RoleWarehouse, perm: domain.PermInventoryAdjust, want: true},
 		{name: "el bodeguero no puede vender", role: domain.RoleWarehouse, perm: domain.PermSalesCreate, want: false},
 		{name: "el admin gestiona usuarios", role: domain.RoleAdmin, perm: domain.PermUsersManage, want: true},
