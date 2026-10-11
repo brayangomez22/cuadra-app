@@ -1,6 +1,6 @@
 # PRODUCT.md — contexto de producto para el diseño de UI
 
-> Borrador escrito a mano en T13 (no generado con `/impeccable init`). Fuentes: `docs/negocio.md`, `docs/estilos.md` §6 y `CLAUDE.md`. Las afirmaciones marcadas con **[validar]** salen de suposiciones y se confirman en las visitas a ferreterías.
+> Borrador escrito a mano en T13 (no generado con `/impeccable init`). Fuentes: `docs/negocio.md`, `docs/estilos.md` ("Particularidades de este producto") y `CLAUDE.md`. Las afirmaciones marcadas con **[validar]** salen de suposiciones y se confirman en las visitas a ferreterías.
 
 ## Qué es
 

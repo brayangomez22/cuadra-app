@@ -22,16 +22,24 @@
   }
 }
 
-// Hidden on screen, still read by screen readers.
 // Hover styles only where hover exists: on touch screens a tap would leave
 // them stuck. Never put an action behind hover alone.
-@mixin hover {
+// $except skips a state, for example `@include hover(':disabled')`.
+@mixin hover($except: null) {
   @media (hover: hover) {
-    &:hover {
-      @content;
+    @if $except {
+      &:hover:not(#{$except}) {
+        @content;
+      }
+    } @else {
+      &:hover {
+        @content;
+      }
     }
   }
 }
+
+// Hidden on screen, still read by screen readers.
 
 @mixin visually-hidden {
   position: absolute;

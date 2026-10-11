@@ -1,0 +1,87 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+// 44px hit area around a 24px box.
+.control {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+
+  @include touch-target;
+}
+
+.input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+  opacity: 0;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-lg);
+  color: var(--color-text-on-action);
+  background: var(--color-bg-surface);
+  pointer-events: none;
+
+  .input:checked + & {
+    border-color: var(--color-action-primary);
+    background: var(--color-action-primary);
+  }
+
+  .input:focus-visible + & {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .input:disabled + & {
+    opacity: 0.5;
+  }
+}
+
+.check {
+  opacity: 0;
+
+  .input:checked + .box & {
+    opacity: 1;
+  }
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  padding-block-start: var(--space-3);
+}
+
+.label {
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-default);
+  cursor: pointer;
+}
+
+.hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

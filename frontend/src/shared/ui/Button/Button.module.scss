@@ -1,0 +1,113 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-block-size: var(--size-control);
+  max-inline-size: 100%;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-on-action);
+  background: var(--color-action-primary);
+  cursor: pointer;
+  user-select: none;
+
+  @include touch-target;
+  @include focus-ring;
+
+  @include reduced-motion-safe {
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  @include hover(':disabled') {
+    background: var(--color-action-primary-hover);
+  }
+
+  &:active:not(:disabled) {
+    background: var(--color-action-primary-active);
+  }
+
+  &[aria-busy='true'] {
+    cursor: progress;
+    opacity: 0.8;
+  }
+
+  &[data-variant='secondary'] {
+    border-color: var(--color-border-strong);
+    color: var(--color-text-default);
+    background: var(--color-bg-surface);
+
+    @include hover(':disabled') {
+      background: var(--color-bg-subtle);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--color-bg-subtle);
+    }
+  }
+
+  &[data-variant='ghost'] {
+    color: var(--color-text-default);
+    background: transparent;
+
+    @include hover(':disabled') {
+      background: var(--color-bg-subtle);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--color-bg-subtle);
+    }
+  }
+
+  &[data-variant='danger'] {
+    color: var(--color-text-on-danger);
+    background: var(--color-action-danger);
+
+    @include hover(':disabled') {
+      background: var(--color-action-danger-hover);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--color-action-danger-hover);
+    }
+  }
+
+  // Disabled looks the same in every variant and theme: gray and readable,
+  // never a faded orange that reads as another color. Loading keeps its
+  // variant (it is busy, not unavailable).
+  &:disabled:not([aria-busy='true']) {
+    border-color: var(--color-border-default);
+    color: var(--color-text-muted);
+    background: var(--color-bg-subtle);
+    cursor: not-allowed;
+  }
+
+  &[data-variant='ghost']:disabled:not([aria-busy='true']) {
+    border-color: transparent;
+    background: transparent;
+  }
+
+  &[data-size='lg'] {
+    padding-inline: var(--space-6);
+    font-size: var(--font-size-lg);
+  }
+}
+
+.icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 1.25em;
+}
+
+.label {
+  min-inline-size: 0;
+
+  @include truncate;
+}

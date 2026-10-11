@@ -1,0 +1,46 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--size-control);
+  block-size: var(--size-control);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xl);
+  color: var(--color-text-default);
+  background: transparent;
+  cursor: pointer;
+
+  @include touch-target;
+  @include focus-ring;
+
+  @include reduced-motion-safe {
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  @include hover(':disabled') {
+    background: var(--color-bg-subtle);
+  }
+
+  &:active:not(:disabled) {
+    background: var(--color-bg-subtle);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &[data-variant='secondary'] {
+    border-color: var(--color-border-strong);
+    background: var(--color-bg-surface);
+  }
+
+  &[data-variant='danger'] {
+    color: var(--color-feedback-danger);
+  }
+}

@@ -117,7 +117,7 @@ describe('tokens de diseño', () => {
     expect(Object.fromEntries(system)).toEqual(Object.fromEntries(dark));
   });
 
-  it('main.scss compila y expone las escalas de espacio, tipografía, radios, sombras, movimiento y capas', () => {
+  it('main.scss compila y expone las escalas de espacio, tipografía, radios, sombras, movimiento, capas y tamaños', () => {
     const expected = [
       ...['1', '2', '3', '4', '5', '6', '8', '10', '12', '16'].map((n) => `--space-${n}`),
       ...['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', 'display'].map((s) => `--font-size-${s}`),
@@ -135,6 +135,7 @@ describe('tokens de diseño', () => {
       '--size-control',
       '--size-row',
       '--size-touch-min',
+      ...['dialog-sm', 'dialog-md', 'toast', 'page'].map((s) => `--size-${s}`),
     ];
     expect(expected.filter((name) => !light.has(name))).toEqual([]);
   });
@@ -170,6 +171,11 @@ describe('tokens de diseño', () => {
   it('hover solo aplica en dispositivos con puntero que permite hover', async () => {
     const { css: out } = await compileWithAbstracts('.a { @include hover { color: inherit; } }');
     expect(out).toMatch(/@media \(hover: hover\)\s*\{\s*\.a:hover/);
+  });
+
+  it('hover puede excluir un estado, como :disabled', async () => {
+    const { css: out } = await compileWithAbstracts(".a { @include hover(':disabled') { color: inherit; } }");
+    expect(out).toMatch(/@media \(hover: hover\)\s*\{\s*\.a:hover:not\(:disabled\)/);
   });
 
   it('la tabla de contraste de docs/estilos.md coincide con los tokens', async () => {

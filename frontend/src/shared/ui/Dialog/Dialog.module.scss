@@ -1,0 +1,112 @@
+@use '@/styles/abstracts' as *;
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: var(--color-overlay);
+
+  @include reduced-motion-safe {
+    &[data-state='open'] {
+      animation: fade-in var(--duration-normal) var(--ease-standard);
+    }
+  }
+}
+
+// Phone: almost the whole screen, with the actions always reachable because
+// only the body scrolls. From md up: a centered card.
+.root {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  max-block-size: calc(100dvh - var(--space-8));
+  border-start-start-radius: var(--radius-lg);
+  border-start-end-radius: var(--radius-lg);
+  color: var(--color-text-default);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-lg);
+
+  @include reduced-motion-safe {
+    &[data-state='open'] {
+      animation: rise var(--duration-normal) var(--ease-standard);
+    }
+  }
+
+  @include respond-to(md) {
+    inset-block: 50% auto;
+    inset-inline: 50% auto;
+    inline-size: calc(100% - var(--space-12));
+    max-inline-size: var(--size-dialog-sm);
+    max-block-size: calc(100dvh - var(--space-12));
+    border-radius: var(--radius-lg);
+    transform: translate(-50%, -50%);
+
+    &[data-size='md'] {
+      max-inline-size: var(--size-dialog-md);
+    }
+  }
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-4) var(--space-2);
+  padding-inline: var(--space-5) var(--space-3);
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  padding-block-start: var(--space-2);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.description {
+  color: var(--color-text-muted);
+}
+
+.body {
+  overflow-y: auto;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-5);
+}
+
+// Stacked full-width on a phone, main action first (column-reverse, since it
+// comes last in the markup); in a row aligned to the end from sm up.
+.footer {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-2);
+  padding-block: var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  padding-inline: var(--space-5);
+  border-block-start: 1px solid var(--color-border-default);
+
+  @include respond-to(sm) {
+    flex-flow: row wrap;
+    justify-content: flex-end;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+  }
+}
