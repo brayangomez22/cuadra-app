@@ -1061,6 +1061,11 @@ export interface operations {
                 category_id?: string;
                 /** @description Productos activos (por defecto), inactivos o todos. */
                 status?: "active" | "inactive" | "all";
+                /**
+                 * @description Solo estos productos (hasta 100), por ejemplo los de una página de existencias. Se combina con los demás
+                 *     filtros: para traer también los inactivos, use `status=all`.
+                 */
+                ids?: string[];
                 /** @description Cantidad máxima de resultados. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Cantidad de resultados a saltar. */

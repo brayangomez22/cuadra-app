@@ -3,6 +3,9 @@
 // One line per row, dense like the counter needs: on narrow screens the table
 // scrolls inside .root instead of wrapping SKUs and names.
 .root {
+  // Positioned so absolutely placed content (like .srOnly text in a cell)
+  // scrolls with the table instead of widening the page.
+  position: relative;
   overflow-x: auto;
   max-inline-size: 100%;
   border: 1px solid var(--color-border-default);

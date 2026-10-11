@@ -93,6 +93,9 @@ func (h *Handler) ListProducts(ctx context.Context, req catalogapi.ListProductsR
 	if params.Q != nil {
 		f.Query = *params.Q
 	}
+	if params.Ids != nil {
+		f.IDs = *params.Ids
+	}
 	if params.Limit != nil {
 		f.Limit = *params.Limit
 	}

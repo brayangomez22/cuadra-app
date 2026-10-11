@@ -28,3 +28,32 @@ export function errorMessage(body: unknown, fallback: string): string {
 
 // The request did not reach the API (no connection, DNS, server down).
 export const NETWORK_ERROR_MESSAGE = 'No hay conexión con Cuadra. Revise el internet e intente de nuevo.';
+
+// ApiError is a response of the API with an error status, thrown by unwrap so
+// TanStack Query and the forms handle it like any other failure.
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code: string | undefined;
+
+  constructor(status: number, body: unknown) {
+    super(errorMessage(body, 'Algo salió mal en Cuadra. Intente de nuevo.'));
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = errorCode(body);
+  }
+}
+
+/** The data of an openapi-fetch result, or an ApiError with its code and message. */
+export function unwrap<T>(result: { data?: T; error?: unknown; response: Response }): T {
+  if (result.data !== undefined) return result.data;
+  throw new ApiError(result.response.status, result.error);
+}
+
+/**
+ * What to show for a failed request: the API's code and Spanish message, or
+ * the no-connection message when the request did not reach the API.
+ */
+export function describeError(error: unknown): { code?: string; message: string } {
+  if (error instanceof ApiError) return { code: error.code, message: error.message };
+  return { message: NETWORK_ERROR_MESSAGE };
+}

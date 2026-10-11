@@ -18,15 +18,17 @@ SELECT count(*)
 FROM products
 WHERE ($1::boolean IS NULL OR active = $1)
   AND ($2::uuid IS NULL OR category_id = $2)
+  AND ($3::uuid[] IS NULL OR id = ANY($3::uuid[]))
 `
 
 type CountProductsParams struct {
 	Active     *bool
 	CategoryID *uuid.UUID
+	Ids        []uuid.UUID
 }
 
 func (q *Queries) CountProducts(ctx context.Context, arg CountProductsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countProducts, arg.Active, arg.CategoryID)
+	row := q.db.QueryRow(ctx, countProducts, arg.Active, arg.CategoryID, arg.Ids)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -37,14 +39,16 @@ SELECT count(*)
 FROM products
 WHERE ($1::boolean IS NULL OR active = $1)
   AND ($2::uuid IS NULL OR category_id = $2)
-  AND (sku = $3
-       OR barcode = $4
-       OR search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest($5::text[]) AS term))
+  AND ($3::uuid[] IS NULL OR id = ANY($3::uuid[]))
+  AND (sku = $4
+       OR barcode = $5
+       OR search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest($6::text[]) AS term))
 `
 
 type CountSearchProductsParams struct {
 	Active     *bool
 	CategoryID *uuid.UUID
+	Ids        []uuid.UUID
 	Sku        string
 	Barcode    *string
 	Terms      []string
@@ -54,6 +58,7 @@ func (q *Queries) CountSearchProducts(ctx context.Context, arg CountSearchProduc
 	row := q.db.QueryRow(ctx, countSearchProducts,
 		arg.Active,
 		arg.CategoryID,
+		arg.Ids,
 		arg.Sku,
 		arg.Barcode,
 		arg.Terms,
@@ -151,13 +156,15 @@ SELECT id, tenant_id, sku, barcode, name, description, category_id, base_unit, c
 FROM products
 WHERE ($1::boolean IS NULL OR active = $1)
   AND ($2::uuid IS NULL OR category_id = $2)
+  AND ($3::uuid[] IS NULL OR id = ANY($3::uuid[]))
 ORDER BY name, id
-LIMIT $4 OFFSET $3
+LIMIT $5 OFFSET $4
 `
 
 type ListProductsParams struct {
 	Active     *bool
 	CategoryID *uuid.UUID
+	Ids        []uuid.UUID
 	RowOffset  int32
 	RowLimit   int32
 }
@@ -183,6 +190,7 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 	rows, err := q.db.Query(ctx, listProducts,
 		arg.Active,
 		arg.CategoryID,
+		arg.Ids,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -223,18 +231,20 @@ SELECT id, tenant_id, sku, barcode, name, description, category_id, base_unit, c
 FROM products
 WHERE ($1::boolean IS NULL OR active = $1)
   AND ($2::uuid IS NULL OR category_id = $2)
-  AND (sku = $3
-       OR barcode = $4
-       OR search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest($5::text[]) AS term))
-ORDER BY coalesce(sku = $3 OR barcode = $4, false) DESC,
-         similarity(search_name, f_unaccent(lower($6))) DESC,
+  AND ($3::uuid[] IS NULL OR id = ANY($3::uuid[]))
+  AND (sku = $4
+       OR barcode = $5
+       OR search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest($6::text[]) AS term))
+ORDER BY coalesce(sku = $4 OR barcode = $5, false) DESC,
+         similarity(search_name, f_unaccent(lower($7))) DESC,
          name, id
-LIMIT $8 OFFSET $7
+LIMIT $9 OFFSET $8
 `
 
 type SearchProductsParams struct {
 	Active     *bool
 	CategoryID *uuid.UUID
+	Ids        []uuid.UUID
 	Sku        string
 	Barcode    *string
 	Terms      []string
@@ -267,6 +277,7 @@ func (q *Queries) SearchProducts(ctx context.Context, arg SearchProductsParams) 
 	rows, err := q.db.Query(ctx, searchProducts,
 		arg.Active,
 		arg.CategoryID,
+		arg.Ids,
 		arg.Sku,
 		arg.Barcode,
 		arg.Terms,

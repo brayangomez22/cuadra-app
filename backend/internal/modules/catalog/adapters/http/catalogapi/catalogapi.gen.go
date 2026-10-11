@@ -260,6 +260,10 @@ type ListProductsParams struct {
 	// Status Productos activos (por defecto), inactivos o todos.
 	Status *ListProductsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
+	// Ids Solo estos productos (hasta 100), por ejemplo los de una página de existencias. Se combina con los demás
+	// filtros: para traer también los inactivos, use `status=all`.
+	Ids *[]openapi_types.UUID `form:"ids,omitempty" json:"ids,omitempty"`
+
 	// Limit Cantidad máxima de resultados.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
@@ -449,6 +453,19 @@ func (siw *ServerInterfaceWrapper) ListProducts(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "ids", r.URL.Query(), &params.Ids, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "ids", Err: err})
 		}
 		return
 	}

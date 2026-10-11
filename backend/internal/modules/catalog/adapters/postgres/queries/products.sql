@@ -19,6 +19,7 @@ SELECT id, tenant_id, sku, barcode, name, description, category_id, base_unit, c
 FROM products
 WHERE (sqlc.narg(active)::boolean IS NULL OR active = sqlc.narg(active))
   AND (sqlc.narg(category_id)::uuid IS NULL OR category_id = sqlc.narg(category_id))
+  AND (sqlc.narg(ids)::uuid[] IS NULL OR id = ANY(sqlc.narg(ids)::uuid[]))
 ORDER BY name, id
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -26,7 +27,8 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 SELECT count(*)
 FROM products
 WHERE (sqlc.narg(active)::boolean IS NULL OR active = sqlc.narg(active))
-  AND (sqlc.narg(category_id)::uuid IS NULL OR category_id = sqlc.narg(category_id));
+  AND (sqlc.narg(category_id)::uuid IS NULL OR category_id = sqlc.narg(category_id))
+  AND (sqlc.narg(ids)::uuid[] IS NULL OR id = ANY(sqlc.narg(ids)::uuid[]));
 
 -- SearchProducts matches an exact SKU or barcode, or names containing every
 -- term (case- and accent-insensitive). Terms arrive with LIKE wildcards
@@ -37,6 +39,7 @@ SELECT id, tenant_id, sku, barcode, name, description, category_id, base_unit, c
 FROM products
 WHERE (sqlc.narg(active)::boolean IS NULL OR active = sqlc.narg(active))
   AND (sqlc.narg(category_id)::uuid IS NULL OR category_id = sqlc.narg(category_id))
+  AND (sqlc.narg(ids)::uuid[] IS NULL OR id = ANY(sqlc.narg(ids)::uuid[]))
   AND (sku = sqlc.arg(sku)
        OR barcode = sqlc.arg(barcode)
        OR search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest(sqlc.arg(terms)::text[]) AS term))
@@ -50,6 +53,7 @@ SELECT count(*)
 FROM products
 WHERE (sqlc.narg(active)::boolean IS NULL OR active = sqlc.narg(active))
   AND (sqlc.narg(category_id)::uuid IS NULL OR category_id = sqlc.narg(category_id))
+  AND (sqlc.narg(ids)::uuid[] IS NULL OR id = ANY(sqlc.narg(ids)::uuid[]))
   AND (sku = sqlc.arg(sku)
        OR barcode = sqlc.arg(barcode)
        OR search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest(sqlc.arg(terms)::text[]) AS term));

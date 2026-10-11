@@ -1,7 +1,7 @@
 // Base components. Screens compose these instead of styling their own controls.
 export { Alert, type AlertTone } from './Alert';
 export { Badge } from './Badge';
-export { Button, type ButtonProps } from './Button';
+export { Button, ButtonLink, type ButtonProps } from './Button';
 export { Checkbox } from './Checkbox';
 export { Dialog, DialogClose } from './Dialog';
 export { Drawer, DrawerClose } from './Drawer';
@@ -11,8 +11,11 @@ export { IconButton } from './IconButton';
 export * from './icons';
 export { Input } from './Input';
 export { Page } from './Page';
+export { Pagination } from './Pagination';
 export { Select, type SelectOption } from './Select';
 export { Skeleton } from './Skeleton';
 export { Spinner } from './Spinner';
 export { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from './Table';
+export { Textarea } from './Textarea';
+export { TextLink } from './TextLink';
 export { ToastProvider, useToast, type ToastOptions, type ToastTone } from './Toast';

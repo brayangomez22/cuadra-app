@@ -90,7 +90,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Alcance:** pantallas de registro e inicio de sesión, y un layout con menú lateral que se pliega en móvil y muestra opciones según el rol. Todo compuesto con `shared/ui`.
 **Tests primero:** el formulario de login muestra errores de validación; una ruta protegida redirige al login sin sesión.
 
-### [ ] T16 · Pantallas de catálogo e inventario
+### [x] T16 · Pantallas de catálogo e inventario
 **Alcance:** lista de productos con búsqueda instantánea y paginación, formulario de crear o editar producto, existencias por sede, registro de entrada de mercancía y kardex de un producto.
 **Tests primero:** el formulario no envía precio vacío o negativo; la búsqueda llama a la API con debounce.
 **Después:** `/impeccable critique` de cada pantalla y revisión con capturas en los anchos de referencia de `docs/estilos.md` (360, 768, 1024, 1366×768 y 1920px).
