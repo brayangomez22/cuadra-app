@@ -75,6 +75,19 @@ services:
       - "127.0.0.1:3000:3000"
     depends_on: [tempo, loki, prometheus]
 
+  # River UI (`make jobs-ui`): browse and retry background jobs. Development
+  # only; it connects as the schema owner and has no login.
+  riverui:
+    image: ghcr.io/riverqueue/riverui:0.20.0
+    profiles: [jobs]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-cuadra}:${POSTGRES_PASSWORD:-cuadra}@postgres:5432/${POSTGRES_DB:-cuadra}?sslmode=disable
+    ports:
+      - "127.0.0.1:8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres-data:
   prometheus-data:

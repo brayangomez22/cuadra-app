@@ -85,6 +85,10 @@ func (d *DB) checkRole(ctx context.Context) error {
 // Close closes the pool.
 func (d *DB) Close() { d.pool.Close() }
 
+// Pool returns the underlying pool for infrastructure that needs it, such as
+// the job queue. Business code goes through WithTenantTx instead.
+func (d *DB) Pool() *pgxpool.Pool { return d.pool }
+
 // Ping checks that the database answers.
 func (d *DB) Ping(ctx context.Context) error { return d.pool.Ping(ctx) }
 

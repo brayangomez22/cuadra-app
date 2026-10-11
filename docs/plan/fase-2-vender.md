@@ -8,7 +8,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 
 ---
 
-### [ ] T18 · Outbox y trabajos en segundo plano (River)
+### [x] T18 · Outbox y trabajos en segundo plano (River)
 **Alcance:** `internal/platform/jobs` con **River** (cola de trabajos sobre Postgres): workers en el mismo binario (o `cmd/worker`), reintentos con backoff, trabajos programados y River UI solo en desarrollo. Patrón **outbox transaccional**: un caso de uso guarda el cambio y encola el trabajo en la **misma transacción**, de modo que nunca se pierde un evento ni se envía uno de una transacción que hizo rollback. Propagación del contexto de traza del request al worker. Métricas: trabajos encolados, completados, fallidos y la latencia de la cola.
 **Tests primero (integración):** si la transacción hace rollback, el trabajo no existe; un trabajo que falla se reintenta y termina en estado `discarded` tras N intentos; la traza del worker queda enlazada a la del request que lo originó.
 **Por qué ahora:** la importación de Excel (T29), la facturación DIAN (T36), la demo (T34), la exportación de datos (T49) y, en V2, las notificaciones por WhatsApp dependen de esto.
