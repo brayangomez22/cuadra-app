@@ -1,0 +1,95 @@
+@use '@/styles/abstracts' as *;
+
+// Phone and tablet: a sticky top bar and the content under it.
+// From lg up: a side column with the menu, and the content beside it.
+.root {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+
+  @include respond-to(lg) {
+    display: grid;
+    grid-template-columns: var(--size-sidebar) minmax(0, 1fr);
+  }
+}
+
+// Hidden until it gets keyboard focus: the first Tab of the page.
+.skipLink {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  z-index: var(--z-toast);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-on-action);
+  background: var(--color-action-primary);
+  transform: translateY(-200%);
+
+  @include focus-ring;
+
+  &:focus-visible {
+    transform: none;
+  }
+}
+
+.topbar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2) var(--space-4);
+  border-block-end: 1px solid var(--color-border-default);
+  background: var(--color-bg-surface);
+
+  @include respond-to(lg) {
+    display: none;
+  }
+}
+
+// The wordmark with the orange accent bar under it.
+.brand {
+  align-self: center;
+  padding-block-end: var(--space-1);
+  border-block-end: 0.25rem solid var(--color-border-accent);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-heavy);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.02em;
+}
+
+// It scrolls on its own, so the account panel stays reachable on a short screen.
+.sidebar {
+  display: none;
+
+  @include respond-to(lg) {
+    position: sticky;
+    inset-block-start: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    block-size: 100dvh;
+    overflow-y: auto;
+    padding-block-start: var(--space-6);
+    border-inline-end: 1px solid var(--color-border-default);
+    background: var(--color-bg-surface);
+  }
+}
+
+.sidebarBrand {
+  align-self: flex-start;
+  margin-inline: var(--space-6);
+}
+
+// Pushed to the bottom of the side column.
+.sidebarAccount {
+  margin-block-start: auto;
+}
+
+.main {
+  flex: 1;
+  min-inline-size: 0;
+}

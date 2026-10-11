@@ -23,4 +23,10 @@ $layout: (
   'toast': f.rem(400px),
   // Content width of a page on wide screens.
   'page': f.rem(1200px),
+  // Side menu of the app layout from lg up.
+  'sidebar': f.rem(256px),
+  // Single-column forms that stand alone, like login and sign-up.
+  'form': f.rem(480px),
+  // Two-column forms that stand alone, like sign-up.
+  'form-wide': f.rem(720px),
 );

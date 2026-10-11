@@ -94,7 +94,7 @@ Nombres de tokens: `--{categoría}-{rol}-{variante}-{estado}`. Por ejemplo, `--c
 **Escalas** (también como custom properties, en `base/_tokens.scss`):
 - Espacio: `--space-1` (4px) `--space-2` (8) `--space-3` (12) `--space-4` (16) `--space-5` (20) `--space-6` (24) `--space-8` (32) `--space-10` (40) `--space-12` (48) `--space-16` (64).
 - Tipografía: `--font-size-xs` (13px) `sm` (14) `md` (16, el texto base) `lg` (18) `xl` (20) `2xl` (24) `3xl` (32) `display` (56, el total de la venta). `--line-height-tight|normal`, `--font-weight-regular|medium|semibold|bold|heavy`, `--font-family-sans|mono` (fuentes del sistema). Usa `@include numeric` (`tabular-nums`) para cifras, precios y cantidades.
-- Tamaños: `--size-control` (alto de botones e inputs: 44px con mouse, 56px táctil), `--size-row` (fila de tabla: 48px con mouse, 56px táctil), `--size-touch-min` (44px). El cambio a táctil lo hace `@media (pointer: coarse)`, sin código en los componentes. Anchos máximos: `--size-dialog-sm` (440px), `--size-dialog-md` (640px), `--size-toast` (400px) y `--size-page` (1200px, el contenido de una página en pantallas anchas); en un celular se reducen para caber.
+- Tamaños: `--size-control` (alto de botones e inputs: 44px con mouse, 56px táctil), `--size-row` (fila de tabla: 48px con mouse, 56px táctil), `--size-touch-min` (44px). El cambio a táctil lo hace `@media (pointer: coarse)`, sin código en los componentes. Anchos máximos: `--size-dialog-sm` (440px), `--size-dialog-md` (640px), `--size-toast` (400px) y `--size-page` (1200px, el contenido de una página en pantallas anchas), `--size-sidebar` (256px, el menú lateral y su panel en celular), `--size-form` (480px, formularios sueltos de una columna, como el login) y `--size-form-wide` (720px, los de dos columnas, como el registro); en un celular se reducen para caber.
 - Radios: `--radius-sm|md|lg|full`. Sombras: `--shadow-sm|md|lg` (cambian con el tema). Movimiento: `--duration-fast|normal`, `--ease-standard`. Capas: `--z-dropdown|sticky|modal|toast`.
 
 ### Verificación de contraste
@@ -292,10 +292,13 @@ Se importan desde `@/shared/ui`. El catálogo visual con todos los estados está
 | `Table` | `Table` (con `caption` obligatorio), `TableHead`, `TableBody`, `TableRow` (`selected`), `TableHeaderCell` y `TableCell` (`numeric`: a la derecha y con cifras tabulares). Una línea por fila; en pantallas angostas la tabla se desplaza dentro de su contenedor. |
 | `Dialog` | Radix Dialog: `title` y `description` obligatorios, `trigger`, `footer` con la acción principal al final y el cancelar envuelto en `DialogClose`. En el celular es una hoja inferior. |
 | `useToast()` | `toast({ tone, title, description })`. `ToastProvider` ya está montado en `App.tsx`. Los errores no se cierran solos (quedan hasta que el usuario los cierra) e interrumpen al lector de pantalla; los demás desaparecen a los 5 u 8 segundos. |
+| `Alert` | Mensaje dentro de la página que no es de un campo, como el error de un formulario: `tone` `danger` (anuncia de inmediato con `role="alert"`), `warning`, `info` o `success` (`role="status"`), `title` opcional. Siempre ícono y texto. |
+| `Drawer` | Panel lateral sobre Radix Dialog (el menú en celular): `title` (texto, es el nombre accesible y da "Cerrar …"), `trigger`, `open` y `onOpenChange`. Atrapa el foco, cierra con Escape o tocando fuera y devuelve el foco. `DrawerClose` cierra desde adentro. |
+| `Page` | Marco de una pantalla dentro del layout: el `h1` (`title`), `description`, `actions` y el contenido, centrado hasta `--size-page`. Toda pantalla de la app lo usa. |
 | `Badge` | `tone` `neutral`, `success`, `warning`, `danger` o `info`. El texto debe decir el estado por sí solo. |
 | `EmptyState` | `icon`, `title`, `description`, `action` y `headingLevel`. |
 | `Spinner` / `Skeleton` | `Spinner` anuncia "Cargando…" (o su `label`); `decorative` si el control ya anuncia `aria-busy`. `Skeleton` es decorativo. |
-| Íconos | `IconClose`, `IconCheck`, `IconChevronDown`, `IconPlus`, `IconSearch`, `IconAlert`, `IconInfo`, `IconSuccess` e `IconBox`: SVG propios de 1em en `currentColor`, siempre decorativos. Un ícono nuevo se agrega en `shared/ui/icons`. |
+| Íconos | `IconClose`, `IconCheck`, `IconChevronDown`, `IconPlus`, `IconSearch`, `IconAlert`, `IconInfo`, `IconSuccess`, `IconBox`, `IconMenu`, `IconLogout`, `IconHome`, `IconCart` e `IconTag`: SVG propios de 1em en `currentColor`, siempre decorativos. Un ícono nuevo se agrega en `shared/ui/icons`. |
 
 ## 7. Particularidades de este producto
 

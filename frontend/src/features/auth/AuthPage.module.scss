@@ -1,0 +1,85 @@
+@use '@/styles/abstracts' as *;
+
+// On a phone the card fills the width; from sm up it floats on the canvas.
+// It never fixes a height, so it reflows with 200% zoom or a short landscape screen.
+.root {
+  display: flex;
+  justify-content: center;
+  min-block-size: 100dvh;
+  padding-block: var(--space-6);
+  padding-inline: var(--space-4);
+
+  @include respond-to(sm) {
+    align-items: center;
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  inline-size: 100%;
+  max-inline-size: var(--size-form);
+
+  &[data-size='wide'] {
+    max-inline-size: var(--size-form-wide);
+  }
+}
+
+// The brand: a heavy wordmark over the orange accent bar.
+.brand {
+  align-self: flex-start;
+  padding-block-end: var(--space-1);
+  border-block-end: 0.25rem solid var(--color-border-accent);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-heavy);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.02em;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-4);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
+
+  @include respond-to(sm) {
+    padding: var(--space-6) var(--space-8);
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+}
+
+.description {
+  color: var(--color-text-muted);
+}
+
+.footer {
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+// Links: default text color, underlined with the orange accent (docs/estilos.md).
+.link {
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-default);
+  text-decoration: underline;
+  text-decoration-color: var(--color-border-accent);
+  text-decoration-thickness: 0.15em;
+  text-underline-offset: 0.2em;
+
+  @include focus-ring;
+}

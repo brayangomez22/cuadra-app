@@ -1,0 +1,71 @@
+@use '@/styles/abstracts' as *;
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: var(--color-overlay);
+
+  @include reduced-motion-safe {
+    &[data-state='open'] {
+      animation: fade-in var(--duration-normal) var(--ease-standard);
+    }
+  }
+}
+
+// Slides in from the start edge. It never covers the whole width, so a tap on
+// the overlay beside it always closes it.
+.root {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  inline-size: min(var(--size-sidebar), calc(100% - var(--space-12)));
+  block-size: 100dvh;
+  color: var(--color-text-default);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-lg);
+
+  @include reduced-motion-safe {
+    &[data-state='open'] {
+      animation: slide-in var(--duration-normal) var(--ease-standard);
+    }
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  padding-inline: var(--space-4) var(--space-2);
+  border-block-end: 1px solid var(--color-border-default);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow-y: auto;
+  padding-block-end: env(safe-area-inset-bottom);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+}

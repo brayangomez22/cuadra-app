@@ -1,0 +1,23 @@
+@use '@/styles/abstracts' as *;
+
+// One column on a phone; two from md up, so the whole form and its button fit
+// on the 1366×768 counter monitor without scrolling.
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+
+  @include respond-to(md) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-5);
+  }
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.submit {
+  grid-column: 1 / -1;
+  inline-size: 100%;
+}

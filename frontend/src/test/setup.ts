@@ -12,3 +12,8 @@ if (typeof Element !== 'undefined') {
     disconnect() {}
   };
 }
+
+// fakeApi stubs the global fetch; each test starts with the real one.
+afterEach(() => {
+  vi.unstubAllGlobals();
+});

@@ -1,0 +1,53 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  padding-block: var(--space-2);
+  padding-inline: var(--space-2);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: 0;
+  list-style: none;
+}
+
+// The current page: subtle background and the orange accent bar at the start.
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--size-control);
+  padding-inline: var(--space-3);
+  border-inline-start: 0.25rem solid transparent;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-default);
+  text-decoration: none;
+
+  @include focus-ring;
+
+  @include reduced-motion-safe {
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  @include hover {
+    background: var(--color-bg-subtle);
+  }
+
+  &[aria-current='page'] {
+    border-inline-start-color: var(--color-border-accent);
+    font-weight: var(--font-weight-bold);
+    background: var(--color-bg-subtle);
+  }
+}
+
+.icon {
+  flex-shrink: 0;
+  font-size: var(--font-size-xl);
+}
+
+.label {
+  @include truncate;
+}
