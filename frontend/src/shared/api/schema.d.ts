@@ -415,6 +415,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ventas del día
+         * @description Las ventas confirmadas (y las anuladas) de un día en hora de Colombia (`America/Bogota`), de la más reciente
+         *     a la más antigua. Sin `date`, el día de hoy.
+         */
+        get: operations["listSales"];
+        put?: never;
+        /**
+         * Confirmar una venta
+         * @description Cobra el carrito completo en una sola operación: arma la venta con los precios del catálogo, valida los
+         *     descuentos contra el tope del usuario y los pagos contra el total, registra las salidas de inventario y le
+         *     asigna el consecutivo de la sede. Si algo falla, no se guarda nada.
+         *
+         *     Solo el efectivo da cambio. Quien no tiene `sales:discount` descuenta hasta el tope que fijó la empresa
+         *     (por defecto, 0 %).
+         */
+        post: operations["confirmSale"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/{saleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                saleId: components["parameters"]["SaleId"];
+            };
+            cookie?: never;
+        };
+        /** Detalle de una venta */
+        get: operations["getSale"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/{saleId}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                saleId: components["parameters"]["SaleId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Anular una venta
+         * @description Anula una venta confirmada y devuelve al inventario exactamente lo que salió, con movimientos `sale_void`.
+         *     La venta conserva su consecutivo. Una venta anulada no se puede volver a anular.
+         */
+        post: operations["voidSale"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -435,6 +507,13 @@ export interface components {
             code: string;
             /** @description Mensaje en español que se puede mostrar al usuario. */
             message: string;
+            /**
+             * @description Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `product_id` en
+             *     `insufficient_stock`). Nunca trae datos personales.
+             */
+            details?: {
+                [key: string]: string;
+            };
         };
         HealthStatus: {
             /** @enum {string} */
@@ -676,7 +755,7 @@ export interface components {
             /** Format: uuid */
             location_id: string;
             /** @enum {string} */
-            type: "purchase_in" | "sale_out" | "adjustment" | "transfer_out" | "transfer_in";
+            type: "purchase_in" | "sale_out" | "sale_void" | "adjustment" | "transfer_out" | "transfer_in";
             quantity: components["schemas"]["SignedQuantity"];
             unit_cost?: components["schemas"]["Money"];
             balance_after: components["schemas"]["SignedQuantity"];
@@ -726,6 +805,138 @@ export interface components {
         TransferResult: {
             out: components["schemas"]["StockMovement"];
             in: components["schemas"]["StockMovement"];
+        };
+        ConfirmSaleInput: {
+            /**
+             * Format: uuid
+             * @description Sede donde se vende y de donde sale el stock.
+             */
+            location_id: string;
+            lines: components["schemas"]["SaleLineInput"][];
+            payments: components["schemas"]["PaymentInput"][];
+        };
+        /** @description Una línea del carrito. `discount` es un monto en pesos sobre la línea, antes de IVA (por defecto, 0). */
+        SaleLineInput: {
+            /** Format: uuid */
+            product_id: string;
+            quantity: components["schemas"]["Quantity"];
+            discount?: components["schemas"]["Money"];
+        };
+        /**
+         * @description Medio de pago. Solo el efectivo (`cash`) da cambio.
+         * @enum {string}
+         */
+        PaymentMethod: "cash" | "card" | "nequi" | "daviplata" | "transfer";
+        /** @description Un pago. En efectivo, `amount` es lo entregado e incluye el cambio. */
+        PaymentInput: {
+            method: components["schemas"]["PaymentMethod"];
+            amount: components["schemas"]["Money"];
+        };
+        VoidSaleInput: {
+            /** @example El cliente desistió de la compra */
+            reason: string;
+        };
+        /** @enum {string} */
+        SaleStatus: "confirmed" | "voided";
+        /**
+         * @description Una línea vendida. `unit_price` es sin IVA, en el momento de la venta. `gross` = cantidad × precio redondeado
+         *     a 2 decimales; `base` = `gross` − `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales;
+         *     `total` = `base` + `tax`.
+         */
+        SaleLine: {
+            /** Format: uuid */
+            product_id: string;
+            /** @description Nombre del producto en el momento de la venta. */
+            product_name: string;
+            quantity: components["schemas"]["Quantity"];
+            unit_price: components["schemas"]["Money"];
+            tax_rate: components["schemas"]["TaxRate"];
+            discount: components["schemas"]["Money"];
+            gross: components["schemas"]["Money"];
+            base: components["schemas"]["Money"];
+            tax: components["schemas"]["Money"];
+            total: components["schemas"]["Money"];
+        };
+        SalePayment: {
+            method: components["schemas"]["PaymentMethod"];
+            amount: components["schemas"]["Money"];
+        };
+        TaxBreakdown: {
+            rate: components["schemas"]["TaxRate"];
+            base: components["schemas"]["Money"];
+            tax: components["schemas"]["Money"];
+        };
+        /**
+         * @description `subtotal` es la suma de los brutos de las líneas y `total` = `subtotal` − `discounts` + `tax`. `taxes`
+         *     suma las bases y el IVA de las líneas por tasa, sin volver a redondear.
+         */
+        SaleTotals: {
+            subtotal: components["schemas"]["Money"];
+            discounts: components["schemas"]["Money"];
+            tax: components["schemas"]["Money"];
+            total: components["schemas"]["Money"];
+            /** @description IVA agrupado por tasa, de menor a mayor. */
+            taxes: components["schemas"]["TaxBreakdown"][];
+        };
+        SaleVoid: {
+            /**
+             * Format: uuid
+             * @description Quién anuló.
+             */
+            user_id: string;
+            reason: string;
+            /** Format: date-time */
+            voided_at: string;
+        };
+        /**
+         * @description Una venta confirmada o anulada. `change` es el cambio entregado en efectivo. `void` solo aparece en una
+         *     venta anulada.
+         */
+        Sale: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int64
+             * @description Consecutivo de la venta en su sede.
+             */
+            number: number;
+            /** Format: uuid */
+            location_id: string;
+            /**
+             * Format: uuid
+             * @description Quién vendió.
+             */
+            user_id: string;
+            status: components["schemas"]["SaleStatus"];
+            lines: components["schemas"]["SaleLine"][];
+            payments: components["schemas"]["SalePayment"][];
+            totals: components["schemas"]["SaleTotals"];
+            paid: components["schemas"]["Money"];
+            change: components["schemas"]["Money"];
+            /** Format: date-time */
+            confirmed_at: string;
+            void?: components["schemas"]["SaleVoid"];
+        };
+        SaleSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            number: number;
+            /** Format: uuid */
+            location_id: string;
+            /** Format: uuid */
+            user_id: string;
+            status: components["schemas"]["SaleStatus"];
+            total: components["schemas"]["Money"];
+            /** Format: date-time */
+            confirmed_at: string;
+            /** Format: date-time */
+            voided_at?: string;
+        };
+        SalePage: {
+            items: components["schemas"]["SaleSummary"][];
+            /** @description Cantidad total de ventas que cumplen el filtro, sin paginar. */
+            total: number;
         };
     };
     responses: {
@@ -801,6 +1012,7 @@ export interface components {
         ProductId: string;
         CategoryId: string;
         LocationId: string;
+        SaleId: string;
         /** @description Refresh token. Lo pone la API; el navegador lo envía solo a `/api/v1/auth`. */
         RefreshCookie: string;
     };
@@ -1657,6 +1869,189 @@ export interface operations {
              * @description Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `insufficient_stock`,
              *     `product_not_found`, `location_not_found`, `location_inactive`).
              */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listSales: {
+        parameters: {
+            query?: {
+                /** @description Día en hora de Colombia (`YYYY-MM-DD`). */
+                date?: string;
+                /** @description Solo las ventas de esta sede. */
+                location_id?: string;
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de ventas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    confirmSale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmSaleInput"];
+            };
+        };
+        responses: {
+            /** @description La venta confirmada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Sale"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description El usuario no tiene permiso (`forbidden`) o un descuento supera su tope (`discount_exceeds_limit`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No hay stock suficiente de un producto (`insufficient_stock`); `details.product_id` dice cuál. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description Algún dato no cumple las reglas (`product_not_found`, `product_inactive`, `location_not_found`,
+             *     `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
+             *     `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getSale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                saleId: components["parameters"]["SaleId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La venta con sus líneas, pagos y totales. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Sale"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description La venta no existe (`sale_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    voidSale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                saleId: components["parameters"]["SaleId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidSaleInput"];
+            };
+        };
+        responses: {
+            /** @description La venta anulada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Sale"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description La venta no existe (`sale_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description La venta no está confirmada; por ejemplo, ya fue anulada (`sale_not_confirmed`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Falta el motivo o es muy largo (`invalid_void_reason`). */
             422: {
                 headers: {
                     [name: string]: unknown;

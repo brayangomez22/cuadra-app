@@ -178,6 +178,56 @@ func (q *Queries) ListKardex(ctx context.Context, arg ListKardexParams) ([]Stock
 	return items, nil
 }
 
+const listMovementsByReference = `-- name: ListMovementsByReference :many
+SELECT id, tenant_id, product_id, location_id, type, quantity, unit_cost, balance_after,
+       average_cost_after, reason, reference_kind, reference_id, user_id, occurred_at
+FROM stock_movements
+WHERE reference_kind = $1::text AND reference_id = $2::uuid
+ORDER BY occurred_at, id
+`
+
+type ListMovementsByReferenceParams struct {
+	ReferenceKind string
+	ReferenceID   uuid.UUID
+}
+
+// ListMovementsByReference returns the movements of a document (a sale's
+// exits and the stock given back when it was voided), oldest first.
+func (q *Queries) ListMovementsByReference(ctx context.Context, arg ListMovementsByReferenceParams) ([]StockMovement, error) {
+	rows, err := q.db.Query(ctx, listMovementsByReference, arg.ReferenceKind, arg.ReferenceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []StockMovement
+	for rows.Next() {
+		var i StockMovement
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.ProductID,
+			&i.LocationID,
+			&i.Type,
+			&i.Quantity,
+			&i.UnitCost,
+			&i.BalanceAfter,
+			&i.AverageCostAfter,
+			&i.Reason,
+			&i.ReferenceKind,
+			&i.ReferenceID,
+			&i.UserID,
+			&i.OccurredAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStockLevels = `-- name: ListStockLevels :many
 SELECT tenant_id, product_id, location_id, quantity, average_cost
 FROM stock_levels

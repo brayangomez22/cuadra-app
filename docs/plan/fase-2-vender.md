@@ -17,7 +17,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Alcance:** captura de errores no controlados y panics en Go y en React (error boundary), con release y ambiente, `tenant_id` como tag (nunca datos personales) y source maps subidos desde el CI. Enlace entre el evento de Sentry y el `trace_id`.
 **Tests primero:** el filtro de datos sensibles elimina emails, tokens y contraseñas del evento antes de enviarlo.
 
-### [ ] T20 · Persistencia y API de ventas
+### [x] T20 · Persistencia y API de ventas
 **Depende de:** T11, T17.
 **Alcance:** contrato en OpenAPI primero. Migraciones de `sales`, `sale_lines` y `sale_payments` (RLS). Confirmar una venta en **una transacción**: guarda la venta, registra las salidas de inventario (puerto `StockReserver`) y deja la venta en estado `confirmed`. Anulación (`voided`) que devuelve el stock con movimientos inversos. Numeración consecutiva por sede sin huecos. Consultas: ventas del día y detalle. Métricas: `cuadra.sales.confirmed` y `cuadra.sales.amount` (histograma), y `cuadra.sales.voided`.
 **Tests primero (integración):** si falla la salida de inventario, la venta no queda guardada; la anulación restaura el stock exacto; dos ventas concurrentes no generan el mismo consecutivo; aislamiento multi-tenant.

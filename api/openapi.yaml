@@ -37,6 +37,11 @@ tags:
       Sedes, existencias y kardex. Las cantidades están en la unidad base del producto y viajan como string decimal.
       Cada cambio de stock queda como un movimiento inmutable del kardex. Los costos (`average_cost`, `unit_cost`,
       `average_cost_after`) solo se envían a quien puede editar el catálogo (`catalog:write`).
+  - name: sales
+    description: |
+      Ventas del punto de venta. El precio, el nombre y el IVA de cada línea salen del catálogo en el momento de la
+      venta; el cliente solo envía producto, cantidad, descuento y pagos. Los montos viajan como string decimal con
+      2 decimales. Cada venta confirmada recibe un consecutivo por sede, sin huecos.
 
 # Authorization is declared here and enforced by the API before the request
 # is validated: every operation requires a bearer token unless it says
@@ -843,6 +848,183 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/sales:
+    get:
+      tags: [sales]
+      operationId: listSales
+      summary: Ventas del día
+      description: |
+        Las ventas confirmadas (y las anuladas) de un día en hora de Colombia (`America/Bogota`), de la más reciente
+        a la más antigua. Sin `date`, el día de hoy.
+      x-permission: sales:read
+      parameters:
+        - name: date
+          in: query
+          description: Día en hora de Colombia (`YYYY-MM-DD`).
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: location_id
+          in: query
+          description: Solo las ventas de esta sede.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de ventas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [sales]
+      operationId: confirmSale
+      summary: Confirmar una venta
+      description: |
+        Cobra el carrito completo en una sola operación: arma la venta con los precios del catálogo, valida los
+        descuentos contra el tope del usuario y los pagos contra el total, registra las salidas de inventario y le
+        asigna el consecutivo de la sede. Si algo falla, no se guarda nada.
+
+        Solo el efectivo da cambio. Quien no tiene `sales:discount` descuenta hasta el tope que fijó la empresa
+        (por defecto, 0 %).
+      x-permission: sales:create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmSaleInput"
+      responses:
+        "201":
+          description: La venta confirmada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: |
+            El usuario no tiene permiso (`forbidden`) o un descuento supera su tope (`discount_exceeds_limit`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: |
+            No hay stock suficiente de un producto (`insufficient_stock`); `details.product_id` dice cuál.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Algún dato no cumple las reglas (`product_not_found`, `product_inactive`, `location_not_found`,
+            `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
+            `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/sales/{saleId}:
+    parameters:
+      - $ref: "#/components/parameters/SaleId"
+    get:
+      tags: [sales]
+      operationId: getSale
+      summary: Detalle de una venta
+      x-permission: sales:read
+      responses:
+        "200":
+          description: La venta con sus líneas, pagos y totales.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: La venta no existe (`sale_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/sales/{saleId}/void:
+    parameters:
+      - $ref: "#/components/parameters/SaleId"
+    post:
+      tags: [sales]
+      operationId: voidSale
+      summary: Anular una venta
+      description: |
+        Anula una venta confirmada y devuelve al inventario exactamente lo que salió, con movimientos `sale_void`.
+        La venta conserva su consecutivo. Una venta anulada no se puede volver a anular.
+      x-permission: sales:void
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoidSaleInput"
+      responses:
+        "200":
+          description: La venta anulada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: La venta no existe (`sale_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: La venta no está confirmada; por ejemplo, ya fue anulada (`sale_not_confirmed`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Falta el motivo o es muy largo (`invalid_void_reason`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   headers:
     SetRefreshCookie:
@@ -894,6 +1076,13 @@ components:
         format: uuid
     LocationId:
       name: locationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SaleId:
+      name: saleId
       in: path
       required: true
       schema:
@@ -973,6 +1162,13 @@ components:
         message:
           type: string
           description: Mensaje en español que se puede mostrar al usuario.
+        details:
+          type: object
+          description: |
+            Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `product_id` en
+            `insufficient_stock`). Nunca trae datos personales.
+          additionalProperties:
+            type: string
     HealthStatus:
       type: object
       required: [status]
@@ -1338,7 +1534,7 @@ components:
           format: uuid
         type:
           type: string
-          enum: [purchase_in, sale_out, adjustment, transfer_out, transfer_in]
+          enum: [purchase_in, sale_out, sale_void, adjustment, transfer_out, transfer_in]
         quantity:
           $ref: "#/components/schemas/SignedQuantity"
         unit_cost:
@@ -1430,3 +1626,223 @@ components:
           $ref: "#/components/schemas/StockMovement"
         in:
           $ref: "#/components/schemas/StockMovement"
+    ConfirmSaleInput:
+      type: object
+      required: [location_id, lines, payments]
+      additionalProperties: false
+      properties:
+        location_id:
+          type: string
+          format: uuid
+          description: Sede donde se vende y de donde sale el stock.
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/SaleLineInput"
+        payments:
+          type: array
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/PaymentInput"
+    SaleLineInput:
+      type: object
+      description: Una línea del carrito. `discount` es un monto en pesos sobre la línea, antes de IVA (por defecto, 0).
+      required: [product_id, quantity]
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+        discount:
+          $ref: "#/components/schemas/Money"
+    PaymentMethod:
+      type: string
+      enum: [cash, card, nequi, daviplata, transfer]
+      description: Medio de pago. Solo el efectivo (`cash`) da cambio.
+    PaymentInput:
+      type: object
+      description: Un pago. En efectivo, `amount` es lo entregado e incluye el cambio.
+      required: [method, amount]
+      additionalProperties: false
+      properties:
+        method:
+          $ref: "#/components/schemas/PaymentMethod"
+        amount:
+          $ref: "#/components/schemas/Money"
+    VoidSaleInput:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: El cliente desistió de la compra
+    SaleStatus:
+      type: string
+      enum: [confirmed, voided]
+    SaleLine:
+      type: object
+      description: |
+        Una línea vendida. `unit_price` es sin IVA, en el momento de la venta. `gross` = cantidad × precio redondeado
+        a 2 decimales; `base` = `gross` − `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales;
+        `total` = `base` + `tax`.
+      required: [product_id, product_name, quantity, unit_price, tax_rate, discount, gross, base, tax, total]
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        product_name:
+          type: string
+          description: Nombre del producto en el momento de la venta.
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+        unit_price:
+          $ref: "#/components/schemas/Money"
+        tax_rate:
+          $ref: "#/components/schemas/TaxRate"
+        discount:
+          $ref: "#/components/schemas/Money"
+        gross:
+          $ref: "#/components/schemas/Money"
+        base:
+          $ref: "#/components/schemas/Money"
+        tax:
+          $ref: "#/components/schemas/Money"
+        total:
+          $ref: "#/components/schemas/Money"
+    SalePayment:
+      type: object
+      required: [method, amount]
+      properties:
+        method:
+          $ref: "#/components/schemas/PaymentMethod"
+        amount:
+          $ref: "#/components/schemas/Money"
+    TaxBreakdown:
+      type: object
+      required: [rate, base, tax]
+      properties:
+        rate:
+          $ref: "#/components/schemas/TaxRate"
+        base:
+          $ref: "#/components/schemas/Money"
+        tax:
+          $ref: "#/components/schemas/Money"
+    SaleTotals:
+      type: object
+      description: |
+        `subtotal` es la suma de los brutos de las líneas y `total` = `subtotal` − `discounts` + `tax`. `taxes`
+        suma las bases y el IVA de las líneas por tasa, sin volver a redondear.
+      required: [subtotal, discounts, tax, total, taxes]
+      properties:
+        subtotal:
+          $ref: "#/components/schemas/Money"
+        discounts:
+          $ref: "#/components/schemas/Money"
+        tax:
+          $ref: "#/components/schemas/Money"
+        total:
+          $ref: "#/components/schemas/Money"
+        taxes:
+          type: array
+          description: IVA agrupado por tasa, de menor a mayor.
+          items:
+            $ref: "#/components/schemas/TaxBreakdown"
+    SaleVoid:
+      type: object
+      required: [user_id, reason, voided_at]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: Quién anuló.
+        reason:
+          type: string
+        voided_at:
+          type: string
+          format: date-time
+    Sale:
+      type: object
+      description: |
+        Una venta confirmada o anulada. `change` es el cambio entregado en efectivo. `void` solo aparece en una
+        venta anulada.
+      required: [id, number, location_id, user_id, status, lines, payments, totals, paid, change, confirmed_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: integer
+          format: int64
+          description: Consecutivo de la venta en su sede.
+        location_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          description: Quién vendió.
+        status:
+          $ref: "#/components/schemas/SaleStatus"
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleLine"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalePayment"
+        totals:
+          $ref: "#/components/schemas/SaleTotals"
+        paid:
+          $ref: "#/components/schemas/Money"
+        change:
+          $ref: "#/components/schemas/Money"
+        confirmed_at:
+          type: string
+          format: date-time
+        void:
+          $ref: "#/components/schemas/SaleVoid"
+    SaleSummary:
+      type: object
+      required: [id, number, location_id, user_id, status, total, confirmed_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: integer
+          format: int64
+        location_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/SaleStatus"
+        total:
+          $ref: "#/components/schemas/Money"
+        confirmed_at:
+          type: string
+          format: date-time
+        voided_at:
+          type: string
+          format: date-time
+    SalePage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleSummary"
+        total:
+          type: integer
+          description: Cantidad total de ventas que cumplen el filtro, sin paginar.

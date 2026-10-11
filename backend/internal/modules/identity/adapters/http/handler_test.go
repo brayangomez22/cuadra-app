@@ -364,7 +364,7 @@ func TestGetMe(t *testing.T) {
 			"name": "Ana Gómez",
 			"email": "ana@eltornillo.co",
 			"role": "cashier",
-			"permissions": ["catalog:read", "inventory:read", "sales:create"]
+			"permissions": ["catalog:read", "inventory:read", "sales:create", "sales:read"]
 		}`, rec.Body.String())
 	})
 

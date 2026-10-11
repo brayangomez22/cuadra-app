@@ -18,6 +18,10 @@ import (
 // ErrNoTenant is returned by WithTenantTx when called without a tenant.
 var ErrNoTenant = errors.New("db: tenant id is required")
 
+// ErrTenantMismatch is returned by WithTenantTx when the context carries a
+// transaction of another tenant.
+var ErrTenantMismatch = errors.New("db: transaction belongs to another tenant")
+
 // ErrUnsafeRole is returned by Open when the connection role could bypass
 // Row-Level Security: a superuser, a BYPASSRLS role or the owner of a table.
 var ErrUnsafeRole = errors.New("db: connection role can bypass row-level security")
@@ -102,14 +106,44 @@ func (d *DB) WithTx(ctx context.Context, fn func(pgx.Tx) error) error {
 // WithTenantTx runs fn in a transaction scoped to tenantID: Row-Level Security
 // policies read it from app.tenant_id. The setting is local to the
 // transaction, so it never leaks to the next use of the pooled connection.
+//
+// If ctx carries a transaction opened by InTenantTx, fn joins it as a
+// savepoint instead: its writes commit or roll back with that transaction,
+// and an error of fn undoes only what fn wrote. Joining a transaction of
+// another tenant fails with ErrTenantMismatch.
 func (d *DB) WithTenantTx(ctx context.Context, tenantID uuid.UUID, fn func(pgx.Tx) error) error {
 	if tenantID == uuid.Nil {
 		return ErrNoTenant
+	}
+	if amb, ok := ctx.Value(ambientKey{}).(ambient); ok {
+		if amb.tenantID != tenantID {
+			return ErrTenantMismatch
+		}
+		return pgx.BeginFunc(ctx, amb.tx, fn)
 	}
 	return d.WithTx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, "SELECT set_config('app.tenant_id', $1, true)", tenantID.String()); err != nil {
 			return fmt.Errorf("db: set tenant: %w", err)
 		}
 		return fn(tx)
+	})
+}
+
+// ambientKey is the context key of the transaction InTenantTx shares.
+type ambientKey struct{}
+
+type ambient struct {
+	tenantID uuid.UUID
+	tx       pgx.Tx
+}
+
+// InTenantTx runs fn in a transaction scoped to tenantID, like WithTenantTx,
+// and passes it a context that carries the transaction: WithTenantTx calls
+// made with that context, from any module, join it. This is how one use case
+// stores the changes of several modules atomically without the transaction
+// reaching its code. If ctx already carries a transaction, fn joins it too.
+func (d *DB) InTenantTx(ctx context.Context, tenantID uuid.UUID, fn func(context.Context, pgx.Tx) error) error {
+	return d.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
+		return fn(context.WithValue(ctx, ambientKey{}, ambient{tenantID: tenantID, tx: tx}), tx)
 	})
 }

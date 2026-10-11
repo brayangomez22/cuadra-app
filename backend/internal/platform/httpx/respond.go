@@ -13,8 +13,9 @@ type ErrorBody struct {
 
 // ErrorDetail carries a machine-readable code and a user-facing message (Spanish).
 type ErrorDetail struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Code    string            `json:"code"`
+	Message string            `json:"message"`
+	Details map[string]string `json:"details,omitempty"`
 }
 
 // WriteJSON writes v as a JSON response with the given status.

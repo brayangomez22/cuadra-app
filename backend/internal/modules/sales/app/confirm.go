@@ -38,8 +38,8 @@ type ConfirmSaleInput struct {
 
 // ConfirmSale builds the sale from the cart with the catalog's prices,
 // checks the discounts against the actor's limit and the payments against
-// the total, and stores it together with its stock exits. If any step fails,
-// nothing is stored.
+// the total, and stores it together with its stock exits and its
+// consecutive number. If any step fails, nothing is stored.
 func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput) (_ *domain.Sale, err error) {
 	ctx, span := s.startSpan(ctx, "ConfirmSale", a, attribute.String("location.id", in.LocationID.String()))
 	defer func() { endSpan(span, err) }()
@@ -64,7 +64,7 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	if err != nil {
 		return nil, err
 	}
-	span.SetAttributes(attribute.String("sale.id", id.String()))
+	span.SetAttributes(saleAttr(id))
 	sale, err := domain.NewSale(domain.NewSaleParams{
 		ID: id, TenantID: a.TenantID, LocationID: in.LocationID, UserID: a.UserID,
 		CustomerID: in.CustomerID, CreatedAt: s.Now(),
@@ -92,9 +92,14 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	err = s.Sales.SaveConfirmed(ctx, sale, func(ctx context.Context) error {
 		return s.Stock.ReserveSale(ctx, a.TenantID, a.UserID, sale.LocationID(), sale.ID(), stockLines(sale))
 	})
+	var stockErr *domain.InsufficientStockError
+	if errors.As(err, &stockErr) {
+		stockErr.ProductName = products[stockErr.ProductID].Name
+	}
 	if err != nil {
 		return nil, err
 	}
+	span.SetAttributes(attribute.Int64("sale.number", sale.Number()))
 	s.confirmed.Add(ctx, 1)
 	s.amount.Record(ctx, sale.Totals().Total.InexactFloat64())
 	return sale, nil

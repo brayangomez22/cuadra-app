@@ -1,5 +1,6 @@
-// Package app holds the sales use cases. ConfirmSale is the point-of-sale
-// checkout; the catalog and the stock are reached through the ports
+// Package app holds the sales use cases: ConfirmSale (the point-of-sale
+// checkout), VoidSale and the queries of a sale and of the day's sales. The
+// catalog and the stock are reached through the ports
 // ProductCatalog and StockReserver, which cmd/api satisfies with the other
 // modules.
 package app
@@ -59,11 +60,17 @@ type StockLine struct {
 // StockReserver registers the stock exits of a sale in the inventory module.
 type StockReserver interface {
 	// ReserveSale registers one sale_out per line (one line per product) at
-	// locationID, referencing saleID. It fails with
-	// domain.ErrInsufficientStock if the tenant's stock policy rejects an
-	// exit. It runs within the transaction of SaleRepository.SaveConfirmed,
-	// through ctx.
+	// locationID, referencing saleID. It fails with a
+	// *domain.InsufficientStockError (without the product's name) if the
+	// tenant's stock policy rejects an exit, and with
+	// domain.ErrLocationNotFound or domain.ErrLocationInactive if the
+	// location cannot sell. It runs within the transaction of
+	// SaleRepository.SaveConfirmed, through ctx.
 	ReserveSale(ctx context.Context, tenantID, userID, locationID, saleID uuid.UUID, lines []StockLine) error
+	// ReverseSale gives back the stock that saleID took, exactly, with
+	// inverse movements. It runs within the transaction of
+	// SaleRepository.Void, through ctx.
+	ReverseSale(ctx context.Context, tenantID, userID, saleID uuid.UUID) error
 }
 
 // Deps are the Service's dependencies. Now defaults to time.Now, the
@@ -87,6 +94,7 @@ type Service struct {
 	confirmed        metric.Int64Counter
 	amount           metric.Float64Histogram
 	discountRejected metric.Int64Counter
+	voided           metric.Int64Counter
 }
 
 // amountBuckets are the bucket boundaries of cuadra.sales.amount, in COP: a
@@ -133,6 +141,11 @@ func NewService(d Deps) (*Service, error) {
 		metric.WithUnit("{rejection}")); err != nil {
 		return nil, err
 	}
+	if s.voided, err = meter.Int64Counter("cuadra.sales.voided",
+		metric.WithDescription("Sales voided."),
+		metric.WithUnit("{sale}")); err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 
@@ -143,6 +156,10 @@ func (s *Service) startSpan(ctx context.Context, name string, a Actor, attrs ...
 		attribute.String("user.id", a.UserID.String()),
 	)
 	return s.tracer.Start(ctx, "sales."+name, trace.WithAttributes(attrs...))
+}
+
+func saleAttr(id uuid.UUID) attribute.KeyValue {
+	return attribute.String("sale.id", id.String())
 }
 
 // endSpan records err on the span and ends it.

@@ -259,3 +259,120 @@ func TestQuerySpans(t *testing.T) {
 		require.Contains(t, names, "PingQuery :exec")
 	})
 }
+
+// insertTenant stores the tenant row of id within tx: tenants is a business
+// table whose policy compares id with app.tenant_id.
+func insertTenant(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	_, err := tx.Exec(ctx, "INSERT INTO tenants (id, name, nit, status, created_at) VALUES ($1, 'Ferretería', '890903938-8', 'active', now())", id)
+	return err
+}
+
+// tenantExists reports whether the tenant row of id was committed.
+func tenantExists(t *testing.T, d *db.DB, id uuid.UUID) bool {
+	t.Helper()
+	var n int
+	require.NoError(t, d.WithTenantTx(t.Context(), id, func(tx pgx.Tx) error {
+		return tx.QueryRow(t.Context(), "SELECT count(*) FROM tenants WHERE id = $1", id).Scan(&n)
+	}))
+	return n == 1
+}
+
+func TestInTenantTx(t *testing.T) {
+	t.Run("WithTenantTx con una transacción en el contexto se une a ella y su rollback deshace todo", func(t *testing.T) {
+		d := dbtest.New(t)
+		tenantID := uuid.Must(uuid.NewV7())
+		boom := errors.New("boom")
+
+		err := d.InTenantTx(t.Context(), tenantID, func(ctx context.Context, _ pgx.Tx) error {
+			require.NoError(t, d.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error { return insertTenant(ctx, tx, tenantID) }))
+			// La escritura de la transacción interna se ve en la externa.
+			require.NoError(t, d.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
+				var n int
+				if err := tx.QueryRow(ctx, "SELECT count(*) FROM tenants WHERE id = $1", tenantID).Scan(&n); err != nil {
+					return err
+				}
+				require.Equal(t, 1, n)
+				return nil
+			}))
+			return boom
+		})
+
+		require.ErrorIs(t, err, boom)
+		require.False(t, tenantExists(t, d, tenantID))
+	})
+
+	t.Run("confirma lo escrito por la transacción unida", func(t *testing.T) {
+		d := dbtest.New(t)
+		tenantID := uuid.Must(uuid.NewV7())
+
+		err := d.InTenantTx(t.Context(), tenantID, func(ctx context.Context, _ pgx.Tx) error {
+			return d.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error { return insertTenant(ctx, tx, tenantID) })
+		})
+
+		require.NoError(t, err)
+		require.True(t, tenantExists(t, d, tenantID))
+	})
+
+	t.Run("un error de la transacción unida deshace solo lo suyo", func(t *testing.T) {
+		d := dbtest.New(t)
+		tenantID := uuid.Must(uuid.NewV7())
+		boom := errors.New("boom")
+
+		err := d.InTenantTx(t.Context(), tenantID, func(ctx context.Context, tx pgx.Tx) error {
+			if err := insertTenant(ctx, tx, tenantID); err != nil {
+				return err
+			}
+			inner := d.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
+				if _, err := tx.Exec(ctx, "UPDATE tenants SET name = 'Otro' WHERE id = $1", tenantID); err != nil {
+					return err
+				}
+				return boom
+			})
+			require.ErrorIs(t, inner, boom)
+			return nil
+		})
+
+		require.NoError(t, err)
+		var name string
+		require.NoError(t, d.WithTenantTx(t.Context(), tenantID, func(tx pgx.Tx) error {
+			return tx.QueryRow(t.Context(), "SELECT name FROM tenants WHERE id = $1", tenantID).Scan(&name)
+		}))
+		require.Equal(t, "Ferretería", name)
+	})
+
+	t.Run("rechaza unirse con otro tenant", func(t *testing.T) {
+		d := dbtest.New(t)
+		tenantA, tenantB := uuid.Must(uuid.NewV7()), uuid.Must(uuid.NewV7())
+
+		err := d.InTenantTx(t.Context(), tenantA, func(ctx context.Context, _ pgx.Tx) error {
+			return d.WithTenantTx(ctx, tenantB, func(pgx.Tx) error {
+				t.Fatal("no debe correr con el tenant equivocado")
+				return nil
+			})
+		})
+
+		require.ErrorIs(t, err, db.ErrTenantMismatch)
+	})
+
+	t.Run("InTenantTx anidado se une a la transacción del contexto", func(t *testing.T) {
+		d := dbtest.New(t)
+		tenantID := uuid.Must(uuid.NewV7())
+		boom := errors.New("boom")
+
+		err := d.InTenantTx(t.Context(), tenantID, func(ctx context.Context, _ pgx.Tx) error {
+			require.NoError(t, d.InTenantTx(ctx, tenantID, func(ctx context.Context, tx pgx.Tx) error {
+				return insertTenant(ctx, tx, tenantID)
+			}))
+			return boom
+		})
+
+		require.ErrorIs(t, err, boom)
+		require.False(t, tenantExists(t, d, tenantID))
+	})
+
+	t.Run("rechaza un tenant vacío", func(t *testing.T) {
+		d := dbtest.New(t)
+		err := d.InTenantTx(t.Context(), uuid.Nil, func(context.Context, pgx.Tx) error { return nil })
+		require.ErrorIs(t, err, db.ErrNoTenant)
+	})
+}

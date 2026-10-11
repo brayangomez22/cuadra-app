@@ -18,6 +18,7 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/config"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
@@ -153,6 +154,19 @@ func run() error {
 		return err
 	}
 
+	salesModule, err := sales.New(sales.Config{
+		DB:             database,
+		Authorize:      identity.Authorize,
+		Products:       salesCatalog{catalogModule},
+		Stock:          salesStock{inventoryModule},
+		Logger:         log,
+		TracerProvider: otel.GetTracerProvider(),
+		MeterProvider:  otel.GetMeterProvider(),
+	})
+	if err != nil {
+		return err
+	}
+
 	handler, err := newHandler(handlerConfig{
 		Log:            log,
 		TracerProvider: otel.GetTracerProvider(),
@@ -163,6 +177,7 @@ func run() error {
 		Authorize: identity.Authorize,
 		Routes: []func(*http.ServeMux){
 			identityModule.RegisterRoutes, catalogModule.RegisterRoutes, inventoryModule.RegisterRoutes,
+			salesModule.RegisterRoutes,
 		},
 	})
 	if err != nil {

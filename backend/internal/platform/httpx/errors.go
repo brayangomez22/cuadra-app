@@ -23,6 +23,10 @@ type ErrorRule struct {
 	Status  int
 	Code    string
 	Message string
+	// Describe, when set, builds the message and the details of an error
+	// that carries data (the product without stock, for instance). It
+	// returns false to fall back to Message.
+	Describe func(err error) (message string, details map[string]string, ok bool)
 }
 
 // ErrorMapper translates the errors returned by a module's handlers into the
@@ -52,10 +56,17 @@ func (m *ErrorMapper) RequestError(w http.ResponseWriter, r *http.Request, err e
 // logged and recorded on the request span, but never sent to the client.
 func (m *ErrorMapper) ResponseError(w http.ResponseWriter, r *http.Request, err error) {
 	for _, rule := range m.rules {
-		if errors.Is(err, rule.Err) {
-			WriteError(w, rule.Status, rule.Code, rule.Message)
-			return
+		if !errors.Is(err, rule.Err) {
+			continue
 		}
+		detail := ErrorDetail{Code: rule.Code, Message: rule.Message}
+		if rule.Describe != nil {
+			if msg, details, ok := rule.Describe(err); ok {
+				detail.Message, detail.Details = msg, details
+			}
+		}
+		WriteJSON(w, rule.Status, ErrorBody{Error: detail})
+		return
 	}
 
 	span := trace.SpanFromContext(r.Context())

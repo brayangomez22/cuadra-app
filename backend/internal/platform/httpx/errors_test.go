@@ -119,3 +119,48 @@ func requireErrorBody(t *testing.T, rec *httptest.ResponseRecorder, code string)
 	require.Equal(t, code, body.Error.Code)
 	require.NotEmpty(t, body.Error.Message)
 }
+
+// outOfStockError plays the role of a typed domain error that carries data.
+type outOfStockError struct{ product, name string }
+
+func (e *outOfStockError) Error() string        { return "insufficient stock of " + e.product }
+func (e *outOfStockError) Is(target error) bool { return target == errOutOfStock }
+
+func TestErrorMapperDescribe(t *testing.T) {
+	rule := httpx.ErrorRule{
+		Err: errOutOfStock, Status: http.StatusConflict, Code: "insufficient_stock", Message: "No hay stock suficiente.",
+		Describe: func(err error) (string, map[string]string, bool) {
+			var e *outOfStockError
+			if !errors.As(err, &e) {
+				return "", nil, false
+			}
+			return "No hay stock suficiente de " + e.name + ".", map[string]string{"product_id": e.product}, true
+		},
+	}
+	respond := func(err error) httpx.ErrorBody {
+		rec := httptest.NewRecorder()
+		httpx.NewErrorMapper(slog.New(slog.DiscardHandler), rule).
+			ResponseError(rec, httptest.NewRequest(http.MethodPost, "/", nil), err)
+		require.Equal(t, http.StatusConflict, rec.Code)
+		var body httpx.ErrorBody
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+		return body
+	}
+
+	t.Run("un error tipado arma el mensaje y los detalles con sus datos", func(t *testing.T) {
+		body := respond(fmt.Errorf("confirm: %w", &outOfStockError{product: "p-1", name: "Cemento gris 50kg"}))
+		require.Equal(t, "insufficient_stock", body.Error.Code)
+		require.Equal(t, "No hay stock suficiente de Cemento gris 50kg.", body.Error.Message)
+		require.Equal(t, map[string]string{"product_id": "p-1"}, body.Error.Details)
+	})
+
+	t.Run("sin datos usa el mensaje fijo y omite los detalles", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		httpx.NewErrorMapper(slog.New(slog.DiscardHandler), rule).
+			ResponseError(rec, httptest.NewRequest(http.MethodPost, "/", nil), errOutOfStock)
+		require.NotContains(t, rec.Body.String(), "details")
+		body := respond(errOutOfStock)
+		require.Equal(t, "No hay stock suficiente.", body.Error.Message)
+		require.Nil(t, body.Error.Details)
+	})
+}

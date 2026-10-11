@@ -2,7 +2,9 @@ package domain
 
 import (
 	"slices"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -11,12 +13,16 @@ import (
 // SaleStatus is the state of a sale.
 type SaleStatus string
 
-// Sale states. A sale is built as a draft and confirmed once paid; voiding
-// comes with persistence (T20).
+// Sale states. A sale is built as a draft, confirmed once paid and stored
+// with its consecutive number; a confirmed sale can be voided, which gives
+// its stock back. Only confirmed and voided sales are stored.
 const (
 	SaleDraft     SaleStatus = "draft"
 	SaleConfirmed SaleStatus = "confirmed"
+	SaleVoided    SaleStatus = "voided"
 )
+
+const maxVoidReasonLength = 500
 
 func (s SaleStatus) String() string { return string(s) }
 
@@ -50,21 +56,31 @@ type Totals struct {
 	Taxes     []TaxBreakdown
 }
 
+// VoidInfo is who voided a sale, why and when.
+type VoidInfo struct {
+	UserID uuid.UUID
+	Reason string
+	At     time.Time
+}
+
 // Sale is a point-of-sale sale at a location: its lines and, once
-// confirmed, its payments. Lines are added only to a draft; a confirmed sale
-// does not change.
+// confirmed, its payments and consecutive number. Lines are added only to a
+// draft; a confirmed sale only changes to voided, keeping its amounts and
+// number.
 type Sale struct {
 	id          uuid.UUID
 	tenantID    uuid.UUID
 	locationID  uuid.UUID
 	userID      uuid.UUID
 	customerID  *uuid.UUID
+	number      int64
 	status      SaleStatus
 	lines       []SaleLine
 	payments    []Payment
 	change      decimal.Decimal
 	createdAt   time.Time
 	confirmedAt *time.Time
+	void        *VoidInfo
 }
 
 // NewSale creates an empty draft sale.
@@ -151,6 +167,43 @@ func (s *Sale) Confirm(payments []Payment, at time.Time) error {
 	return nil
 }
 
+// AssignNumber gives a confirmed sale its consecutive number at its
+// location. The repository draws it when it stores the sale; it is assigned
+// once and is positive.
+func (s *Sale) AssignNumber(n int64) error {
+	if s.status != SaleConfirmed {
+		return ErrSaleNotConfirmed
+	}
+	if s.number != 0 {
+		return ErrSaleNumberAssigned
+	}
+	if n <= 0 {
+		return ErrInvalidSaleNumber
+	}
+	s.number = n
+	return nil
+}
+
+// Void voids a confirmed sale: userID voids it at the given time for reason
+// (required, at most 500 characters, trimmed). The sale keeps its lines,
+// payments and number. A voided sale cannot be voided again. On error the
+// sale is unchanged.
+func (s *Sale) Void(userID uuid.UUID, reason string, at time.Time) error {
+	if s.status != SaleConfirmed {
+		return ErrSaleNotConfirmed
+	}
+	if userID == uuid.Nil {
+		return ErrInvalidUserID
+	}
+	reason = strings.TrimSpace(reason)
+	if reason == "" || utf8.RuneCountInString(reason) > maxVoidReasonLength {
+		return ErrInvalidVoidReason
+	}
+	s.status = SaleVoided
+	s.void = &VoidInfo{UserID: userID, Reason: reason, At: at.UTC()}
+	return nil
+}
+
 // Totals adds up the lines. The taxes by rate are the sums of the lines'
 // already rounded amounts, so nothing is rounded here.
 func (s *Sale) Totals() Totals {
@@ -192,6 +245,10 @@ func (s *Sale) UserID() uuid.UUID { return s.userID }
 // CustomerID returns a copy of the customer's id, or nil for an anonymous sale.
 func (s *Sale) CustomerID() *uuid.UUID { return copyID(s.customerID) }
 
+// Number returns the consecutive number at the location; zero until the
+// sale is stored.
+func (s *Sale) Number() int64 { return s.number }
+
 // Status returns the sale's state.
 func (s *Sale) Status() SaleStatus { return s.status }
 
@@ -223,5 +280,15 @@ func (s *Sale) ConfirmedAt() *time.Time {
 		return nil
 	}
 	c := *s.confirmedAt
+	return &c
+}
+
+// VoidInfo returns a copy of who voided the sale, why and when, or nil if it
+// is not voided.
+func (s *Sale) VoidInfo() *VoidInfo {
+	if s.void == nil {
+		return nil
+	}
+	c := *s.void
 	return &c
 }

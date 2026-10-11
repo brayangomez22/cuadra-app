@@ -1,6 +1,10 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/google/uuid"
+)
 
 // Domain errors of the sales module. The HTTP adapter maps them to status codes.
 var (
@@ -18,14 +22,39 @@ var (
 	ErrInvalidDiscountLimit = errors.New("sales: invalid discount limit")
 	ErrInvalidPaymentMethod = errors.New("sales: invalid payment method")
 	ErrInvalidPaymentAmount = errors.New("sales: invalid payment amount")
+	ErrInvalidSaleNumber    = errors.New("sales: invalid sale number")
+	ErrInvalidVoidReason    = errors.New("sales: invalid void reason")
 
 	ErrDiscountExceedsLimit = errors.New("sales: discount exceeds the user's limit")
 	ErrSaleWithoutLines     = errors.New("sales: sale without lines")
 	ErrInsufficientPayment  = errors.New("sales: payments do not cover the total")
 	ErrNonCashOverpayment   = errors.New("sales: non-cash payments exceed the total")
 	ErrSaleNotDraft         = errors.New("sales: sale is not a draft")
+	ErrSaleNotConfirmed     = errors.New("sales: sale is not confirmed")
+	ErrSaleNumberAssigned   = errors.New("sales: sale number already assigned")
+	ErrInconsistentSale     = errors.New("sales: stored sale is inconsistent")
 
+	ErrSaleNotFound      = errors.New("sales: sale not found")
 	ErrProductNotFound   = errors.New("sales: product not found")
 	ErrProductInactive   = errors.New("sales: product is inactive")
+	ErrLocationNotFound  = errors.New("sales: location not found")
+	ErrLocationInactive  = errors.New("sales: location is inactive")
 	ErrInsufficientStock = errors.New("sales: insufficient stock")
 )
+
+// InsufficientStockError is ErrInsufficientStock for one product of the
+// sale: errors.Is(err, ErrInsufficientStock) holds. The StockReserver fills
+// ProductID; ConfirmSale adds the name from the catalog so the cashier knows
+// which product to take off.
+type InsufficientStockError struct {
+	ProductID   uuid.UUID
+	ProductName string
+}
+
+// Error names the product by id only: the message goes to logs and spans.
+func (e *InsufficientStockError) Error() string {
+	return ErrInsufficientStock.Error() + " of product " + e.ProductID.String()
+}
+
+// Is makes the error match ErrInsufficientStock.
+func (e *InsufficientStockError) Is(target error) bool { return target == ErrInsufficientStock }

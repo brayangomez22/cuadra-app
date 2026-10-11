@@ -42,6 +42,7 @@ type StockRepository interface {
 	ListLevels(ctx context.Context, tenantID uuid.UUID, f StockFilter) (StockLevelPage, error)
 	// Kardex returns one page of a product's movements, newest first.
 	Kardex(ctx context.Context, tenantID uuid.UUID, f KardexFilter) (MovementPage, error)
+	MovementsByReference(ctx context.Context, tenantID uuid.UUID, ref DocumentRef) ([]*StockMovement, error)
 }
 
 // StockFilter selects the levels at a location, optionally of one product.
