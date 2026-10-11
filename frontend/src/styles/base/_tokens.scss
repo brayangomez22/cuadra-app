@@ -47,6 +47,10 @@
   @each $name, $value in sizes.$pointer-fine {
     --size-#{$name}: #{$value};
   }
+
+  @each $name, $value in sizes.$layout {
+    --size-#{$name}: #{$value};
+  }
 }
 
 @media (pointer: coarse) {

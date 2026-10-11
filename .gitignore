@@ -23,3 +23,8 @@ dist/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Impeccable: engine binary (the launcher downloads it when missing) and the
+# 1 MB font index, kept local
+.claude/skills/impeccable/scripts/bin/
+.claude/skills/impeccable/scripts/data/

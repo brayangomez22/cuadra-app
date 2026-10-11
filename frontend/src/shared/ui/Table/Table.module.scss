@@ -1,0 +1,74 @@
+@use '@/styles/abstracts' as *;
+
+// One line per row, dense like the counter needs: on narrow screens the table
+// scrolls inside .root instead of wrapping SKUs and names.
+.root {
+  overflow-x: auto;
+  max-inline-size: 100%;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+
+  @include focus-ring;
+}
+
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-md);
+}
+
+.caption {
+  padding: var(--space-3) var(--space-4);
+  font-weight: var(--font-weight-semibold);
+  text-align: start;
+}
+
+.headerCell,
+.cell {
+  padding-block: var(--space-2);
+  padding-inline: var(--space-4);
+  text-align: start;
+  vertical-align: middle;
+
+  &[data-numeric='true'] {
+    text-align: end;
+    white-space: nowrap;
+
+    @include numeric;
+  }
+}
+
+.head {
+  background: var(--color-bg-subtle);
+}
+
+.headerCell {
+  block-size: var(--size-control);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.row {
+  block-size: var(--size-row);
+  border-block-start: 1px solid var(--color-border-default);
+
+  .head & {
+    border-block-start: 0;
+  }
+
+  // Selection shows with background and the orange bar, not color alone. The
+  // bar is always there, transparent, so selecting a row does not shift it.
+  .cell:first-child {
+    border-inline-start: var(--space-1) solid transparent;
+  }
+
+  &[aria-selected='true'] {
+    background: var(--color-bg-subtle);
+
+    .cell:first-child {
+      border-inline-start-color: var(--color-border-accent);
+    }
+  }
+}

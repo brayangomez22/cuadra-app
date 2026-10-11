@@ -81,7 +81,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Alcance:** con la skill de diseño, propón 2 o 3 direcciones visuales (paleta, tipografía, densidad) **como mockups de la pantalla del POS**, no como código. Elijo una. Después implementa `src/styles/` completo: primitivos, tokens semánticos en tema claro y oscuro, escalas, mixins, reset, base y a11y.
 **Aceptación:** todos los pares texto/fondo de los tokens cumplen 4.5:1 (deja una tabla de verificación en `docs/estilos.md`); stylelint en verde.
 
-### [ ] T14 · Componentes base (`shared/ui`)
+### [x] T14 · Componentes base (`shared/ui`)
 **Alcance:** Button, IconButton, Field (label + input + ayuda + error), Input, Select (Radix), Checkbox, Table (densa, cifras tabulares, columna numérica alineada a la derecha), Dialog (Radix), Toast (Radix), Badge, EmptyState, Spinner/Skeleton. Una página interna `/dev/ui` que los muestra todos en sus estados (vale como catálogo visual).
 **Tests primero:** comportamiento y accesibilidad. Field asocia label e input y anuncia el error (`aria-describedby`, `aria-invalid`); Dialog atrapa el foco y cierra con Escape; Button deshabilitado no dispara `onClick`.
 **Después:** `/impeccable audit` y `/impeccable critique` sobre `/dev/ui`, y corrige lo que encuentre.

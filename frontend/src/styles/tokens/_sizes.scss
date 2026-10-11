@@ -15,3 +15,12 @@ $pointer-coarse: (
   'control': f.rem(56px),
   'row': f.rem(56px),
 );
+
+// Maximum widths. On a phone they shrink to fit the screen.
+$layout: (
+  'dialog-sm': f.rem(440px),
+  'dialog-md': f.rem(640px),
+  'toast': f.rem(400px),
+  // Content width of a page on wide screens.
+  'page': f.rem(1200px),
+);

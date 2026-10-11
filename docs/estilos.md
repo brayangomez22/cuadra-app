@@ -94,7 +94,7 @@ Nombres de tokens: `--{categoría}-{rol}-{variante}-{estado}`. Por ejemplo, `--c
 **Escalas** (también como custom properties, en `base/_tokens.scss`):
 - Espacio: `--space-1` (4px) `--space-2` (8) `--space-3` (12) `--space-4` (16) `--space-5` (20) `--space-6` (24) `--space-8` (32) `--space-10` (40) `--space-12` (48) `--space-16` (64).
 - Tipografía: `--font-size-xs` (13px) `sm` (14) `md` (16, el texto base) `lg` (18) `xl` (20) `2xl` (24) `3xl` (32) `display` (56, el total de la venta). `--line-height-tight|normal`, `--font-weight-regular|medium|semibold|bold|heavy`, `--font-family-sans|mono` (fuentes del sistema). Usa `@include numeric` (`tabular-nums`) para cifras, precios y cantidades.
-- Tamaños: `--size-control` (alto de botones e inputs: 44px con mouse, 56px táctil), `--size-row` (fila de tabla: 48px con mouse, 56px táctil), `--size-touch-min` (44px). El cambio a táctil lo hace `@media (pointer: coarse)`, sin código en los componentes.
+- Tamaños: `--size-control` (alto de botones e inputs: 44px con mouse, 56px táctil), `--size-row` (fila de tabla: 48px con mouse, 56px táctil), `--size-touch-min` (44px). El cambio a táctil lo hace `@media (pointer: coarse)`, sin código en los componentes. Anchos máximos: `--size-dialog-sm` (440px), `--size-dialog-md` (640px), `--size-toast` (400px) y `--size-page` (1200px, el contenido de una página en pantallas anchas); en un celular se reducen para caber.
 - Radios: `--radius-sm|md|lg|full`. Sombras: `--shadow-sm|md|lg` (cambian con el tema). Movimiento: `--duration-fast|normal`, `--ease-standard`. Capas: `--z-dropdown|sticky|modal|toast`.
 
 ### Verificación de contraste
@@ -256,7 +256,7 @@ Toda pantalla es **usable**, no solo visible, en cualquier dispositivo en que se
 - **Anchos de referencia:** 360 (celular), 768 (tablet vertical), 1024 (tablet horizontal), **1366×768** (el monitor típico del mostrador) y 1920. En 1366×768 la acción principal (por ejemplo, "Cobrar") se ve sin hacer scroll.
 - **Orientación:** funciona en vertical y en horizontal. En un celular horizontal, con poca altura, la acción principal no queda tapada ni fuera de la pantalla.
 - **Zoom y texto grande:** con zoom del navegador al 200% no se pierde contenido ni funciones (WCAG 1.4.4 y 1.4.10); el contenido se reacomoda en una columna. Por eso los tamaños van en `rem` y no se fija el alto de nada que contenga texto.
-- **Táctil sin hover:** ninguna acción depende solo de `:hover`. Los estilos de hover van con `@include hover`, que solo aplica en dispositivos con hover. El tamaño táctil lo resuelven los tokens `--size-control` y `--size-row`, que crecen solos con `pointer: coarse`.
+- **Táctil sin hover:** ninguna acción depende solo de `:hover`. Los estilos de hover van con `@include hover`, que solo aplica en dispositivos con hover; `@include hover(':disabled')` excluye un estado. El tamaño táctil lo resuelven los tokens `--size-control` y `--size-row`, que crecen solos con `pointer: coarse`.
 - **Barras fijas en celular:** una barra fija abajo (total y "Cobrar") suma `env(safe-area-inset-bottom)` a su padding y no queda tapada por el teclado en pantalla. Usa `dvh` en vez de `vh` para el alto de la ventana.
 - **Cómo se construye:**
   - Mobile-first: estilos base para el celular y `@include respond-to(md) { ... }` hacia arriba. Breakpoints `sm` 640, `md` 768, `lg` 1024, `xl` 1280.
@@ -277,14 +277,34 @@ Toda pantalla es **usable**, no solo visible, en cualquier dispositivo en que se
 - Claro por defecto; oscuro con `[data-theme='dark']` sobre `<html>` y fallback con `prefers-color-scheme` cuando no hay `data-theme='light'`. Los dos temas tienen exactamente los mismos tokens (lo comprueba el test).
 - Como los componentes solo usan tokens semánticos, un tema nuevo no exige tocar ningún componente.
 
-## 6. Particularidades de este producto
+## 6. Componentes base (`shared/ui`)
+
+Se importan desde `@/shared/ui`. El catálogo visual con todos los estados está en **`/dev/ui`** (solo en desarrollo: `npm run dev` y abre `http://localhost:5173/dev/ui`).
+
+| Componente | Uso |
+|---|---|
+| `Button` | `variant` `primary` (la única acción naranja de la pantalla), `secondary`, `ghost` o `danger`; `size` `md` o `lg`; `loading` lo bloquea y anuncia `aria-busy`; deshabilitado se ve gris en todas las variantes; `icon` decorativo. Es `type="button"` por defecto. |
+| `IconButton` | `label` obligatorio: es el nombre accesible y el tooltip. |
+| `Field` | Label, control, ayuda (`hint`) y error. Asocia el label y describe el control con la ayuda y el error (`aria-describedby`, `aria-invalid`). El error lleva ícono y texto. Un control propio se conecta con `useFieldControl(props)`. |
+| `Input` | `align="end"` para precios y cantidades. |
+| `Select` | Radix Select: `options`, `value` u `defaultValue`, `onValueChange`, `placeholder`. |
+| `Checkbox` | Nativo, con `label` y `hint` propios (no va dentro de `Field`). |
+| `Table` | `Table` (con `caption` obligatorio), `TableHead`, `TableBody`, `TableRow` (`selected`), `TableHeaderCell` y `TableCell` (`numeric`: a la derecha y con cifras tabulares). Una línea por fila; en pantallas angostas la tabla se desplaza dentro de su contenedor. |
+| `Dialog` | Radix Dialog: `title` y `description` obligatorios, `trigger`, `footer` con la acción principal al final y el cancelar envuelto en `DialogClose`. En el celular es una hoja inferior. |
+| `useToast()` | `toast({ tone, title, description })`. `ToastProvider` ya está montado en `App.tsx`. Los errores no se cierran solos (quedan hasta que el usuario los cierra) e interrumpen al lector de pantalla; los demás desaparecen a los 5 u 8 segundos. |
+| `Badge` | `tone` `neutral`, `success`, `warning`, `danger` o `info`. El texto debe decir el estado por sí solo. |
+| `EmptyState` | `icon`, `title`, `description`, `action` y `headingLevel`. |
+| `Spinner` / `Skeleton` | `Spinner` anuncia "Cargando…" (o su `label`); `decorative` si el control ya anuncia `aria-busy`. `Skeleton` es decorativo. |
+| Íconos | `IconClose`, `IconCheck`, `IconChevronDown`, `IconPlus`, `IconSearch`, `IconAlert`, `IconInfo`, `IconSuccess` e `IconBox`: SVG propios de 1em en `currentColor`, siempre decorativos. Un ícono nuevo se agrega en `shared/ui/icons`. |
+
+## 7. Particularidades de este producto
 
 - **El POS es una herramienta de trabajo**, no una landing: prima la velocidad, la densidad legible y el teclado (lector de código de barras, atajos, Enter para confirmar). Las decoraciones son mínimas.
 - **Las cifras mandan**: precios y cantidades alineados a la derecha, con números tabulares y separador de miles colombiano (`$ 12.500`).
 - Usuarios de 35 a 60 años, a veces en mostradores con mala luz y pantallas modestas. El tamaño base de texto debe ser cómodo (16px como mínimo) y con alto contraste.
 - Habrá tablets y celulares, así que los objetivos táctiles importan y toda pantalla cumple las reglas de **Responsive** de la sección 5.
 
-## 7. Checklist antes de dar por terminado un componente
+## 8. Checklist antes de dar por terminado un componente
 
 - [ ] Un `.module.scss` propio, con `.root` y sin estilos globales.
 - [ ] Solo tokens semánticos y `npm run lint:styles` en verde.

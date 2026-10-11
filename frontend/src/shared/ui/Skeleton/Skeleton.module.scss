@@ -1,0 +1,24 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: block;
+  inline-size: 100%;
+  block-size: 1lh;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+
+  @include reduced-motion-safe {
+    animation: pulse 1.6s var(--ease-standard) infinite;
+  }
+
+  &[data-shape='block'] {
+    block-size: 100%;
+    border-radius: var(--radius-md);
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
