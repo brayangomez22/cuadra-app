@@ -1,0 +1,25 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-default);
+  text-decoration: underline;
+  text-decoration-color: var(--color-border-accent);
+  text-decoration-thickness: 0.15em;
+  text-underline-offset: 0.2em;
+
+  @include focus-ring;
+
+  @include hover {
+    text-decoration-color: currentcolor;
+  }
+
+  &[data-tone='quiet'] {
+    text-decoration-color: var(--color-border-strong);
+
+    @include hover {
+      text-decoration-color: currentcolor;
+    }
+  }
+}

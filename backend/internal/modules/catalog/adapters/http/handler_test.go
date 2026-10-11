@@ -300,6 +300,22 @@ func TestListProducts(t *testing.T) {
 		require.Contains(t, rec.Body.String(), `"items":[]`)
 	})
 
+	t.Run("pasa los ids pedidos al caso de uso", func(t *testing.T) {
+		uc := &stubUseCases{}
+		first, second := uuid.Must(uuid.NewV7()), uuid.Must(uuid.NewV7())
+
+		rec := serve(t, uc, owner, http.MethodGet, "/api/v1/products?status=all&ids="+first.String()+"&ids="+second.String(), "")
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Equal(t, []uuid.UUID{first, second}, uc.filter.IDs)
+	})
+
+	t.Run("sin ids no filtra por id", func(t *testing.T) {
+		uc := &stubUseCases{}
+		serve(t, uc, owner, http.MethodGet, "/api/v1/products", "")
+		require.Nil(t, uc.filter.IDs)
+	})
+
 	t.Run("status inactive filtra los inactivos", func(t *testing.T) {
 		uc := &stubUseCases{}
 		serve(t, uc, owner, http.MethodGet, "/api/v1/products?status=inactive", "")

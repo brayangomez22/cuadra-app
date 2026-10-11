@@ -1,5 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
-import { GuestOnly, LoginPage, RequireAuth, SignUpPage } from '@/features/auth';
+import { GuestOnly, LoginPage, RequireAuth, RequirePermission, SignUpPage } from '@/features/auth';
+import { ProductFormPage, ProductListPage } from '@/features/catalog';
+import { KardexPage, ReceiptPage, StockPage } from '@/features/inventory';
 import { AppLayout } from './layout/AppLayout';
 import { ComingSoonPage } from './pages/ComingSoonPage';
 import { HomePage } from './pages/HomePage';
@@ -33,10 +35,31 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         children: [
           { path: '/', element: <HomePage /> },
-          // Placeholders until T16 (catalog and inventory) and phase 2 (POS).
+          // Placeholder until phase 2 (POS).
           { path: '/vender', element: <ComingSoonPage title="Vender" /> },
-          { path: '/productos', element: <ComingSoonPage title="Productos" /> },
-          { path: '/inventario', element: <ComingSoonPage title="Inventario" /> },
+          // Each section checks the permission of its API (x-permission in api/openapi.yaml).
+          {
+            element: <RequirePermission permission="catalog:read" />,
+            children: [{ path: '/productos', element: <ProductListPage /> }],
+          },
+          {
+            element: <RequirePermission permission="catalog:write" />,
+            children: [
+              { path: '/productos/nuevo', element: <ProductFormPage /> },
+              { path: '/productos/:productId/editar', element: <ProductFormPage /> },
+            ],
+          },
+          {
+            element: <RequirePermission permission="inventory:read" />,
+            children: [
+              { path: '/inventario', element: <StockPage /> },
+              { path: '/productos/:productId/kardex', element: <KardexPage /> },
+            ],
+          },
+          {
+            element: <RequirePermission permission="inventory:adjust" />,
+            children: [{ path: '/inventario/entrada', element: <ReceiptPage /> }],
+          },
         ],
       },
     ],

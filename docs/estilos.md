@@ -284,12 +284,16 @@ Se importan desde `@/shared/ui`. El catálogo visual con todos los estados está
 | Componente | Uso |
 |---|---|
 | `Button` | `variant` `primary` (la única acción naranja de la pantalla), `secondary`, `ghost` o `danger`; `size` `md` o `lg`; `loading` lo bloquea y anuncia `aria-busy`; deshabilitado se ve gris en todas las variantes; `icon` decorativo. Es `type="button"` por defecto. |
+| `ButtonLink` | Un enlace (`<a>` de React Router) con el aspecto de `Button`: para acciones que navegan, como "Nuevo producto". Mismas `variant` (sin `danger`), `size` e `icon`. |
 | `IconButton` | `label` obligatorio: es el nombre accesible y el tooltip. |
 | `Field` | Label, control, ayuda (`hint`) y error. Asocia el label y describe el control con la ayuda y el error (`aria-describedby`, `aria-invalid`). El error lleva ícono y texto. Un control propio se conecta con `useFieldControl(props)`. |
 | `Input` | `align="end"` para precios y cantidades. |
+| `Textarea` | Texto de varias líneas (una descripción), dentro de un `Field` como `Input`. |
 | `Select` | Radix Select: `options`, `value` u `defaultValue`, `onValueChange`, `placeholder`. |
 | `Checkbox` | Nativo, con `label` y `hint` propios (no va dentro de `Field`). |
 | `Table` | `Table` (con `caption` obligatorio), `TableHead`, `TableBody`, `TableRow` (`selected`), `TableHeaderCell` y `TableCell` (`numeric`: a la derecha y con cifras tabulares). Una línea por fila; en pantallas angostas la tabla se desplaza dentro de su contenedor. |
+| `Pagination` | Rango visible y total ("21–40 de 134") con Anterior y Siguiente; trabaja con `limit` y `offset` como la API. `label` nombra la navegación. Sin resultados no muestra nada y con una sola página oculta los botones. |
+| `TextLink` | Enlace dentro de un texto o una celda: subrayado, nunca texto naranja. `tone="quiet"` (subrayado gris) para enlaces que se repiten en cada fila. |
 | `Dialog` | Radix Dialog: `title` y `description` obligatorios, `trigger`, `footer` con la acción principal al final y el cancelar envuelto en `DialogClose`. En el celular es una hoja inferior. |
 | `useToast()` | `toast({ tone, title, description })`. `ToastProvider` ya está montado en `App.tsx`. Los errores no se cierran solos (quedan hasta que el usuario los cierra) e interrumpen al lector de pantalla; los demás desaparecen a los 5 u 8 segundos. |
 | `Alert` | Mensaje dentro de la página que no es de un campo, como el error de un formulario: `tone` `danger` (anuncia de inmediato con `role="alert"`), `warning`, `info` o `success` (`role="status"`), `title` opcional. Siempre ícono y texto. |

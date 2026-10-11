@@ -144,13 +144,13 @@ func list(ctx context.Context, q *sqlcgen.Queries, f domain.ProductFilter) ([]sq
 		return nil, 0, err
 	}
 	found, err := q.ListProducts(ctx, sqlcgen.ListProductsParams{
-		Active: f.Active, CategoryID: f.CategoryID,
+		Active: f.Active, CategoryID: f.CategoryID, Ids: f.IDs,
 		RowLimit: limit, RowOffset: offset,
 	})
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := q.CountProducts(ctx, sqlcgen.CountProductsParams{Active: f.Active, CategoryID: f.CategoryID})
+	total, err := q.CountProducts(ctx, sqlcgen.CountProductsParams{Active: f.Active, CategoryID: f.CategoryID, Ids: f.IDs})
 	if err != nil {
 		return nil, 0, err
 	}
@@ -169,7 +169,7 @@ func search(ctx context.Context, q *sqlcgen.Queries, text string, f domain.Produ
 	terms := searchTerms(text)
 	barcode := text
 	found, err := q.SearchProducts(ctx, sqlcgen.SearchProductsParams{
-		Active: f.Active, CategoryID: f.CategoryID,
+		Active: f.Active, CategoryID: f.CategoryID, Ids: f.IDs,
 		Sku: strings.ToUpper(text), Barcode: &barcode, Terms: terms, Text: text,
 		RowLimit: limit, RowOffset: offset,
 	})
@@ -177,7 +177,7 @@ func search(ctx context.Context, q *sqlcgen.Queries, text string, f domain.Produ
 		return nil, 0, err
 	}
 	total, err := q.CountSearchProducts(ctx, sqlcgen.CountSearchProductsParams{
-		Active: f.Active, CategoryID: f.CategoryID,
+		Active: f.Active, CategoryID: f.CategoryID, Ids: f.IDs,
 		Sku: strings.ToUpper(text), Barcode: &barcode, Terms: terms,
 	})
 	if err != nil {

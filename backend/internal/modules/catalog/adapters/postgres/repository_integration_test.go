@@ -282,6 +282,30 @@ func TestProductSearch(t *testing.T) {
 		require.Equal(t, []string{"Tubo PVC presión 1/2 pulgada", "Tubo PVC sanitario 3 pulgadas"}, names(page))
 	})
 
+	t.Run("filtra por ids, con o sin texto", func(t *testing.T) {
+		cement := search(t, domain.ProductFilter{Query: "cem-50"}).Items[0]
+		pipe := search(t, domain.ProductFilter{Query: "tub-12"}).Items[0]
+		ids := []uuid.UUID{pipe.ID(), cement.ID(), inactive.ID()}
+
+		require.Equal(t, []string{"Cemento gris 50kg", "Tubo PVC descontinuado", "Tubo PVC presión 1/2 pulgada"},
+			names(search(t, domain.ProductFilter{IDs: ids})))
+		require.Equal(t, 3, search(t, domain.ProductFilter{IDs: ids}).Total)
+		require.Equal(t, []string{"Tubo PVC presión 1/2 pulgada"},
+			names(search(t, domain.ProductFilter{Query: "tubo", Active: &active, IDs: ids})))
+		require.Empty(t, search(t, domain.ProductFilter{IDs: []uuid.UUID{}}).Items)
+	})
+
+	t.Run("aislamiento: los ids de otro tenant no aparecen", func(t *testing.T) {
+		other := f.createTenant(t)
+		foreign := f.createProduct(t, other, "AJENO-1", "Producto de otra ferretería")
+		pipe := search(t, domain.ProductFilter{Query: "tub-12"}).Items[0]
+
+		page := search(t, domain.ProductFilter{IDs: []uuid.UUID{foreign.ID(), pipe.ID()}})
+
+		require.Equal(t, []string{"Tubo PVC presión 1/2 pulgada"}, names(page))
+		require.Equal(t, 1, page.Total)
+	})
+
 	t.Run("sin texto lista por nombre", func(t *testing.T) {
 		page := search(t, domain.ProductFilter{Active: &active})
 		require.Equal(t, []string{

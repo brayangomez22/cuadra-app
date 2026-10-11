@@ -3,6 +3,7 @@ package apispec_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -176,6 +177,27 @@ func TestLoad(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, spec.Paths.Find("/healthz"))
 		require.NotNil(t, spec.Paths.Find("/readyz"))
+	})
+
+	t.Run("el contrato real rechaza más de 100 ids en la lista de productos", func(t *testing.T) {
+		spec, err := apispec.Load(t.Context())
+		require.NoError(t, err)
+		validator, err := apispec.NewValidator(spec, discardLogger())
+		require.NoError(t, err)
+		handler := validator(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))
+		products := func(n int) string {
+			query := make([]string, n)
+			for i := range query {
+				query[i] = "ids=01920000-0000-7000-8000-" + fmt.Sprintf("%012d", i)
+			}
+			return "/api/v1/products?" + strings.Join(query, "&")
+		}
+
+		for n, want := range map[int]int{100: http.StatusOK, 101: http.StatusBadRequest} {
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, products(n), nil))
+			require.Equal(t, want, rec.Code, "%d ids: %s", n, rec.Body.String())
+		}
 	})
 }
 

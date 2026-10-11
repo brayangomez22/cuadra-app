@@ -1,0 +1,56 @@
+@use '@/styles/abstracts' as *;
+
+.loading {
+  align-self: center;
+  padding-block: var(--space-8);
+}
+
+.subtitle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-inline-size: var(--size-form-wide);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sectionTitle {
+  padding-block-end: var(--space-2);
+  border-block-end: 1px solid var(--color-border-default);
+  font-size: var(--font-size-lg);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+
+  @include respond-to(md) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.wide {
+  @include respond-to(md) {
+    grid-column: 1 / -1;
+  }
+}
+
+// The main action last and on the right, as in the dialogs; stacked on a phone.
+.footer {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

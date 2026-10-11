@@ -31,6 +31,8 @@ type ProductFilter struct {
 	CategoryID *uuid.UUID
 	// Active, when set, keeps only active (true) or inactive (false) products.
 	Active *bool
+	// IDs, when not nil, keeps only these products.
+	IDs    []uuid.UUID
 	Limit  int
 	Offset int
 }
