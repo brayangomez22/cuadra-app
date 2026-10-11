@@ -1,7 +1,8 @@
 // API errors follow the Error schema: {"error": {"code": "...", "message": "..."}}.
 // The message is Spanish and safe to show; the code is stable for decisions.
+// Some errors add details, such as the product_id of insufficient_stock.
 
-type ApiErrorBody = { error: { code: string; message: string } };
+type ApiErrorBody = { error: { code: string; message: string; details?: Record<string, string> } };
 
 function isApiError(body: unknown): body is ApiErrorBody {
   if (typeof body !== 'object' || body === null || !('error' in body)) return false;
@@ -34,12 +35,14 @@ export const NETWORK_ERROR_MESSAGE = 'No hay conexión con Cuadra. Revise el int
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string | undefined;
+  readonly details: Record<string, string>;
 
   constructor(status: number, body: unknown) {
     super(errorMessage(body, 'Algo salió mal en Cuadra. Intente de nuevo.'));
     this.name = 'ApiError';
     this.status = status;
     this.code = errorCode(body);
+    this.details = (isApiError(body) && body.error.details) || {};
   }
 }
 

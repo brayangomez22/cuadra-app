@@ -22,7 +22,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Alcance:** contrato en OpenAPI primero. Migraciones de `sales`, `sale_lines` y `sale_payments` (RLS). Confirmar una venta en **una transacción**: guarda la venta, registra las salidas de inventario (puerto `StockReserver`) y deja la venta en estado `confirmed`. Anulación (`voided`) que devuelve el stock con movimientos inversos. Numeración consecutiva por sede sin huecos. Consultas: ventas del día y detalle. Métricas: `cuadra.sales.confirmed` y `cuadra.sales.amount` (histograma), y `cuadra.sales.voided`.
 **Tests primero (integración):** si falla la salida de inventario, la venta no queda guardada; la anulación restaura el stock exacto; dos ventas concurrentes no generan el mismo consecutivo; aislamiento multi-tenant.
 
-### [ ] T21 · Pantalla del POS
+### [x] T21 · Pantalla del POS
 **Depende de:** T14, T20.
 **Alcance:** la pantalla más importante del producto. Búsqueda por **lector de código de barras** (input siempre enfocado, Enter agrega), por SKU o por nombre parcial; carrito con edición de cantidad decimal y descuento según permisos del rol; pago mixto con cálculo del cambio; confirmar con teclado; atajos (F2 buscar, F4 cobrar, Esc cancelar). Pensada para tablet y escritorio.
 **Tests primero:** escanear el mismo código dos veces suma cantidad; no permite cobrar con pago insuficiente; los atajos funcionan; un cajero no ve el campo de descuento por encima de su límite.

@@ -28,3 +28,6 @@ dist/
 # 1 MB font index, kept local
 .claude/skills/impeccable/scripts/bin/
 .claude/skills/impeccable/scripts/data/
+
+# Impeccable: critique snapshots and live-mode state (local only)
+.impeccable/

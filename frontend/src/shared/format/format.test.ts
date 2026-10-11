@@ -1,5 +1,5 @@
 import { plain } from '@/test/fixtures';
-import { formatDateTime, formatMoney, formatPercent, formatQuantity, parseDecimalInput } from './format';
+import { formatDateTime, formatMoney, formatPercent, formatQuantity, parseDecimalInput, parseMoneyInput } from './format';
 
 describe('formatMoney', () => {
   it.each([
@@ -85,5 +85,25 @@ describe('parseDecimalInput', () => {
 
   it('rechaza más de 14 dígitos enteros', () => {
     expect(parseDecimalInput('123456789012345')).toEqual({ ok: false, reason: 'too_large' });
+  });
+});
+
+describe('parseMoneyInput', () => {
+  it.each([
+    ['100.000', '100000'],
+    ['1.250.000', '1250000'],
+    ['1.250.000,50', '1250000.50'],
+    ['50000', '50000'],
+    ['12500,5', '12500.5'],
+  ])('acepta %j como lo escribe un cajero: %j', (text, value) => {
+    expect(parseMoneyInput(text)).toEqual({ ok: true, value });
+  });
+
+  it.each([
+    ['1.25.000', 'invalid'],
+    ['100.000,123', 'invalid'],
+    ['abc', 'invalid'],
+  ] as const)('rechaza %j', (text, reason) => {
+    expect(parseMoneyInput(text)).toEqual({ ok: false, reason });
   });
 });

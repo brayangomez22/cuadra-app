@@ -29,14 +29,20 @@ export function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-export function apiError(status: number, code: string, message: string) {
-  return json(status, { error: { code, message } });
+export function apiError(status: number, code: string, message: string, details?: Record<string, string>) {
+  return json(status, { error: { code, message, details } });
 }
 
 const permissionsByRole: Record<Me['role'], string[]> = {
-  owner: ['catalog:read', 'catalog:write', 'inventory:read', 'inventory:adjust', 'sales:create', 'users:manage', 'tenant:manage'],
-  admin: ['catalog:read', 'catalog:write', 'inventory:read', 'inventory:adjust', 'sales:create', 'users:manage'],
-  cashier: ['catalog:read', 'inventory:read', 'sales:create'],
+  owner: [
+    'catalog:read', 'catalog:write', 'inventory:read', 'inventory:adjust',
+    'sales:create', 'sales:discount', 'sales:read', 'sales:void', 'users:manage', 'tenant:manage',
+  ],
+  admin: [
+    'catalog:read', 'catalog:write', 'inventory:read', 'inventory:adjust',
+    'sales:create', 'sales:discount', 'sales:read', 'sales:void', 'users:manage',
+  ],
+  cashier: ['catalog:read', 'inventory:read', 'sales:create', 'sales:read'],
   warehouse: ['catalog:read', 'inventory:read', 'inventory:adjust'],
 };
 

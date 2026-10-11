@@ -34,9 +34,15 @@ type stubUseCases struct {
 	reason  string
 	list    app.ListSalesInput
 
-	sale *domain.Sale
-	page domain.SalePage
-	err  error
+	sale  *domain.Sale
+	page  domain.SalePage
+	limit domain.DiscountLimit
+	err   error
+}
+
+func (s *stubUseCases) GetDiscountLimit(_ context.Context, a app.Actor) (domain.DiscountLimit, error) {
+	s.actor = a
+	return s.limit, s.err
 }
 
 func (s *stubUseCases) ConfirmSale(_ context.Context, a app.Actor, in app.ConfirmSaleInput) (*domain.Sale, error) {
@@ -282,4 +288,32 @@ func TestListSales(t *testing.T) {
 		require.Equal(t, 20, uc.list.Limit)
 		require.Contains(t, rec.Body.String(), `"items":[]`)
 	})
+}
+
+func TestGetDiscountLimit(t *testing.T) {
+	tests := []struct {
+		name  string
+		limit domain.DiscountLimit
+		want  string
+	}{
+		{"responde el tope del usuario autenticado", mustLimit(t, "0.1"), `{"unlimited":false,"max":"0.1"}`},
+		{"sin tope responde unlimited y max 1", domain.NoDiscountLimit, `{"unlimited":true,"max":"1"}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			uc := &stubUseCases{limit: tt.limit}
+			p := cashier()
+			rec := serve(t, uc, &p, http.MethodGet, "/api/v1/sales/discount-limit", "")
+			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+			require.JSONEq(t, tt.want, rec.Body.String())
+			require.Equal(t, app.Actor{TenantID: owner.TenantID, UserID: owner.UserID}, uc.actor)
+		})
+	}
+}
+
+func mustLimit(t *testing.T, fraction string) domain.DiscountLimit {
+	t.Helper()
+	l, err := domain.NewDiscountLimit(dec(fraction))
+	require.NoError(t, err)
+	return l
 }

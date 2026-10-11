@@ -944,6 +944,30 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/sales/discount-limit:
+    get:
+      tags: [sales]
+      operationId: getDiscountLimit
+      summary: Tope de descuento del usuario
+      description: |
+        Cuánto puede descontar el usuario autenticado en cada línea, para que el POS muestre u oculte el campo de
+        descuento. Quien tiene `sales:discount` no tiene tope (`unlimited`); los demás tienen el que fijó la
+        empresa (por defecto, 0 %). La API vuelve a aplicar el tope al confirmar la venta.
+      x-permission: sales:create
+      responses:
+        "200":
+          description: El tope del usuario.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscountLimit"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/v1/sales/{saleId}:
     parameters:
       - $ref: "#/components/parameters/SaleId"
@@ -1683,6 +1707,19 @@ components:
           minLength: 1
           maxLength: 500
           example: El cliente desistió de la compra
+    DiscountLimit:
+      type: object
+      description: |
+        Tope de descuento de una línea como fracción de su bruto (`0.10` permite descontar el 10 %). Con
+        `unlimited`, `max` es `1`.
+      required: [unlimited, max]
+      properties:
+        unlimited:
+          type: boolean
+        max:
+          type: string
+          pattern: '^(0(\.\d{1,4})?|1(\.0{1,4})?)$'
+          example: "0.10"
     SaleStatus:
       type: string
       enum: [confirmed, voided]

@@ -85,3 +85,6 @@ Hallazgos de las visitas a ferreterías (el detalle de cada visita está en la f
 | Hallazgo | Veces | Cita textual | ¿Pilotos interesados? |
 |---|---|---|---|
 | | | | |
+
+**Preguntas abiertas para los pilotos**
+- **Centavos en efectivo (T21):** como el precio se guarda sin IVA (decisión del 2026-10-10), el total de una venta puede tener centavos (`$ 96.997,50`) que nadie cobra en efectivo. ¿Cómo lo resuelve hoy la ferretería: redondea al peso, a los 50 o a los 100? ¿Quién asume la diferencia? La respuesta define si el POS sugiere un valor "a cobrar" redondeado y cómo lo refleja la factura electrónica (T36).
