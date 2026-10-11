@@ -1,0 +1,12 @@
+// Emits one theme's colors and shadows as custom properties.
+@mixin tokens($colors, $shadows, $scheme) {
+  color-scheme: $scheme;
+
+  @each $role, $value in $colors {
+    --color-#{$role}: #{$value};
+  }
+
+  @each $name, $value in $shadows {
+    --shadow-#{$name}: #{$value};
+  }
+}

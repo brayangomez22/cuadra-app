@@ -1,0 +1,8 @@
+// Default theme.
+@use 'theme';
+@use '../tokens/semantic';
+@use '../tokens/shadow';
+
+:root {
+  @include theme.tokens(semantic.$light, shadow.$light, light);
+}

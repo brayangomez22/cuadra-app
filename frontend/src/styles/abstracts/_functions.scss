@@ -1,0 +1,6 @@
+@use 'sass:math';
+
+// Converts a px length to rem, assuming the 16px browser default.
+@function rem($px) {
+  @return math.div($px, 16px) * 1rem;
+}

@@ -76,7 +76,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Alcance:** Vite + React + TS en `frontend/`, alias `@/` → `src/` (en Vite y tsconfig), `sass-embedded`, CSS Modules con `localsConvention: 'camelCaseOnly'` y nombres legibles en desarrollo (`generateScopedName`, ver `docs/estilos.md`), tipos para `*.module.scss`, `clsx`, stylelint configurado según `docs/estilos.md` (`npm run lint:styles`), React Router, TanStack Query. **Cliente de API tipado generado desde `api/openapi.yaml`** con `openapi-typescript` + `openapi-fetch` (`npm run gen:api`), con refresh automático del token. Vitest + Testing Library. Estructura vacía de `src/styles/` con `main.scss` importado en `main.tsx`. Job de frontend en el CI (lint, lint:styles, test, build, y verificación de que el cliente generado está al día). **Sin pantallas todavía.**
 **Tests primero:** el cliente reintenta una vez tras refrescar el token ante un 401 y, si el refresh falla, cierra la sesión; stylelint rechaza un color hex dentro de un `.module.scss` y una clase que no esté en camelCase (fixture de prueba).
 
-### [ ] T13 · Dirección visual y tokens (sesión de diseño)
+### [x] T13 · Dirección visual y tokens (sesión de diseño)
 **Antes:** instala Impeccable y corre `/impeccable init` para generar `PRODUCT.md` (usuarios, contexto de mostrador, tono de la marca).
 **Alcance:** con la skill de diseño, propón 2 o 3 direcciones visuales (paleta, tipografía, densidad) **como mockups de la pantalla del POS**, no como código. Elijo una. Después implementa `src/styles/` completo: primitivos, tokens semánticos en tema claro y oscuro, escalas, mixins, reset, base y a11y.
 **Aceptación:** todos los pares texto/fondo de los tokens cumplen 4.5:1 (deja una tabla de verificación en `docs/estilos.md`); stylelint en verde.
@@ -93,7 +93,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 ### [ ] T16 · Pantallas de catálogo e inventario
 **Alcance:** lista de productos con búsqueda instantánea y paginación, formulario de crear o editar producto, existencias por sede, registro de entrada de mercancía y kardex de un producto.
 **Tests primero:** el formulario no envía precio vacío o negativo; la búsqueda llama a la API con debounce.
-**Después:** `/impeccable critique` de cada pantalla y revisión con capturas en 360px y 1440px.
+**Después:** `/impeccable critique` de cada pantalla y revisión con capturas en los anchos de referencia de `docs/estilos.md` (360, 768, 1024, 1366×768 y 1920px).
 
 ---
 

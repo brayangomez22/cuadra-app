@@ -1,7 +1,7 @@
 // Global entry point, imported once in main.tsx. Conventions in docs/estilos.md.
-// Tokens, themes, reset, base and a11y arrive in T13:
-//   @use 'themes/light';
-//   @use 'themes/dark';
-//   @use 'base/reset';
-//   @use 'base/global';
-//   @use 'base/a11y';
+@use 'base/tokens';
+@use 'themes/light';
+@use 'themes/dark';
+@use 'base/reset';
+@use 'base/global';
+@use 'base/a11y';

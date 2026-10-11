@@ -1,0 +1,65 @@
+// Raw palette (direction B, "Señal de obra": safety orange on cement grey).
+// PRIVATE: only the semantic layer reads these maps. Components never do.
+// Contrast is checked against the semantic pairs in styles-check/tokens.test.ts.
+
+// Warm cement greys. 0 is paper white; 950 is the dark-theme canvas.
+$neutral: (
+  0: #fff,
+  50: #f1efea,
+  100: #e9e9e7,
+  150: #e0dfdb,
+  200: #d4d2cc,
+  250: #b5b1a8,
+  500: #7a776f,
+  550: #77736b,
+  600: #55524c,
+  750: #3a3834,
+  800: #2b2a27,
+  850: #201f1d,
+  900: #1a1917,
+  950: #161514,
+);
+
+// Safety orange. Always carries dark text: as text on white it is below 4.5:1.
+$orange: (
+  300: #ffb27a,
+  400: #ff9152,
+  500: #ff7a2e,
+  550: #f06a1a,
+  600: #e86a1f,
+  650: #e35d0a,
+);
+
+// Danger: errors and destructive actions.
+$red: (
+  50: #fbe9e7,
+  300: #ffa59d,
+  400: #ff8a80,
+  700: #b3261e,
+  800: #9a1f18,
+  950: #3a1f1c,
+);
+
+// Success: confirmed sale, change to return.
+$green: (
+  50: #e6f1e4,
+  400: #7cc47f,
+  700: #2d6a2f,
+  950: #1d2e1e,
+);
+
+// Warning: low stock, pending invoice.
+$amber: (
+  50: #fbefd9,
+  400: #f2b84b,
+  800: #8a5300,
+  950: #352812,
+);
+
+// Info: neutral notices. Never a brand color.
+$blue: (
+  50: #e3edf8,
+  300: #8ab8ec,
+  700: #1f5a96,
+  950: #1a2836,
+);

@@ -1,0 +1,33 @@
+// System fonts only (decision in docs/decisiones.md): nothing to download and
+// every device renders its own native face.
+@use '../abstracts/functions' as f;
+
+$family-sans: (system-ui, -apple-system, 'Segoe UI', roboto, 'Noto Sans', 'Helvetica Neue', arial, sans-serif);
+$family-mono: (ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', menlo, consolas, monospace);
+
+// md is the body size and never goes below 16px. display is the sale total.
+$size: (
+  'xs': f.rem(13px),
+  'sm': f.rem(14px),
+  'md': f.rem(16px),
+  'lg': f.rem(18px),
+  'xl': f.rem(20px),
+  '2xl': f.rem(24px),
+  '3xl': f.rem(32px),
+  'display': f.rem(56px),
+);
+
+// heavy is reserved for the sale total.
+$weight: (
+  'regular': 400,
+  'medium': 500,
+  'semibold': 600,
+  'bold': 700,
+  'heavy': 800,
+);
+
+// tight for headings and big figures, normal for running text.
+$line-height: (
+  'tight': 1.15,
+  'normal': 1.5,
+);

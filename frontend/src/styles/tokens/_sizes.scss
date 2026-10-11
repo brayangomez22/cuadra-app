@@ -1,0 +1,17 @@
+// Interactive sizes. Density is "comfortable" on a mouse and grows on touch
+// screens (pointer: coarse), where fingers need bigger targets.
+@use '../abstracts/functions' as f;
+
+$touch-min: f.rem(44px);
+
+// Mouse and trackpad.
+$pointer-fine: (
+  'control': f.rem(44px),
+  'row': f.rem(48px),
+);
+
+// Touch screens: tablets and phones at the counter.
+$pointer-coarse: (
+  'control': f.rem(56px),
+  'row': f.rem(56px),
+);

@@ -1,0 +1,15 @@
+// Dark theme: explicit choice with data-theme="dark" on <html>, or the OS
+// preference when the user has not chosen light explicitly.
+@use 'theme';
+@use '../tokens/semantic';
+@use '../tokens/shadow';
+
+:root[data-theme='dark'] {
+  @include theme.tokens(semantic.$dark, shadow.$dark, dark);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include theme.tokens(semantic.$dark, shadow.$dark, dark);
+  }
+}
