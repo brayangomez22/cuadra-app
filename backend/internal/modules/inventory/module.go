@@ -3,9 +3,12 @@
 package inventory
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
+
+	"github.com/google/uuid"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -56,4 +59,21 @@ func New(cfg Config) (*Module, error) {
 // RegisterRoutes mounts the module's operations (tag "inventory") on mux.
 func (m *Module) RegisterRoutes(mux *http.ServeMux) {
 	httpadapter.Register(mux, m.service, m.authorize, m.log)
+}
+
+// IssueSaleStock registers the stock exits of a sale (see
+// app.Service.IssueSaleStock). It is for the sales module, through the port
+// cmd/api adapts; with a ctx from db.InTenantTx it joins the sale's
+// transaction. Errors of one product are *app.ProductStockError.
+func (m *Module) IssueSaleStock(ctx context.Context, tenantID, userID uuid.UUID, in app.SaleStockInput) error {
+	_, err := m.service.IssueSaleStock(ctx, app.Actor{TenantID: tenantID, UserID: userID}, in)
+	return err
+}
+
+// ReverseSaleStock gives back the stock of a voided sale (see
+// app.Service.ReverseSaleStock), joining the void's transaction like
+// IssueSaleStock.
+func (m *Module) ReverseSaleStock(ctx context.Context, tenantID, userID, saleID uuid.UUID) error {
+	_, err := m.service.ReverseSaleStock(ctx, app.Actor{TenantID: tenantID, UserID: userID}, saleID)
+	return err
 }

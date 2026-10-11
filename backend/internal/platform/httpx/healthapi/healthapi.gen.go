@@ -55,6 +55,10 @@ type ErrorDetail struct {
 	// Code Código estable, en snake_case, para que el cliente decida qué hacer.
 	Code string `json:"code"`
 
+	// Details Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `product_id` en
+	// `insufficient_stock`). Nunca trae datos personales.
+	Details *map[string]string `json:"details,omitempty"`
+
 	// Message Mensaje en español que se puede mostrar al usuario.
 	Message string `json:"message"`
 }
@@ -83,6 +87,9 @@ type LocationId = openapi_types.UUID
 
 // ProductId defines model for ProductId.
 type ProductId = openapi_types.UUID
+
+// SaleId defines model for SaleId.
+type SaleId = openapi_types.UUID
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {

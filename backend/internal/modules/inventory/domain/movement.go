@@ -15,10 +15,12 @@ const maxReasonLength = 500
 type MovementType string
 
 // Movement types. Inbound types have a positive quantity, outbound types a
-// negative one; an adjustment can be either.
+// negative one; an adjustment can be either. sale_void gives back the stock
+// of a voided sale.
 const (
 	MovementPurchaseIn  MovementType = "purchase_in"
 	MovementSaleOut     MovementType = "sale_out"
+	MovementSaleVoid    MovementType = "sale_void"
 	MovementAdjustment  MovementType = "adjustment"
 	MovementTransferOut MovementType = "transfer_out"
 	MovementTransferIn  MovementType = "transfer_in"
@@ -28,7 +30,7 @@ const (
 func ParseMovementType(s string) (MovementType, error) {
 	t := MovementType(s)
 	switch t {
-	case MovementPurchaseIn, MovementSaleOut, MovementAdjustment, MovementTransferOut, MovementTransferIn:
+	case MovementPurchaseIn, MovementSaleOut, MovementSaleVoid, MovementAdjustment, MovementTransferOut, MovementTransferIn:
 		return t, nil
 	}
 	return "", ErrInvalidMovementType
@@ -43,7 +45,7 @@ func (t MovementType) isTransfer() bool {
 // validQuantity reports whether q has the sign the movement type requires.
 func (t MovementType) validQuantity(q decimal.Decimal) bool {
 	switch t {
-	case MovementPurchaseIn, MovementTransferIn:
+	case MovementPurchaseIn, MovementSaleVoid, MovementTransferIn:
 		return q.IsPositive()
 	case MovementSaleOut, MovementTransferOut:
 		return q.IsNegative()
@@ -156,6 +158,10 @@ func newMovement(s StockMovementSnapshot) (*StockMovement, error) {
 	}
 	isTransferRef := s.Reference != nil && s.Reference.Kind == DocumentTransfer
 	if isTransferRef != s.Type.isTransfer() {
+		return nil, ErrInvalidReference
+	}
+	// Giving stock back is always for a sale.
+	if s.Type == MovementSaleVoid && (s.Reference == nil || s.Reference.Kind != DocumentSale) {
 		return nil, ErrInvalidReference
 	}
 	return &StockMovement{

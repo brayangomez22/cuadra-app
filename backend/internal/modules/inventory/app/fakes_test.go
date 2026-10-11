@@ -165,6 +165,18 @@ func (f fakeStock) Kardex(_ context.Context, tenantID uuid.UUID, filter domain.K
 	return page, nil
 }
 
+func (f fakeStock) MovementsByReference(_ context.Context, tenantID uuid.UUID, ref domain.DocumentRef) ([]*domain.StockMovement, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []*domain.StockMovement
+	for _, m := range f.movements {
+		if r := m.Reference(); m.TenantID() == tenantID && r != nil && *r == ref {
+			out = append(out, m)
+		}
+	}
+	return out, nil
+}
+
 // env is a Service wired to fakes, with recorders for spans and metrics.
 type env struct {
 	svc     *app.Service

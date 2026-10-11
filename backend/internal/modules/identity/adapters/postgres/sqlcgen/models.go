@@ -5,12 +5,62 @@
 package sqlcgen
 
 import (
+	"database/sql/driver"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
 )
+
+type RiverJobState string
+
+const (
+	RiverJobStateAvailable RiverJobState = "available"
+	RiverJobStateCancelled RiverJobState = "cancelled"
+	RiverJobStateCompleted RiverJobState = "completed"
+	RiverJobStateDiscarded RiverJobState = "discarded"
+	RiverJobStatePending   RiverJobState = "pending"
+	RiverJobStateRetryable RiverJobState = "retryable"
+	RiverJobStateRunning   RiverJobState = "running"
+	RiverJobStateScheduled RiverJobState = "scheduled"
+)
+
+func (e *RiverJobState) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = RiverJobState(s)
+	case string:
+		*e = RiverJobState(s)
+	default:
+		return fmt.Errorf("unsupported scan type for RiverJobState: %T", src)
+	}
+	return nil
+}
+
+type NullRiverJobState struct {
+	RiverJobState RiverJobState
+	Valid         bool // Valid is true if RiverJobState is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullRiverJobState) Scan(value interface{}) error {
+	if value == nil {
+		ns.RiverJobState, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.RiverJobState.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullRiverJobState) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.RiverJobState), nil
+}
 
 type Category struct {
 	ID        uuid.UUID
@@ -59,6 +109,109 @@ type RefreshToken struct {
 	ExpiresAt time.Time
 	CreatedAt time.Time
 	RevokedAt *time.Time
+}
+
+type RiverJob struct {
+	ID           int64
+	State        RiverJobState
+	Attempt      int16
+	MaxAttempts  int16
+	AttemptedAt  *time.Time
+	CreatedAt    time.Time
+	FinalizedAt  *time.Time
+	ScheduledAt  time.Time
+	Priority     int16
+	Args         []byte
+	AttemptedBy  []string
+	Errors       [][]byte
+	Kind         string
+	Metadata     []byte
+	Queue        string
+	Tags         []string
+	UniqueKey    []byte
+	UniqueStates pgtype.Bits
+}
+
+type RiverLeader struct {
+	ElectedAt time.Time
+	ExpiresAt time.Time
+	LeaderID  string
+	Name      string
+}
+
+type RiverMigration struct {
+	ID        int64
+	CreatedAt time.Time
+	Version   int64
+}
+
+type RiverNotification struct {
+	ID        int64
+	CreatedAt time.Time
+	Payload   string
+	Topic     string
+}
+
+type RiverQueue struct {
+	Name      string
+	CreatedAt time.Time
+	Metadata  []byte
+	PausedAt  *time.Time
+	UpdatedAt time.Time
+}
+
+type Sale struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	LocationID  uuid.UUID
+	Number      int64
+	UserID      uuid.UUID
+	CustomerID  pgtype.UUID
+	Status      string
+	Subtotal    decimal.Decimal
+	Discounts   decimal.Decimal
+	Tax         decimal.Decimal
+	Total       decimal.Decimal
+	Paid        decimal.Decimal
+	Change      decimal.Decimal
+	CreatedAt   time.Time
+	ConfirmedAt time.Time
+	VoidedAt    *time.Time
+	VoidedBy    pgtype.UUID
+	VoidReason  *string
+}
+
+type SaleLine struct {
+	TenantID    uuid.UUID
+	SaleID      uuid.UUID
+	Position    int32
+	ProductID   uuid.UUID
+	ProductName string
+	Quantity    decimal.Decimal
+	UnitPrice   decimal.Decimal
+	TaxRate     decimal.Decimal
+	Discount    decimal.Decimal
+	Gross       decimal.Decimal
+	Tax         decimal.Decimal
+}
+
+type SalePayment struct {
+	TenantID uuid.UUID
+	SaleID   uuid.UUID
+	Position int32
+	Method   string
+	Amount   decimal.Decimal
+}
+
+type SaleSequence struct {
+	TenantID   uuid.UUID
+	LocationID uuid.UUID
+	LastNumber int64
+}
+
+type SalesSetting struct {
+	TenantID    uuid.UUID
+	MaxDiscount decimal.Decimal
 }
 
 type StockLevel struct {

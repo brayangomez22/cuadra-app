@@ -254,3 +254,27 @@ func movementFromRow(row sqlcgen.StockMovement) (*domain.StockMovement, error) {
 	}
 	return m, nil
 }
+
+// MovementsByReference returns the movements of a document, oldest first.
+func (r *StockRepository) MovementsByReference(ctx context.Context, tenantID uuid.UUID, ref domain.DocumentRef) ([]*domain.StockMovement, error) {
+	var rows []sqlcgen.StockMovement
+	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
+		var err error
+		rows, err = sqlcgen.New(tx).ListMovementsByReference(ctx, sqlcgen.ListMovementsByReferenceParams{
+			ReferenceKind: string(ref.Kind), ReferenceID: ref.ID,
+		})
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("inventory: movements of %s %s: %w", ref.Kind, ref.ID, err)
+	}
+	out := make([]*domain.StockMovement, 0, len(rows))
+	for _, row := range rows {
+		m, err := movementFromRow(row)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, nil
+}

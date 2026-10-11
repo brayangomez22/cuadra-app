@@ -81,6 +81,10 @@ type ErrorDetail struct {
 	// Code Código estable, en snake_case, para que el cliente decida qué hacer.
 	Code string `json:"code"`
 
+	// Details Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `product_id` en
+	// `insufficient_stock`). Nunca trae datos personales.
+	Details *map[string]string `json:"details,omitempty"`
+
 	// Message Mensaje en español que se puede mostrar al usuario.
 	Message string `json:"message"`
 }
@@ -159,6 +163,9 @@ type ProductId = openapi_types.UUID
 
 // RefreshCookie defines model for RefreshCookie.
 type RefreshCookie = string
+
+// SaleId defines model for SaleId.
+type SaleId = openapi_types.UUID
 
 // BadRequest Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
 type BadRequest = Error

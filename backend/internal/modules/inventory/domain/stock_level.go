@@ -8,9 +8,9 @@ import (
 )
 
 // StockLevel is a product's stock at a location and its weighted average
-// cost. Every change goes through Receive, Issue, Adjust or Transfer, which
-// return the StockMovement that records it, so the level and the kardex
-// cannot disagree. On error the level is unchanged.
+// cost. Every change goes through Receive, Issue, ReturnSale, Adjust or
+// Transfer, which return the StockMovement that records it, so the level and
+// the kardex cannot disagree. On error the level is unchanged.
 type StockLevel struct {
 	tenantID    uuid.UUID
 	productID   uuid.UUID
@@ -80,6 +80,17 @@ func (l *StockLevel) Receive(qty, unitCost decimal.Decimal, info MovementInfo) (
 // policy does not allow it.
 func (l *StockLevel) Issue(qty decimal.Decimal, policy StockPolicy, info MovementInfo) (*StockMovement, error) {
 	c, err := l.planOut(MovementSaleOut, qty, policy, info)
+	if err != nil {
+		return nil, err
+	}
+	return l.apply(c), nil
+}
+
+// ReturnSale gives back qty units of a voided sale (sale_void) at unitCost,
+// the cost its sale_out was valued at, and updates the weighted average cost
+// like an entry. info must reference the sale.
+func (l *StockLevel) ReturnSale(qty, unitCost decimal.Decimal, info MovementInfo) (*StockMovement, error) {
+	c, err := l.planIn(MovementSaleVoid, qty, unitCost, info)
 	if err != nil {
 		return nil, err
 	}

@@ -36,6 +36,14 @@ type store struct {
 	reserved []reservation
 	// reserveErr, when set, makes the next reservations fail.
 	reserveErr error
+	// reversed records the sales whose stock was given back; reverseErr,
+	// when set, makes the next reversals fail.
+	reversed   []uuid.UUID
+	reverseErr error
+	// numbers is the last number given at each location.
+	numbers map[uuid.UUID]int64
+	// filters records the filters List received.
+	filters []domain.SaleFilter
 	// catalogCalls records the ids each catalog lookup received.
 	catalogCalls [][]uuid.UUID
 }
@@ -67,7 +75,27 @@ func (f fakeStock) ReserveSale(_ context.Context, tenantID, userID, locationID, 
 	return nil
 }
 
-// fakeSales stores the sale only if reserve succeeds, as one transaction would.
+func (f fakeStock) ReverseSale(_ context.Context, _, _, saleID uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.reverseErr != nil {
+		return f.reverseErr
+	}
+	f.reversed = append(f.reversed, saleID)
+	return nil
+}
+
+// clone copies a sale in or out of the fake, as a database would.
+func clone(s *domain.Sale) *domain.Sale {
+	c, err := domain.RehydrateSale(s.Snapshot())
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
+// fakeSales stores the sale only if reserve succeeds, as one transaction
+// would, and numbers it per location.
 type fakeSales struct{ *store }
 
 func (f fakeSales) SaveConfirmed(ctx context.Context, s *domain.Sale, reserve func(context.Context) error) error {
@@ -76,8 +104,55 @@ func (f fakeSales) SaveConfirmed(ctx context.Context, s *domain.Sale, reserve fu
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.sales[s.ID()] = s
+	if err := s.AssignNumber(f.numbers[s.LocationID()] + 1); err != nil {
+		return err
+	}
+	f.numbers[s.LocationID()]++
+	f.sales[s.ID()] = clone(s)
 	return nil
+}
+
+func (f fakeSales) Get(_ context.Context, tenantID, id uuid.UUID) (*domain.Sale, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s, ok := f.sales[id]
+	if !ok || s.TenantID() != tenantID {
+		return nil, domain.ErrSaleNotFound
+	}
+	return clone(s), nil
+}
+
+func (f fakeSales) List(_ context.Context, tenantID uuid.UUID, filter domain.SaleFilter) (domain.SalePage, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.filters = append(f.filters, filter)
+	var page domain.SalePage
+	for _, s := range f.sales {
+		at := *s.ConfirmedAt()
+		if s.TenantID() != tenantID || at.Before(filter.From) || !at.Before(filter.To) ||
+			filter.LocationID != nil && s.LocationID() != *filter.LocationID {
+			continue
+		}
+		page.Items = append(page.Items, domain.SummaryOf(s))
+	}
+	page.Total = len(page.Items)
+	return page, nil
+}
+
+// Void changes a copy and stores it only if change succeeds, as one
+// transaction would.
+func (f fakeSales) Void(ctx context.Context, tenantID, id uuid.UUID, change func(context.Context, *domain.Sale) error) (*domain.Sale, error) {
+	s, err := f.Get(ctx, tenantID, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := change(ctx, s); err != nil {
+		return nil, err
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.sales[id] = clone(s)
+	return s, nil
 }
 
 type fakePolicies struct{ *store }
@@ -105,6 +180,7 @@ func newEnv(t *testing.T) *env {
 			products: map[productKey]app.ProductInfo{},
 			policies: map[uuid.UUID]domain.SalesPolicy{},
 			sales:    map[uuid.UUID]*domain.Sale{},
+			numbers:  map[uuid.UUID]int64{},
 		},
 		actor:   app.Actor{TenantID: newID(), UserID: newID()},
 		spans:   tracetest.NewSpanRecorder(),

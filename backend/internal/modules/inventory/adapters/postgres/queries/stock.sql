@@ -54,3 +54,12 @@ SELECT count(*)
 FROM stock_movements
 WHERE product_id = sqlc.arg(product_id)
   AND (sqlc.narg(location_id)::uuid IS NULL OR location_id = sqlc.narg(location_id));
+
+-- ListMovementsByReference returns the movements of a document (a sale's
+-- exits and the stock given back when it was voided), oldest first.
+-- name: ListMovementsByReference :many
+SELECT id, tenant_id, product_id, location_id, type, quantity, unit_cost, balance_after,
+       average_cost_after, reason, reference_kind, reference_id, user_id, occurred_at
+FROM stock_movements
+WHERE reference_kind = sqlc.arg(reference_kind)::text AND reference_id = sqlc.arg(reference_id)::uuid
+ORDER BY occurred_at, id;
