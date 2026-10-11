@@ -12,6 +12,7 @@ const (
 	PermInventoryRead   Permission = "inventory:read"
 	PermInventoryAdjust Permission = "inventory:adjust"
 	PermSalesCreate     Permission = "sales:create"
+	PermSalesDiscount   Permission = "sales:discount" // discount without the tenant's limit
 	PermUsersManage     Permission = "users:manage"
 	PermTenantManage    Permission = "tenant:manage"
 )
@@ -24,6 +25,7 @@ var allPermissions = []Permission{
 	PermInventoryRead,
 	PermInventoryAdjust,
 	PermSalesCreate,
+	PermSalesDiscount,
 	PermUsersManage,
 	PermTenantManage,
 }
@@ -35,7 +37,7 @@ var rolePermissions = map[Role][]Permission{
 	RoleAdmin: {
 		PermCatalogRead, PermCatalogWrite,
 		PermInventoryRead, PermInventoryAdjust,
-		PermSalesCreate,
+		PermSalesCreate, PermSalesDiscount,
 		PermUsersManage,
 	},
 	RoleCashier: {
