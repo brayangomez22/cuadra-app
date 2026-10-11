@@ -61,3 +61,24 @@ export const IconBox = createIcon(
     <path d="m3 8 9 5 9-5M12 13v8" />
   </>,
 );
+export const IconMenu = createIcon(<path d="M4 6h16M4 12h16M4 18h16" />);
+export const IconLogout = createIcon(
+  <>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <path d="m16 17 5-5-5-5M21 12H9" />
+  </>,
+);
+export const IconHome = createIcon(<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z" />);
+export const IconCart = createIcon(
+  <>
+    <circle cx="9" cy="20" r="1" />
+    <circle cx="18" cy="20" r="1" />
+    <path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 7H6" />
+  </>,
+);
+export const IconTag = createIcon(
+  <>
+    <path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4Z" />
+    <circle cx="7.5" cy="7.5" r="1" />
+  </>,
+);

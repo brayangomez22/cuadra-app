@@ -1,16 +1,19 @@
 import { useId, useState, type ReactNode } from 'react';
 import {
+  Alert,
   Badge,
   Button,
   Checkbox,
   Dialog,
   DialogClose,
+  Drawer,
   EmptyState,
   Field,
   IconAlert,
   IconBox,
   IconButton,
   IconClose,
+  IconMenu,
   IconPlus,
   IconSearch,
   IconSuccess,
@@ -200,6 +203,30 @@ export function UiCatalogPage() {
             Rechazada por la DIAN
           </Badge>
           <Badge tone="info">En proceso</Badge>
+        </Row>
+      </Section>
+
+      <Section title="Alert">
+        <div className={styles.stack}>
+          <Alert tone="danger">El correo o la contraseña no son correctos.</Alert>
+          <Alert tone="warning" title="Sin conexión">
+            No pudimos guardar los cambios. Revise el internet e intente de nuevo.
+          </Alert>
+          <Alert tone="info">La factura electrónica se enviará a la DIAN en unos minutos.</Alert>
+          <Alert tone="success">Entrada de mercancía registrada.</Alert>
+        </div>
+      </Section>
+
+      <Section title="Drawer">
+        <Row>
+          <Drawer title="Menú" trigger={<IconButton label="Abrir menú" icon={<IconMenu />} variant="secondary" />}>
+            <EmptyState
+              icon={<IconBox />}
+              title="Contenido del panel"
+              description="En la app, aquí van el menú y la cuenta."
+              headingLevel={3}
+            />
+          </Drawer>
         </Row>
       </Section>
 

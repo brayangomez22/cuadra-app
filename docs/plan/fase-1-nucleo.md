@@ -86,7 +86,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Tests primero:** comportamiento y accesibilidad. Field asocia label e input y anuncia el error (`aria-describedby`, `aria-invalid`); Dialog atrapa el foco y cierra con Escape; Button deshabilitado no dispara `onClick`.
 **Después:** `/impeccable audit` y `/impeccable critique` sobre `/dev/ui`, y corrige lo que encuentre.
 
-### [ ] T15 · Autenticación y layout
+### [x] T15 · Autenticación y layout
 **Alcance:** pantallas de registro e inicio de sesión, y un layout con menú lateral que se pliega en móvil y muestra opciones según el rol. Todo compuesto con `shared/ui`.
 **Tests primero:** el formulario de login muestra errores de validación; una ruta protegida redirige al login sin sesión.
 

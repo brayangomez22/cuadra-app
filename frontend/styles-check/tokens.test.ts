@@ -135,7 +135,7 @@ describe('tokens de diseño', () => {
       '--size-control',
       '--size-row',
       '--size-touch-min',
-      ...['dialog-sm', 'dialog-md', 'toast', 'page'].map((s) => `--size-${s}`),
+      ...['dialog-sm', 'dialog-md', 'toast', 'page', 'sidebar', 'form', 'form-wide'].map((s) => `--size-${s}`),
     ];
     expect(expected.filter((name) => !light.has(name))).toEqual([]);
   });

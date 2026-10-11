@@ -1,4 +1,8 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
+import { GuestOnly, LoginPage, RequireAuth, SignUpPage } from '@/features/auth';
+import { AppLayout } from './layout/AppLayout';
+import { ComingSoonPage } from './pages/ComingSoonPage';
+import { HomePage } from './pages/HomePage';
 
 // Internal pages that never reach a production build: import.meta.env.DEV is
 // false there, so the bundler drops the route and its lazy import.
@@ -13,11 +17,31 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
     ]
   : [];
 
-// The screens arrive in T15 (auth and layout) and T16 (catalog and inventory).
-export const router = createBrowserRouter([
+// URLs are in Spanish: the user sees them.
+export const routes: RouteObject[] = [
   {
-    path: '/',
-    element: <h1>Cuadra</h1>,
+    element: <GuestOnly />,
+    children: [
+      { path: '/ingresar', element: <LoginPage /> },
+      { path: '/registro', element: <SignUpPage /> },
+    ],
+  },
+  {
+    element: <RequireAuth />,
+    children: [
+      {
+        element: <AppLayout />,
+        children: [
+          { path: '/', element: <HomePage /> },
+          // Placeholders until T16 (catalog and inventory) and phase 2 (POS).
+          { path: '/vender', element: <ComingSoonPage title="Vender" /> },
+          { path: '/productos', element: <ComingSoonPage title="Productos" /> },
+          { path: '/inventario', element: <ComingSoonPage title="Inventario" /> },
+        ],
+      },
+    ],
   },
   ...devRoutes,
-]);
+];
+
+export const router = createBrowserRouter(routes);
