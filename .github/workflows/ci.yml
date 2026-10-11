@@ -60,7 +60,15 @@ jobs:
       - run: npm run lint
       - run: npm run lint:styles
       - run: npm test
-      - run: npm run build
+      - name: Build (uploads source maps to Sentry on main)
+        run: npm run build
+        env:
+          VITE_RELEASE: ${{ github.sha }}
+          # Only pushes to main upload: that is the build that gets deployed. Without
+          # the token (PRs) the build makes no source maps at all.
+          SENTRY_AUTH_TOKEN: ${{ github.event_name == 'push' && secrets.SENTRY_AUTH_TOKEN || '' }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
   security:
     name: Security scans

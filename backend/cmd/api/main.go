@@ -2,6 +2,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log/slog"
@@ -20,6 +21,7 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/config"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/errreport"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/jobs"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/logger"
@@ -30,6 +32,9 @@ const serviceName = "cuadra-api"
 
 // telemetryShutdownTimeout bounds the final flush of pending telemetry.
 const telemetryShutdownTimeout = 5 * time.Second
+
+// errorFlushTimeout bounds the final send of pending Sentry events.
+const errorFlushTimeout = 2 * time.Second
 
 // accessTokenTTL is the lifetime of a JWT access token. A role change or a
 // deactivation reaches tokens already issued only when they expire.
@@ -60,7 +65,22 @@ func run() error {
 		return err
 	}
 
-	log := logger.New(os.Stdout, cfg.LogLevel, serviceName, httpx.RequestIDAttrs, auth.PrincipalAttrs).With(slog.String("env", cfg.Env))
+	// Every Error log also goes to Sentry (a no-op without SENTRY_DSN). Its
+	// flush is deferred before the telemetry and database ones, so it runs
+	// after them and sends whatever their shutdown logs.
+	reporter, err := errreport.New(errreport.Options{
+		DSN:         cfg.SentryDSN,
+		Environment: cfg.Env,
+		Release:     cmp.Or(cfg.SentryRelease, version()),
+		Extractors:  []func(context.Context) []slog.Attr{httpx.RequestIDAttrs, auth.PrincipalAttrs},
+	})
+	if err != nil {
+		return err
+	}
+	defer reporter.Flush(errorFlushTimeout)
+
+	base := logger.New(os.Stdout, cfg.LogLevel, serviceName, httpx.RequestIDAttrs, auth.PrincipalAttrs)
+	log := slog.New(reporter.Handler(base.Handler())).With(slog.String("env", cfg.Env))
 
 	// Export failures are degraded telemetry, not app failures. They go only to
 	// stdout: sending them through OTLP would loop when the log export fails.

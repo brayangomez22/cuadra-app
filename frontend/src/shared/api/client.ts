@@ -1,4 +1,5 @@
 import createClient from 'openapi-fetch';
+import { recordFailedRequest } from '@/shared/observability';
 import { createAuthFetch } from './authFetch';
 import type { paths } from './schema';
 import { createSession, type Session } from './session';
@@ -11,7 +12,11 @@ export function createApiClient(session: Session, baseUrl = window.location.orig
     baseUrl,
     fetch: createAuthFetch({
       session,
-      fetch: (request) => globalThis.fetch(request),
+      fetch: async (request) => {
+        const response = await globalThis.fetch(request);
+        recordFailedRequest(response);
+        return response;
+      },
       refreshUrl: new URL('/api/v1/auth/refresh', baseUrl).toString(),
     }),
   });
