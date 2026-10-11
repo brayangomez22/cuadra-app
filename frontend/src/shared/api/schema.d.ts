@@ -445,6 +445,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/discount-limit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tope de descuento del usuario
+         * @description Cuánto puede descontar el usuario autenticado en cada línea, para que el POS muestre u oculte el campo de
+         *     descuento. Quien tiene `sales:discount` no tiene tope (`unlimited`); los demás tienen el que fijó la
+         *     empresa (por defecto, 0 %). La API vuelve a aplicar el tope al confirmar la venta.
+         */
+        get: operations["getDiscountLimit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/{saleId}": {
         parameters: {
             query?: never;
@@ -835,6 +857,15 @@ export interface components {
         VoidSaleInput: {
             /** @example El cliente desistió de la compra */
             reason: string;
+        };
+        /**
+         * @description Tope de descuento de una línea como fracción de su bruto (`0.10` permite descontar el 10 %). Con
+         *     `unlimited`, `max` es `1`.
+         */
+        DiscountLimit: {
+            unlimited: boolean;
+            /** @example 0.10 */
+            max: string;
         };
         /** @enum {string} */
         SaleStatus: "confirmed" | "voided";
@@ -1968,6 +1999,29 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getDiscountLimit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El tope del usuario. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscountLimit"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalError"];
         };
     };

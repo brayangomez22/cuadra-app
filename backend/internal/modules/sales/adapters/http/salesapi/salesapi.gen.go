@@ -72,6 +72,14 @@ type ConfirmSaleInput struct {
 	Payments   []PaymentInput     `json:"payments"`
 }
 
+// DiscountLimit Tope de descuento de una línea como fracción de su bruto (`0.10` permite descontar el 10 %). Con
+// `unlimited`, `max` es `1`.
+type DiscountLimit struct {
+	// Max Example: 0.10
+	Max       string `json:"max"`
+	Unlimited bool   `json:"unlimited"`
+}
+
 // Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
 type Error struct {
 	Error ErrorDetail `json:"error"`
@@ -370,6 +378,9 @@ type ServerInterface interface {
 	// ConfirmSale Confirmar una venta
 	// (POST /api/v1/sales)
 	ConfirmSale(w http.ResponseWriter, r *http.Request)
+	// GetDiscountLimit Tope de descuento del usuario
+	// (GET /api/v1/sales/discount-limit)
+	GetDiscountLimit(w http.ResponseWriter, r *http.Request)
 	// GetSale Detalle de una venta
 	// (GET /api/v1/sales/{saleId})
 	GetSale(w http.ResponseWriter, r *http.Request, saleId SaleId)
@@ -464,6 +475,20 @@ func (siw *ServerInterfaceWrapper) ConfirmSale(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConfirmSale(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDiscountLimit operation middleware
+func (siw *ServerInterfaceWrapper) GetDiscountLimit(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDiscountLimit(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -647,6 +672,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sales", wrapper.ListSales)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/sales", wrapper.ConfirmSale)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sales/discount-limit", wrapper.GetDiscountLimit)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sales/{saleId}", wrapper.GetSale)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/sales/{saleId}/void", wrapper.VoidSale)
 
@@ -834,6 +860,69 @@ func (response ConfirmSale422JSONResponse) VisitConfirmSaleResponse(w http.Respo
 type ConfirmSale500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ConfirmSale500JSONResponse) VisitConfirmSaleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDiscountLimitRequestObject struct {
+}
+
+type GetDiscountLimitResponseObject interface {
+	VisitGetDiscountLimitResponse(w http.ResponseWriter) error
+}
+
+type GetDiscountLimit200JSONResponse DiscountLimit
+
+func (response GetDiscountLimit200JSONResponse) VisitGetDiscountLimitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDiscountLimit401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetDiscountLimit401JSONResponse) VisitGetDiscountLimitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDiscountLimit403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetDiscountLimit403JSONResponse) VisitGetDiscountLimitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDiscountLimit500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetDiscountLimit500JSONResponse) VisitGetDiscountLimitResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -1066,6 +1155,9 @@ type StrictServerInterface interface {
 	// ConfirmSale Confirmar una venta
 	// (POST /api/v1/sales)
 	ConfirmSale(ctx context.Context, request ConfirmSaleRequestObject) (ConfirmSaleResponseObject, error)
+	// GetDiscountLimit Tope de descuento del usuario
+	// (GET /api/v1/sales/discount-limit)
+	GetDiscountLimit(ctx context.Context, request GetDiscountLimitRequestObject) (GetDiscountLimitResponseObject, error)
 	// GetSale Detalle de una venta
 	// (GET /api/v1/sales/{saleId})
 	GetSale(ctx context.Context, request GetSaleRequestObject) (GetSaleResponseObject, error)
@@ -1163,6 +1255,30 @@ func (sh *strictHandler) ConfirmSale(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ConfirmSaleResponseObject); ok {
 		if err := validResponse.VisitConfirmSaleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDiscountLimit operation middleware
+func (sh *strictHandler) GetDiscountLimit(w http.ResponseWriter, r *http.Request) {
+	var request GetDiscountLimitRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDiscountLimit(ctx, request.(GetDiscountLimitRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDiscountLimit")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDiscountLimitResponseObject); ok {
+		if err := validResponse.VisitGetDiscountLimitResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

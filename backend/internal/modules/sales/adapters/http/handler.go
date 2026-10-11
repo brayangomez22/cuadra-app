@@ -32,6 +32,7 @@ type UseCases interface {
 	VoidSale(ctx context.Context, a app.Actor, id uuid.UUID, reason string) (*domain.Sale, error)
 	GetSale(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Sale, error)
 	ListSales(ctx context.Context, a app.Actor, in app.ListSalesInput) (domain.SalePage, error)
+	GetDiscountLimit(ctx context.Context, a app.Actor) (domain.DiscountLimit, error)
 }
 
 // Handler implements salesapi.StrictServerInterface.
@@ -150,6 +151,19 @@ func (h *Handler) ListSales(ctx context.Context, req salesapi.ListSalesRequestOb
 		})
 	}
 	return salesapi.ListSales200JSONResponse{Items: items, Total: page.Total}, nil
+}
+
+// GetDiscountLimit returns the caller's discount limit, as a fraction of a
+// line's gross amount; without limit, the whole line.
+func (h *Handler) GetDiscountLimit(ctx context.Context, _ salesapi.GetDiscountLimitRequestObject) (salesapi.GetDiscountLimitResponseObject, error) {
+	limit, err := h.uc.GetDiscountLimit(ctx, h.actor(ctx))
+	if err != nil {
+		return nil, err
+	}
+	if limit.Unlimited() {
+		return salesapi.GetDiscountLimit200JSONResponse{Unlimited: true, Max: "1"}, nil
+	}
+	return salesapi.GetDiscountLimit200JSONResponse{Max: formatDecimal(limit.Max())}, nil
 }
 
 func saleBody(s *domain.Sale) salesapi.Sale {

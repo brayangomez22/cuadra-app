@@ -90,6 +90,20 @@ export function parseDecimalInput(text: string): DecimalInput {
   return { ok: true, value: fraction === undefined ? `${sign}${whole}` : `${sign}${whole}.${fraction}` };
 }
 
+// "100.000" or "1.250.000,50": an amount with Colombian thousands separators.
+const moneyWithThousands = /^\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/;
+
+/**
+ * Reads an amount of money as a cashier types it. Unlike a quantity, an
+ * amount in pesos is never 1,5 thousandths, so "100.000" is a hundred
+ * thousand: dots in groups of three are thousands separators.
+ */
+export function parseMoneyInput(text: string): DecimalInput {
+  const trimmed = text.trim();
+  if (moneyWithThousands.test(trimmed)) return parseDecimalInput(trimmed.replaceAll('.', ''));
+  return parseDecimalInput(trimmed);
+}
+
 /** A decimal string of the API as it is typed in a field: "10000.00" → "10000,00". */
 export function toDecimalInput(value: string): string {
   return value.replace('.', ',');
