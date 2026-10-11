@@ -13,7 +13,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Tests primero (integración):** si la transacción hace rollback, el trabajo no existe; un trabajo que falla se reintenta y termina en estado `discarded` tras N intentos; la traza del worker queda enlazada a la del request que lo originó.
 **Por qué ahora:** la importación de Excel (T29), la facturación DIAN (T36), la demo (T34), la exportación de datos (T49) y, en V2, las notificaciones por WhatsApp dependen de esto.
 
-### [ ] T19 · Sentry (backend y frontend)
+### [x] T19 · Sentry (backend y frontend)
 **Alcance:** captura de errores no controlados y panics en Go y en React (error boundary), con release y ambiente, `tenant_id` como tag (nunca datos personales) y source maps subidos desde el CI. Enlace entre el evento de Sentry y el `trace_id`.
 **Tests primero:** el filtro de datos sensibles elimina emails, tokens y contraseñas del evento antes de enviarlo.
 

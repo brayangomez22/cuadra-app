@@ -9,7 +9,7 @@ type Props = {
   description?: ReactNode;
   action?: ReactNode;
   /** Heading level that fits the page outline. */
-  headingLevel?: 2 | 3 | 4;
+  headingLevel?: 1 | 2 | 3 | 4;
   className?: string;
 };
 

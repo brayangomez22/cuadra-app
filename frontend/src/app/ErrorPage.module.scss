@@ -1,0 +1,9 @@
+@use '@/styles/abstracts' as *;
+
+// Full screen: the error replaces the whole app, layout included.
+.root {
+  display: grid;
+  place-items: center;
+  min-block-size: 100dvh;
+  padding: var(--space-4);
+}

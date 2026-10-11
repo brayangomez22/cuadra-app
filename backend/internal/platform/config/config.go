@@ -20,6 +20,10 @@ type Config struct {
 	JWTSecret       []byte
 	LogLevel        slog.Level
 	ShutdownTimeout time.Duration
+	// SentryDSN enables error reporting to Sentry; empty disables it. Never logged.
+	SentryDSN string
+	// SentryRelease names the build in Sentry; empty means the VCS revision.
+	SentryRelease string
 }
 
 // Load reads the configuration using getenv (os.Getenv in production). It
@@ -30,6 +34,8 @@ func Load(getenv func(string) string) (Config, error) {
 		HTTPAddr:        withDefault(getenv("HTTP_ADDR"), ":8080"),
 		DatabaseURL:     getenv("DATABASE_URL"),
 		ShutdownTimeout: 15 * time.Second,
+		SentryDSN:       getenv("SENTRY_DSN"),
+		SentryRelease:   getenv("SENTRY_RELEASE"),
 	}
 	var errs []error
 

@@ -70,6 +70,19 @@ func TestLoad(t *testing.T) {
 		require.Equal(t, 30*time.Second, cfg.ShutdownTimeout)
 	})
 
+	t.Run("lee la configuración opcional de Sentry", func(t *testing.T) {
+		cfg, err := config.Load(env(map[string]string{
+			"DATABASE_URL":   "postgres://localhost/cuadra",
+			"JWT_SECRET":     jwtSecret,
+			"SENTRY_DSN":     "https://public@o1.ingest.us.sentry.io/1",
+			"SENTRY_RELEASE": "4f2c1ab",
+		}))
+
+		require.NoError(t, err)
+		require.Equal(t, "https://public@o1.ingest.us.sentry.io/1", cfg.SentryDSN)
+		require.Equal(t, "4f2c1ab", cfg.SentryRelease)
+	})
+
 	t.Run("rechaza un SHUTDOWN_TIMEOUT inválido", func(t *testing.T) {
 		for _, value := range []string{"pronto", "0s", "-5s"} {
 			_, err := config.Load(env(map[string]string{
