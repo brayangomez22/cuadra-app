@@ -509,6 +509,115 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cash-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Abrir la caja
+         * @description Abre la caja del usuario autenticado en una sede, con la base inicial en efectivo.
+         */
+        post: operations["openCashSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cash-sessions/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Caja actual del usuario
+         * @description Si la empresa exige caja abierta para vender (`required`) y la caja abierta del usuario autenticado, con sus
+         *     movimientos. Sin caja abierta, `session` no viene.
+         */
+        get: operations["getCurrentCashSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cash-sessions/{cashSessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cashSessionId: components["parameters"]["CashSessionId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Detalle de una caja
+         * @description La caja con sus movimientos y, si está cerrada, el reporte de cierre.
+         */
+        get: operations["getCashSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cash-sessions/{cashSessionId}/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cashSessionId: components["parameters"]["CashSessionId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar un ingreso o egreso de caja
+         * @description Registra un ingreso o un egreso de efectivo con su motivo en la caja abierta del usuario.
+         */
+        post: operations["recordCashMovement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cash-sessions/{cashSessionId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cashSessionId: components["parameters"]["CashSessionId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cerrar la caja con arqueo
+         * @description Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
+         *     efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
+         *     diferencia con lo contado. El cierre no se puede modificar después.
+         */
+        post: operations["closeCashSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -943,6 +1052,11 @@ export interface components {
              * @description Quién vendió.
              */
             user_id: string;
+            /**
+             * Format: uuid
+             * @description La caja donde se cobró; no viene si se vendió sin caja.
+             */
+            cash_session_id?: string;
             status: components["schemas"]["SaleStatus"];
             lines: components["schemas"]["SaleLine"][];
             payments: components["schemas"]["SalePayment"][];
@@ -973,6 +1087,111 @@ export interface components {
             items: components["schemas"]["SaleSummary"][];
             /** @description Cantidad total de ventas que cumplen el filtro, sin paginar. */
             total: number;
+        };
+        /**
+         * @description Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+         * @example -4800.00
+         */
+        SignedMoney: string;
+        OpenCashSessionInput: {
+            /**
+             * Format: uuid
+             * @description Sede de la caja; las ventas de la caja son de esta sede.
+             */
+            location_id: string;
+            opening_float: components["schemas"]["Money"];
+        };
+        /**
+         * @description `in` es un ingreso de efectivo a la caja y `out` un egreso.
+         * @enum {string}
+         */
+        CashMovementKind: "in" | "out";
+        CashMovementInput: {
+            kind: components["schemas"]["CashMovementKind"];
+            amount: components["schemas"]["Money"];
+            /** @example Pago del domicilio */
+            reason: string;
+        };
+        CashMovement: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["CashMovementKind"];
+            amount: components["schemas"]["Money"];
+            reason: string;
+            /** Format: uuid */
+            user_id: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description Billetes o monedas contados de una denominación del peso colombiano: 100000, 50000, 20000, 10000, 5000, 2000,
+         *     1000 (billete y moneda juntos), 500, 200, 100 o 50.
+         */
+        DenominationCount: {
+            denomination: components["schemas"]["Money"];
+            /** Format: int64 */
+            quantity: number;
+        };
+        CloseCashSessionInput: {
+            /** @description Una entrada por denominación, sin repetir. Un conteo vacío es una caja sin efectivo. */
+            counts: components["schemas"]["DenominationCount"][];
+            notes?: string;
+        };
+        /** @description Lo que cobraron las ventas de la caja con un medio de pago; el efectivo es neto del cambio. */
+        CashMethodTotal: {
+            method: components["schemas"]["PaymentMethod"];
+            amount: components["schemas"]["Money"];
+        };
+        /**
+         * @description El reporte de cierre. `expected` = base + `cash_received` + `cash_in` − `cash_out` − `change_given`, de las
+         *     ventas confirmadas de la caja (las anuladas antes del cierre no cuentan); `difference` = `counted` −
+         *     `expected`: negativa es faltante (`shortage`) y positiva, sobrante (`overage`).
+         */
+        CashClosing: {
+            /** Format: date-time */
+            closed_at: string;
+            /** Format: uuid */
+            closed_by: string;
+            notes?: string;
+            /** @description Ventas confirmadas de la caja. */
+            sales_count: number;
+            cash_received: components["schemas"]["Money"];
+            change_given: components["schemas"]["Money"];
+            cash_in: components["schemas"]["Money"];
+            cash_out: components["schemas"]["Money"];
+            expected: components["schemas"]["SignedMoney"];
+            counted: components["schemas"]["Money"];
+            difference: components["schemas"]["SignedMoney"];
+            /** @enum {string} */
+            result: "exact" | "shortage" | "overage";
+            /** @description El conteo, de la denominación más alta a la más baja. */
+            counts: components["schemas"]["DenominationCount"][];
+            payments: components["schemas"]["CashMethodTotal"][];
+        };
+        /** @description Una caja. `closing` solo viene cuando está cerrada. */
+        CashSession: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            location_id: string;
+            /**
+             * Format: uuid
+             * @description El cajero.
+             */
+            user_id: string;
+            /** @enum {string} */
+            status: "open" | "closed";
+            opening_float: components["schemas"]["Money"];
+            /** Format: date-time */
+            opened_at: string;
+            /** @description Ingresos y egresos, del más antiguo al más reciente. */
+            movements: components["schemas"]["CashMovement"][];
+            closing?: components["schemas"]["CashClosing"];
+        };
+        CurrentCashSession: {
+            /** @description Si la empresa exige caja abierta para vender. */
+            required: boolean;
+            session?: components["schemas"]["CashSession"];
         };
     };
     responses: {
@@ -1049,6 +1268,7 @@ export interface components {
         CategoryId: string;
         LocationId: string;
         SaleId: string;
+        CashSessionId: string;
         /** @description Refresh token. Lo pone la API; el navegador lo envía solo a `/api/v1/auth`. */
         RefreshCookie: string;
     };
@@ -1982,7 +2202,11 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description No hay stock suficiente de un producto (`insufficient_stock`); `details.product_id` dice cuál. */
+            /**
+             * @description No hay stock suficiente de un producto (`insufficient_stock`); `details.product_id` dice cuál. El usuario
+             *     no tiene caja abierta y la empresa la exige (`cash_session_required`), o la caja se cerró
+             *     (`cash_session_closed`).
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1994,7 +2218,7 @@ export interface operations {
             /**
              * @description Algún dato no cumple las reglas (`product_not_found`, `product_inactive`, `location_not_found`,
              *     `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
-             *     `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`).
+             *     `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`).
              */
             422: {
                 headers: {
@@ -2111,6 +2335,243 @@ export interface operations {
                 };
             };
             /** @description Falta el motivo o es muy largo (`invalid_void_reason`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    openCashSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenCashSessionInput"];
+            };
+        };
+        responses: {
+            /** @description La caja abierta. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashSession"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description El usuario ya tiene una caja abierta (`cash_session_already_open`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description La sede no existe (`location_not_found`) o la base no es válida (`invalid_opening_float`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getCurrentCashSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La caja actual. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentCashSession"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getCashSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cashSessionId: components["parameters"]["CashSessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La caja. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashSession"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description La caja no existe (`cash_session_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    recordCashMovement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cashSessionId: components["parameters"]["CashSessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CashMovementInput"];
+            };
+        };
+        responses: {
+            /** @description El movimiento registrado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashMovement"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description El usuario no tiene permiso (`forbidden`) o la caja es de otro usuario (`cash_session_not_owner`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description La caja no existe (`cash_session_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description La caja está cerrada (`cash_session_closed`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El monto o el motivo no son válidos (`invalid_cash_movement_amount`, `invalid_cash_movement_reason`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    closeCashSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cashSessionId: components["parameters"]["CashSessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseCashSessionInput"];
+            };
+        };
+        responses: {
+            /** @description La caja cerrada, con el reporte de cierre. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashSession"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description El usuario no tiene permiso (`forbidden`) o la caja es de otro usuario (`cash_session_not_owner`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description La caja no existe (`cash_session_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description La caja ya está cerrada (`cash_session_closed`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description El conteo no es válido (`invalid_denomination`, `invalid_denomination_quantity`,
+             *     `duplicate_denomination`) o las notas son muy largas (`invalid_cash_notes`).
+             */
             422: {
                 headers: {
                     [name: string]: unknown;

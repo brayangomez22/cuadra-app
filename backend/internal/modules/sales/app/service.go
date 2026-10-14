@@ -1,5 +1,6 @@
 // Package app holds the sales use cases: ConfirmSale (the point-of-sale
-// checkout), VoidSale and the queries of a sale and of the day's sales. The
+// checkout), VoidSale, the queries of a sale and of the day's sales, and the
+// cash sessions (opening, cash ins and outs, closing with the count). The
 // catalog and the stock are reached through the ports
 // ProductCatalog and StockReserver, which cmd/api satisfies with the other
 // modules.
@@ -80,6 +81,7 @@ type Deps struct {
 	Stock          StockReserver
 	Sales          domain.SaleRepository
 	Policies       domain.PolicyRepository
+	CashSessions   domain.CashSessionRepository
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -95,6 +97,12 @@ type Service struct {
 	amount           metric.Float64Histogram
 	discountRejected metric.Int64Counter
 	voided           metric.Int64Counter
+
+	cashOpened          metric.Int64Counter
+	cashClosed          metric.Int64Counter
+	cashDifference      metric.Float64Histogram
+	cashMovements       metric.Int64Counter
+	cashSessionRequired metric.Int64Counter
 }
 
 // amountBuckets are the bucket boundaries of cuadra.sales.amount, in COP: a
@@ -103,10 +111,15 @@ var amountBuckets = []float64{
 	5_000, 10_000, 25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000, 2_500_000, 5_000_000, 10_000_000,
 }
 
+// cashDifferenceBuckets are the bucket boundaries of
+// cuadra.sales.cash_difference, in COP: from a missing coin to a missing
+// bundle of bills.
+var cashDifferenceBuckets = []float64{0, 50, 500, 1_000, 5_000, 10_000, 20_000, 50_000, 100_000, 500_000}
+
 // NewService builds a Service. It fails if a port is missing or a metric
 // instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if d.Products == nil || d.Stock == nil || d.Sales == nil || d.Policies == nil {
+	if d.Products == nil || d.Stock == nil || d.Sales == nil || d.Policies == nil || d.CashSessions == nil {
 		return nil, errors.New("sales: missing service dependency")
 	}
 	if d.Now == nil {
@@ -146,6 +159,9 @@ func NewService(d Deps) (*Service, error) {
 		metric.WithUnit("{sale}")); err != nil {
 		return nil, err
 	}
+	if err := s.newCashInstruments(meter); err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 
@@ -169,4 +185,39 @@ func endSpan(span trace.Span, err error) {
 		span.SetStatus(codes.Error, err.Error())
 	}
 	span.End()
+}
+
+func (s *Service) newCashInstruments(meter metric.Meter) error {
+	var err error
+	if s.cashOpened, err = meter.Int64Counter("cuadra.sales.cash_sessions_opened",
+		metric.WithDescription("Cash sessions opened."),
+		metric.WithUnit("{session}")); err != nil {
+		return err
+	}
+	if s.cashClosed, err = meter.Int64Counter("cuadra.sales.cash_sessions_closed",
+		metric.WithDescription("Cash sessions closed, by result of the count (cash.result)."),
+		metric.WithUnit("{session}")); err != nil {
+		return err
+	}
+	if s.cashDifference, err = meter.Float64Histogram("cuadra.sales.cash_difference",
+		metric.WithDescription("Absolute difference between the counted and the expected cash at closing, by cash.result."),
+		metric.WithUnit("{COP}"),
+		metric.WithExplicitBucketBoundaries(cashDifferenceBuckets...)); err != nil {
+		return err
+	}
+	if s.cashMovements, err = meter.Int64Counter("cuadra.sales.cash_movements",
+		metric.WithDescription("Cash ins and outs recorded, by cash.movement_kind."),
+		metric.WithUnit("{movement}")); err != nil {
+		return err
+	}
+	if s.cashSessionRequired, err = meter.Int64Counter("cuadra.sales.cash_session_required_rejected",
+		metric.WithDescription("Sales rejected because the cashier had no open cash session."),
+		metric.WithUnit("{rejection}")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func cashSessionAttr(id uuid.UUID) attribute.KeyValue {
+	return attribute.String("cash_session.id", id.String())
 }

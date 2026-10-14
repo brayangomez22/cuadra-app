@@ -62,7 +62,7 @@ func insertSale(ctx context.Context, q *sqlcgen.Queries, snap domain.SaleSnapsho
 	t := snap.Totals
 	if err := q.InsertSale(ctx, sqlcgen.InsertSaleParams{
 		ID: snap.ID, TenantID: snap.TenantID, LocationID: snap.LocationID, Number: number,
-		UserID: snap.UserID, CustomerID: snap.CustomerID, Status: string(snap.Status),
+		UserID: snap.UserID, CustomerID: snap.CustomerID, CashSessionID: snap.CashSessionID, Status: string(snap.Status),
 		Subtotal: t.Subtotal, Discounts: t.Discounts, Tax: t.Tax, Total: t.Total, Paid: t.Paid, Change: t.Change,
 		CreatedAt: snap.CreatedAt, ConfirmedAt: snap.ConfirmedAt,
 	}); err != nil {
@@ -168,7 +168,7 @@ func readSale(ctx context.Context, q *sqlcgen.Queries, row sqlcgen.Sale) (*domai
 	}
 	snap := domain.SaleSnapshot{
 		ID: row.ID, TenantID: row.TenantID, LocationID: row.LocationID, UserID: row.UserID,
-		CustomerID: row.CustomerID, Number: row.Number, Status: domain.SaleStatus(row.Status),
+		CustomerID: row.CustomerID, CashSessionID: row.CashSessionID, Number: row.Number, Status: domain.SaleStatus(row.Status),
 		Totals: domain.StoredTotals{
 			Subtotal: row.Subtotal, Discounts: row.Discounts, Tax: row.Tax, Total: row.Total, Paid: row.Paid, Change: row.Change,
 		},

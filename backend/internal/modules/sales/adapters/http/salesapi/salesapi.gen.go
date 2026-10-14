@@ -18,6 +18,63 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for CashClosingResult.
+const (
+	Exact    CashClosingResult = "exact"
+	Overage  CashClosingResult = "overage"
+	Shortage CashClosingResult = "shortage"
+)
+
+// Valid indicates whether the value is a known member of the CashClosingResult enum.
+func (e CashClosingResult) Valid() bool {
+	switch e {
+	case Exact:
+		return true
+	case Overage:
+		return true
+	case Shortage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CashMovementKind.
+const (
+	In  CashMovementKind = "in"
+	Out CashMovementKind = "out"
+)
+
+// Valid indicates whether the value is a known member of the CashMovementKind enum.
+func (e CashMovementKind) Valid() bool {
+	switch e {
+	case In:
+		return true
+	case Out:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CashSessionStatus.
+const (
+	Closed CashSessionStatus = "closed"
+	Open   CashSessionStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the CashSessionStatus enum.
+func (e CashSessionStatus) Valid() bool {
+	switch e {
+	case Closed:
+		return true
+	case Open:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PaymentMethod.
 const (
 	Card      PaymentMethod = "card"
@@ -63,6 +120,136 @@ func (e SaleStatus) Valid() bool {
 	}
 }
 
+// CashClosing El reporte de cierre. `expected` = base + `cash_received` + `cash_in` − `cash_out` − `change_given`, de las
+// ventas confirmadas de la caja (las anuladas antes del cierre no cuentan); `difference` = `counted` −
+// `expected`: negativa es faltante (`shortage`) y positiva, sobrante (`overage`).
+type CashClosing struct {
+	// CashIn Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	CashIn Money `json:"cash_in"`
+
+	// CashOut Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	CashOut Money `json:"cash_out"`
+
+	// CashReceived Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	CashReceived Money `json:"cash_received"`
+
+	// ChangeGiven Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	ChangeGiven Money              `json:"change_given"`
+	ClosedAt    time.Time          `json:"closed_at"`
+	ClosedBy    openapi_types.UUID `json:"closed_by"`
+
+	// Counted Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Counted Money `json:"counted"`
+
+	// Counts El conteo, de la denominación más alta a la más baja.
+	Counts []DenominationCount `json:"counts"`
+
+	// Difference Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Difference SignedMoney `json:"difference"`
+
+	// Expected Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Expected SignedMoney       `json:"expected"`
+	Notes    *string           `json:"notes,omitempty"`
+	Payments []CashMethodTotal `json:"payments"`
+	Result   CashClosingResult `json:"result"`
+
+	// SalesCount Ventas confirmadas de la caja.
+	SalesCount int `json:"sales_count"`
+}
+
+// CashClosingResult defines model for CashClosing.Result.
+type CashClosingResult string
+
+// CashMethodTotal Lo que cobraron las ventas de la caja con un medio de pago; el efectivo es neto del cambio.
+type CashMethodTotal struct {
+	// Amount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Amount Money `json:"amount"`
+
+	// Method Medio de pago. Solo el efectivo (`cash`) da cambio.
+	Method PaymentMethod `json:"method"`
+}
+
+// CashMovement defines model for CashMovement.
+type CashMovement struct {
+	// Amount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Amount    Money              `json:"amount"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Kind `in` es un ingreso de efectivo a la caja y `out` un egreso.
+	Kind   CashMovementKind   `json:"kind"`
+	Reason string             `json:"reason"`
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// CashMovementInput defines model for CashMovementInput.
+type CashMovementInput struct {
+	// Amount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Amount Money `json:"amount"`
+
+	// Kind `in` es un ingreso de efectivo a la caja y `out` un egreso.
+	Kind CashMovementKind `json:"kind"`
+
+	// Reason Example: Pago del domicilio
+	Reason string `json:"reason"`
+}
+
+// CashMovementKind `in` es un ingreso de efectivo a la caja y `out` un egreso.
+type CashMovementKind string
+
+// CashSession Una caja. `closing` solo viene cuando está cerrada.
+type CashSession struct {
+	// Closing El reporte de cierre. `expected` = base + `cash_received` + `cash_in` − `cash_out` − `change_given`, de las
+	// ventas confirmadas de la caja (las anuladas antes del cierre no cuentan); `difference` = `counted` −
+	// `expected`: negativa es faltante (`shortage`) y positiva, sobrante (`overage`).
+	Closing    *CashClosing       `json:"closing,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
+	LocationId openapi_types.UUID `json:"location_id"`
+
+	// Movements Ingresos y egresos, del más antiguo al más reciente.
+	Movements []CashMovement `json:"movements"`
+	OpenedAt  time.Time      `json:"opened_at"`
+
+	// OpeningFloat Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	OpeningFloat Money             `json:"opening_float"`
+	Status       CashSessionStatus `json:"status"`
+
+	// UserId El cajero.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// CashSessionStatus defines model for CashSession.Status.
+type CashSessionStatus string
+
+// CloseCashSessionInput defines model for CloseCashSessionInput.
+type CloseCashSessionInput struct {
+	// Counts Una entrada por denominación, sin repetir. Un conteo vacío es una caja sin efectivo.
+	Counts []DenominationCount `json:"counts"`
+	Notes  *string             `json:"notes,omitempty"`
+}
+
 // ConfirmSaleInput defines model for ConfirmSaleInput.
 type ConfirmSaleInput struct {
 	Lines []SaleLineInput `json:"lines"`
@@ -70,6 +257,25 @@ type ConfirmSaleInput struct {
 	// LocationId Sede donde se vende y de donde sale el stock.
 	LocationId openapi_types.UUID `json:"location_id"`
 	Payments   []PaymentInput     `json:"payments"`
+}
+
+// CurrentCashSession defines model for CurrentCashSession.
+type CurrentCashSession struct {
+	// Required Si la empresa exige caja abierta para vender.
+	Required bool `json:"required"`
+
+	// Session Una caja. `closing` solo viene cuando está cerrada.
+	Session *CashSession `json:"session,omitempty"`
+}
+
+// DenominationCount Billetes o monedas contados de una denominación del peso colombiano: 100000, 50000, 20000, 10000, 5000, 2000,
+// 1000 (billete y moneda juntos), 500, 200, 100 o 50.
+type DenominationCount struct {
+	// Denomination Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Denomination Money `json:"denomination"`
+	Quantity     int64 `json:"quantity"`
 }
 
 // DiscountLimit Tope de descuento de una línea como fracción de su bruto (`0.10` permite descontar el 10 %). Con
@@ -103,6 +309,17 @@ type ErrorDetail struct {
 // Example: 12500.00
 type Money = string
 
+// OpenCashSessionInput defines model for OpenCashSessionInput.
+type OpenCashSessionInput struct {
+	// LocationId Sede de la caja; las ventas de la caja son de esta sede.
+	LocationId openapi_types.UUID `json:"location_id"`
+
+	// OpeningFloat Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	OpeningFloat Money `json:"opening_float"`
+}
+
 // PaymentInput Un pago. En efectivo, `amount` es lo entregado e incluye el cambio.
 type PaymentInput struct {
 	// Amount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
@@ -125,6 +342,9 @@ type Quantity = string
 // Sale Una venta confirmada o anulada. `change` es el cambio entregado en efectivo. `void` solo aparece en una
 // venta anulada.
 type Sale struct {
+	// CashSessionId La caja donde se cobró; no viene si se vendió sin caja.
+	CashSessionId *openapi_types.UUID `json:"cash_session_id,omitempty"`
+
 	// Change Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
@@ -290,6 +510,11 @@ type SaleVoid struct {
 	VoidedAt time.Time          `json:"voided_at"`
 }
 
+// SignedMoney Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+//
+// Example: -4800.00
+type SignedMoney = string
+
 // TaxBreakdown defines model for TaxBreakdown.
 type TaxBreakdown struct {
 	// Base Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
@@ -318,6 +543,9 @@ type VoidSaleInput struct {
 	// Reason Example: El cliente desistió de la compra
 	Reason string `json:"reason"`
 }
+
+// CashSessionId defines model for CashSessionId.
+type CashSessionId = openapi_types.UUID
 
 // CategoryId defines model for CategoryId.
 type CategoryId = openapi_types.UUID
@@ -364,6 +592,15 @@ type ListSalesParams struct {
 	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// OpenCashSessionJSONRequestBody defines body for OpenCashSession for application/json ContentType.
+type OpenCashSessionJSONRequestBody = OpenCashSessionInput
+
+// CloseCashSessionJSONRequestBody defines body for CloseCashSession for application/json ContentType.
+type CloseCashSessionJSONRequestBody = CloseCashSessionInput
+
+// RecordCashMovementJSONRequestBody defines body for RecordCashMovement for application/json ContentType.
+type RecordCashMovementJSONRequestBody = CashMovementInput
+
 // ConfirmSaleJSONRequestBody defines body for ConfirmSale for application/json ContentType.
 type ConfirmSaleJSONRequestBody = ConfirmSaleInput
 
@@ -372,6 +609,21 @@ type VoidSaleJSONRequestBody = VoidSaleInput
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// OpenCashSession Abrir la caja
+	// (POST /api/v1/cash-sessions)
+	OpenCashSession(w http.ResponseWriter, r *http.Request)
+	// GetCurrentCashSession Caja actual del usuario
+	// (GET /api/v1/cash-sessions/current)
+	GetCurrentCashSession(w http.ResponseWriter, r *http.Request)
+	// GetCashSession Detalle de una caja
+	// (GET /api/v1/cash-sessions/{cashSessionId})
+	GetCashSession(w http.ResponseWriter, r *http.Request, cashSessionId CashSessionId)
+	// CloseCashSession Cerrar la caja con arqueo
+	// (POST /api/v1/cash-sessions/{cashSessionId}/close)
+	CloseCashSession(w http.ResponseWriter, r *http.Request, cashSessionId CashSessionId)
+	// RecordCashMovement Registrar un ingreso o egreso de caja
+	// (POST /api/v1/cash-sessions/{cashSessionId}/movements)
+	RecordCashMovement(w http.ResponseWriter, r *http.Request, cashSessionId CashSessionId)
 	// ListSales Ventas del día
 	// (GET /api/v1/sales)
 	ListSales(w http.ResponseWriter, r *http.Request, params ListSalesParams)
@@ -397,6 +649,112 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// OpenCashSession operation middleware
+func (siw *ServerInterfaceWrapper) OpenCashSession(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.OpenCashSession(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCurrentCashSession operation middleware
+func (siw *ServerInterfaceWrapper) GetCurrentCashSession(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCurrentCashSession(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCashSession operation middleware
+func (siw *ServerInterfaceWrapper) GetCashSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "cashSessionId" -------------
+	var cashSessionId CashSessionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cashSessionId", r.PathValue("cashSessionId"), &cashSessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cashSessionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCashSession(w, r, cashSessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CloseCashSession operation middleware
+func (siw *ServerInterfaceWrapper) CloseCashSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "cashSessionId" -------------
+	var cashSessionId CashSessionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cashSessionId", r.PathValue("cashSessionId"), &cashSessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cashSessionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CloseCashSession(w, r, cashSessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordCashMovement operation middleware
+func (siw *ServerInterfaceWrapper) RecordCashMovement(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "cashSessionId" -------------
+	var cashSessionId CashSessionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cashSessionId", r.PathValue("cashSessionId"), &cashSessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cashSessionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordCashMovement(w, r, cashSessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListSales operation middleware
 func (siw *ServerInterfaceWrapper) ListSales(w http.ResponseWriter, r *http.Request) {
@@ -675,6 +1033,11 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sales/discount-limit", wrapper.GetDiscountLimit)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sales/{saleId}", wrapper.GetSale)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/sales/{saleId}/void", wrapper.VoidSale)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/cash-sessions", wrapper.OpenCashSession)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/cash-sessions/current", wrapper.GetCurrentCashSession)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/cash-sessions/{cashSessionId}", wrapper.GetCashSession)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/cash-sessions/{cashSessionId}/movements", wrapper.RecordCashMovement)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/cash-sessions/{cashSessionId}/close", wrapper.CloseCashSession)
 
 	return m
 }
@@ -686,6 +1049,509 @@ type ForbiddenJSONResponse Error
 type InternalErrorJSONResponse Error
 
 type UnauthorizedJSONResponse Error
+
+type OpenCashSessionRequestObject struct {
+	Body *OpenCashSessionJSONRequestBody
+}
+
+type OpenCashSessionResponseObject interface {
+	VisitOpenCashSessionResponse(w http.ResponseWriter) error
+}
+
+type OpenCashSession201JSONResponse CashSession
+
+func (response OpenCashSession201JSONResponse) VisitOpenCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type OpenCashSession400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response OpenCashSession400JSONResponse) VisitOpenCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type OpenCashSession401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response OpenCashSession401JSONResponse) VisitOpenCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type OpenCashSession403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response OpenCashSession403JSONResponse) VisitOpenCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type OpenCashSession409JSONResponse Error
+
+func (response OpenCashSession409JSONResponse) VisitOpenCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type OpenCashSession422JSONResponse Error
+
+func (response OpenCashSession422JSONResponse) VisitOpenCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type OpenCashSession500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response OpenCashSession500JSONResponse) VisitOpenCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCurrentCashSessionRequestObject struct {
+}
+
+type GetCurrentCashSessionResponseObject interface {
+	VisitGetCurrentCashSessionResponse(w http.ResponseWriter) error
+}
+
+type GetCurrentCashSession200JSONResponse CurrentCashSession
+
+func (response GetCurrentCashSession200JSONResponse) VisitGetCurrentCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCurrentCashSession401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetCurrentCashSession401JSONResponse) VisitGetCurrentCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCurrentCashSession403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetCurrentCashSession403JSONResponse) VisitGetCurrentCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCurrentCashSession500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetCurrentCashSession500JSONResponse) VisitGetCurrentCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCashSessionRequestObject struct {
+	CashSessionId CashSessionId `json:"cashSessionId"`
+}
+
+type GetCashSessionResponseObject interface {
+	VisitGetCashSessionResponse(w http.ResponseWriter) error
+}
+
+type GetCashSession200JSONResponse CashSession
+
+func (response GetCashSession200JSONResponse) VisitGetCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCashSession400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetCashSession400JSONResponse) VisitGetCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCashSession401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetCashSession401JSONResponse) VisitGetCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCashSession403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetCashSession403JSONResponse) VisitGetCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCashSession404JSONResponse Error
+
+func (response GetCashSession404JSONResponse) VisitGetCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCashSession500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetCashSession500JSONResponse) VisitGetCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CloseCashSessionRequestObject struct {
+	CashSessionId CashSessionId `json:"cashSessionId"`
+	Body          *CloseCashSessionJSONRequestBody
+}
+
+type CloseCashSessionResponseObject interface {
+	VisitCloseCashSessionResponse(w http.ResponseWriter) error
+}
+
+type CloseCashSession200JSONResponse CashSession
+
+func (response CloseCashSession200JSONResponse) VisitCloseCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CloseCashSession400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CloseCashSession400JSONResponse) VisitCloseCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CloseCashSession401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CloseCashSession401JSONResponse) VisitCloseCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CloseCashSession403JSONResponse Error
+
+func (response CloseCashSession403JSONResponse) VisitCloseCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CloseCashSession404JSONResponse Error
+
+func (response CloseCashSession404JSONResponse) VisitCloseCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CloseCashSession409JSONResponse Error
+
+func (response CloseCashSession409JSONResponse) VisitCloseCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CloseCashSession422JSONResponse Error
+
+func (response CloseCashSession422JSONResponse) VisitCloseCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CloseCashSession500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CloseCashSession500JSONResponse) VisitCloseCashSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCashMovementRequestObject struct {
+	CashSessionId CashSessionId `json:"cashSessionId"`
+	Body          *RecordCashMovementJSONRequestBody
+}
+
+type RecordCashMovementResponseObject interface {
+	VisitRecordCashMovementResponse(w http.ResponseWriter) error
+}
+
+type RecordCashMovement201JSONResponse CashMovement
+
+func (response RecordCashMovement201JSONResponse) VisitRecordCashMovementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCashMovement400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RecordCashMovement400JSONResponse) VisitRecordCashMovementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCashMovement401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RecordCashMovement401JSONResponse) VisitRecordCashMovementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCashMovement403JSONResponse Error
+
+func (response RecordCashMovement403JSONResponse) VisitRecordCashMovementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCashMovement404JSONResponse Error
+
+func (response RecordCashMovement404JSONResponse) VisitRecordCashMovementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCashMovement409JSONResponse Error
+
+func (response RecordCashMovement409JSONResponse) VisitRecordCashMovementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCashMovement422JSONResponse Error
+
+func (response RecordCashMovement422JSONResponse) VisitRecordCashMovementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCashMovement500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RecordCashMovement500JSONResponse) VisitRecordCashMovementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type ListSalesRequestObject struct {
 	Params ListSalesParams
@@ -1149,6 +2015,21 @@ func (response VoidSale500JSONResponse) VisitVoidSaleResponse(w http.ResponseWri
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// OpenCashSession Abrir la caja
+	// (POST /api/v1/cash-sessions)
+	OpenCashSession(ctx context.Context, request OpenCashSessionRequestObject) (OpenCashSessionResponseObject, error)
+	// GetCurrentCashSession Caja actual del usuario
+	// (GET /api/v1/cash-sessions/current)
+	GetCurrentCashSession(ctx context.Context, request GetCurrentCashSessionRequestObject) (GetCurrentCashSessionResponseObject, error)
+	// GetCashSession Detalle de una caja
+	// (GET /api/v1/cash-sessions/{cashSessionId})
+	GetCashSession(ctx context.Context, request GetCashSessionRequestObject) (GetCashSessionResponseObject, error)
+	// CloseCashSession Cerrar la caja con arqueo
+	// (POST /api/v1/cash-sessions/{cashSessionId}/close)
+	CloseCashSession(ctx context.Context, request CloseCashSessionRequestObject) (CloseCashSessionResponseObject, error)
+	// RecordCashMovement Registrar un ingreso o egreso de caja
+	// (POST /api/v1/cash-sessions/{cashSessionId}/movements)
+	RecordCashMovement(ctx context.Context, request RecordCashMovementRequestObject) (RecordCashMovementResponseObject, error)
 	// ListSales Ventas del día
 	// (GET /api/v1/sales)
 	ListSales(ctx context.Context, request ListSalesRequestObject) (ListSalesResponseObject, error)
@@ -1203,6 +2084,153 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// OpenCashSession operation middleware
+func (sh *strictHandler) OpenCashSession(w http.ResponseWriter, r *http.Request) {
+	var request OpenCashSessionRequestObject
+
+	var body OpenCashSessionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.OpenCashSession(ctx, request.(OpenCashSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "OpenCashSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(OpenCashSessionResponseObject); ok {
+		if err := validResponse.VisitOpenCashSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCurrentCashSession operation middleware
+func (sh *strictHandler) GetCurrentCashSession(w http.ResponseWriter, r *http.Request) {
+	var request GetCurrentCashSessionRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCurrentCashSession(ctx, request.(GetCurrentCashSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCurrentCashSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCurrentCashSessionResponseObject); ok {
+		if err := validResponse.VisitGetCurrentCashSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCashSession operation middleware
+func (sh *strictHandler) GetCashSession(w http.ResponseWriter, r *http.Request, cashSessionId CashSessionId) {
+	var request GetCashSessionRequestObject
+
+	request.CashSessionId = cashSessionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCashSession(ctx, request.(GetCashSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCashSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCashSessionResponseObject); ok {
+		if err := validResponse.VisitGetCashSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CloseCashSession operation middleware
+func (sh *strictHandler) CloseCashSession(w http.ResponseWriter, r *http.Request, cashSessionId CashSessionId) {
+	var request CloseCashSessionRequestObject
+
+	request.CashSessionId = cashSessionId
+
+	var body CloseCashSessionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CloseCashSession(ctx, request.(CloseCashSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CloseCashSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CloseCashSessionResponseObject); ok {
+		if err := validResponse.VisitCloseCashSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RecordCashMovement operation middleware
+func (sh *strictHandler) RecordCashMovement(w http.ResponseWriter, r *http.Request, cashSessionId CashSessionId) {
+	var request RecordCashMovementRequestObject
+
+	request.CashSessionId = cashSessionId
+
+	var body RecordCashMovementJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RecordCashMovement(ctx, request.(RecordCashMovementRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecordCashMovement")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RecordCashMovementResponseObject); ok {
+		if err := validResponse.VisitRecordCashMovementResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ListSales operation middleware

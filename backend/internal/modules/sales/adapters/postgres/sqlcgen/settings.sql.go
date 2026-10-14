@@ -13,14 +13,19 @@ import (
 )
 
 const getSalesPolicy = `-- name: GetSalesPolicy :one
-SELECT max_discount
+SELECT max_discount, require_cash_session
 FROM sales_settings
 WHERE tenant_id = $1
 `
 
-func (q *Queries) GetSalesPolicy(ctx context.Context, tenantID uuid.UUID) (decimal.Decimal, error) {
+type GetSalesPolicyRow struct {
+	MaxDiscount        decimal.Decimal
+	RequireCashSession bool
+}
+
+func (q *Queries) GetSalesPolicy(ctx context.Context, tenantID uuid.UUID) (GetSalesPolicyRow, error) {
 	row := q.db.QueryRow(ctx, getSalesPolicy, tenantID)
-	var max_discount decimal.Decimal
-	err := row.Scan(&max_discount)
-	return max_discount, err
+	var i GetSalesPolicyRow
+	err := row.Scan(&i.MaxDiscount, &i.RequireCashSession)
+	return i, err
 }

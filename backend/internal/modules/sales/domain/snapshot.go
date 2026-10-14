@@ -39,19 +39,20 @@ type StoredTotals struct {
 // SaleSnapshot holds a stored sale's fields, for RehydrateSale. Void is set
 // only for a voided sale.
 type SaleSnapshot struct {
-	ID          uuid.UUID
-	TenantID    uuid.UUID
-	LocationID  uuid.UUID
-	UserID      uuid.UUID
-	CustomerID  *uuid.UUID
-	Number      int64
-	Status      SaleStatus
-	Lines       []LineSnapshot
-	Payments    []PaymentSnapshot
-	Totals      StoredTotals
-	CreatedAt   time.Time
-	ConfirmedAt time.Time
-	Void        *VoidInfo
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	LocationID    uuid.UUID
+	UserID        uuid.UUID
+	CustomerID    *uuid.UUID
+	CashSessionID *uuid.UUID
+	Number        int64
+	Status        SaleStatus
+	Lines         []LineSnapshot
+	Payments      []PaymentSnapshot
+	Totals        StoredTotals
+	CreatedAt     time.Time
+	ConfirmedAt   time.Time
+	Void          *VoidInfo
 }
 
 // Snapshot returns the fields of a stored (confirmed or voided) sale, as the
@@ -59,7 +60,7 @@ type SaleSnapshot struct {
 func (s *Sale) Snapshot() SaleSnapshot {
 	snap := SaleSnapshot{
 		ID: s.id, TenantID: s.tenantID, LocationID: s.locationID, UserID: s.userID,
-		CustomerID: copyID(s.customerID), Number: s.number, Status: s.status,
+		CustomerID: copyID(s.customerID), CashSessionID: copyID(s.cashSessionID), Number: s.number, Status: s.status,
 		CreatedAt: s.createdAt, Void: s.VoidInfo(),
 	}
 	if s.confirmedAt != nil {
@@ -96,7 +97,7 @@ func RehydrateSale(snap SaleSnapshot) (*Sale, error) {
 	}
 	s, err := NewSale(NewSaleParams{
 		ID: snap.ID, TenantID: snap.TenantID, LocationID: snap.LocationID, UserID: snap.UserID,
-		CustomerID: snap.CustomerID, CreatedAt: snap.CreatedAt,
+		CustomerID: snap.CustomerID, CashSessionID: snap.CashSessionID, CreatedAt: snap.CreatedAt,
 	})
 	if err != nil {
 		return nil, err

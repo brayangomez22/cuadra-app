@@ -223,6 +223,9 @@ type TaxRate = string
 // UnitOfMeasure Unidad base en la que se cuenta y se vende el producto.
 type UnitOfMeasure string
 
+// CashSessionId defines model for CashSessionId.
+type CashSessionId = openapi_types.UUID
+
 // CategoryId defines model for CategoryId.
 type CategoryId = openapi_types.UUID
 

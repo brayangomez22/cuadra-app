@@ -34,10 +34,18 @@ type stubUseCases struct {
 	reason  string
 	list    app.ListSalesInput
 
-	sale  *domain.Sale
-	page  domain.SalePage
-	limit domain.DiscountLimit
-	err   error
+	openCash app.OpenCashSessionInput
+	movement app.CashMovementRequest
+	closing  app.CloseCashSessionInput
+
+	sale     *domain.Sale
+	page     domain.SalePage
+	limit    domain.DiscountLimit
+	session  *domain.CashSession
+	view     app.CashSessionView
+	current  app.CurrentCashSession
+	recorded domain.CashMovement
+	err      error
 }
 
 func (s *stubUseCases) GetDiscountLimit(_ context.Context, a app.Actor) (domain.DiscountLimit, error) {

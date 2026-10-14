@@ -1,5 +1,6 @@
-// Printing a sale receipt (T22). The receipt is mounted in a portal on <body>
-// marked with data-print-root; while it exists, printing shows only it.
+// Printing a sale receipt (T22) or a cash closing report (T23). What prints is
+// mounted in a portal on <body> marked with data-print-root; while it exists,
+// printing shows only it.
 // Global because @page and the rest of <body> are outside any module.
 @use '../themes/theme';
 @use '../tokens/semantic';

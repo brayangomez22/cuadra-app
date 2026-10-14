@@ -2,7 +2,7 @@ import { createBrowserRouter, type RouteObject } from 'react-router';
 import { GuestOnly, LoginPage, RequireAuth, RequirePermission, SignUpPage } from '@/features/auth';
 import { ProductFormPage, ProductListPage } from '@/features/catalog';
 import { KardexPage, ReceiptPage, StockPage } from '@/features/inventory';
-import { PosPage } from '@/features/sales';
+import { CashPage, CashReportPage, CloseCashPage, PosPage } from '@/features/sales';
 import { AppLayout } from './layout/AppLayout';
 import { HomePage } from './pages/HomePage';
 import { RouteError } from './RouteError';
@@ -61,7 +61,15 @@ export const routes: RouteObject[] = [
               },
               {
                 element: <RequirePermission permission="sales:create" />,
-                children: [{ path: '/vender', element: <PosPage /> }],
+                children: [
+                  { path: '/vender', element: <PosPage /> },
+                  { path: '/caja', element: <CashPage /> },
+                  { path: '/caja/cerrar', element: <CloseCashPage /> },
+                ],
+              },
+              {
+                element: <RequirePermission permission="sales:read" />,
+                children: [{ path: '/caja/:sessionId', element: <CashReportPage /> }],
               },
               {
                 element: <RequirePermission permission="inventory:adjust" />,

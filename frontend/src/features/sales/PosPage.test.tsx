@@ -1,7 +1,7 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { aUser, apiError, fakeApi, json, signedIn, type Me } from '@/test/fakeApi';
-import { aCement, aLocation, aProduct, aSale, ids, page, plain, query, type Product } from '@/test/fixtures';
+import { aCement, aLocation, anOpenCashSession, aProduct, aSale, ids, page, plain, query, type Product } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 
 const CEMENT_BARCODE = '7701234567890';
@@ -10,6 +10,8 @@ type Options = {
   user?: Me;
   limit?: { unlimited: boolean; max: string };
   locations?: ReturnType<typeof aLocation>[];
+  /** The current cash session; by default the tenant sells without one. */
+  cash?: { required: boolean; session?: ReturnType<typeof anOpenCashSession> };
   extra?: Parameters<typeof fakeApi>[0];
 };
 
@@ -25,6 +27,7 @@ function posApi({
   user = aUser('cashier'),
   limit = { unlimited: false, max: '0' },
   locations = [aLocation()],
+  cash = { required: false },
   extra = {},
 }: Options = {}) {
   const products = [aProduct(), aCement({ barcode: CEMENT_BARCODE })];
@@ -34,6 +37,7 @@ function posApi({
     'GET /api/v1/sales/discount-limit': json(200, limit),
     'GET /api/v1/products': (request) => json(200, page(search(products, query(request).get('q') ?? ''))),
     'POST /api/v1/sales': json(201, aSale()),
+    'GET /api/v1/cash-sessions/current': json(200, cash),
     ...extra,
   });
 }
@@ -42,6 +46,11 @@ const user = () => userEvent.setup({ delay: null });
 
 async function searchBox() {
   return screen.findByRole('combobox', { name: 'Buscar producto' });
+}
+
+// The POS focuses the search on the next animation frame: wait for it.
+async function expectSearchFocused() {
+  await waitFor(async () => expect(await searchBox()).toHaveFocus());
 }
 
 // scan types a code and Enter into the search, as a barcode reader does.
@@ -90,7 +99,7 @@ describe('PosPage', () => {
     expect(screen.getAllByRole('listitem', { name: /Cemento/ })).toHaveLength(1);
     expect(summaryValue('Total')).toBe('$ 76.160');
     // The reader can scan the next product at once.
-    expect(await searchBox()).toHaveFocus();
+    await expectSearchFocused();
     expect(await searchBox()).toHaveValue('');
   });
 
@@ -170,7 +179,7 @@ describe('PosPage', () => {
     await user().click((await findCartLine(/Tubo PVC/)).getByRole('button', { name: /Quitar/ }));
 
     expect(screen.queryByRole('listitem', { name: /Tubo PVC/ })).not.toBeInTheDocument();
-    expect(await searchBox()).toHaveFocus();
+    await expectSearchFocused();
   });
 
   describe('cobro', () => {
@@ -220,7 +229,7 @@ describe('PosPage', () => {
       await user().keyboard('{Enter}');
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       expect(screen.queryByRole('listitem', { name: /Cemento/ })).not.toBeInTheDocument();
-      expect(await searchBox()).toHaveFocus();
+      await expectSearchFocused();
     });
 
     it('acepta el valor con puntos de miles, como lo escribe el cajero', async () => {
@@ -413,7 +422,7 @@ describe('PosPage', () => {
 
       await user().keyboard('{F2}');
 
-      expect(await searchBox()).toHaveFocus();
+      await expectSearchFocused();
     });
 
     it('F4 no abre el cobro con el carrito vacío', async () => {
@@ -453,7 +462,7 @@ describe('PosPage', () => {
       await user().click(dialog.getByRole('button', { name: 'Cancelar venta' }));
 
       await waitFor(() => expect(screen.queryByRole('listitem', { name: /Tubo PVC/ })).not.toBeInTheDocument());
-      expect(await searchBox()).toHaveFocus();
+      await expectSearchFocused();
     });
 
     it('un escaneo después de Esc no borra la venta', async () => {
@@ -469,7 +478,7 @@ describe('PosPage', () => {
 
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       expect(cartLine(/Tubo PVC/)).toBeDefined();
-      expect(await searchBox()).toHaveFocus();
+      await expectSearchFocused();
     });
 
     it('Esc en la confirmación conserva la venta', async () => {
@@ -571,5 +580,56 @@ describe('PosPage', () => {
     renderApp('/vender');
 
     expect(await findCartLine(/Tubo PVC/)).toBeDefined();
+  });
+
+  describe('caja', () => {
+    it('si la empresa exige caja y no hay una abierta, no deja vender y lleva a abrirla', async () => {
+      posApi({ cash: { required: true } });
+      renderApp('/vender');
+
+      expect(await screen.findByRole('heading', { name: 'Abra la caja para vender' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Abrir caja' })).toHaveAttribute('href', '/caja');
+      expect(screen.queryByRole('combobox', { name: 'Buscar producto' })).not.toBeInTheDocument();
+    });
+
+    it('con la caja abierta vende en la sede de la caja, aunque haya varias', async () => {
+      const api = posApi({
+        cash: { required: true, session: anOpenCashSession({ location_id: ids.north }) },
+        locations: [aLocation(), aLocation({ id: ids.north, name: 'Sede norte' })],
+      });
+      renderApp('/vender');
+
+      await scan('CEM-50');
+      await findCartLine(/Cemento/);
+      expect(screen.queryByRole('combobox', { name: 'Sede' })).not.toBeInTheDocument();
+      expect(screen.getByText(/Caja abierta en Sede norte/)).toBeInTheDocument();
+      await user().keyboard('{F4}');
+      await user().keyboard('{Enter}');
+
+      expect((await posted(api)).location_id).toBe(ids.north);
+    });
+
+    it('si la caja se cerró mientras vendía, lo dice y vuelve a pedirla', async () => {
+      let current: unknown = { required: true, session: anOpenCashSession() };
+      posApi({
+        extra: {
+          'GET /api/v1/cash-sessions/current': () => json(200, current),
+          'POST /api/v1/sales': () => {
+            current = { required: true };
+            return apiError(409, 'cash_session_closed', 'La caja ya está cerrada. Para seguir vendiendo, abra una nueva.');
+          },
+        },
+      });
+      renderApp('/vender');
+
+      await scan('CEM-50');
+      await findCartLine(/Cemento/);
+      await user().keyboard('{F4}');
+      await user().keyboard('{Enter}');
+
+      expect(await within(await checkout()).findByText(/La caja ya está cerrada/)).toBeInTheDocument();
+      await user().keyboard('{Escape}');
+      expect(await screen.findByRole('heading', { name: 'Abra la caja para vender' })).toBeInTheDocument();
+    });
   });
 });

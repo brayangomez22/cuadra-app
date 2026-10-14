@@ -157,6 +157,9 @@ type TenantSelectionRequired struct {
 	Tenants []TenantOption `json:"tenants"`
 }
 
+// CashSessionId defines model for CashSessionId.
+type CashSessionId = openapi_types.UUID
+
 // CategoryId defines model for CategoryId.
 type CategoryId = openapi_types.UUID
 

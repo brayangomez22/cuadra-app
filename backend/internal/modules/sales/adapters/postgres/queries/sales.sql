@@ -8,10 +8,10 @@ ON CONFLICT (tenant_id, location_id) DO UPDATE SET last_number = sale_sequences.
 RETURNING last_number;
 
 -- name: InsertSale :exec
-INSERT INTO sales (id, tenant_id, location_id, number, user_id, customer_id, status,
+INSERT INTO sales (id, tenant_id, location_id, number, user_id, customer_id, cash_session_id, status,
                    subtotal, discounts, tax, total, paid, change, created_at, confirmed_at)
 VALUES (sqlc.arg(id), sqlc.arg(tenant_id), sqlc.arg(location_id), sqlc.arg(number), sqlc.arg(user_id),
-        sqlc.narg(customer_id), sqlc.arg(status), sqlc.arg(subtotal), sqlc.arg(discounts), sqlc.arg(tax),
+        sqlc.narg(customer_id), sqlc.narg(cash_session_id), sqlc.arg(status), sqlc.arg(subtotal), sqlc.arg(discounts), sqlc.arg(tax),
         sqlc.arg(total), sqlc.arg(paid), sqlc.arg(change), sqlc.arg(created_at), sqlc.arg(confirmed_at));
 
 -- name: InsertSaleLine :exec

@@ -34,7 +34,7 @@ func (q *Queries) CountSales(ctx context.Context, arg CountSalesParams) (int64, 
 }
 
 const getSale = `-- name: GetSale :one
-SELECT id, tenant_id, location_id, number, user_id, customer_id, status, subtotal, discounts, tax, total, paid, change, created_at, confirmed_at, voided_at, voided_by, void_reason FROM sales WHERE id = $1
+SELECT id, tenant_id, location_id, number, user_id, customer_id, status, subtotal, discounts, tax, total, paid, change, created_at, confirmed_at, voided_at, voided_by, void_reason, cash_session_id FROM sales WHERE id = $1
 `
 
 func (q *Queries) GetSale(ctx context.Context, id uuid.UUID) (Sale, error) {
@@ -59,34 +59,36 @@ func (q *Queries) GetSale(ctx context.Context, id uuid.UUID) (Sale, error) {
 		&i.VoidedAt,
 		&i.VoidedBy,
 		&i.VoidReason,
+		&i.CashSessionID,
 	)
 	return i, err
 }
 
 const insertSale = `-- name: InsertSale :exec
-INSERT INTO sales (id, tenant_id, location_id, number, user_id, customer_id, status,
+INSERT INTO sales (id, tenant_id, location_id, number, user_id, customer_id, cash_session_id, status,
                    subtotal, discounts, tax, total, paid, change, created_at, confirmed_at)
 VALUES ($1, $2, $3, $4, $5,
-        $6, $7, $8, $9, $10,
-        $11, $12, $13, $14, $15)
+        $6, $7, $8, $9, $10, $11,
+        $12, $13, $14, $15, $16)
 `
 
 type InsertSaleParams struct {
-	ID          uuid.UUID
-	TenantID    uuid.UUID
-	LocationID  uuid.UUID
-	Number      int64
-	UserID      uuid.UUID
-	CustomerID  *uuid.UUID
-	Status      string
-	Subtotal    decimal.Decimal
-	Discounts   decimal.Decimal
-	Tax         decimal.Decimal
-	Total       decimal.Decimal
-	Paid        decimal.Decimal
-	Change      decimal.Decimal
-	CreatedAt   time.Time
-	ConfirmedAt time.Time
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	LocationID    uuid.UUID
+	Number        int64
+	UserID        uuid.UUID
+	CustomerID    *uuid.UUID
+	CashSessionID *uuid.UUID
+	Status        string
+	Subtotal      decimal.Decimal
+	Discounts     decimal.Decimal
+	Tax           decimal.Decimal
+	Total         decimal.Decimal
+	Paid          decimal.Decimal
+	Change        decimal.Decimal
+	CreatedAt     time.Time
+	ConfirmedAt   time.Time
 }
 
 func (q *Queries) InsertSale(ctx context.Context, arg InsertSaleParams) error {
@@ -97,6 +99,7 @@ func (q *Queries) InsertSale(ctx context.Context, arg InsertSaleParams) error {
 		arg.Number,
 		arg.UserID,
 		arg.CustomerID,
+		arg.CashSessionID,
 		arg.Status,
 		arg.Subtotal,
 		arg.Discounts,
@@ -302,7 +305,7 @@ func (q *Queries) ListSales(ctx context.Context, arg ListSalesParams) ([]ListSal
 }
 
 const lockSale = `-- name: LockSale :one
-SELECT id, tenant_id, location_id, number, user_id, customer_id, status, subtotal, discounts, tax, total, paid, change, created_at, confirmed_at, voided_at, voided_by, void_reason FROM sales WHERE id = $1 FOR UPDATE
+SELECT id, tenant_id, location_id, number, user_id, customer_id, status, subtotal, discounts, tax, total, paid, change, created_at, confirmed_at, voided_at, voided_by, void_reason, cash_session_id FROM sales WHERE id = $1 FOR UPDATE
 `
 
 // LockSale reads a sale and locks it until the transaction ends, so two
@@ -329,6 +332,7 @@ func (q *Queries) LockSale(ctx context.Context, id uuid.UUID) (Sale, error) {
 		&i.VoidedAt,
 		&i.VoidedBy,
 		&i.VoidReason,
+		&i.CashSessionID,
 	)
 	return i, err
 }

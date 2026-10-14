@@ -62,6 +62,52 @@ func (ns NullRiverJobState) Value() (driver.Value, error) {
 	return string(ns.RiverJobState), nil
 }
 
+type CashMovement struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	SessionID uuid.UUID
+	Kind      string
+	Amount    decimal.Decimal
+	Reason    string
+	UserID    uuid.UUID
+	CreatedAt time.Time
+}
+
+type CashSession struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	LocationID   uuid.UUID
+	UserID       uuid.UUID
+	Status       string
+	OpeningFloat decimal.Decimal
+	OpenedAt     time.Time
+	ClosedAt     *time.Time
+	ClosedBy     pgtype.UUID
+	Notes        *string
+	CashReceived pgtype.Numeric
+	ChangeGiven  pgtype.Numeric
+	CashIn       pgtype.Numeric
+	CashOut      pgtype.Numeric
+	SalesCount   *int32
+	Expected     pgtype.Numeric
+	Counted      pgtype.Numeric
+	Difference   pgtype.Numeric
+}
+
+type CashSessionCount struct {
+	TenantID     uuid.UUID
+	SessionID    uuid.UUID
+	Denomination decimal.Decimal
+	Quantity     int64
+}
+
+type CashSessionPayment struct {
+	TenantID  uuid.UUID
+	SessionID uuid.UUID
+	Method    string
+	Amount    decimal.Decimal
+}
+
 type Category struct {
 	ID        uuid.UUID
 	TenantID  uuid.UUID
@@ -161,24 +207,25 @@ type RiverQueue struct {
 }
 
 type Sale struct {
-	ID          uuid.UUID
-	TenantID    uuid.UUID
-	LocationID  uuid.UUID
-	Number      int64
-	UserID      uuid.UUID
-	CustomerID  pgtype.UUID
-	Status      string
-	Subtotal    decimal.Decimal
-	Discounts   decimal.Decimal
-	Tax         decimal.Decimal
-	Total       decimal.Decimal
-	Paid        decimal.Decimal
-	Change      decimal.Decimal
-	CreatedAt   time.Time
-	ConfirmedAt time.Time
-	VoidedAt    *time.Time
-	VoidedBy    pgtype.UUID
-	VoidReason  *string
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	LocationID    uuid.UUID
+	Number        int64
+	UserID        uuid.UUID
+	CustomerID    pgtype.UUID
+	Status        string
+	Subtotal      decimal.Decimal
+	Discounts     decimal.Decimal
+	Tax           decimal.Decimal
+	Total         decimal.Decimal
+	Paid          decimal.Decimal
+	Change        decimal.Decimal
+	CreatedAt     time.Time
+	ConfirmedAt   time.Time
+	VoidedAt      *time.Time
+	VoidedBy      pgtype.UUID
+	VoidReason    *string
+	CashSessionID pgtype.UUID
 }
 
 type SaleLine struct {
@@ -210,8 +257,9 @@ type SaleSequence struct {
 }
 
 type SalesSetting struct {
-	TenantID    uuid.UUID
-	MaxDiscount decimal.Decimal
+	TenantID           uuid.UUID
+	MaxDiscount        decimal.Decimal
+	RequireCashSession bool
 }
 
 type StockLevel struct {

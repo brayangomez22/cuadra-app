@@ -9,13 +9,19 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// foreignKeyViolation is the SQLSTATE of a foreign key violation.
-const foreignKeyViolation = "23503"
+// SQLSTATE codes the adapter maps to domain errors.
+const (
+	foreignKeyViolation = "23503"
+	uniqueViolation     = "23505"
+)
 
-// Constraints of migrations/00008_sales.sql the adapter maps to domain errors.
+// Constraints of migrations/00008_sales.sql and 00009_cash_sessions.sql the
+// adapter maps to domain errors.
 const (
 	salesLocationFKey         = "sales_location_fkey"
 	saleSequencesLocationFKey = "sale_sequences_location_fkey"
+	cashSessionsLocationFKey  = "cash_sessions_location_fkey"
+	cashSessionsOneOpenKey    = "cash_sessions_one_open_key"
 )
 
 // maxPageSize is the contract's largest page.

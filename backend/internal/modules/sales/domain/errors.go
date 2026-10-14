@@ -25,6 +25,18 @@ var (
 	ErrInvalidSaleNumber    = errors.New("sales: invalid sale number")
 	ErrInvalidVoidReason    = errors.New("sales: invalid void reason")
 
+	ErrInvalidCashSessionID        = errors.New("sales: invalid cash session id")
+	ErrInvalidOpeningFloat         = errors.New("sales: invalid opening float")
+	ErrInvalidCashMovementID       = errors.New("sales: invalid cash movement id")
+	ErrInvalidCashMovementKind     = errors.New("sales: invalid cash movement kind")
+	ErrInvalidCashMovementAmount   = errors.New("sales: invalid cash movement amount")
+	ErrInvalidCashMovementReason   = errors.New("sales: invalid cash movement reason")
+	ErrInvalidDenomination         = errors.New("sales: invalid denomination")
+	ErrInvalidDenominationQuantity = errors.New("sales: invalid denomination quantity")
+	ErrDuplicateDenomination       = errors.New("sales: duplicate denomination")
+	ErrInvalidCashNotes            = errors.New("sales: invalid cash closing notes")
+	ErrInvalidCashActivity         = errors.New("sales: invalid cash activity")
+
 	ErrDiscountExceedsLimit = errors.New("sales: discount exceeds the user's limit")
 	ErrSaleWithoutLines     = errors.New("sales: sale without lines")
 	ErrInsufficientPayment  = errors.New("sales: payments do not cover the total")
@@ -33,6 +45,14 @@ var (
 	ErrSaleNotConfirmed     = errors.New("sales: sale is not confirmed")
 	ErrSaleNumberAssigned   = errors.New("sales: sale number already assigned")
 	ErrInconsistentSale     = errors.New("sales: stored sale is inconsistent")
+
+	ErrCashSessionRequired         = errors.New("sales: no open cash session")
+	ErrCashSessionAlreadyOpen      = errors.New("sales: the user already has an open cash session")
+	ErrCashSessionClosed           = errors.New("sales: cash session is closed")
+	ErrCashSessionNotOwner         = errors.New("sales: cash session belongs to another user")
+	ErrCashSessionLocationMismatch = errors.New("sales: sale location differs from the cash session's")
+	ErrInconsistentCashSession     = errors.New("sales: stored cash session is inconsistent")
+	ErrCashSessionNotFound         = errors.New("sales: cash session not found")
 
 	ErrSaleNotFound      = errors.New("sales: sale not found")
 	ErrProductNotFound   = errors.New("sales: product not found")

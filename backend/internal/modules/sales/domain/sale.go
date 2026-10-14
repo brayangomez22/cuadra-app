@@ -34,7 +34,9 @@ type NewSaleParams struct {
 	// UserID is who sells: the cashier.
 	UserID     uuid.UUID
 	CustomerID *uuid.UUID
-	CreatedAt  time.Time
+	// CashSessionID is the open cash session of the cashier, if any.
+	CashSessionID *uuid.UUID
+	CreatedAt     time.Time
 }
 
 // TaxBreakdown is the IVA of the lines at one rate: the sum of their bases
@@ -68,19 +70,21 @@ type VoidInfo struct {
 // draft; a confirmed sale only changes to voided, keeping its amounts and
 // number.
 type Sale struct {
-	id          uuid.UUID
-	tenantID    uuid.UUID
-	locationID  uuid.UUID
-	userID      uuid.UUID
-	customerID  *uuid.UUID
-	number      int64
-	status      SaleStatus
-	lines       []SaleLine
-	payments    []Payment
-	change      decimal.Decimal
-	createdAt   time.Time
-	confirmedAt *time.Time
-	void        *VoidInfo
+	id         uuid.UUID
+	tenantID   uuid.UUID
+	locationID uuid.UUID
+	userID     uuid.UUID
+	customerID *uuid.UUID
+	// cashSessionID is the drawer the sale was charged in, if any.
+	cashSessionID *uuid.UUID
+	number        int64
+	status        SaleStatus
+	lines         []SaleLine
+	payments      []Payment
+	change        decimal.Decimal
+	createdAt     time.Time
+	confirmedAt   *time.Time
+	void          *VoidInfo
 }
 
 // NewSale creates an empty draft sale.
@@ -100,14 +104,18 @@ func NewSale(p NewSaleParams) (*Sale, error) {
 	if p.CustomerID != nil && *p.CustomerID == uuid.Nil {
 		return nil, ErrInvalidCustomerID
 	}
+	if p.CashSessionID != nil && *p.CashSessionID == uuid.Nil {
+		return nil, ErrInvalidCashSessionID
+	}
 	return &Sale{
-		id:         p.ID,
-		tenantID:   p.TenantID,
-		locationID: p.LocationID,
-		userID:     p.UserID,
-		customerID: copyID(p.CustomerID),
-		status:     SaleDraft,
-		createdAt:  p.CreatedAt.UTC(),
+		id:            p.ID,
+		tenantID:      p.TenantID,
+		locationID:    p.LocationID,
+		userID:        p.UserID,
+		customerID:    copyID(p.CustomerID),
+		cashSessionID: copyID(p.CashSessionID),
+		status:        SaleDraft,
+		createdAt:     p.CreatedAt.UTC(),
 	}, nil
 }
 
@@ -241,6 +249,10 @@ func (s *Sale) LocationID() uuid.UUID { return s.locationID }
 
 // UserID returns who sold.
 func (s *Sale) UserID() uuid.UUID { return s.userID }
+
+// CashSessionID returns a copy of the id of the cash session the sale was
+// charged in, or nil if it was sold without one.
+func (s *Sale) CashSessionID() *uuid.UUID { return copyID(s.cashSessionID) }
 
 // CustomerID returns a copy of the customer's id, or nil for an anonymous sale.
 func (s *Sale) CustomerID() *uuid.UUID { return copyID(s.customerID) }
