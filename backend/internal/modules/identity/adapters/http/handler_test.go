@@ -341,7 +341,7 @@ func TestLogout(t *testing.T) {
 }
 
 func TestGetMe(t *testing.T) {
-	t.Run("devuelve el usuario del token con su empresa y sus permisos", func(t *testing.T) {
+	t.Run("devuelve el usuario del token con su empresa, su NIT y sus permisos", func(t *testing.T) {
 		p := profile(t, domain.RoleCashier)
 		var gotTenant, gotUser uuid.UUID
 		uc := &stubUseCases{me: func(tenantID, userID uuid.UUID) (app.Profile, error) {
@@ -361,6 +361,7 @@ func TestGetMe(t *testing.T) {
 			"id": "`+p.User.ID().String()+`",
 			"tenant_id": "`+p.Tenant.ID().String()+`",
 			"tenant_name": "Ferretería El Tornillo",
+			"tenant_nit": "890903938-8",
 			"name": "Ana Gómez",
 			"email": "ana@eltornillo.co",
 			"role": "cashier",

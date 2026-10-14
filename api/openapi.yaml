@@ -1277,7 +1277,7 @@ components:
           $ref: "#/components/schemas/Me"
     Me:
       type: object
-      required: [id, tenant_id, tenant_name, name, email, role, permissions]
+      required: [id, tenant_id, tenant_name, tenant_nit, name, email, role, permissions]
       properties:
         id:
           type: string
@@ -1287,6 +1287,10 @@ components:
           format: uuid
         tenant_name:
           type: string
+        tenant_nit:
+          type: string
+          description: NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
+          example: 890903938-8
         name:
           type: string
         email:

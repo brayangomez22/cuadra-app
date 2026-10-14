@@ -9,8 +9,10 @@ import { useConfirmSale, useDiscountLimit, type Sale } from './api';
 import { CartLines } from './CartLines';
 import { cartReducer, cartTotals, type DiscountLimit, type PaymentInput } from './cart';
 import { CheckoutDialog } from './CheckoutDialog';
+import { PrintableReceipt } from './PrintableReceipt';
+import type { Paper } from './Receipt';
 import { ProductSearch } from './ProductSearch';
-import { loadCart, loadLocation, saveCart, saveLocation } from './storage';
+import { loadCart, loadLocation, loadPaper, saveCart, saveLocation, savePaper } from './storage';
 import styles from './PosPage.module.scss';
 
 // Until the API answers, nobody discounts: the safe default (docs/decisiones.md).
@@ -36,6 +38,7 @@ export function PosPage() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [sale, setSale] = useState<Sale>();
+  const [paper, setPaper] = useState<Paper>(loadPaper);
   const [outOfStock, setOutOfStock] = useState<string>();
   const search = useRef<HTMLInputElement>(null);
 
@@ -227,7 +230,23 @@ export function PosPage() {
         error={confirmSale.isError ? describeError(confirmSale.error).message : undefined}
         sale={sale}
         onNewSale={closeCheckout}
+        paper={paper}
+        onPaperChange={(value) => {
+          setPaper(value);
+          savePaper(value);
+        }}
+        onPrint={() => window.print()}
       />
+
+      {sale && user && (
+        <PrintableReceipt
+          sale={sale}
+          business={{ name: user.tenant_name, nit: user.tenant_nit }}
+          location={locations.data?.find((l) => l.id === sale.location_id)?.name ?? ''}
+          cashier={user.name}
+          paper={paper}
+        />
+      )}
 
       <Dialog
         open={cancelOpen}

@@ -111,6 +111,11 @@ type Me struct {
 	Role        MeRole             `json:"role"`
 	TenantId    openapi_types.UUID `json:"tenant_id"`
 	TenantName  string             `json:"tenant_name"`
+
+	// TenantNit NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
+	//
+	// Example: 890903938-8
+	TenantNit string `json:"tenant_nit"`
 }
 
 // MeRole defines model for Me.Role.

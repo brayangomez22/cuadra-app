@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { formatMoney, isNegative, isZero, parseMoneyInput, toDecimalInput } from '@/shared/format';
-import { Alert, Button, Dialog, DialogClose, Field, IconButton, IconClose, IconPlus, Input, Select } from '@/shared/ui';
-import { settle, type PaymentInput, type PaymentMethod, type Settlement } from './cart';
+import { Alert, Button, Dialog, DialogClose, Field, IconButton, IconClose, IconPlus, IconPrinter, Input, Select } from '@/shared/ui';
+import { methodLabels, settle, type PaymentInput, type PaymentMethod, type Settlement } from './cart';
 import type { Sale } from './api';
+import type { Paper } from './Receipt';
 import styles from './CheckoutDialog.module.scss';
 
 type Props = {
@@ -19,15 +20,18 @@ type Props = {
   sale?: Sale;
   /** Closes the result and starts the next sale. */
   onNewSale: () => void;
+  /** The receipt's paper width and how to change it. */
+  paper: Paper;
+  onPaperChange: (paper: Paper) => void;
+  /** Prints the confirmed sale's receipt. */
+  onPrint: () => void;
 };
 
-const methodLabels: Record<PaymentMethod, string> = {
-  cash: 'Efectivo',
-  card: 'Tarjeta',
-  nequi: 'Nequi',
-  daviplata: 'Daviplata',
-  transfer: 'Transferencia',
-};
+const paperOptions = [
+  { value: '80', label: '80 mm' },
+  { value: '58', label: '58 mm' },
+];
+
 const methodOptions = Object.entries(methodLabels).map(([value, label]) => ({ value, label }));
 // The order in which a new payment proposes a method it does not have yet.
 const nextMethods: PaymentMethod[] = ['card', 'nequi', 'daviplata', 'transfer', 'cash'];
@@ -61,7 +65,19 @@ function settlementError(s: Settlement): string | undefined {
 }
 
 /** Takes the payments of the sale, mixed if needed, and shows the change. */
-export function CheckoutDialog({ open, onOpenChange, total, onConfirm, pending, error, sale, onNewSale }: Props) {
+export function CheckoutDialog({
+  open,
+  onOpenChange,
+  total,
+  onConfirm,
+  pending,
+  error,
+  sale,
+  onNewSale,
+  paper,
+  onPaperChange,
+  onPrint,
+}: Props) {
   return (
     <Dialog
       open={open}
@@ -71,7 +87,9 @@ export function CheckoutDialog({ open, onOpenChange, total, onConfirm, pending, 
       description={sale ? 'La venta quedó registrada.' : 'Con un solo pago en efectivo vacío se cobra el valor exacto.'}
     >
       {/* Mounted per opening: every charge starts with one empty cash payment. */}
-      {open && (sale ? <SaleDone sale={sale} onNewSale={onNewSale} /> : (
+      {open && (sale ? (
+        <SaleDone sale={sale} onNewSale={onNewSale} paper={paper} onPaperChange={onPaperChange} onPrint={onPrint} />
+      ) : (
         <PaymentsForm total={total} onConfirm={onConfirm} pending={pending} error={error} />
       ))}
     </Dialog>
@@ -197,7 +215,13 @@ function PaymentsForm({ total, onConfirm, pending, error }: Pick<Props, 'total' 
   );
 }
 
-function SaleDone({ sale, onNewSale }: { sale: Sale; onNewSale: () => void }) {
+function SaleDone({
+  sale,
+  onNewSale,
+  paper,
+  onPaperChange,
+  onPrint,
+}: { sale: Sale } & Pick<Props, 'onNewSale' | 'paper' | 'onPaperChange' | 'onPrint'>) {
   return (
     <div className={styles.root}>
       <dl className={styles.figures}>
@@ -215,6 +239,19 @@ function SaleDone({ sale, onNewSale }: { sale: Sale; onNewSale: () => void }) {
         </div>
       </dl>
       <div className={styles.footer}>
+        <div className={styles.print}>
+          <Field label="Papel" className={styles.paper}>
+            <Select
+              options={paperOptions}
+              value={paper}
+              onValueChange={(value) => onPaperChange(value === '58' ? '58' : '80')}
+            />
+          </Field>
+          <Button variant="secondary" size="lg" icon={<IconPrinter />} onClick={onPrint}>
+            Imprimir tirilla
+          </Button>
+        </div>
+        {/* The next sale keeps the focus: Enter starts it, as before printing existed. */}
         <Button size="lg" onClick={onNewSale} autoFocus>
           Nueva venta
         </Button>

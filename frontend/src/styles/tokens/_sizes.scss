@@ -29,4 +29,7 @@ $layout: (
   'form': f.rem(480px),
   // Two-column forms that stand alone, like sign-up.
   'form-wide': f.rem(720px),
+  // Printable width of thermal receipt paper (58 and 80 mm rolls leave 48 and 72 mm).
+  'receipt-58': 48mm,
+  'receipt-80': 72mm,
 );

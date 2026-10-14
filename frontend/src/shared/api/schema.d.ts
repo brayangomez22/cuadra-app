@@ -597,6 +597,11 @@ export interface components {
             /** Format: uuid */
             tenant_id: string;
             tenant_name: string;
+            /**
+             * @description NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
+             * @example 890903938-8
+             */
+            tenant_nit: string;
             name: string;
             email: string;
             /** @enum {string} */

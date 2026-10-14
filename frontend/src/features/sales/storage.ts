@@ -2,6 +2,7 @@
 // blocked (private windows, previews), so every access is guarded and the
 // screen works without it.
 import { emptyCart, type Cart } from './cart';
+import type { Paper } from './Receipt';
 
 /** The sale in progress survives a reload or a visit to another screen, in this tab only. */
 export function loadCart(key: string): Cart {
@@ -56,5 +57,24 @@ export function saveLocation(key: string, locationId: string) {
     localStorage.setItem(key, locationId);
   } catch {
     // The cashier picks the location again next time.
+  }
+}
+
+const PAPER_KEY = 'cuadra.pos.paper';
+
+/** The receipt printer's paper: a setting of this device, 80 mm unless chosen. */
+export function loadPaper(): Paper {
+  try {
+    return localStorage.getItem(PAPER_KEY) === '58' ? '58' : '80';
+  } catch {
+    return '80';
+  }
+}
+
+export function savePaper(paper: Paper) {
+  try {
+    localStorage.setItem(PAPER_KEY, paper);
+  } catch {
+    // The cashier picks the paper again next time.
   }
 }

@@ -182,6 +182,7 @@ func me(p app.Profile) identityapi.Me {
 		Id:          p.User.ID(),
 		TenantId:    p.Tenant.ID(),
 		TenantName:  p.Tenant.Name(),
+		TenantNit:   p.Tenant.NIT().String(),
 		Name:        p.User.Name(),
 		Email:       p.User.Email().String(),
 		Role:        identityapi.MeRole(p.User.Role()),

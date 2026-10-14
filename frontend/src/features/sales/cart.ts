@@ -10,6 +10,16 @@ type Schemas = components['schemas'];
 export type DiscountLimit = Schemas['DiscountLimit'];
 export type PaymentMethod = Schemas['PaymentMethod'];
 export type PaymentInput = Schemas['PaymentInput'];
+
+/** How the cashier and the receipt name each payment method. */
+export const methodLabels: Record<PaymentMethod, string> = {
+  cash: 'Efectivo',
+  card: 'Tarjeta',
+  nequi: 'Nequi',
+  daviplata: 'Daviplata',
+  transfer: 'Transferencia',
+};
+
 export type CartProduct = Pick<
   Schemas['Product'],
   'id' | 'name' | 'sku' | 'base_unit' | 'price' | 'price_with_tax' | 'tax_rate'

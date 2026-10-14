@@ -28,7 +28,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Tests primero:** escanear el mismo código dos veces suma cantidad; no permite cobrar con pago insuficiente; los atajos funcionan; un cajero no ve el campo de descuento por encima de su límite.
 **Después:** `/impeccable critique` + prueba de velocidad: una venta de 5 productos en menos de 20 segundos con teclado.
 
-### [ ] T22 · Tirilla de venta (impresión)
+### [x] T22 · Tirilla de venta (impresión)
 **Alcance:** recibo imprimible en impresora térmica de 58 y 80 mm usando la impresión del navegador (`@media print` con estilos de tirilla) y su representación en PDF. Datos del negocio, NIT, consecutivo, líneas, IVA discriminado, medios de pago y cambio. (La impresión directa ESC/POS queda para V2 si los pilotos la piden.)
 **Tests primero:** el componente de tirilla muestra el IVA agrupado por tasa y los totales coinciden con la venta.
 
