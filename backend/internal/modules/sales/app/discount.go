@@ -13,5 +13,21 @@ func (s *Service) GetDiscountLimit(ctx context.Context, a Actor) (_ domain.Disco
 	ctx, span := s.startSpan(ctx, "GetDiscountLimit", a)
 	defer func() { endSpan(span, err) }()
 
-	return s.discountLimit(ctx, a)
+	if a.UnlimitedDiscount {
+		return domain.NoDiscountLimit, nil
+	}
+	policy, err := s.Policies.Get(ctx, a.TenantID)
+	if err != nil {
+		return domain.DiscountLimit{}, err
+	}
+	return discountLimit(a, policy), nil
+}
+
+// discountLimit is the actor's limit: none with sales:discount, the tenant's
+// otherwise.
+func discountLimit(a Actor, policy domain.SalesPolicy) domain.DiscountLimit {
+	if a.UnlimitedDiscount {
+		return domain.NoDiscountLimit
+	}
+	return policy.MaxDiscount
 }

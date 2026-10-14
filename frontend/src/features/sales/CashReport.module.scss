@@ -1,0 +1,119 @@
+@use '@/styles/abstracts' as *;
+
+// A thermal report, like the sale's receipt: one narrow column in monospace
+// with dashed rules between the blocks.
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: var(--size-receipt-80);
+  max-inline-size: 100%;
+  padding-block: var(--space-2);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-default);
+  overflow-wrap: anywhere;
+
+  &[data-paper='58'] {
+    width: var(--size-receipt-58);
+    font-size: var(--font-size-xs);
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: center;
+}
+
+.business {
+  margin: 0;
+  font-size: inherit;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+}
+
+.heading {
+  padding-block: var(--space-1);
+  border-block: 1px solid currentcolor;
+  font-weight: var(--font-weight-bold);
+}
+
+.block,
+.movements,
+.notes,
+.footer {
+  padding-block-start: var(--space-2);
+  border-block-start: 1px dashed currentcolor;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.figure {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+
+  // An amount never breaks: the term wraps instead.
+  dt {
+    min-inline-size: 0;
+  }
+
+  dd {
+    flex-shrink: 0;
+    margin: 0;
+    text-align: end;
+    white-space: nowrap;
+
+    @include numeric;
+  }
+
+  &[data-strong] {
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+.movements {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline: 0;
+  list-style: none;
+}
+
+.movement {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.amount {
+  flex-shrink: 0;
+  text-align: end;
+
+  @include numeric;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  text-align: center;
+}
+
+// The line to sign on.
+.signature {
+  border-block-end: 1px solid currentcolor;
+}

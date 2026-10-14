@@ -79,6 +79,9 @@ type ReadyStatus struct {
 // ReadyStatusStatus defines model for ReadyStatus.Status.
 type ReadyStatusStatus string
 
+// CashSessionId defines model for CashSessionId.
+type CashSessionId = openapi_types.UUID
+
 // CategoryId defines model for CategoryId.
 type CategoryId = openapi_types.UUID
 

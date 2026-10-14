@@ -80,3 +80,31 @@ type PolicyRepository interface {
 	// set one.
 	Get(ctx context.Context, tenantID uuid.UUID) (SalesPolicy, error)
 }
+
+// CashSessionRepository persists cash sessions and their movements. Every
+// operation is scoped to a tenant: a session of another tenant is reported as
+// ErrCashSessionNotFound.
+type CashSessionRepository interface {
+	// Open stores a new open session. ErrCashSessionAlreadyOpen if its user
+	// already has one open; ErrLocationNotFound if the location does not
+	// exist in the tenant.
+	Open(ctx context.Context, s *CashSession) error
+	// Get returns a session, open or closed.
+	Get(ctx context.Context, tenantID, id uuid.UUID) (*CashSession, error)
+	// Current returns the user's open session, or ErrCashSessionNotFound.
+	Current(ctx context.Context, tenantID, userID uuid.UUID) (*CashSession, error)
+	// Movements returns a session's movements, oldest first.
+	Movements(ctx context.Context, tenantID, id uuid.UUID) ([]CashMovement, error)
+	// AddMovement locks a session, calls record with it and stores the
+	// movement record returns. If record fails, nothing is stored and its
+	// error is returned.
+	AddMovement(ctx context.Context, tenantID, id uuid.UUID, record func(*CashSession) (CashMovement, error)) (CashMovement, error)
+	// EnsureOpen locks a session for share until the transaction carried by
+	// ctx ends (the one storing a sale) and fails with ErrCashSessionClosed
+	// if it is closed. A closing waits for the sales that hold the lock.
+	EnsureOpen(ctx context.Context, tenantID, id uuid.UUID) error
+	// Close locks a session, reads its activity (the confirmed sales charged
+	// in it and its movements) and calls closeFn with both, then stores the
+	// closing. If closeFn fails, nothing is stored and its error is returned.
+	Close(ctx context.Context, tenantID, id uuid.UUID, closeFn func(*CashSession, CashActivity) error) (*CashSession, error)
+}

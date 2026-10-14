@@ -32,7 +32,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Alcance:** recibo imprimible en impresora térmica de 58 y 80 mm usando la impresión del navegador (`@media print` con estilos de tirilla) y su representación en PDF. Datos del negocio, NIT, consecutivo, líneas, IVA discriminado, medios de pago y cambio. (La impresión directa ESC/POS queda para V2 si los pilotos la piden.)
 **Tests primero:** el componente de tirilla muestra el IVA agrupado por tasa y los totales coinciden con la venta.
 
-### [ ] T23 · Caja: apertura, cierre y arqueo
+### [x] T23 · Caja: apertura, cierre y arqueo
 **Alcance:** dominio, API y UI. Apertura con base inicial; toda venta en efectivo queda asociada a la caja abierta del usuario; ingresos y egresos de caja con motivo; cierre con **arqueo** (conteo por denominación), cálculo de faltante o sobrante y reporte de cierre imprimible. No se puede vender sin caja abierta (configurable).
 **Tests primero:** el esperado en caja = base + ventas en efectivo + ingresos − egresos − cambio entregado; no se pueden registrar ventas en una caja cerrada; el cierre queda inmutable.
 

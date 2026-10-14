@@ -49,6 +49,7 @@ func New(cfg Config) (*Module, error) {
 		Stock:          cfg.Stock,
 		Sales:          postgres.NewSaleRepository(cfg.DB),
 		Policies:       postgres.NewPolicyRepository(cfg.DB),
+		CashSessions:   postgres.NewCashSessionRepository(cfg.DB),
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Logger:         cfg.Logger,

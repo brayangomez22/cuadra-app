@@ -26,13 +26,19 @@ const permissionSalesDiscount = "sales:discount"
 // defaultPageSize is the contract's default limit.
 const defaultPageSize = 20
 
-// UseCases are the sales use cases the handlers call (*app.Service).
+// UseCases are the sales and cash use cases the handlers call (*app.Service).
 type UseCases interface {
 	ConfirmSale(ctx context.Context, a app.Actor, in app.ConfirmSaleInput) (*domain.Sale, error)
 	VoidSale(ctx context.Context, a app.Actor, id uuid.UUID, reason string) (*domain.Sale, error)
 	GetSale(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Sale, error)
 	ListSales(ctx context.Context, a app.Actor, in app.ListSalesInput) (domain.SalePage, error)
 	GetDiscountLimit(ctx context.Context, a app.Actor) (domain.DiscountLimit, error)
+
+	OpenCashSession(ctx context.Context, a app.Actor, in app.OpenCashSessionInput) (*domain.CashSession, error)
+	RecordCashMovement(ctx context.Context, a app.Actor, sessionID uuid.UUID, in app.CashMovementRequest) (domain.CashMovement, error)
+	CloseCashSession(ctx context.Context, a app.Actor, sessionID uuid.UUID, in app.CloseCashSessionInput) (app.CashSessionView, error)
+	GetCashSession(ctx context.Context, a app.Actor, id uuid.UUID) (app.CashSessionView, error)
+	GetCurrentCashSession(ctx context.Context, a app.Actor) (app.CurrentCashSession, error)
 }
 
 // Handler implements salesapi.StrictServerInterface.
@@ -43,7 +49,7 @@ type Handler struct {
 
 var _ salesapi.StrictServerInterface = (*Handler)(nil)
 
-// Register mounts the sales operations on mux, with the module's error
+// Register mounts the sales and cash operations on mux, with the module's error
 // mapping. can decides who discounts without limit.
 func Register(mux *http.ServeMux, uc UseCases, can auth.Authorizer, log *slog.Logger) {
 	h := &Handler{uc: uc, can: can}
@@ -170,8 +176,8 @@ func saleBody(s *domain.Sale) salesapi.Sale {
 	totals := s.Totals()
 	body := salesapi.Sale{
 		Id: s.ID(), Number: s.Number(), LocationId: s.LocationID(), UserId: s.UserID(),
-		Status: salesapi.SaleStatus(s.Status()),
-		Lines:  make([]salesapi.SaleLine, 0, len(s.Lines())), Payments: make([]salesapi.SalePayment, 0, len(s.Payments())),
+		Status: salesapi.SaleStatus(s.Status()), CashSessionId: s.CashSessionID(),
+		Lines: make([]salesapi.SaleLine, 0, len(s.Lines())), Payments: make([]salesapi.SalePayment, 0, len(s.Payments())),
 		Totals: salesapi.SaleTotals{
 			Subtotal: formatMoney(totals.Subtotal), Discounts: formatMoney(totals.Discounts),
 			Tax: formatMoney(totals.Tax), Total: formatMoney(totals.Total),

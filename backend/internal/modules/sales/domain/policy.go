@@ -5,4 +5,7 @@ package domain
 type SalesPolicy struct {
 	// MaxDiscount is the discount limit of users without sales:discount.
 	MaxDiscount DiscountLimit
+	// CashSessionOptional lets users sell without an open cash session. The
+	// zero value requires one.
+	CashSessionOptional bool
 }

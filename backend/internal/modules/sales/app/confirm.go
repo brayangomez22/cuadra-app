@@ -39,7 +39,10 @@ type ConfirmSaleInput struct {
 // ConfirmSale builds the sale from the cart with the catalog's prices,
 // checks the discounts against the actor's limit and the payments against
 // the total, and stores it together with its stock exits and its
-// consecutive number. If any step fails, nothing is stored.
+// consecutive number. The sale is charged in the actor's open cash session,
+// which must be at the sale's location; without one, the sale is rejected
+// unless the tenant lets users sell without it. If any step fails, nothing
+// is stored.
 func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput) (_ *domain.Sale, err error) {
 	ctx, span := s.startSpan(ctx, "ConfirmSale", a, attribute.String("location.id", in.LocationID.String()))
 	defer func() { endSpan(span, err) }()
@@ -47,14 +50,19 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	if len(in.Lines) == 0 {
 		return nil, domain.ErrSaleWithoutLines
 	}
+	policy, err := s.Policies.Get(ctx, a.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	session, err := s.saleCashSession(ctx, a, policy, in.LocationID)
+	if err != nil {
+		return nil, err
+	}
 	products, err := s.products(ctx, a.TenantID, in.Lines)
 	if err != nil {
 		return nil, err
 	}
-	limit, err := s.discountLimit(ctx, a)
-	if err != nil {
-		return nil, err
-	}
+	limit := discountLimit(a, policy)
 	payments, err := parsePayments(in.Payments)
 	if err != nil {
 		return nil, err
@@ -65,10 +73,16 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 		return nil, err
 	}
 	span.SetAttributes(saleAttr(id))
-	sale, err := domain.NewSale(domain.NewSaleParams{
+	params := domain.NewSaleParams{
 		ID: id, TenantID: a.TenantID, LocationID: in.LocationID, UserID: a.UserID,
 		CustomerID: in.CustomerID, CreatedAt: s.Now(),
-	})
+	}
+	if session != nil {
+		sessionID := session.ID()
+		params.CashSessionID = &sessionID
+		span.SetAttributes(cashSessionAttr(sessionID))
+	}
+	sale, err := domain.NewSale(params)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +104,13 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	}
 
 	err = s.Sales.SaveConfirmed(ctx, sale, func(ctx context.Context) error {
+		// The session may have closed since it was read: check it again,
+		// locked, within the sale's transaction.
+		if session != nil {
+			if err := s.CashSessions.EnsureOpen(ctx, a.TenantID, session.ID()); err != nil {
+				return err
+			}
+		}
 		return s.Stock.ReserveSale(ctx, a.TenantID, a.UserID, sale.LocationID(), sale.ID(), stockLines(sale))
 	})
 	var stockErr *domain.InsufficientStockError
@@ -137,17 +158,24 @@ func (s *Service) products(ctx context.Context, tenantID uuid.UUID, lines []Line
 	return byID, nil
 }
 
-// discountLimit is the actor's limit: none with sales:discount, the tenant's
-// otherwise.
-func (s *Service) discountLimit(ctx context.Context, a Actor) (domain.DiscountLimit, error) {
-	if a.UnlimitedDiscount {
-		return domain.NoDiscountLimit, nil
+// saleCashSession returns the actor's open cash session, which must be at
+// locationID. Without one it returns nil if the tenant's policy allows it,
+// and ErrCashSessionRequired otherwise.
+func (s *Service) saleCashSession(ctx context.Context, a Actor, policy domain.SalesPolicy, locationID uuid.UUID) (*domain.CashSession, error) {
+	session, err := s.CashSessions.Current(ctx, a.TenantID, a.UserID)
+	switch {
+	case errors.Is(err, domain.ErrCashSessionNotFound):
+		if policy.CashSessionOptional {
+			return nil, nil
+		}
+		s.cashSessionRequired.Add(ctx, 1)
+		return nil, domain.ErrCashSessionRequired
+	case err != nil:
+		return nil, err
+	case session.LocationID() != locationID:
+		return nil, domain.ErrCashSessionLocationMismatch
 	}
-	policy, err := s.Policies.Get(ctx, a.TenantID)
-	if err != nil {
-		return domain.DiscountLimit{}, err
-	}
-	return policy.MaxDiscount, nil
+	return session, nil
 }
 
 func parsePayments(in []PaymentRequest) ([]domain.Payment, error) {

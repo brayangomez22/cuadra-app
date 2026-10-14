@@ -4,8 +4,22 @@ import { useAuth } from '@/features/auth';
 import { inventoryKeys, useLocations } from '@/features/inventory';
 import { ApiError, describeError } from '@/shared/api/errors';
 import { formatMoney, formatPercent, isZero } from '@/shared/format';
-import { Alert, Button, Dialog, DialogClose, EmptyState, Field, IconBox, Page, Select, Spinner } from '@/shared/ui';
-import { useConfirmSale, useDiscountLimit, type Sale } from './api';
+import {
+  Alert,
+  Button,
+  ButtonLink,
+  Dialog,
+  DialogClose,
+  EmptyState,
+  Field,
+  IconBox,
+  IconCash,
+  Page,
+  Select,
+  Spinner,
+  TextLink,
+} from '@/shared/ui';
+import { salesKeys, useConfirmSale, useCurrentCashSession, useDiscountLimit, type Sale } from './api';
 import { CartLines } from './CartLines';
 import { cartReducer, cartTotals, type DiscountLimit, type PaymentInput } from './cart';
 import { CheckoutDialog } from './CheckoutDialog';
@@ -18,9 +32,15 @@ import styles from './PosPage.module.scss';
 // Until the API answers, nobody discounts: the safe default (docs/decisiones.md).
 const noDiscount: DiscountLimit = { unlimited: false, max: '0' };
 
+// Errors of a sale that mean the cashier's drawer is gone: the screen asks
+// for it again once the checkout closes.
+const cashSessionErrors = new Set(['cash_session_required', 'cash_session_closed']);
+
 /**
  * The point of sale: search or scan, adjust the cart and charge, all from the
  * keyboard. F2 goes to the search, F4 charges and Escape cancels the sale.
+ * Sales go to the cashier's open cash session, at its location; if the
+ * tenant requires one and there is none, the screen asks to open it.
  */
 export function PosPage() {
   const auth = useAuth();
@@ -31,6 +51,7 @@ export function PosPage() {
   const queryClient = useQueryClient();
   const locations = useLocations();
   const limit = useDiscountLimit();
+  const cash = useCurrentCashSession();
   const confirmSale = useConfirmSale();
 
   const [cart, dispatch] = useReducer(cartReducer, cartKey, loadCart);
@@ -40,15 +61,20 @@ export function PosPage() {
   const [sale, setSale] = useState<Sale>();
   const [paper, setPaper] = useState<Paper>(loadPaper);
   const [outOfStock, setOutOfStock] = useState<string>();
+  const [cashLost, setCashLost] = useState(false);
   const search = useRef<HTMLInputElement>(null);
 
   const activeLocations = useMemo(() => (locations.data ?? []).filter((l) => l.active), [locations.data]);
   const [onlyLocation] = activeLocations;
-  const locationId = activeLocations.some((l) => l.id === storedLocation)
-    ? storedLocation
-    : activeLocations.length === 1
-      ? onlyLocation?.id
-      : undefined;
+  const session = cash.data?.session;
+  // With an open drawer, the sale happens where the drawer is.
+  const locationId = session
+    ? session.location_id
+    : activeLocations.some((l) => l.id === storedLocation)
+      ? storedLocation
+      : activeLocations.length === 1
+        ? onlyLocation?.id
+        : undefined;
 
   const discountLimit = limit.data ?? noDiscount;
   const showDiscount = discountLimit.unlimited || !isZero(discountLimit.max);
@@ -93,6 +119,10 @@ export function PosPage() {
 
   function closeCheckout() {
     setCheckoutOpen(false);
+    if (cashLost) {
+      setCashLost(false);
+      void queryClient.invalidateQueries({ queryKey: salesKeys.currentCash });
+    }
     if (sale) {
       setSale(undefined);
       confirmSale.reset();
@@ -116,24 +146,37 @@ export function PosPage() {
           if (error instanceof ApiError && error.code === 'insufficient_stock') {
             setOutOfStock(error.details.product_id);
           }
+          if (error instanceof ApiError && cashSessionErrors.has(error.code ?? '')) setCashLost(true);
         },
       },
     );
   }
 
-  if (locations.isPending) {
+  if (locations.isPending || cash.isPending) {
     return (
       <Page title="Vender">
         <Spinner label="Cargando la caja…" />
       </Page>
     );
   }
-  if (locations.isError) {
+  if (locations.isError || cash.isError) {
     return (
       <Page title="Vender">
         <Alert tone="danger" title="No pudimos abrir la caja">
-          {describeError(locations.error).message}
+          {describeError(locations.error ?? cash.error).message}
         </Alert>
+      </Page>
+    );
+  }
+  if (cash.data.required && !session) {
+    return (
+      <Page title="Vender">
+        <EmptyState
+          icon={<IconCash />}
+          title="Abra la caja para vender"
+          description="Cuente el efectivo del cajón y abra la caja. La venta en curso no se pierde."
+          action={<ButtonLink to="/caja">Abrir caja</ButtonLink>}
+        />
       </Page>
     );
   }
@@ -154,19 +197,27 @@ export function PosPage() {
       title="Vender"
       className={styles.root}
       actions={
-        activeLocations.length > 1 && (
-          <Field label="Sede" className={styles.location}>
-            <Select
-              options={activeLocations.map((l) => ({ value: l.id, label: l.name }))}
-              value={locationId}
-              placeholder="Elija la sede"
-              onValueChange={(value) => {
-                setStoredLocation(value);
-                saveLocation(locationKey, value);
-                focusSearch();
-              }}
-            />
-          </Field>
+        session ? (
+          <p className={styles.cash}>
+            Caja abierta en {locations.data.find((l) => l.id === session.location_id)?.name}
+            {' · '}
+            <TextLink to="/caja">Ver caja</TextLink>
+          </p>
+        ) : (
+          activeLocations.length > 1 && (
+            <Field label="Sede" className={styles.location}>
+              <Select
+                options={activeLocations.map((l) => ({ value: l.id, label: l.name }))}
+                value={locationId}
+                placeholder="Elija la sede"
+                onValueChange={(value) => {
+                  setStoredLocation(value);
+                  saveLocation(locationKey, value);
+                  focusSearch();
+                }}
+              />
+            </Field>
+          )
         )
       }
     >

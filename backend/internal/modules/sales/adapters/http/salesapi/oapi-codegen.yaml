@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
-# Types and strict server interface for the operations tagged "sales".
+# Types and strict server interface for the operations tagged "sales" and "cash".
 package: salesapi
 output: salesapi.gen.go
 generate:
@@ -7,4 +7,4 @@ generate:
   std-http-server: true
   strict-server: true
 output-options:
-  include-tags: [sales]
+  include-tags: [sales, cash]

@@ -34,6 +34,22 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrInvalidPaymentAmount, Status: http.StatusUnprocessableEntity, Code: "invalid_payment_amount", Message: "Cada pago debe ser mayor que cero y tener máximo 2 decimales."},
 	{Err: domain.ErrInvalidPaymentMethod, Status: http.StatusUnprocessableEntity, Code: "invalid_payment_method", Message: "El medio de pago no es válido."},
 	{Err: domain.ErrInvalidVoidReason, Status: http.StatusUnprocessableEntity, Code: "invalid_void_reason", Message: "Escribe el motivo de la anulación (máximo 500 caracteres)."},
+
+	// Cash sessions.
+	{Err: domain.ErrCashSessionRequired, Status: http.StatusConflict, Code: "cash_session_required", Message: "Se necesita una caja abierta para vender."},
+	{Err: domain.ErrCashSessionClosed, Status: http.StatusConflict, Code: "cash_session_closed", Message: "La caja ya está cerrada. Para seguir vendiendo, abra una nueva."},
+	{Err: domain.ErrCashSessionAlreadyOpen, Status: http.StatusConflict, Code: "cash_session_already_open", Message: "Ya tiene una caja abierta. Ciérrela antes de abrir otra."},
+	{Err: domain.ErrCashSessionNotOwner, Status: http.StatusForbidden, Code: "cash_session_not_owner", Message: "Esta caja es de otro usuario: solo quien la abrió registra movimientos en ella o la cierra."},
+	{Err: domain.ErrCashSessionNotFound, Status: http.StatusNotFound, Code: "cash_session_not_found", Message: "La caja no existe."},
+	{Err: domain.ErrCashSessionLocationMismatch, Status: http.StatusUnprocessableEntity, Code: "cash_session_location_mismatch", Message: "La caja está abierta en otra sede. Venda en esa sede o cierre la caja."},
+	{Err: domain.ErrInvalidOpeningFloat, Status: http.StatusUnprocessableEntity, Code: "invalid_opening_float", Message: "La base no puede ser negativa y tiene máximo 2 decimales."},
+	{Err: domain.ErrInvalidCashMovementKind, Status: http.StatusUnprocessableEntity, Code: "invalid_cash_movement_kind", Message: "El movimiento debe ser un ingreso o un egreso."},
+	{Err: domain.ErrInvalidCashMovementAmount, Status: http.StatusUnprocessableEntity, Code: "invalid_cash_movement_amount", Message: "El monto debe ser mayor que cero y tener máximo 2 decimales."},
+	{Err: domain.ErrInvalidCashMovementReason, Status: http.StatusUnprocessableEntity, Code: "invalid_cash_movement_reason", Message: "Escriba el motivo del movimiento (máximo 200 caracteres)."},
+	{Err: domain.ErrInvalidDenomination, Status: http.StatusUnprocessableEntity, Code: "invalid_denomination", Message: "Una de las denominaciones no es un billete o moneda vigente."},
+	{Err: domain.ErrDuplicateDenomination, Status: http.StatusUnprocessableEntity, Code: "duplicate_denomination", Message: "Cada denominación va una sola vez en el conteo."},
+	{Err: domain.ErrInvalidDenominationQuantity, Status: http.StatusUnprocessableEntity, Code: "invalid_denomination_quantity", Message: "La cantidad de billetes o monedas no es válida."},
+	{Err: domain.ErrInvalidCashNotes, Status: http.StatusUnprocessableEntity, Code: "invalid_cash_notes", Message: "Las notas del cierre tienen máximo 500 caracteres."},
 }
 
 // describeInsufficientStock names the product without stock, so the cashier

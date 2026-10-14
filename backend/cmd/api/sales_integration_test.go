@@ -27,7 +27,8 @@ import (
 
 // TestSalesFlow runs sales through the whole stack: the catalog's prices,
 // the inventory's stock exits in the sale's transaction, the consecutive
-// number and voiding, with the permissions of each role.
+// number, voiding and the cashier's cash session up to its closing, with the
+// permissions of each role.
 func TestSalesFlow(t *testing.T) {
 	database := dbtest.New(t)
 	tokens, err := auth.NewJWT(testSecret, 15*time.Minute)
@@ -120,7 +121,38 @@ func TestSalesFlow(t *testing.T) {
 			`"payments":[{"method":"cash","amount":"` + cash + `"}]}`
 	}
 
-	var saleID string
+	var saleID, sessionID string
+
+	t.Run("sin caja abierta el cajero no puede vender", func(t *testing.T) {
+		rec := do(t, http.MethodGet, "/api/v1/cash-sessions/current", "", cashierToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.JSONEq(t, `{"required":true}`, rec.Body.String())
+
+		rec = do(t, http.MethodPost, "/api/v1/sales", saleBody("1", "35700"), cashierToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "cash_session_required")
+		require.Equal(t, "10", stock(t))
+	})
+
+	t.Run("el cajero abre su caja con base; no puede abrir dos ni en una sede inexistente", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/cash-sessions", `{"location_id":"`+uuid.Must(uuid.NewV7()).String()+`","opening_float":"100000"}`, cashierToken)
+		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "location_not_found")
+
+		rec = do(t, http.MethodPost, "/api/v1/cash-sessions", `{"location_id":"`+locationID+`","opening_float":"100000"}`, cashierToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		sessionID = id(t, rec)
+		require.Contains(t, rec.Body.String(), `"status":"open"`)
+
+		rec = do(t, http.MethodPost, "/api/v1/cash-sessions", `{"location_id":"`+locationID+`","opening_float":"0"}`, cashierToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "cash_session_already_open")
+
+		rec = do(t, http.MethodGet, "/api/v1/cash-sessions/current", "", cashierToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), sessionID)
+		require.NotContains(t, rec.Body.String(), "expected", "arqueo ciego")
+	})
 
 	t.Run("el cajero confirma una venta: descuenta el stock y responde el consecutivo", func(t *testing.T) {
 		rec := do(t, http.MethodPost, "/api/v1/sales", saleBody("2.5", "100000"), cashierToken)
@@ -142,6 +174,7 @@ func TestSalesFlow(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &sale))
 		saleID = sale.ID
+		require.Contains(t, rec.Body.String(), `"cash_session_id":"`+sessionID+`"`)
 		require.Equal(t, int64(1), sale.Number)
 		require.Equal(t, "confirmed", sale.Status)
 		// 2.5 × 30000 = 75000 + IVA 14250 = 89250
@@ -182,7 +215,7 @@ func TestSalesFlow(t *testing.T) {
 		require.Contains(t, rec.Body.String(), "discount_exceeds_limit")
 	})
 
-	t.Run("rechaza pago insuficiente y una sede inexistente con 422", func(t *testing.T) {
+	t.Run("rechaza pago insuficiente y una sede distinta a la de la caja con 422", func(t *testing.T) {
 		rec := do(t, http.MethodPost, "/api/v1/sales", saleBody("1", "100"), cashierToken)
 		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), "insufficient_payment")
@@ -190,7 +223,7 @@ func TestSalesFlow(t *testing.T) {
 		body := strings.Replace(saleBody("1", "35700"), locationID, uuid.Must(uuid.NewV7()).String(), 1)
 		rec = do(t, http.MethodPost, "/api/v1/sales", body, cashierToken)
 		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
-		require.Contains(t, rec.Body.String(), "location_not_found")
+		require.Contains(t, rec.Body.String(), "cash_session_location_mismatch")
 	})
 
 	t.Run("el bodeguero no puede vender ni ver ventas", func(t *testing.T) {
@@ -259,10 +292,75 @@ func TestSalesFlow(t *testing.T) {
 		require.Contains(t, rec.Body.String(), `"type":"sale_void"`)
 	})
 
+	t.Run("el cajero registra un egreso y cierra la caja con arqueo", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/cash-sessions/"+sessionID+"/movements",
+			`{"kind":"out","amount":"7100","reason":"Pago del domicilio"}`, cashierToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+		rec = do(t, http.MethodPost, "/api/v1/cash-sessions/"+sessionID+"/close",
+			`{"counts":[{"denomination":"100000","quantity":1}]}`, ownerToken)
+		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "cash_session_not_owner")
+
+		// The voided first sale does not count: 35700 + 4 × 17850 = 107100 in
+		// cash, exact. 100000 + 107100 − 7100 = 200000.
+		rec = do(t, http.MethodPost, "/api/v1/cash-sessions/"+sessionID+"/close",
+			`{"counts":[{"denomination":"100000","quantity":1},{"denomination":"50000","quantity":1},{"denomination":"20000","quantity":2},{"denomination":"5000","quantity":1}],"notes":"Turno de la mañana"}`,
+			cashierToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var session struct {
+			Status  string
+			Closing struct {
+				SalesCount   int    `json:"sales_count"`
+				CashReceived string `json:"cash_received"`
+				CashOut      string `json:"cash_out"`
+				Expected     string
+				Counted      string
+				Difference   string
+				Result       string
+			}
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &session))
+		require.Equal(t, "closed", session.Status)
+		require.Equal(t, 5, session.Closing.SalesCount)
+		require.Equal(t, "107100.00", session.Closing.CashReceived)
+		require.Equal(t, "7100.00", session.Closing.CashOut)
+		require.Equal(t, "200000.00", session.Closing.Expected)
+		require.Equal(t, "195000.00", session.Closing.Counted)
+		require.Equal(t, "-5000.00", session.Closing.Difference)
+		require.Equal(t, "shortage", session.Closing.Result)
+	})
+
+	t.Run("el cierre queda inmutable y sin caja no se vende", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/cash-sessions/"+sessionID+"/close", `{"counts":[]}`, cashierToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "cash_session_closed")
+		rec = do(t, http.MethodPost, "/api/v1/cash-sessions/"+sessionID+"/movements", `{"kind":"in","amount":"1000","reason":"Base"}`, cashierToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		rec = do(t, http.MethodPost, "/api/v1/sales", saleBody("1", "35700"), cashierToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "cash_session_required")
+
+		rec = do(t, http.MethodGet, "/api/v1/cash-sessions/"+sessionID, "", ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"expected":"200000.00"`)
+		rec = do(t, http.MethodGet, "/api/v1/cash-sessions/"+sessionID, "", warehouseToken)
+		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+	})
+
 	t.Run("aislamiento: otro tenant no ve ni anula la venta", func(t *testing.T) {
 		otherToken, _ := signup(t, "otro@ventas.co")
 
-		rec := do(t, http.MethodGet, "/api/v1/sales/"+saleID, "", otherToken)
+		rec := do(t, http.MethodGet, "/api/v1/cash-sessions/"+sessionID, "", otherToken)
+		require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "cash_session_not_found")
+		rec = do(t, http.MethodPost, "/api/v1/locations", `{"name":"Bodega"}`, otherToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		otherLocation := id(t, rec)
+		rec = do(t, http.MethodPost, "/api/v1/cash-sessions", `{"location_id":"`+otherLocation+`","opening_float":"0"}`, otherToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+		rec = do(t, http.MethodGet, "/api/v1/sales/"+saleID, "", otherToken)
 		require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), "sale_not_found")
 
@@ -273,7 +371,7 @@ func TestSalesFlow(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), `"total":0`)
 
-		rec = do(t, http.MethodPost, "/api/v1/sales", saleBody("1", "35700"), otherToken)
+		rec = do(t, http.MethodPost, "/api/v1/sales", strings.Replace(saleBody("1", "35700"), locationID, otherLocation, 1), otherToken)
 		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), "product_not_found", "no puede vender productos de otro tenant")
 	})

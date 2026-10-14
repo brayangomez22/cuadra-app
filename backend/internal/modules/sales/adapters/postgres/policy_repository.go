@@ -19,15 +19,17 @@ type PolicyRepository struct{ db *db.DB }
 // NewPolicyRepository returns a PolicyRepository on d.
 func NewPolicyRepository(d *db.DB) *PolicyRepository { return &PolicyRepository{db: d} }
 
-// Get returns the tenant's policy; the defaults if it has no settings row.
+// Get returns the tenant's policy; the defaults (no discount, cash session
+// required) if it has no settings row.
 func (r *PolicyRepository) Get(ctx context.Context, tenantID uuid.UUID) (domain.SalesPolicy, error) {
 	var policy domain.SalesPolicy
 	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		maxDiscount, err := sqlcgen.New(tx).GetSalesPolicy(ctx, tenantID)
+		row, err := sqlcgen.New(tx).GetSalesPolicy(ctx, tenantID)
 		if err != nil {
 			return err
 		}
-		policy.MaxDiscount, err = domain.NewDiscountLimit(maxDiscount)
+		policy.CashSessionOptional = !row.RequireCashSession
+		policy.MaxDiscount, err = domain.NewDiscountLimit(row.MaxDiscount)
 		return err
 	})
 	switch {

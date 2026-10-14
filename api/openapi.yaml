@@ -42,6 +42,11 @@ tags:
       Ventas del punto de venta. El precio, el nombre y el IVA de cada línea salen del catálogo en el momento de la
       venta; el cliente solo envía producto, cantidad, descuento y pagos. Los montos viajan como string decimal con
       2 decimales. Cada venta confirmada recibe un consecutivo por sede, sin huecos.
+  - name: cash
+    description: |
+      Caja del cajero: apertura con base, ingresos y egresos con motivo, y cierre con arqueo por denominación. Cada
+      usuario tiene como máximo una caja abierta, en una sede, y las ventas que confirma quedan en ella. Por defecto no
+      se puede vender sin caja abierta. El arqueo es ciego: el esperado y la diferencia solo aparecen en el cierre.
 
 # Authorization is declared here and enforced by the API before the request
 # is validated: every operation requires a bearer token unless it says
@@ -927,7 +932,9 @@ paths:
                 $ref: "#/components/schemas/Error"
         "409":
           description: |
-            No hay stock suficiente de un producto (`insufficient_stock`); `details.product_id` dice cuál.
+            No hay stock suficiente de un producto (`insufficient_stock`); `details.product_id` dice cuál. El usuario
+            no tiene caja abierta y la empresa la exige (`cash_session_required`), o la caja se cerró
+            (`cash_session_closed`).
           content:
             application/json:
               schema:
@@ -936,7 +943,7 @@ paths:
           description: |
             Algún dato no cumple las reglas (`product_not_found`, `product_inactive`, `location_not_found`,
             `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
-            `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`).
+            `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`).
           content:
             application/json:
               schema:
@@ -1049,6 +1056,216 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+
+  /api/v1/cash-sessions:
+    post:
+      tags: [cash]
+      operationId: openCashSession
+      summary: Abrir la caja
+      description: Abre la caja del usuario autenticado en una sede, con la base inicial en efectivo.
+      x-permission: sales:create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenCashSessionInput"
+      responses:
+        "201":
+          description: La caja abierta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: El usuario ya tiene una caja abierta (`cash_session_already_open`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: La sede no existe (`location_not_found`) o la base no es válida (`invalid_opening_float`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/cash-sessions/current:
+    get:
+      tags: [cash]
+      operationId: getCurrentCashSession
+      summary: Caja actual del usuario
+      description: |
+        Si la empresa exige caja abierta para vender (`required`) y la caja abierta del usuario autenticado, con sus
+        movimientos. Sin caja abierta, `session` no viene.
+      x-permission: sales:create
+      responses:
+        "200":
+          description: La caja actual.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentCashSession"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/cash-sessions/{cashSessionId}:
+    parameters:
+      - $ref: "#/components/parameters/CashSessionId"
+    get:
+      tags: [cash]
+      operationId: getCashSession
+      summary: Detalle de una caja
+      description: La caja con sus movimientos y, si está cerrada, el reporte de cierre.
+      x-permission: sales:read
+      responses:
+        "200":
+          description: La caja.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: La caja no existe (`cash_session_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/cash-sessions/{cashSessionId}/movements:
+    parameters:
+      - $ref: "#/components/parameters/CashSessionId"
+    post:
+      tags: [cash]
+      operationId: recordCashMovement
+      summary: Registrar un ingreso o egreso de caja
+      description: Registra un ingreso o un egreso de efectivo con su motivo en la caja abierta del usuario.
+      x-permission: sales:create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashMovementInput"
+      responses:
+        "201":
+          description: El movimiento registrado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashMovement"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: |
+            El usuario no tiene permiso (`forbidden`) o la caja es de otro usuario (`cash_session_not_owner`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: La caja no existe (`cash_session_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: La caja está cerrada (`cash_session_closed`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            El monto o el motivo no son válidos (`invalid_cash_movement_amount`, `invalid_cash_movement_reason`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/cash-sessions/{cashSessionId}/close:
+    parameters:
+      - $ref: "#/components/parameters/CashSessionId"
+    post:
+      tags: [cash]
+      operationId: closeCashSession
+      summary: Cerrar la caja con arqueo
+      description: |
+        Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
+        efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
+        diferencia con lo contado. El cierre no se puede modificar después.
+      x-permission: sales:create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseCashSessionInput"
+      responses:
+        "200":
+          description: La caja cerrada, con el reporte de cierre.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: |
+            El usuario no tiene permiso (`forbidden`) o la caja es de otro usuario (`cash_session_not_owner`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: La caja no existe (`cash_session_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: La caja ya está cerrada (`cash_session_closed`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            El conteo no es válido (`invalid_denomination`, `invalid_denomination_quantity`,
+            `duplicate_denomination`) o las notas son muy largas (`invalid_cash_notes`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   headers:
     SetRefreshCookie:
@@ -1107,6 +1324,13 @@ components:
         format: uuid
     SaleId:
       name: saleId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CashSessionId:
+      name: cashSessionId
       in: path
       required: true
       schema:
@@ -1829,6 +2053,10 @@ components:
           type: string
           format: uuid
           description: Quién vendió.
+        cash_session_id:
+          type: string
+          format: uuid
+          description: La caja donde se cobró; no viene si se vendió sin caja.
         status:
           $ref: "#/components/schemas/SaleStatus"
         lines:
@@ -1887,3 +2115,179 @@ components:
         total:
           type: integer
           description: Cantidad total de ventas que cumplen el filtro, sin paginar.
+    SignedMoney:
+      type: string
+      description: Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+      pattern: '^-?\d{1,14}(\.\d{1,4})?$'
+      example: "-4800.00"
+    OpenCashSessionInput:
+      type: object
+      required: [location_id, opening_float]
+      additionalProperties: false
+      properties:
+        location_id:
+          type: string
+          format: uuid
+          description: Sede de la caja; las ventas de la caja son de esta sede.
+        opening_float:
+          $ref: "#/components/schemas/Money"
+    CashMovementKind:
+      type: string
+      enum: [in, out]
+      description: "`in` es un ingreso de efectivo a la caja y `out` un egreso."
+    CashMovementInput:
+      type: object
+      required: [kind, amount, reason]
+      additionalProperties: false
+      properties:
+        kind:
+          $ref: "#/components/schemas/CashMovementKind"
+        amount:
+          $ref: "#/components/schemas/Money"
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: Pago del domicilio
+    CashMovement:
+      type: object
+      required: [id, kind, amount, reason, user_id, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/CashMovementKind"
+        amount:
+          $ref: "#/components/schemas/Money"
+        reason:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+    DenominationCount:
+      type: object
+      description: |
+        Billetes o monedas contados de una denominación del peso colombiano: 100000, 50000, 20000, 10000, 5000, 2000,
+        1000 (billete y moneda juntos), 500, 200, 100 o 50.
+      required: [denomination, quantity]
+      additionalProperties: false
+      properties:
+        denomination:
+          $ref: "#/components/schemas/Money"
+        quantity:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 10000000
+    CloseCashSessionInput:
+      type: object
+      required: [counts]
+      additionalProperties: false
+      properties:
+        counts:
+          type: array
+          description: Una entrada por denominación, sin repetir. Un conteo vacío es una caja sin efectivo.
+          maxItems: 11
+          items:
+            $ref: "#/components/schemas/DenominationCount"
+        notes:
+          type: string
+          maxLength: 500
+    CashMethodTotal:
+      type: object
+      description: Lo que cobraron las ventas de la caja con un medio de pago; el efectivo es neto del cambio.
+      required: [method, amount]
+      properties:
+        method:
+          $ref: "#/components/schemas/PaymentMethod"
+        amount:
+          $ref: "#/components/schemas/Money"
+    CashClosing:
+      type: object
+      description: |
+        El reporte de cierre. `expected` = base + `cash_received` + `cash_in` − `cash_out` − `change_given`, de las
+        ventas confirmadas de la caja (las anuladas antes del cierre no cuentan); `difference` = `counted` −
+        `expected`: negativa es faltante (`shortage`) y positiva, sobrante (`overage`).
+      required: [closed_at, closed_by, sales_count, cash_received, change_given, cash_in, cash_out, expected, counted,
+        difference, result, counts, payments]
+      properties:
+        closed_at:
+          type: string
+          format: date-time
+        closed_by:
+          type: string
+          format: uuid
+        notes:
+          type: string
+        sales_count:
+          type: integer
+          description: Ventas confirmadas de la caja.
+        cash_received:
+          $ref: "#/components/schemas/Money"
+        change_given:
+          $ref: "#/components/schemas/Money"
+        cash_in:
+          $ref: "#/components/schemas/Money"
+        cash_out:
+          $ref: "#/components/schemas/Money"
+        expected:
+          $ref: "#/components/schemas/SignedMoney"
+        counted:
+          $ref: "#/components/schemas/Money"
+        difference:
+          $ref: "#/components/schemas/SignedMoney"
+        result:
+          type: string
+          enum: [exact, shortage, overage]
+        counts:
+          type: array
+          description: El conteo, de la denominación más alta a la más baja.
+          items:
+            $ref: "#/components/schemas/DenominationCount"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CashMethodTotal"
+    CashSession:
+      type: object
+      description: Una caja. `closing` solo viene cuando está cerrada.
+      required: [id, location_id, user_id, status, opening_float, opened_at, movements]
+      properties:
+        id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          description: El cajero.
+        status:
+          type: string
+          enum: [open, closed]
+        opening_float:
+          $ref: "#/components/schemas/Money"
+        opened_at:
+          type: string
+          format: date-time
+        movements:
+          type: array
+          description: Ingresos y egresos, del más antiguo al más reciente.
+          items:
+            $ref: "#/components/schemas/CashMovement"
+        closing:
+          $ref: "#/components/schemas/CashClosing"
+    CurrentCashSession:
+      type: object
+      required: [required]
+      properties:
+        required:
+          type: boolean
+          description: Si la empresa exige caja abierta para vender.
+        session:
+          $ref: "#/components/schemas/CashSession"

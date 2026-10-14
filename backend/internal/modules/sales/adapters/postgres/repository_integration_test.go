@@ -90,9 +90,16 @@ func (f fixture) createLocation(t *testing.T, tenantID uuid.UUID) uuid.UUID {
 func confirmed(t *testing.T, tn tenant, location uuid.UUID, confirmedAt time.Time) *domain.Sale {
 	t.Helper()
 	customer := newID()
-	s, err := domain.NewSale(domain.NewSaleParams{
+	return confirmedWith(t, tn, domain.NewSaleParams{
 		ID: newID(), TenantID: tn.id, LocationID: location, UserID: newID(), CustomerID: &customer, CreatedAt: confirmedAt,
 	})
+}
+
+// confirmedWith is confirmed with the given sale fields.
+func confirmedWith(t *testing.T, tn tenant, p domain.NewSaleParams) *domain.Sale {
+	t.Helper()
+	confirmedAt := p.CreatedAt
+	s, err := domain.NewSale(p)
 	require.NoError(t, err)
 	require.NoError(t, s.AddLine(domain.LineInput{
 		ProductID: tn.product, ProductName: "Cemento gris 50kg", Quantity: dec("2.5"),
