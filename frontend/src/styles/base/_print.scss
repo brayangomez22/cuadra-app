@@ -1,0 +1,33 @@
+// Printing a sale receipt (T22). The receipt is mounted in a portal on <body>
+// marked with data-print-root; while it exists, printing shows only it.
+// Global because @page and the rest of <body> are outside any module.
+@use '../themes/theme';
+@use '../tokens/semantic';
+@use '../tokens/shadow';
+
+// A thermal printer has no margins to spare, and the roll's length is the
+// driver's business: no size, so a long sale is never cut into pages.
+@page receipt {
+  margin: 0;
+}
+
+@media print {
+  // Paper is white: the light theme, whatever the screen uses.
+  :root,
+  :root[data-theme='dark'],
+  :root:not([data-theme='light']) {
+    @include theme.tokens(semantic.$light, shadow.$light, light);
+  }
+
+  body:has(> [data-print-root]) {
+    background: none;
+
+    > :not([data-print-root]) {
+      display: none;
+    }
+  }
+
+  [data-print-root] {
+    page: receipt;
+  }
+}
