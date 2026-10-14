@@ -15,12 +15,14 @@ Sigue este flujo sin saltarte pasos:
 1. **Contexto:**
    - Lee `docs/plan/README.md` (fase activa y alcance) y busca la tarea $ARGUMENTS en los archivos de `docs/plan/`.
    - Si la tarea no pertenece a la fase activa, o si tiene un **Depende de** sin completar, avísame antes de seguir.
+   - Lee `docs/plan/pendientes.md`: los pendientes con **Destino** $ARGUMENTS son parte del alcance de esta tarea.
    - Lee `docs/decisiones.md` y el código existente de los módulos que toca. No leas ni modifiques nada fuera de ese alcance.
 2. **Plan:** preséntame un plan corto con:
    - los archivos que vas a crear o modificar,
    - los cambios al contrato OpenAPI, si hay endpoints,
    - la lista de casos de test (en español, como nombres de `t.Run`),
    - los spans y métricas que vas a agregar,
+   - qué pendientes de `docs/plan/pendientes.md` resuelve,
    - las decisiones de diseño y las preguntas abiertas.
    Luego **detente y espera mi aprobación**.
 3. **Tests en rojo:** escribe solo los tests. Córrelos y muéstrame que fallan por la razón esperada (no por errores de compilación sin relación).
@@ -30,6 +32,7 @@ Sigue este flujo sin saltarte pasos:
    - resumen de lo que cambió,
    - lista concreta de lo que debo revisar yo con lupa (dinero, stock, permisos, tenant, seguridad, datos sensibles en logs o spans),
    - si tomaste una decisión de arquitectura, agrégala a `docs/decisiones.md`,
+   - en `docs/plan/pendientes.md`, marca con `[x]` los pendientes que esta tarea resolvió y **agrega lo que quedó fuera del alcance**, cada uno con su origen ($ARGUMENTS) y su destino: la tarea posterior que lo cubra (y la referencia en el alcance de esa tarea) o "Para trabajar ahora" si ninguna lo cubre. Un pendiente que solo queda en el resumen o en el PR se pierde,
    - marca la tarea con `[x]` en su archivo de fase,
    - propón el mensaje de commit (Conventional Commits en inglés).
    No hagas commit ni push. Termina con: "Revisa el diff (`git diff`) y, cuando estés conforme, ejecuta `/cerrar-tarea`."

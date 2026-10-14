@@ -15,6 +15,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T36 · Emisión de documentos electrónicos
 **Depende de:** T18 (outbox + River), T20, T31, T35.
 **Alcance:** puerto `ElectronicInvoicer` en el módulo de ventas y adaptador del proveedor elegido. Al confirmar la venta se encola su emisión (outbox) como factura electrónica o como documento equivalente POS según el caso. Máquina de estados (`pending` → `sent` → `accepted` / `rejected`), reintentos con backoff ante caídas del proveedor, almacenamiento del CUFE/CUDE, del XML y de la representación gráfica (PDF con QR), y envío al correo del cliente. Configuración por tenant de resoluciones de numeración y prefijos. Panel de documentos con su estado y reintento manual. Métricas: documentos por estado y latencia de aceptación; alerta si la tasa de rechazo supera un umbral.
+**Pendientes que entran a esta tarea:** P03 (`docs/plan/pendientes.md`).
 **Tests primero:** con el proveedor caído la venta se confirma igual y el documento queda pendiente para reintento; un rechazo guarda el motivo y no se reintenta automáticamente; la numeración respeta la resolución vigente y alerta cuando se acerca al final del rango.
 **Revisa tú:** todo. Es el componente con más riesgo legal del producto.
 
@@ -25,6 +26,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 
 ### [ ] T38 · Endurecimiento de seguridad
 **Alcance:** revisión contra OWASP ASVS nivel 1: headers de seguridad (CSP, HSTS...), CORS estricto, rate limiting global y por tenant **detrás de una interfaz `RateLimiter`** (implementación inicial en memoria o en Postgres; si la API corre en varias réplicas y una medición lo justifica, se agrega un adaptador de Redis sin tocar el resto), límites de tamaño de request, rotación de secretos JWT, **registro de auditoría** (quién anuló, cambió precios o ajustó inventario) consultable por el dueño, política de contraseñas y bloqueo por intentos. Escaneo DAST con OWASP ZAP contra staging desde el CI.
+**Pendientes que entran a esta tarea:** P04–P07 (`docs/plan/pendientes.md`).
 **Aceptación:** checklist ASVS en `docs/seguridad.md` con cada punto resuelto o justificado.
 
 ### [ ] T39 · Feature flags por tenant
@@ -38,6 +40,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T41 · Gestión de usuarios y auditoría
 **Depende de:** T38 (registro de auditoría).
 **Alcance:** UI para invitar usuarios por correo, asignar rol y sede, desactivar y restablecer contraseña. Límites por rol configurables (por ejemplo, el descuento máximo del cajero). Pantalla de **auditoría** para el dueño: quién anuló ventas, cambió precios, ajustó inventario o modificó cupos, y cuándo (consume el registro de auditoría de T38).
+**Pendientes que entran a esta tarea:** P08–P10 (`docs/plan/pendientes.md`).
 **Tests primero:** solo `owner` y `admin` gestionan usuarios; un usuario desactivado pierde el acceso en su siguiente request; el dueño no puede quitarse su propio rol de owner si es el único.
 
 ### [ ] T42 · Reportes
@@ -47,10 +50,12 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T43 · Tablero del dueño
 **Depende de:** T28, T32, T42.
 **Alcance:** pantalla de inicio para `owner` y `admin`: ventas de hoy contra el mismo día de la semana anterior, ticket promedio, productos por agotarse, cartera vencida, documentos DIAN con problemas y cajas abiertas. Se actualiza solo cada pocos minutos.
+**Pendientes que entran a esta tarea:** P11 (`docs/plan/pendientes.md`).
 **Tests primero:** cada indicador coincide con su reporte detallado en T42.
 **Después:** `/impeccable critique`: lo más importante debe entenderse en 5 segundos.
 
 ### [ ] T44 · Lista de primeros pasos
 **Depende de:** T29, T36, T41.
 **Alcance:** guía dentro de la app para un tenant nuevo, calculada a partir del **estado real** y no de clics: 1) datos del negocio, 2) resolución de facturación DIAN, 3) importar productos, 4) cargar inventario inicial, 5) invitar al equipo, 6) abrir caja y hacer la primera venta. Muestra el progreso y se puede ocultar, pero vuelve a aparecer si falta algo crítico (por ejemplo, la resolución DIAN vencida). Estados vacíos de cada pantalla con la acción siguiente ("Aún no tienes productos: impórtalos desde Excel"). Evento de analítica por paso completado (T40).
+**Pendientes que entran a esta tarea:** P12 (`docs/plan/pendientes.md`).
 **Tests primero:** un paso se marca como completo solo cuando el dato existe (por ejemplo, ≥ 1 venta confirmada); la lista desaparece al completar todo y no se muestra a roles sin permiso para resolver los pasos.

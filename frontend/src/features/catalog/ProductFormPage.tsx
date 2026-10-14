@@ -162,13 +162,13 @@ function ProductForm({ product, categories }: FormProps) {
             <Field label="SKU" hint="Su código interno. Se guarda en mayúsculas." error={errors.sku?.message}>
               <Input autoComplete="off" autoCapitalize="characters" spellCheck={false} {...register('sku')} />
             </Field>
-            <Field label="Código de barras" hint="Opcional. Puede escanearlo aquí." error={errors.barcode?.message}>
+            <Field label="Código de barras" optional hint="Puede escanearlo aquí." error={errors.barcode?.message}>
               <Input autoComplete="off" spellCheck={false} {...register('barcode')} />
             </Field>
             <Field label="Nombre" error={errors.name?.message} className={styles.wide}>
               <Input autoComplete="off" {...register('name')} />
             </Field>
-            <Field label="Descripción" hint="Opcional." error={errors.description?.message} className={styles.wide}>
+            <Field label="Descripción" optional error={errors.description?.message} className={styles.wide}>
               <Textarea {...register('description')} />
             </Field>
             <Field label="Categoría" error={errors.category_id?.message}>

@@ -55,7 +55,7 @@ func TestErrorMapperResponseError(t *testing.T) {
 			err:         errors.New("connection reset by peer"),
 			wantStatus:  http.StatusInternalServerError,
 			wantCode:    "internal_error",
-			wantMessage: "Ocurrió un error inesperado. Intenta de nuevo.",
+			wantMessage: "Ocurrió un error inesperado. Intente de nuevo.",
 		},
 	}
 	for _, tt := range tests {

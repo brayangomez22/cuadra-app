@@ -121,7 +121,7 @@ function CountForm({ session, onClosed }: { session: CashSession; onClosed: (id:
             );
           })}
         </fieldset>
-        <Field label="Notas (opcional)" hint="Lo que el dueño deba saber de este cierre.">
+        <Field label="Notas" optional hint="Lo que el dueño deba saber de este cierre.">
           <Textarea maxLength={500} value={notes} onChange={(event) => setNotes(event.target.value)} />
         </Field>
       </div>

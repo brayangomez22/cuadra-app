@@ -127,7 +127,7 @@ export function UiCatalogPage() {
           <Field label="Cantidad" error="La cantidad debe ser mayor que cero">
             <Input inputMode="decimal" align="end" defaultValue="0" />
           </Field>
-          <Field label="Código de barras">
+          <Field label="Código de barras" optional>
             <Input disabled defaultValue="7701234567890" />
           </Field>
           <Field label="Unidad de medida" hint="La unidad base del inventario">

@@ -138,8 +138,8 @@ La tabla siguiente la genera ese mismo test; si cambias un color, el test falla 
 | oscuro | `--color-text-on-action` | `--color-action-primary` | 6.75:1 | 4.5:1 |
 | oscuro | `--color-text-on-action` | `--color-action-primary-hover` | 7.88:1 | 4.5:1 |
 | oscuro | `--color-text-on-action` | `--color-action-primary-active` | 5.44:1 | 4.5:1 |
-| oscuro | `--color-text-on-danger` | `--color-action-danger` | 7.69:1 | 4.5:1 |
-| oscuro | `--color-text-on-danger` | `--color-action-danger-hover` | 9.30:1 | 4.5:1 |
+| oscuro | `--color-text-on-danger` | `--color-action-danger` | 6.53:1 | 4.5:1 |
+| oscuro | `--color-text-on-danger` | `--color-action-danger-hover` | 5.62:1 | 4.5:1 |
 | oscuro | `--color-feedback-danger` | `--color-bg-surface` | 7.21:1 | 4.5:1 |
 | oscuro | `--color-feedback-danger` | `--color-feedback-danger-subtle` | 6.60:1 | 4.5:1 |
 | oscuro | `--color-feedback-success` | `--color-bg-surface` | 7.88:1 | 4.5:1 |
@@ -286,7 +286,7 @@ Se importan desde `@/shared/ui`. El catálogo visual con todos los estados está
 | `Button` | `variant` `primary` (la única acción naranja de la pantalla), `secondary`, `ghost` o `danger`; `size` `md` o `lg`; `loading` lo bloquea y anuncia `aria-busy`; deshabilitado se ve gris en todas las variantes; `icon` decorativo. Es `type="button"` por defecto. |
 | `ButtonLink` | Un enlace (`<a>` de React Router) con el aspecto de `Button`: para acciones que navegan, como "Nuevo producto". Mismas `variant` (sin `danger`), `size` e `icon`. |
 | `IconButton` | `label` obligatorio: es el nombre accesible y el tooltip. |
-| `Field` | Label, control, ayuda (`hint`) y error. Asocia el label y describe el control con la ayuda y el error (`aria-describedby`, `aria-invalid`). El error lleva ícono y texto. Un control propio se conecta con `useFieldControl(props)`. |
+| `Field` | Label, control, ayuda (`hint`) y error. Asocia el label y describe el control con la ayuda y el error (`aria-describedby`, `aria-invalid`). El error lleva ícono y texto. Los campos son obligatorios por defecto: `optional` agrega «(opcional)» al label. Un control propio se conecta con `useFieldControl(props)`. |
 | `Input` | `align="end"` para precios y cantidades. |
 | `Textarea` | Texto de varias líneas (una descripción), dentro de un `Field` como `Input`. |
 | `Select` | Radix Select: `options`, `value` u `defaultValue`, `onValueChange`, `placeholder`. |

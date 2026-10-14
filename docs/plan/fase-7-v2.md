@@ -17,7 +17,7 @@ Listas por tipo de cliente (público, maestro de obra, contratista, empresa) apl
 El modelo ya soporta sedes (`Location`) y traslados desde la fase 1. Falta: administración de sedes, usuarios y cajas por sede, permisos limitados a una sede, flujo de traslado con envío y recepción (en tránsito), reportes y tablero comparativos por sede y numeración DIAN por sede.
 
 ### Épica V2-5 · Modo sin internet del POS
-PWA instalable; catálogo, precios y clientes en caché local (IndexedDB); ventas guardadas localmente con cola de sincronización idempotente (ID generado en el cliente); resolución de conflictos de stock al reconectar; indicador claro de estado de conexión; emisión DIAN diferida al sincronizar. **Épica de alto riesgo técnico:** empezar con un spike y un ADR.
+PWA instalable; catálogo, precios y clientes en caché local (IndexedDB); ventas guardadas localmente con cola de sincronización idempotente (ID generado en el cliente); resolución de conflictos de stock al reconectar; indicador claro de estado de conexión; emisión DIAN diferida al sincronizar. **Épica de alto riesgo técnico:** empezar con un spike y un ADR. Pendiente que entra aquí: P14 (`docs/plan/pendientes.md`).
 
 ### Épica V2-6 · WhatsApp
 Integración con la WhatsApp Business Platform (directa o vía un proveedor; decidir con un spike): envío de facturas y cotizaciones en PDF, **recordatorios de cobro** automáticos de cartera vencida, **resumen diario** al dueño (ventas, cartera, productos por agotarse) y plantillas aprobadas por Meta. Reutiliza los trabajos programados de River.

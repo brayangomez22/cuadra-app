@@ -227,9 +227,9 @@ func TestAdjustStock(t *testing.T) {
 		require.Equal(t, "Bulto roto", got["reason"])
 	})
 
-	t.Run("insufficient_stock responde 422 con el código", func(t *testing.T) {
+	t.Run("insufficient_stock responde 409 con el código, como en ventas", func(t *testing.T) {
 		rec := serve(t, &stubUseCases{err: domain.ErrInsufficientStock}, &owner, http.MethodPost, "/api/v1/inventory/adjustments", body)
-		requireError(t, rec, http.StatusUnprocessableEntity, "insufficient_stock")
+		requireError(t, rec, http.StatusConflict, "insufficient_stock")
 	})
 
 	t.Run("ajuste sin motivo responde 422 adjustment_reason_required", func(t *testing.T) {

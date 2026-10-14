@@ -19,6 +19,26 @@ describe('Field', () => {
     expect(screen.getByLabelText('Precio')).toBeInstanceOf(HTMLInputElement);
   });
 
+  it('un campo opcional lo dice en su label, también al lector de pantalla', () => {
+    render(
+      <Field label="Descripción" optional>
+        <Input />
+      </Field>,
+    );
+
+    expect(screen.getByLabelText('Descripción (opcional)')).toBeInstanceOf(HTMLInputElement);
+  });
+
+  it('un campo obligatorio no agrega nada al label', () => {
+    render(
+      <Field label="Precio">
+        <Input />
+      </Field>,
+    );
+
+    expect(screen.queryByText(/opcional/)).not.toBeInTheDocument();
+  });
+
   it('describe el input con el texto de ayuda', () => {
     render(
       <Field label="Precio" hint="Con IVA incluido">

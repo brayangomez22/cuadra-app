@@ -10,12 +10,17 @@ type Props = {
   hint?: ReactNode;
   /** Validation message. Marks the control as aria-invalid and describes it. */
   error?: ReactNode;
+  /**
+   * The field may stay empty. Fields are required by default (most are), so
+   * only the optional ones say it, in the label itself: "Descripción (opcional)".
+   */
+  optional?: boolean;
   /** One control: Input, Select or another that calls useFieldControl. */
   children: ReactNode;
   className?: string;
 };
 
-export function Field({ label, hint, error, children, className }: Props) {
+export function Field({ label, hint, error, optional = false, children, className }: Props) {
   const id = useId();
   const controlId = `${id}-control`;
   const hintId = hint ? `${id}-hint` : undefined;
@@ -26,6 +31,7 @@ export function Field({ label, hint, error, children, className }: Props) {
     <div className={clsx(styles.root, className)}>
       <label htmlFor={controlId} className={styles.label}>
         {label}
+        {optional && <span className={styles.optional}> (opcional)</span>}
       </label>
       <FieldContext value={{ controlId, describedBy, invalid: Boolean(error) }}>{children}</FieldContext>
       {hint && (

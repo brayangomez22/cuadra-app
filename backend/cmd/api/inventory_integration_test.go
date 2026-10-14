@@ -120,10 +120,10 @@ func TestInventoryFlow(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	})
 
-	t.Run("un traslado mayor al stock responde 422 insufficient_stock", func(t *testing.T) {
+	t.Run("un traslado mayor al stock responde 409 insufficient_stock", func(t *testing.T) {
 		body := `{"product_id":"` + productID + `","from_location_id":"` + bodegaID + `","to_location_id":"` + centroID + `","quantity":"21"}`
 		rec := do(t, http.MethodPost, "/api/v1/inventory/transfers", body, warehouseToken)
-		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), "insufficient_stock")
 	})
 
