@@ -1,9 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth';
+import { unitShort } from '@/features/catalog';
 import { inventoryKeys, useLocations } from '@/features/inventory';
 import { ApiError, describeError } from '@/shared/api/errors';
-import { formatMoney, formatPercent, isZero } from '@/shared/format';
+import { formatMoney, formatPercent, formatQuantity, isZero } from '@/shared/format';
 import {
   Alert,
   Button,
@@ -21,7 +22,7 @@ import {
 } from '@/shared/ui';
 import { salesKeys, useConfirmSale, useCurrentCashSession, useDiscountLimit, type Sale } from './api';
 import { CartLines } from './CartLines';
-import { cartReducer, cartTotals, type DiscountLimit, type PaymentInput } from './cart';
+import { cartReducer, cartTotals, type CartAction, type DiscountLimit, type PaymentInput } from './cart';
 import { CheckoutDialog } from './CheckoutDialog';
 import { PrintableReceipt } from './PrintableReceipt';
 import type { Paper } from './Receipt';
@@ -31,6 +32,10 @@ import styles from './PosPage.module.scss';
 
 // Until the API answers, nobody discounts: the safe default (docs/decisiones.md).
 const noDiscount: DiscountLimit = { unlimited: false, max: '0' };
+
+// How long the line just added stays marked: enough to notice it, short
+// enough that a fast reader does not pile up marks.
+const ADDED_MARK_MS = 1500;
 
 // Errors of a sale that mean the cashier's drawer is gone: the screen asks
 // for it again once the checkout closes.
@@ -62,6 +67,10 @@ export function PosPage() {
   const [paper, setPaper] = useState<Paper>(loadPaper);
   const [outOfStock, setOutOfStock] = useState<string>();
   const [cashLost, setCashLost] = useState(false);
+  // The product just added (or added again), to mark its line and bring it
+  // into view; seq changes on every add.
+  const [added, setAdded] = useState<{ productId: string; seq: number }>();
+  const [announcement, setAnnouncement] = useState('');
   const search = useRef<HTMLInputElement>(null);
 
   const activeLocations = useMemo(() => (locations.data ?? []).filter((l) => l.active), [locations.data]);
@@ -84,6 +93,14 @@ export function PosPage() {
   const invalidLines = totals.lines.filter((l) => !l.input).length;
 
   useEffect(() => saveCart(cartKey, cart), [cartKey, cart]);
+
+  // The mark goes off by itself.
+  useEffect(() => {
+    if (!added) return;
+    const timer = setTimeout(() => setAdded(undefined), ADDED_MARK_MS);
+    return () => clearTimeout(timer);
+  }, [added]);
+
 
   const focusSearch = () => requestAnimationFrame(() => search.current?.focus());
 
@@ -109,6 +126,28 @@ export function PosPage() {
   function change(action: Parameters<typeof dispatch>[0]) {
     dispatch(action);
     setOutOfStock(undefined);
+  }
+
+  // A product from the search or the reader: its line is marked and a screen
+  // reader hears the product, its quantity in the sale and the new total
+  // (only on adds, not on every edit of the cart).
+  function add(action: Extract<CartAction, { type: 'add' }>) {
+    change(action);
+    const mark = { productId: action.product.id, seq: (added?.seq ?? 0) + 1 };
+    if (added?.productId === mark.productId) {
+      // Scanned again while marked: take the mark off for a frame so it starts over.
+      setAdded(undefined);
+      requestAnimationFrame(() => setAdded(mark));
+    } else {
+      setAdded(mark);
+    }
+    const next = cartTotals(cartReducer(cart, action), discountLimit);
+    const line = next.lines.find((l) => l.line.product.id === action.product.id)?.line;
+    if (line) {
+      setAnnouncement(
+        `${line.product.name}: ${formatQuantity(line.quantity)} ${unitShort(line.product.base_unit)}. Total ${formatMoney(next.total)}`,
+      );
+    }
   }
 
   function openCheckout() {
@@ -223,12 +262,19 @@ export function PosPage() {
     >
       <div className={styles.workspace}>
         <div className={styles.sale}>
-          <ProductSearch ref={search} onAdd={(product, quantity) => change({ type: 'add', product, quantity })} />
+          <ProductSearch
+            ref={search}
+            onAdd={(product, quantity) => add({ type: 'add', product, quantity })}
+          />
+          <p className="srOnly" role="status" aria-label="Último producto agregado">
+            {announcement}
+          </p>
           {showDiscount && !discountLimit.unlimited && (
             <p className={styles.note}>Descuento máximo por línea: {formatPercent(discountLimit.max, 'rate')}</p>
           )}
           <CartLines
             totals={totals}
+            added={added}
             dispatch={change}
             showDiscount={showDiscount}
             outOfStock={outOfStock}

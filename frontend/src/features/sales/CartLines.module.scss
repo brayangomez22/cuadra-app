@@ -29,12 +29,26 @@
   gap: var(--space-2) var(--space-3);
   padding: var(--space-3);
 
+  // Room for the mark, always there so marking a line never shifts it.
+  border-inline-start: var(--space-1) solid transparent;
+
   & + & {
     border-block-start: 1px solid var(--color-border-default);
   }
 
   &[data-state='error'] {
     background: var(--color-feedback-danger-subtle);
+  }
+
+  // The line just added: an accent on its edge that fades out. Without
+  // motion, the mark stays still until the POS removes it.
+  &[data-state='added'] {
+    border-inline-start-color: var(--color-border-accent);
+    background: var(--color-bg-subtle);
+
+    @include reduced-motion-safe {
+      animation: added var(--duration-mark) var(--ease-standard) forwards;
+    }
   }
 
   @include respond-to(md) {
@@ -92,4 +106,11 @@
 .remove {
   grid-area: remove;
   justify-self: end;
+}
+
+@keyframes added {
+  to {
+    border-inline-start-color: transparent;
+    background: transparent;
+  }
 }
