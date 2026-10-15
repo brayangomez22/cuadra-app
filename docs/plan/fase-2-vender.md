@@ -45,6 +45,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 
 Alertas como código: tasa de 5xx > 2% durante 5 min, p95 > 500 ms y un pico de logins fallidos. Definir SLOs iniciales en `docs/slo.md` (por ejemplo, 99,5% de las requests del POS en menos de 300 ms).
 **Aceptación:** `make obs-up` levanta Grafana con los dashboards listos y una alerta se dispara en una prueba forzada.
+**Pendientes que entran a esta tarea:** P01, P02 (`docs/plan/pendientes.md`).
 
 ### [ ] T25 · Tests end-to-end (Playwright)
 **Alcance:** `e2e/` con Playwright contra el stack levantado en docker-compose con datos semilla. Flujos críticos: registro → login → crear producto → registrar entrada de inventario → venta con pago mixto → verificar el stock. Corre en el CI en cada PR a `main` (con capturas y traces de Playwright como artefactos si falla).

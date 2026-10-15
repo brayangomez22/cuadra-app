@@ -90,6 +90,7 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
   /clear           → contexto limpio para la siguiente tarea
   ```
 - Al terminar una tarea se marca `[x]` en el archivo de su fase (lo hace `/tarea`).
+- Lo que una tarea deja fuera de su alcance va a [`pendientes.md`](pendientes.md) con su destino: la tarea posterior que lo cubre o "Para trabajar ahora" (una rama `chore/` antes de seguir). `/tarea` lee y actualiza esa lista; ningún pendiente queda solo en un PR o en `docs/decisiones.md`.
 
 ## Numeración de tareas
 

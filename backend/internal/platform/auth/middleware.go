@@ -13,8 +13,8 @@ import (
 
 // User-facing messages of the auth errors.
 const (
-	unauthorizedMessage = "Tu sesión no es válida o expiró. Inicia sesión de nuevo."
-	forbiddenMessage    = "No tienes permiso para realizar esta acción."
+	unauthorizedMessage = "Su sesión no es válida o expiró. Inicie sesión de nuevo."
+	forbiddenMessage    = "No tiene permiso para realizar esta acción."
 )
 
 // Verifier checks an access token and returns its principal.

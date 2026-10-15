@@ -771,6 +771,20 @@ func (response AdjustStock403JSONResponse) VisitAdjustStockResponse(w http.Respo
 	return err
 }
 
+type AdjustStock409JSONResponse Error
+
+func (response AdjustStock409JSONResponse) VisitAdjustStockResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AdjustStock422JSONResponse Error
 
 func (response AdjustStock422JSONResponse) VisitAdjustStockResponse(w http.ResponseWriter) error {
@@ -951,6 +965,20 @@ func (response TransferStock403JSONResponse) VisitTransferStockResponse(w http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TransferStock409JSONResponse Error
+
+func (response TransferStock409JSONResponse) VisitTransferStockResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }

@@ -11,8 +11,8 @@ import (
 
 // Generic user-facing messages for errors whose details must stay internal.
 const (
-	InvalidRequestMessage = "La solicitud no es válida. Revisa los datos enviados."
-	InternalErrorMessage  = "Ocurrió un error inesperado. Intenta de nuevo."
+	InvalidRequestMessage = "La solicitud no es válida. Revise los datos enviados."
+	InternalErrorMessage  = "Ocurrió un error inesperado. Intente de nuevo."
 )
 
 // ErrorRule maps a domain error to its HTTP status, its stable code and a

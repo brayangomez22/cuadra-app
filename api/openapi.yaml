@@ -802,11 +802,16 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "409":
+          description: No hay stock suficiente en la sede (`insufficient_stock`) y la empresa no permite stock negativo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "422":
           description: |
             Algún dato no cumple las reglas (`invalid_quantity`, `adjustment_reason_required`,
-            `adjustment_reason_too_long`, `insufficient_stock`, `product_not_found`, `location_not_found`,
-            `location_inactive`).
+            `adjustment_reason_too_long`, `product_not_found`, `location_not_found`, `location_inactive`).
           content:
             application/json:
               schema:
@@ -842,10 +847,16 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "409":
+          description: No hay stock suficiente en la sede (`insufficient_stock`) y la empresa no permite stock negativo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "422":
           description: |
-            Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `insufficient_stock`,
-            `product_not_found`, `location_not_found`, `location_inactive`).
+            Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `product_not_found`,
+            `location_not_found`, `location_inactive`).
           content:
             application/json:
               schema:
@@ -1371,13 +1382,15 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
     Conflict:
-      description: La operación choca con el estado actual (por ejemplo, un SKU duplicado).
+      description: |
+        La operación choca con el estado actual (por ejemplo, un SKU duplicado o `insufficient_stock`: no hay stock
+        suficiente).
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
     UnprocessableEntity:
-      description: La request es válida, pero viola una regla de negocio (por ejemplo, `insufficient_stock`).
+      description: La request es válida, pero viola una regla de negocio (por ejemplo, `invalid_quantity`).
       content:
         application/json:
           schema:

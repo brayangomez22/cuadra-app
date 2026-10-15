@@ -1231,7 +1231,10 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description La operación choca con el estado actual (por ejemplo, un SKU duplicado). */
+        /**
+         * @description La operación choca con el estado actual (por ejemplo, un SKU duplicado o `insufficient_stock`: no hay stock
+         *     suficiente).
+         */
         Conflict: {
             headers: {
                 [name: string]: unknown;
@@ -1240,7 +1243,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description La request es válida, pero viola una regla de negocio (por ejemplo, `insufficient_stock`). */
+        /** @description La request es válida, pero viola una regla de negocio (por ejemplo, `invalid_quantity`). */
         UnprocessableEntity: {
             headers: {
                 [name: string]: unknown;
@@ -2080,10 +2083,18 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            /** @description No hay stock suficiente en la sede (`insufficient_stock`) y la empresa no permite stock negativo. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /**
              * @description Algún dato no cumple las reglas (`invalid_quantity`, `adjustment_reason_required`,
-             *     `adjustment_reason_too_long`, `insufficient_stock`, `product_not_found`, `location_not_found`,
-             *     `location_inactive`).
+             *     `adjustment_reason_too_long`, `product_not_found`, `location_not_found`, `location_inactive`).
              */
             422: {
                 headers: {
@@ -2121,9 +2132,18 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            /** @description No hay stock suficiente en la sede (`insufficient_stock`) y la empresa no permite stock negativo. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /**
-             * @description Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `insufficient_stock`,
-             *     `product_not_found`, `location_not_found`, `location_inactive`).
+             * @description Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `product_not_found`,
+             *     `location_not_found`, `location_inactive`).
              */
             422: {
                 headers: {

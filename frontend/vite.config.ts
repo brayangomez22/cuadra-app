@@ -27,6 +27,14 @@ export default defineConfig(({ mode }) => ({
   ],
   build: {
     sourcemap: uploadSourceMaps ? 'hidden' : false,
+    rollupOptions: {
+      output: {
+        // React and the router change only with an upgrade: in their own chunk,
+        // browsers keep them cached across deploys.
+        manualChunks: (id) =>
+          /node_modules\/(react|react-dom|react-router|scheduler)\//.test(id) ? 'vendor' : undefined,
+      },
+    },
   },
   resolve: {
     alias: {

@@ -44,7 +44,7 @@ func (h *Health) GetReadyz(ctx context.Context, _ healthapi.GetReadyzRequestObje
 		h.log.WarnContext(ctx, "readiness check failed", slog.String("dependency", "database"), slog.Any("error", err))
 		return healthapi.GetReadyz503JSONResponse{Error: healthapi.ErrorDetail{
 			Code:    "not_ready",
-			Message: "El servicio no está listo. Intenta de nuevo en unos segundos.",
+			Message: "El servicio no está listo. Intente de nuevo en unos segundos.",
 		}}, nil
 	}
 	return healthapi.GetReadyz200JSONResponse{Status: healthapi.Ready}, nil
