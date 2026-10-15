@@ -1,4 +1,4 @@
-import type { Dispatch, KeyboardEvent } from 'react';
+import { useEffect, useRef, type Dispatch, type KeyboardEvent } from 'react';
 import { unitShort } from '@/features/catalog';
 import { formatMoney, isZero } from '@/shared/format';
 import { Badge, EmptyState, Field, IconAlert, IconButton, IconCart, IconClose, Input } from '@/shared/ui';
@@ -12,6 +12,8 @@ type Props = {
   showDiscount: boolean;
   /** The product the API said has no stock for the sale. */
   outOfStock?: string;
+  /** The product just added: its line is marked and scrolled into view. seq changes on every add. */
+  added?: { productId: string; seq: number };
   /** Gives the focus back to the search, for the next product. */
   onDone: () => void;
 };
@@ -20,7 +22,17 @@ type Props = {
  * The lines of the sale in progress, the newest last. Quantity and discount
  * are edited in place; Enter in either goes back to the search.
  */
-export function CartLines({ totals, dispatch, showDiscount, outOfStock, onDone }: Props) {
+export function CartLines({ totals, dispatch, showDiscount, outOfStock, added, onDone }: Props) {
+  const lines = useRef(new Map<string, HTMLLIElement>());
+
+  // On a phone or at 200% zoom the added line can be off screen: bring it in,
+  // without moving the page if it is already visible. The focus stays in the search.
+  const addedSeq = added?.seq;
+  const addedId = added?.productId;
+  useEffect(() => {
+    if (addedId) lines.current.get(addedId)?.scrollIntoView?.({ block: 'nearest' });
+  }, [addedId, addedSeq]);
+
   if (totals.lines.length === 0) {
     return (
       <EmptyState
@@ -44,8 +56,18 @@ export function CartLines({ totals, dispatch, showDiscount, outOfStock, onDone }
         const { product } = line;
         const forProduct = <span className="srOnly">de {product.name}</span>;
         const noStock = product.id === outOfStock;
+        const isAdded = product.id === added?.productId;
         return (
-          <li key={product.id} className={styles.line} aria-label={product.name} data-state={noStock ? 'error' : undefined}>
+          <li
+            key={product.id}
+            ref={(element) => {
+              if (element) lines.current.set(product.id, element);
+              else lines.current.delete(product.id);
+            }}
+            className={styles.line}
+            aria-label={product.name}
+            data-state={noStock ? 'error' : isAdded ? 'added' : undefined}
+          >
             <div className={styles.product}>
               <span className={styles.name}>{product.name}</span>
               <span className={styles.meta}>

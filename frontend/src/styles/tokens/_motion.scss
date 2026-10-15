@@ -1,6 +1,9 @@
 $duration: (
   'fast': 120ms,
   'normal': 200ms,
+  // How long a just-changed row stays marked (the line added to the POS). The
+  // POS clears the mark after the same time (ADDED_MARK_MS).
+  'mark': 1500ms,
 );
 
 // Fast out, gentle stop: things settle instead of bouncing.

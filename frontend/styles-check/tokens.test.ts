@@ -21,6 +21,8 @@ const pairs: [fg: string, bg: string, min: number][] = [
   ['--color-text-default', '--color-bg-canvas', TEXT],
   ['--color-text-default', '--color-bg-surface', TEXT],
   ['--color-text-default', '--color-bg-subtle', TEXT],
+  // The change to hand back, on the success panel of a confirmed sale.
+  ['--color-text-default', '--color-feedback-success-subtle', TEXT],
   ['--color-text-muted', '--color-bg-canvas', TEXT],
   ['--color-text-muted', '--color-bg-surface', TEXT],
   ['--color-text-muted', '--color-bg-subtle', TEXT],

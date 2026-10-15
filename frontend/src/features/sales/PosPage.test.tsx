@@ -1,4 +1,5 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { onTestFinished } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { aUser, apiError, fakeApi, json, signedIn, type Me } from '@/test/fakeApi';
 import { aCement, aLocation, anOpenCashSession, aProduct, aSale, ids, page, plain, query, type Product } from '@/test/fixtures';
@@ -630,6 +631,140 @@ describe('PosPage', () => {
       expect(await within(await checkout()).findByText(/La caja ya está cerrada/)).toBeInTheDocument();
       await user().keyboard('{Escape}');
       expect(await screen.findByRole('heading', { name: 'Abra la caja para vender' })).toBeInTheDocument();
+    });
+  });
+
+  describe('lo que se ve al agregar y al terminar (critique P2)', () => {
+    function announcement() {
+      return plain(screen.getByRole('status', { name: 'Último producto agregado' }).textContent);
+    }
+
+    it('anuncia el producto agregado con su cantidad y el total', async () => {
+      posApi();
+      renderApp('/vender');
+
+      await scan(CEMENT_BARCODE);
+      await findCartLine(/Cemento/);
+
+      await waitFor(() => expect(announcement()).toBe('Cemento gris 50kg: 1 bulto. Total $ 38.080'));
+    });
+
+    it('marca la línea recién agregada y la lleva a la vista', async () => {
+      // jsdom has no scrollIntoView: a spy stands in for it during this test.
+      const scrolled = vi.fn();
+      Element.prototype.scrollIntoView = scrolled;
+      onTestFinished(() => {
+        Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+      });
+      posApi();
+      renderApp('/vender');
+
+      await scan('TUB-PVC-12');
+      await findCartLine(/Tubo PVC/);
+      await scan(CEMENT_BARCODE);
+      await findCartLine(/Cemento/);
+
+      expect(screen.getByRole('listitem', { name: /Cemento/ })).toHaveAttribute('data-state', 'added');
+      expect(screen.getByRole('listitem', { name: /Tubo PVC/ })).not.toHaveAttribute('data-state');
+      expect(scrolled).toHaveBeenLastCalledWith({ block: 'nearest' });
+      await expectSearchFocused();
+    });
+
+    it('al escanear otra vez el mismo producto lo vuelve a marcar y anuncia la nueva cantidad', async () => {
+      posApi();
+      renderApp('/vender');
+
+      await scan(CEMENT_BARCODE);
+      await findCartLine(/Cemento/);
+      await scan('TUB-PVC-12');
+      await findCartLine(/Tubo PVC/);
+      await scan(CEMENT_BARCODE);
+
+      await waitFor(() => expect(announcement()).toBe('Cemento gris 50kg: 2 bulto. Total $ 88.060'));
+      expect(screen.getByRole('listitem', { name: /Cemento/ })).toHaveAttribute('data-state', 'added');
+      expect(screen.getByRole('listitem', { name: /Tubo PVC/ })).not.toHaveAttribute('data-state');
+    });
+
+    it('la marca desaparece sola después de un momento', async () => {
+      posApi();
+      renderApp('/vender');
+
+      await scan(CEMENT_BARCODE);
+      const line = await screen.findByRole('listitem', { name: /Cemento/ });
+      expect(line).toHaveAttribute('data-state', 'added');
+
+      await waitFor(() => expect(line).not.toHaveAttribute('data-state'), { timeout: 3000 });
+    });
+
+    it('editar la cantidad mientras la línea está marcada no pierde el foco cuando la marca se apaga', async () => {
+      posApi();
+      renderApp('/vender');
+      await scan(CEMENT_BARCODE);
+      const line = await findCartLine(/Cemento/);
+      const quantity = line.getByLabelText(/^Cantidad/);
+      await user().click(quantity);
+
+      await waitFor(() => expect(screen.getByRole('listitem', { name: /Cemento/ })).not.toHaveAttribute('data-state'), {
+        timeout: 3000,
+      });
+      expect(quantity).toHaveFocus();
+      await user().type(quantity, '{Backspace}3');
+      expect(quantity).toHaveValue('3');
+    });
+
+    it('con cambio, lo muestra en grande con lo que hay que entregar', async () => {
+      posApi();
+      renderApp('/vender');
+      await scan('TUB-PVC-12');
+      await findCartLine(/Tubo PVC/);
+      await user().keyboard('{F4}');
+      await user().keyboard('{Enter}');
+
+      const done = within(await screen.findByRole('dialog', { name: 'Venta N.º 15' }));
+      const change = done.getByText('Entregue de cambio', { selector: 'dt' });
+      expect(plain(change.nextElementSibling?.textContent)).toBe('$ 8.100');
+      expect(done.queryByText('Pago exacto, sin cambio')).not.toBeInTheDocument();
+    });
+
+    it('un pago exacto dice que no hay cambio', async () => {
+      posApi({ extra: { 'POST /api/v1/sales': json(201, aSale({ paid: '11900.00', change: '0.00', payments: [{ method: 'cash', amount: '11900.00' }] })) } });
+      renderApp('/vender');
+      await scan('TUB-PVC-12');
+      await findCartLine(/Tubo PVC/);
+      await user().keyboard('{F4}');
+      await user().keyboard('{Enter}');
+
+      const done = within(await screen.findByRole('dialog', { name: 'Venta N.º 15' }));
+      expect(done.getByText('Pago exacto, sin cambio')).toBeInTheDocument();
+      expect(done.queryByText('Entregue de cambio')).not.toBeInTheDocument();
+    });
+
+    it('muestra el desglose de una venta con pago mixto', async () => {
+      posApi({
+        extra: {
+          'POST /api/v1/sales': json(
+            201,
+            aSale({
+              paid: '21900.00',
+              change: '10000.00',
+              payments: [
+                { method: 'cash', amount: '20000.00' },
+                { method: 'card', amount: '1900.00' },
+              ],
+            }),
+          ),
+        },
+      });
+      renderApp('/vender');
+      await scan('TUB-PVC-12');
+      await findCartLine(/Tubo PVC/);
+      await user().keyboard('{F4}');
+      await user().keyboard('{Enter}');
+
+      const done = within(await screen.findByRole('dialog', { name: 'Venta N.º 15' }));
+      const payments = within(done.getByRole('list', { name: 'Pagos de la venta' }));
+      const items = payments.getAllByRole('listitem').map((item) => plain(item.textContent));
+      expect(items).toEqual(['Efectivo$ 20.000', 'Tarjeta$ 1.900']);
     });
   });
 });

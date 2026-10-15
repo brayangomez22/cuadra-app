@@ -1,6 +1,19 @@
 import { useState, type FormEvent } from 'react';
 import { formatMoney, isNegative, isZero, parseMoneyInput, toDecimalInput } from '@/shared/format';
-import { Alert, Button, Dialog, DialogClose, Field, IconButton, IconClose, IconPlus, IconPrinter, Input, Select } from '@/shared/ui';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogClose,
+  Field,
+  IconButton,
+  IconClose,
+  IconPlus,
+  IconPrinter,
+  IconSuccess,
+  Input,
+  Select,
+} from '@/shared/ui';
 import { methodLabels, settle, type PaymentInput, type PaymentMethod, type Settlement } from './cart';
 import type { Sale } from './api';
 import type { Paper } from './Receipt';
@@ -222,22 +235,46 @@ function SaleDone({
   onPaperChange,
   onPrint,
 }: { sale: Sale } & Pick<Props, 'onNewSale' | 'paper' | 'onPaperChange' | 'onPrint'>) {
+  const hasChange = !isZero(sale.change);
   return (
     <div className={styles.root}>
-      <dl className={styles.figures}>
-        <div className={styles.figure}>
+      {/* The figure the cashier acts on: how much to hand back, as big as the POS total. */}
+      {hasChange ? (
+        <dl className={styles.result} data-tone="change">
+          <dt className={styles.resultLabel}>
+            <IconSuccess className={styles.resultIcon} />
+            Entregue de cambio
+          </dt>
+          <dd className={styles.changeAmount}>{formatMoney(sale.change)}</dd>
+        </dl>
+      ) : (
+        <p className={styles.result}>
+          <span className={styles.resultLabel}>
+            <IconSuccess className={styles.resultIcon} />
+            Pago exacto, sin cambio
+          </span>
+        </p>
+      )}
+
+      <ul className={styles.breakdown} aria-label="Pagos de la venta">
+        {sale.payments.map((payment, index) => (
+          <li key={`${payment.method}-${index}`} className={styles.breakdownRow}>
+            <span>{methodLabels[payment.method]}</span>
+            <span className={styles.breakdownAmount}>{formatMoney(payment.amount)}</span>
+          </li>
+        ))}
+      </ul>
+      <dl className={styles.summary}>
+        <div className={styles.breakdownRow}>
           <dt>Total</dt>
-          <dd>{formatMoney(sale.totals.total)}</dd>
+          <dd className={styles.breakdownAmount}>{formatMoney(sale.totals.total)}</dd>
         </div>
-        <div className={styles.figure}>
+        <div className={styles.breakdownRow}>
           <dt>Recibido</dt>
-          <dd>{formatMoney(sale.paid)}</dd>
-        </div>
-        <div className={styles.figure} data-tone="change">
-          <dt>Cambio</dt>
-          <dd className={styles.total}>{formatMoney(sale.change)}</dd>
+          <dd className={styles.breakdownAmount}>{formatMoney(sale.paid)}</dd>
         </div>
       </dl>
+
       <div className={styles.footer}>
         <div className={styles.print}>
           <Field label="Papel" className={styles.paper}>

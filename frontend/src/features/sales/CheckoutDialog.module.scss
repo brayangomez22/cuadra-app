@@ -56,6 +56,85 @@
   font-size: var(--font-size-2xl);
 }
 
+// The end of a sale: the change to hand back, big, with a success mark; or
+// that there is none. The success color goes on the icon and the border,
+// never alone: the words say it.
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+
+  // The amount scales with the dialog's width (cqi) so it never wraps.
+  container-type: inline-size;
+
+  &[data-tone='change'] {
+    border-color: var(--color-feedback-success);
+    background: var(--color-feedback-success-subtle);
+  }
+}
+
+.resultLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-default);
+}
+
+.resultIcon {
+  flex-shrink: 0;
+  color: var(--color-feedback-success);
+}
+
+.changeAmount {
+  margin: 0;
+  font-size: min(var(--font-size-display), 16cqi);
+  font-weight: var(--font-weight-heavy);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  color: var(--color-text-default);
+
+  @include numeric;
+}
+
+// What paid it, then the total and what was received.
+.breakdown,
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summary {
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--color-border-default);
+}
+
+.breakdownRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+
+  dd {
+    margin: 0;
+  }
+}
+
+.breakdownAmount {
+  color: var(--color-text-default);
+
+  @include numeric;
+}
+
 .payments {
   display: flex;
   flex-direction: column;
