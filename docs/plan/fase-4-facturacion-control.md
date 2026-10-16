@@ -44,18 +44,18 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Tests primero:** solo `owner` y `admin` gestionan usuarios; un usuario desactivado pierde el acceso en su siguiente request; el dueño no puede quitarse su propio rol de owner si es el único.
 
 ### [ ] T42 · Reportes
-**Alcance:** reportes para el negocio (no confundir con Grafana): ventas por día, vendedor, medio de pago, categoría y sede; productos más vendidos; productos **sin movimiento** en N días (plata quieta); utilidad por producto y por venta (precio − costo promedio al momento de la venta); cartera por cobrar; cierres de caja. Filtros por rango de fechas y exportación a Excel/CSV. Las consultas pesadas usan índices o vistas materializadas justificadas con `EXPLAIN ANALYZE`.
+**Alcance:** reportes para el negocio (no confundir con Grafana): ventas por día, vendedor, medio de pago, categoría y sede; productos más vendidos; productos **sin movimiento** en N días (plata quieta); utilidad por producto y por venta (precio − costo promedio al momento de la venta); cartera por cobrar; cierres de caja. Filtros por rango de fechas y exportación a Excel/CSV. Las consultas pesadas usan índices o vistas materializadas justificadas con `EXPLAIN ANALYZE`. Los reportes de productos agregan por producto con detalle por variante (por ejemplo, ventas de una camiseta y su desglose por talla y color), y permiten filtrar por atributos del tenant.
 **Tests primero (integración):** la utilidad usa el costo vigente al momento de la venta, no el actual; los totales del reporte de ventas cuadran con la suma de los cierres de caja del mismo periodo.
 
 ### [ ] T43 · Tablero del dueño
 **Depende de:** T28, T32, T42.
-**Alcance:** pantalla de inicio para `owner` y `admin`: ventas de hoy contra el mismo día de la semana anterior, ticket promedio, productos por agotarse, cartera vencida, documentos DIAN con problemas y cajas abiertas. Se actualiza solo cada pocos minutos.
+**Alcance:** pantalla de inicio para `owner` y `admin`: ventas de hoy contra el mismo día de la semana anterior, ticket promedio, variantes por agotarse, cartera vencida, documentos DIAN con problemas y cajas abiertas. Se actualiza solo cada pocos minutos.
 **Pendientes que entran a esta tarea:** P11 (`docs/plan/pendientes.md`).
 **Tests primero:** cada indicador coincide con su reporte detallado en T42.
 **Después:** `/impeccable critique`: lo más importante debe entenderse en 5 segundos.
 
 ### [ ] T44 · Lista de primeros pasos
 **Depende de:** T29, T36, T41.
-**Alcance:** guía dentro de la app para un tenant nuevo, calculada a partir del **estado real** y no de clics: 1) datos del negocio, 2) resolución de facturación DIAN, 3) importar productos, 4) cargar inventario inicial, 5) invitar al equipo, 6) abrir caja y hacer la primera venta. Muestra el progreso y se puede ocultar, pero vuelve a aparecer si falta algo crítico (por ejemplo, la resolución DIAN vencida). Estados vacíos de cada pantalla con la acción siguiente ("Aún no tienes productos: impórtalos desde Excel"). Evento de analítica por paso completado (T40).
+**Alcance:** guía dentro de la app para un tenant nuevo, calculada a partir del **estado real** y no de clics: 1) datos del negocio, 2) resolución de facturación DIAN, 3) importar productos, 4) cargar inventario inicial, 5) invitar al equipo, 6) abrir caja y hacer la primera venta. Los pasos se toman de la **plantilla del tipo de negocio** (por ejemplo, una droguería con `lots_expiry` tiene el paso "registra lotes y vencimientos"). Muestra el progreso y se puede ocultar, pero vuelve a aparecer si falta algo crítico (por ejemplo, la resolución DIAN vencida). Estados vacíos de cada pantalla con la acción siguiente ("Aún no tienes productos: impórtalos desde Excel"). Evento de analítica por paso completado (T40).
 **Pendientes que entran a esta tarea:** P12 (`docs/plan/pendientes.md`).
-**Tests primero:** un paso se marca como completo solo cuando el dato existe (por ejemplo, ≥ 1 venta confirmada); la lista desaparece al completar todo y no se muestra a roles sin permiso para resolver los pasos.
+**Tests primero:** un paso se marca como completo solo cuando el dato existe (por ejemplo, ≥ 1 venta confirmada); la lista desaparece al completar todo y no se muestra a roles sin permiso para resolver los pasos; dos plantillas distintas producen listas de pasos distintas.

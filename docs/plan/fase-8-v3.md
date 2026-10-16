@@ -12,7 +12,7 @@ Catálogo público por tenant sincronizado con inventario y precios (subdominio 
 
 ### Épica V3-3 · Inteligencia artificial
 - **Predicción de reabastecimiento** según el histórico y la temporada.
-- **Asistente para el dueño** con preguntas en lenguaje natural ("¿cuánto vendí de cemento este mes comparado con el anterior?"), expuesto como **servidor MCP** sobre la API de reportes, con permisos del usuario y aislamiento por tenant.
+- **Asistente para el dueño** con preguntas en lenguaje natural ("¿cuánto vendí de [producto] este mes comparado con el anterior?"), expuesto como **servidor MCP** sobre la API de reportes, con permisos del usuario y aislamiento por tenant.
 - **Lectura automática de facturas de proveedor** (foto o PDF) para precargar compras en T33.
 
 ### Épica V3-4 · Exportación contable
@@ -22,7 +22,7 @@ Exportación de ventas, compras, cartera y cierres en los formatos de importaci�
 Empleados, liquidación mensual o quincenal con prestaciones, y emisión del documento de nómina electrónica a través del proveedor tecnológico.
 
 ### Épica V3-6 · Segundo vertical: talleres
-Reutiliza el núcleo (≈70%). Nuevo módulo: órdenes de trabajo (diagnóstico, repuestos + mano de obra, estado), vehículos e historial por placa, técnicos y comisiones, y agenda (se conecta con el producto de agenda por WhatsApp). Requiere el mecanismo de **verticales por tenant**: activar módulos y menús según el tipo de negocio.
+Reutiliza el núcleo (≈70%). Nuevo módulo: órdenes de trabajo (diagnóstico, repuestos + mano de obra, estado), vehículos e historial por placa, técnicos y comisiones, y agenda (se conecta con el producto de agenda por WhatsApp). Requiere el mecanismo de **verticales por tenant**: activar módulos y menús según el tipo de negocio. Se implementa como la plantilla `taller` más el módulo `work_orders`, sobre el mecanismo de T24e.
 
 ### Épica V3-7 · Multi-país
 Abstraer la facturación electrónica, los impuestos y los documentos de identidad por país (México, Perú, Ecuador), con moneda y zona horaria por tenant.

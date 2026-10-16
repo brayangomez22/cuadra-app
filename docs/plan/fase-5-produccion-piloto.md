@@ -1,6 +1,6 @@
 # Fase 5 — Producción y piloto
 
-Todo lo necesario para que una ferretería real use Cuadra sin riesgo: infraestructura, despliegue, monitoreo, backups, datos y legal. **Al terminar esta fase arranca el piloto.**
+Todo lo necesario para que un negocio real use Cuadra sin riesgo: infraestructura, despliegue, monitoreo, backups, datos y legal. **Al terminar esta fase arranca el piloto.**
 
 > **Requisito adicional para el piloto:** `docs/negocio.md` con sus preguntas respondidas (precio, costos, métricas del piloto y soporte).
 
@@ -43,7 +43,7 @@ Estado remoto de Terraform en un Storage Account con bloqueo. Paso en el CI de `
 **Alcance:** documentos y su registro de aceptación, no asesoría legal. **Revisión de un abogado antes del piloto.**
 - Política de tratamiento de datos personales (Ley 1581 de 2012) y aviso de privacidad.
 - Términos y condiciones del servicio.
-- Acuerdo de encargo de tratamiento con cada ferretería: ella es la responsable de los datos de sus clientes y Cuadra es el encargado.
+- Acuerdo de encargo de tratamiento con cada negocio cliente: ella es la responsable de los datos de sus clientes y Cuadra es el encargado.
 - Páginas públicas para cada documento; aceptación obligatoria en el registro, guardando versión, fecha, usuario e IP; nueva aceptación cuando cambia la versión.
 - Procedimiento para atender consultas y reclamos de titulares (conocer, actualizar, suprimir), en `docs/legal/`.
 

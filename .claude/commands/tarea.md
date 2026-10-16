@@ -17,6 +17,7 @@ Sigue este flujo sin saltarte pasos:
    - Si la tarea no pertenece a la fase activa, o si tiene un **Depende de** sin completar, avísame antes de seguir.
    - Lee `docs/plan/pendientes.md`: los pendientes con **Destino** $ARGUMENTS son parte del alcance de esta tarea.
    - Lee `docs/decisiones.md` y el código existente de los módulos que toca. No leas ni modifiques nada fuera de ese alcance.
+   - Si el texto de la tarea contradice la sección "Core genérico y módulos por tipo de negocio" de `CLAUDE.md` (por ejemplo, usa términos de un nicho, enums fijos o "producto" donde corresponde "variante"), **sigue `CLAUDE.md`** y avísame de la contradicción en el plan.
 2. **Plan:** preséntame un plan corto con:
    - los archivos que vas a crear o modificar,
    - los cambios al contrato OpenAPI, si hay endpoints,
