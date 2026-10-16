@@ -113,4 +113,53 @@ func TestLogging(t *testing.T) {
 		require.Equal(t, "req-42", entry["request_id"])
 		require.NotContains(t, buf.String(), "no-se-loguea")
 	})
+	t.Run("la línea http request incluye los atributos que agrega un middleware interno", func(t *testing.T) {
+		var buf bytes.Buffer
+		log := slog.New(slog.NewJSONHandler(&buf, nil))
+		inner := func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				httpx.AddRequestLogAttrs(r.Context(), slog.String("tenant_id", "t-1"), slog.String("user_id", "u-1"))
+				next.ServeHTTP(w, r)
+			})
+		}
+		handler := httpx.Logging(log)(inner(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		})))
+
+		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/v1/algo", nil))
+
+		var entry map[string]any
+		require.NoError(t, json.Unmarshal(buf.Bytes(), &entry))
+		require.Equal(t, "http request", entry["msg"])
+		require.Equal(t, "t-1", entry["tenant_id"])
+		require.Equal(t, "u-1", entry["user_id"])
+	})
+
+	t.Run("sin atributos agregados la línea http request no cambia", func(t *testing.T) {
+		var buf bytes.Buffer
+		log := slog.New(slog.NewJSONHandler(&buf, nil))
+		handler := httpx.Logging(log)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		}))
+
+		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/v1/algo", nil))
+
+		var entry map[string]any
+		require.NoError(t, json.Unmarshal(buf.Bytes(), &entry))
+		require.ElementsMatch(t, []string{"time", "level", "msg", "method", "path", "status", "duration_ms"}, keys(entry))
+	})
+
+	t.Run("agregar atributos fuera de logging no hace nada", func(t *testing.T) {
+		require.NotPanics(t, func() {
+			httpx.AddRequestLogAttrs(t.Context(), slog.String("tenant_id", "t-1"))
+		})
+	})
+}
+
+func keys(m map[string]any) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
 }

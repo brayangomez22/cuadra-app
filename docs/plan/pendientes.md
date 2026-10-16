@@ -14,8 +14,8 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 
 | | ID | Pendiente | Origen | Destino |
 |---|---|---|---|---|
-| [ ] | P01 | Paneles de Grafana para las métricas de la caja (`cuadra.sales.cash_*`), incluida una alerta si se repiten los faltantes | T23 | T24 |
-| [ ] | P02 | Verificar que la línea de log `http request` lleve `tenant_id` (y `user_id`) desde el contexto; si no, agregarlo | PR #8 (T07) | T24 |
+| [x] | P01 | Paneles de Grafana para las métricas de la caja (`cuadra.sales.cash_*`), incluida una alerta si se repiten los faltantes | T23 | T24 |
+| [x] | P02 | Verificar que la línea de log `http request` lleve `tenant_id` (y `user_id`) desde el contexto; si no, agregarlo | PR #8 (T07) | T24 |
 | [ ] | P03 | Modelar la diferencia entre IVA **exento** y **excluido** que exige la DIAN. La decisión 62 lo mandaba a "T39" con la numeración anterior; hoy T39 es otra cosa | Decisión 62 (T08) | T36 |
 | [ ] | P04 | Rate limit en el registro (`POST /auth/signup`) | PR #8 (T07) | T38 |
 | [ ] | P05 | Confiar en `X-Forwarded-For` solo detrás del ingress de Azure (IP real para el rate limit) | PR #8 (T07) | T38 |
@@ -28,6 +28,8 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P12 | Editar los datos del negocio (dirección, teléfono) que la tirilla y el reporte de cierre necesitan; T44 solo verifica que existan | Decisión de T22 | T44 |
 | [ ] | P13 | Verificar en el primer despliegue la subida de source maps a Sentry y el reporte de un error del frontend en un navegador real | PR #25 (T19) | T46 |
 | [ ] | P14 | Idempotencia de `POST /sales` | PR #28 (T21) | V2-5 |
+| [ ] | P21 | Alertas por tasa de consumo del presupuesto de error (burn rate de varias ventanas) para los dos SLOs de `docs/slo.md`, calibradas con tráfico real | T24 | T47 |
+| [ ] | P22 | Paneles para las métricas de trabajos en segundo plano (`cuadra.jobs.*`: encolados, fallidos, descartados, latencia de la cola) y una alerta si se descartan trabajos | T24 | T47 |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 

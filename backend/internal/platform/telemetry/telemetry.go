@@ -67,7 +67,7 @@ func Setup(ctx context.Context, res Resource, getenv func(string) string) (Shutd
 	if err != nil {
 		return fail(fmt.Errorf("metric exporter: %w", err))
 	}
-	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExp)), sdkmetric.WithResource(r))
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExp)), sdkmetric.WithResource(r), sdkmetric.WithView(views()...))
 	shutdowns = append(shutdowns, mp.Shutdown)
 
 	logExp, err := otlploghttp.New(ctx)
@@ -83,6 +83,21 @@ func Setup(ctx context.Context, res Resource, getenv func(string) string) (Shutd
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 
 	return shutdown, nil
+}
+
+// httpDurationBounds are otelhttp's boundaries plus 0.3 s, the threshold of
+// the POS latency SLO (docs/slo.md): a ratio of requests under a threshold
+// can only be computed at a bucket boundary. 0.5 s is the p95 alert's.
+var httpDurationBounds = []float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.3, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}
+
+// views adjusts the aggregation of instruments the libraries create.
+func views() []sdkmetric.View {
+	return []sdkmetric.View{
+		sdkmetric.NewView(
+			sdkmetric.Instrument{Name: "http.server.request.duration"},
+			sdkmetric.Stream{Aggregation: sdkmetric.AggregationExplicitBucketHistogram{Boundaries: httpDurationBounds}},
+		),
+	}
 }
 
 // newResource describes the service. OTEL_SERVICE_NAME and
