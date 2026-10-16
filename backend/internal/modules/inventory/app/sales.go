@@ -13,10 +13,9 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/domain"
 )
 
-// SaleStockLine is the quantity of a product a sale takes; a sale has one
-// line per product.
+// SaleStockLine is the quantity of a variant a sale takes.
 type SaleStockLine struct {
-	ProductID uuid.UUID
+	VariantID uuid.UUID
 	Quantity  decimal.Decimal
 }
 
@@ -27,23 +26,23 @@ type SaleStockInput struct {
 	Lines      []SaleStockLine
 }
 
-// ProductStockError is the error of one product's exit; it unwraps to the
-// domain error (ErrInsufficientStock, ErrProductNotFound...), so the sales
-// module can tell the cashier which product failed.
-type ProductStockError struct {
-	ProductID uuid.UUID
+// VariantStockError is the error of one variant's exit; it unwraps to the
+// domain error (ErrInsufficientStock, ErrVariantNotFound...), so the sales
+// module can tell the cashier which variant failed.
+type VariantStockError struct {
+	VariantID uuid.UUID
 	Err       error
 }
 
-func (e *ProductStockError) Error() string {
-	return fmt.Sprintf("product %s: %v", e.ProductID, e.Err)
+func (e *VariantStockError) Error() string {
+	return fmt.Sprintf("variant %s: %v", e.VariantID, e.Err)
 }
 
-func (e *ProductStockError) Unwrap() error { return e.Err }
+func (e *VariantStockError) Unwrap() error { return e.Err }
 
-// IssueSaleStock registers the exits of a sale: one sale_out per product at
+// IssueSaleStock registers the exits of a sale: one sale_out per line at
 // the location, referencing the sale and following the tenant's stock
-// policy. The exits go in product order, so two sales of the same products
+// policy. The exits go in variant order, so two sales of the same variants
 // lock their levels in the same order and cannot deadlock. Called within the
 // sale's transaction (through ctx), a failed exit rolls back the whole sale.
 func (s *Service) IssueSaleStock(ctx context.Context, a Actor, in SaleStockInput) (_ []*domain.StockMovement, err error) {
@@ -58,14 +57,14 @@ func (s *Service) IssueSaleStock(ctx context.Context, a Actor, in SaleStockInput
 		return nil, err
 	}
 	lines := slices.Clone(in.Lines)
-	slices.SortFunc(lines, func(x, y SaleStockLine) int { return bytes.Compare(x.ProductID[:], y.ProductID[:]) })
+	slices.SortFunc(lines, func(x, y SaleStockLine) int { return bytes.Compare(x.VariantID[:], y.VariantID[:]) })
 
 	info := s.info(a)
 	info.Reference = &domain.DocumentRef{Kind: domain.DocumentSale, ID: in.SaleID}
 	movements := make([]*domain.StockMovement, 0, len(lines))
 	for _, l := range lines {
 		var m *domain.StockMovement
-		err := s.Stock.Apply(ctx, a.TenantID, l.ProductID, []uuid.UUID{in.LocationID},
+		err := s.Stock.Apply(ctx, a.TenantID, l.VariantID, []uuid.UUID{in.LocationID},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				var err error
 				m, err = levels[0].Issue(l.Quantity, policy, info)
@@ -73,7 +72,7 @@ func (s *Service) IssueSaleStock(ctx context.Context, a Actor, in SaleStockInput
 			})
 		if err != nil {
 			s.countInsufficient(ctx, err, domain.MovementSaleOut)
-			return nil, &ProductStockError{ProductID: l.ProductID, Err: err}
+			return nil, &VariantStockError{VariantID: l.VariantID, Err: err}
 		}
 		movements = append(movements, m)
 	}
@@ -106,8 +105,8 @@ func (s *Service) ReverseSaleStock(ctx context.Context, a Actor, saleID uuid.UUI
 	}
 	// Same lock order as IssueSaleStock.
 	slices.SortFunc(exits, func(x, y *domain.StockMovement) int {
-		px, py := x.ProductID(), y.ProductID()
-		if c := bytes.Compare(px[:], py[:]); c != 0 {
+		vx, vy := x.VariantID(), y.VariantID()
+		if c := bytes.Compare(vx[:], vy[:]); c != 0 {
 			return c
 		}
 		lx, ly := x.LocationID(), y.LocationID()
@@ -119,7 +118,7 @@ func (s *Service) ReverseSaleStock(ctx context.Context, a Actor, saleID uuid.UUI
 	movements := make([]*domain.StockMovement, 0, len(exits))
 	for _, exit := range exits {
 		var m *domain.StockMovement
-		err := s.Stock.Apply(ctx, a.TenantID, exit.ProductID(), []uuid.UUID{exit.LocationID()},
+		err := s.Stock.Apply(ctx, a.TenantID, exit.VariantID(), []uuid.UUID{exit.LocationID()},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				var err error
 				m, err = levels[0].ReturnSale(exit.Quantity().Neg(), exit.UnitCost(), info)

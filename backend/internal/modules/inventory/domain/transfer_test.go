@@ -9,13 +9,13 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/domain"
 )
 
-// siblingLevel returns a level of the same tenant and product as base, at
+// siblingLevel returns a level of the same tenant and variant as base, at
 // another location.
 func siblingLevel(t *testing.T, base *domain.StockLevel, qty, avgCost string) *domain.StockLevel {
 	t.Helper()
 	level, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
 		TenantID:    base.TenantID(),
-		ProductID:   base.ProductID(),
+		VariantID:   base.VariantID(),
 		LocationID:  newID(),
 		Quantity:    dec(qty),
 		AverageCost: dec(avgCost),
@@ -99,20 +99,20 @@ func TestTransfer(t *testing.T) {
 		requireDec(t, "10", from.Quantity())
 	})
 
-	t.Run("rechaza traslado entre productos o tenants distintos", func(t *testing.T) {
+	t.Run("rechaza traslado entre variantes o tenants distintos", func(t *testing.T) {
 		from := levelWith(t, "10", "1000")
-		otherProduct, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
-			TenantID: from.TenantID(), ProductID: newID(), LocationID: newID(),
+		otherVariant, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
+			TenantID: from.TenantID(), VariantID: newID(), LocationID: newID(),
 			Quantity: dec("0"), AverageCost: dec("0"),
 		})
 		require.NoError(t, err)
 		otherTenant, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
-			TenantID: newID(), ProductID: from.ProductID(), LocationID: newID(),
+			TenantID: newID(), VariantID: from.VariantID(), LocationID: newID(),
 			Quantity: dec("0"), AverageCost: dec("0"),
 		})
 		require.NoError(t, err)
 
-		for _, to := range []*domain.StockLevel{otherProduct, otherTenant} {
+		for _, to := range []*domain.StockLevel{otherVariant, otherTenant} {
 			_, _, err := domain.Transfer(from, to, dec("1"), strict, newID(), testNow)
 			require.ErrorIs(t, err, domain.ErrTransferMismatch)
 		}

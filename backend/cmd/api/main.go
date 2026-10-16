@@ -146,6 +146,7 @@ func run() error {
 	inventoryModule, err := inventory.New(inventory.Config{
 		DB:             database,
 		Authorize:      identity.Authorize,
+		Variants:       inventoryCatalog{catalogModule},
 		Logger:         log,
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),
@@ -158,7 +159,7 @@ func run() error {
 		DB:             database,
 		Authorize:      identity.Authorize,
 		Products:       salesCatalog{catalogModule},
-		Stock:          salesStock{inventoryModule},
+		Stock:          salesStock{inventory: inventoryModule, catalog: catalogModule},
 		Logger:         log,
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),

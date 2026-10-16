@@ -366,10 +366,33 @@ export interface paths {
         };
         /**
          * Existencias de una sede
-         * @description Los productos que han tenido movimientos en la sede, con su cantidad y costo promedio. Un producto sin
+         * @description Las variantes que han tenido movimientos en la sede, con su cantidad y costo promedio. Una variante sin
          *     movimientos no aparece (su existencia es cero).
          */
         get: operations["listStock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/variants/{variantId}/kardex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                variantId: components["parameters"]["VariantId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Kardex de una variante
+         * @description Los movimientos de la variante, del más reciente al más antiguo. `balance_after` es el saldo en la sede
+         *     del movimiento justo después de él. Una variante sin movimientos, o de otra empresa, tiene el kardex vacío.
+         */
+        get: operations["getVariantKardex"];
         put?: never;
         post?: never;
         delete?: never;
@@ -388,9 +411,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Kardex de un producto
-         * @description Los movimientos del producto, del más reciente al más antiguo. `balance_after` es el saldo en la sede
-         *     del movimiento justo después de él.
+         * Kardex de la variante por defecto de un producto
+         * @deprecated
+         * @description El kardex de la variante por defecto del producto. Use `GET /api/v1/variants/{variantId}/kardex`. Un
+         *     producto que no existe tiene el kardex vacío.
          */
         get: operations["getKardex"];
         put?: never;
@@ -991,11 +1015,17 @@ export interface components {
             items: components["schemas"]["Location"][];
         };
         /**
-         * @description La existencia de un producto en una sede. `quantity` es negativa solo si la empresa permite vender sin
+         * @description La existencia de una variante en una sede. `quantity` es negativa solo si la empresa permite vender sin
          *     stock. `average_cost` (costo promedio ponderado, sin IVA) solo se envía a quien tiene `catalog:write`.
          */
         StockLevel: {
             /** Format: uuid */
+            variant_id: string;
+            /**
+             * Format: uuid
+             * @deprecated
+             * @description El producto de la variante. Use `variant_id`.
+             */
             product_id: string;
             /** Format: uuid */
             location_id: string;
@@ -1021,6 +1051,12 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
+            variant_id: string;
+            /**
+             * Format: uuid
+             * @deprecated
+             * @description El producto de la variante. Use `variant_id`.
+             */
             product_id: string;
             /** Format: uuid */
             location_id: string;
@@ -1046,26 +1082,47 @@ export interface components {
             /** @description Cantidad total de movimientos que cumplen el filtro, sin paginar. */
             total: number;
         };
+        /** @description Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`). */
         ReceiptInput: {
             /** Format: uuid */
-            product_id: string;
+            variant_id?: string;
+            /**
+             * Format: uuid
+             * @deprecated
+             * @description Se resuelve a la variante por defecto del producto. Use `variant_id`.
+             */
+            product_id?: string;
             /** Format: uuid */
             location_id: string;
             quantity: components["schemas"]["Quantity"];
             unit_cost: components["schemas"]["Money"];
         };
+        /** @description Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`). */
         AdjustmentInput: {
             /** Format: uuid */
-            product_id: string;
+            variant_id?: string;
+            /**
+             * Format: uuid
+             * @deprecated
+             * @description Se resuelve a la variante por defecto del producto. Use `variant_id`.
+             */
+            product_id?: string;
             /** Format: uuid */
             location_id: string;
             quantity: components["schemas"]["SignedQuantity"];
-            /** @example Bulto roto en la bodega */
+            /** @example Unidad dañada en la bodega */
             reason: string;
         };
+        /** @description Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`). */
         TransferInput: {
             /** Format: uuid */
-            product_id: string;
+            variant_id?: string;
+            /**
+             * Format: uuid
+             * @deprecated
+             * @description Se resuelve a la variante por defecto del producto. Use `variant_id`.
+             */
+            product_id?: string;
             /** Format: uuid */
             from_location_id: string;
             /** Format: uuid */
@@ -2195,7 +2252,13 @@ export interface operations {
     listStock: {
         parameters: {
             query?: {
-                /** @description Solo la existencia de este producto. */
+                /** @description Solo la existencia de esta variante. */
+                variant_id?: string;
+                /**
+                 * @deprecated
+                 * @description Solo la existencia de la variante por defecto de este producto. Use `variant_id`; no se envían los dos
+                 *     (`variant_required`).
+                 */
                 product_id?: string;
                 /** @description Cantidad máxima de resultados. */
                 limit?: components["parameters"]["Limit"];
@@ -2223,6 +2286,48 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description Se enviaron `variant_id` y `product_id` a la vez (`variant_required`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getVariantKardex: {
+        parameters: {
+            query?: {
+                /** @description Solo los movimientos de esta sede. */
+                location_id?: string;
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path: {
+                variantId: components["parameters"]["VariantId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página del kardex. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockMovementPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -2285,8 +2390,8 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /**
-             * @description Algún dato no cumple las reglas (`invalid_quantity`, `invalid_unit_cost`, `product_not_found`,
-             *     `location_not_found`, `location_inactive`).
+             * @description Algún dato no cumple las reglas (`invalid_quantity`, `invalid_unit_cost`, `variant_required`,
+             *     `variant_not_found`, `product_not_found`, `location_not_found`, `location_inactive`).
              */
             422: {
                 headers: {
@@ -2335,7 +2440,8 @@ export interface operations {
             };
             /**
              * @description Algún dato no cumple las reglas (`invalid_quantity`, `adjustment_reason_required`,
-             *     `adjustment_reason_too_long`, `product_not_found`, `location_not_found`, `location_inactive`).
+             *     `adjustment_reason_too_long`, `variant_required`, `variant_not_found`, `product_not_found`,
+             *     `location_not_found`, `location_inactive`).
              */
             422: {
                 headers: {
@@ -2383,8 +2489,8 @@ export interface operations {
                 };
             };
             /**
-             * @description Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `product_not_found`,
-             *     `location_not_found`, `location_inactive`).
+             * @description Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `variant_required`,
+             *     `variant_not_found`, `product_not_found`, `location_not_found`, `location_inactive`).
              */
             422: {
                 headers: {

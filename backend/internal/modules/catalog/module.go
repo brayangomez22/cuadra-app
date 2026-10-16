@@ -34,6 +34,7 @@ type Config struct {
 // Module is the wired catalog module.
 type Module struct {
 	service   *app.Service
+	products  *postgres.ProductRepository
 	authorize auth.Authorizer
 	log       *slog.Logger
 }
@@ -43,8 +44,9 @@ func New(cfg Config) (*Module, error) {
 	if cfg.DB == nil || cfg.Authorize == nil || cfg.Logger == nil {
 		return nil, errors.New("catalog: missing module dependency")
 	}
+	products := postgres.NewProductRepository(cfg.DB)
 	svc, err := app.NewService(app.Deps{
-		Products:       postgres.NewProductRepository(cfg.DB),
+		Products:       products,
 		Categories:     postgres.NewCategoryRepository(cfg.DB),
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
@@ -53,7 +55,7 @@ func New(cfg Config) (*Module, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Module{service: svc, authorize: cfg.Authorize, log: cfg.Logger}, nil
+	return &Module{service: svc, products: products, authorize: cfg.Authorize, log: cfg.Logger}, nil
 }
 
 // RegisterRoutes mounts the module's operations (tag "catalog") on mux.
@@ -81,4 +83,11 @@ func (m *Module) ProductsByID(ctx context.Context, tenantID uuid.UUID, ids []uui
 		return nil, err
 	}
 	return page.Items, nil
+}
+
+// VariantProducts returns the product of each of variantIDs that exists in
+// tenantID; the others are left out. It is for other modules that only know
+// the variant (the inventory fills its deprecated product_id with it).
+func (m *Module) VariantProducts(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	return m.products.VariantProducts(ctx, tenantID, variantIDs)
 }

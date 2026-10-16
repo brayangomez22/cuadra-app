@@ -19,12 +19,12 @@ func requireDecimal(t *testing.T, want string, got decimal.Decimal) {
 	require.Truef(t, dec(want).Equal(got), "want %s, got %s", want, got)
 }
 
-func saleLine(productID uuid.UUID, qty string) app.SaleStockLine {
-	return app.SaleStockLine{ProductID: productID, Quantity: dec(qty)}
+func saleLine(variantID uuid.UUID, qty string) app.SaleStockLine {
+	return app.SaleStockLine{VariantID: variantID, Quantity: dec(qty)}
 }
 
 func TestIssueSaleStock(t *testing.T) {
-	t.Run("registra una salida por producto ordenadas por producto", func(t *testing.T) {
+	t.Run("registra una salida por variante ordenadas por variante", func(t *testing.T) {
 		e := newEnv(t)
 		loc := e.createLocation(t, "Sede")
 		p1, p2 := newID(), newID()
@@ -32,7 +32,7 @@ func TestIssueSaleStock(t *testing.T) {
 		e.receive(t, p2, loc.ID(), "5", "200")
 		saleID := newID()
 
-		// p2 primero en la venta: las salidas igual van en orden de producto.
+		// p2 primero en la venta: las salidas igual van en orden de variante.
 		movements, err := e.svc.IssueSaleStock(t.Context(), e.actor, app.SaleStockInput{
 			LocationID: loc.ID(), SaleID: saleID,
 			Lines: []app.SaleStockLine{saleLine(p2, "1.5"), saleLine(p1, "3")},
@@ -40,7 +40,7 @@ func TestIssueSaleStock(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, movements, 2)
-		first, second := movements[0].ProductID(), movements[1].ProductID()
+		first, second := movements[0].VariantID(), movements[1].VariantID()
 		require.Negative(t, bytes.Compare(first[:], second[:]))
 		for _, m := range movements {
 			require.Equal(t, domain.MovementSaleOut, m.Type())
@@ -82,7 +82,7 @@ func TestIssueSaleStock(t *testing.T) {
 		require.ErrorIs(t, err, domain.ErrLocationNotFound)
 	})
 
-	t.Run("si falta stock de un producto, el error dice cuál", func(t *testing.T) {
+	t.Run("si falta stock de una variante, el error dice cuál", func(t *testing.T) {
 		e := newEnv(t)
 		loc := e.createLocation(t, "Sede")
 		p := newID()
@@ -92,9 +92,9 @@ func TestIssueSaleStock(t *testing.T) {
 			LocationID: loc.ID(), SaleID: newID(), Lines: []app.SaleStockLine{saleLine(p, "2.5")},
 		})
 		require.ErrorIs(t, err, domain.ErrInsufficientStock)
-		var pe *app.ProductStockError
+		var pe *app.VariantStockError
 		require.True(t, errors.As(err, &pe))
-		require.Equal(t, p, pe.ProductID)
+		require.Equal(t, p, pe.VariantID)
 		require.Equal(t, int64(1), e.counter(t, "cuadra.inventory.insufficient_stock", "type", "sale_out"))
 	})
 
@@ -143,13 +143,13 @@ func TestReverseSaleStock(t *testing.T) {
 		requireDecimal(t, "15", e.level(p1, loc.ID()).Quantity) // 10 − 3 − 1 + 6 + 3
 		requireDecimal(t, "5", e.level(p2, loc.ID()).Quantity)
 		// La devolución entra al costo con que salió (1000), no al promedio vigente.
-		byProduct := map[uuid.UUID]*domain.StockMovement{}
+		byVariant := map[uuid.UUID]*domain.StockMovement{}
 		for _, m := range movements {
-			byProduct[m.ProductID()] = m
+			byVariant[m.VariantID()] = m
 		}
-		requireDecimal(t, "3", byProduct[p1].Quantity())
-		requireDecimal(t, "1000", byProduct[p1].UnitCost())
-		requireDecimal(t, "1.25", byProduct[p2].Quantity())
+		requireDecimal(t, "3", byVariant[p1].Quantity())
+		requireDecimal(t, "1000", byVariant[p1].UnitCost())
+		requireDecimal(t, "1.25", byVariant[p2].Quantity())
 
 		require.Equal(t, int64(2), e.counter(t, "cuadra.inventory.movements", "type", "sale_void"))
 		_, attrs := e.span(t, "inventory.ReverseSaleStock")

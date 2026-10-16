@@ -4,6 +4,7 @@ package postgres_test
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -71,17 +72,42 @@ func (f fixture) createTenant(t *testing.T) uuid.UUID {
 	return id
 }
 
-// createProduct stores a product row directly, for the same reason.
-func (f fixture) createProduct(t *testing.T, tenantID uuid.UUID) uuid.UUID {
+// createProduct stores a product row and its variants directly, for the same
+// reason: the default variant and extra more. Like a product created after
+// variants existed, no variant has the product's id. It returns the
+// variant ids, the default one first.
+func (f fixture) createProduct(t *testing.T, tenantID uuid.UUID, extra int) []uuid.UUID {
 	t.Helper()
-	id := newID()
+	productID := newID()
 	f.exec(t, tenantID, `INSERT INTO products (id, tenant_id, name, description, base_unit, tax_rate, active, created_at)
-		VALUES ($1, $2, 'Cemento gris 50kg', '', 'bulto', 0.19, true, $3)`,
-		id, tenantID, now)
-	f.exec(t, tenantID, `INSERT INTO product_variants (id, tenant_id, product_id, sku, cost, price, is_default, active, created_at)
-		VALUES ($1, $2, $1, $3, 30000, 35000, true, true, $4)`,
-		id, tenantID, "SKU-"+strings.ToUpper(id.String()), now)
-	return id
+		VALUES ($1, $2, 'Producto', '', 'und', 0.19, true, $3)`,
+		productID, tenantID, now)
+	ids := make([]uuid.UUID, 0, extra+1)
+	for i := range extra + 1 {
+		id := newID()
+		f.exec(t, tenantID, `INSERT INTO product_variants (id, tenant_id, product_id, sku, cost, price, axis_values, is_default, active, created_at)
+			VALUES ($1, $2, $3, $4, 30000, 35000, jsonb_build_object('opcion', $5::text), $6, true, $7)`,
+			id, tenantID, productID, "SKU-"+strings.ToUpper(id.String()), strconv.Itoa(i), i == 0, now)
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// createVariant stores a simple product and returns its default variant.
+func (f fixture) createVariant(t *testing.T, tenantID uuid.UUID) uuid.UUID {
+	t.Helper()
+	return f.createProduct(t, tenantID, 0)[0]
+}
+
+// levelRows counts the stored levels of a variant at a location, lot or not.
+func (f fixture) levelRows(t *testing.T, tenantID, variantID, locationID uuid.UUID) int {
+	t.Helper()
+	var n int
+	require.NoError(t, f.db.WithTenantTx(t.Context(), tenantID, func(tx pgx.Tx) error {
+		return tx.QueryRow(t.Context(), "SELECT count(*) FROM stock_levels WHERE variant_id = $1 AND location_id = $2",
+			variantID, locationID).Scan(&n)
+	}))
+	return n
 }
 
 func (f fixture) createLocation(t *testing.T, tenantID uuid.UUID, name string) *domain.Location {
@@ -97,9 +123,9 @@ func info(userID uuid.UUID) domain.MovementInfo {
 }
 
 // receive registers an entry through Apply, as the use case does.
-func (f fixture) receive(t *testing.T, tenantID, productID, locationID uuid.UUID, qty, cost string) {
+func (f fixture) receive(t *testing.T, tenantID, variantID, locationID uuid.UUID, qty, cost string) {
 	t.Helper()
-	err := f.stock.Apply(t.Context(), tenantID, productID, []uuid.UUID{locationID},
+	err := f.stock.Apply(t.Context(), tenantID, variantID, []uuid.UUID{locationID},
 		func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 			m, err := levels[0].Receive(dec(qty), dec(cost), info(newID()))
 			return []*domain.StockMovement{m}, err
@@ -107,10 +133,10 @@ func (f fixture) receive(t *testing.T, tenantID, productID, locationID uuid.UUID
 	require.NoError(t, err)
 }
 
-// level returns the stored level of a product at a location; zero if none.
-func (f fixture) level(t *testing.T, tenantID, productID, locationID uuid.UUID) decimal.Decimal {
+// level returns the stored level of a variant at a location; zero if none.
+func (f fixture) level(t *testing.T, tenantID, variantID, locationID uuid.UUID) decimal.Decimal {
 	t.Helper()
-	page, err := f.stock.ListLevels(t.Context(), tenantID, domain.StockFilter{LocationID: locationID, ProductID: &productID, Limit: 10})
+	page, err := f.stock.ListLevels(t.Context(), tenantID, domain.StockFilter{LocationID: locationID, VariantID: &variantID, Limit: 10})
 	require.NoError(t, err)
 	if page.Total == 0 {
 		return decimal.Zero
@@ -176,9 +202,9 @@ func TestStockRepositoryApply(t *testing.T) {
 
 	t.Run("dos salidas simultáneas por el total del stock: solo una pasa", func(t *testing.T) {
 		tenant := f.createTenant(t)
-		product := f.createProduct(t, tenant)
+		variant := f.createVariant(t, tenant)
 		loc := f.createLocation(t, tenant, "Bodega")
-		f.receive(t, tenant, product, loc.ID(), "10", "1000")
+		f.receive(t, tenant, variant, loc.ID(), "10", "1000")
 
 		const workers = 8
 		start := make(chan struct{})
@@ -187,7 +213,7 @@ func TestStockRepositoryApply(t *testing.T) {
 		for i := range workers {
 			wg.Go(func() {
 				<-start
-				errs[i] = f.stock.Apply(t.Context(), tenant, product, []uuid.UUID{loc.ID()},
+				errs[i] = f.stock.Apply(t.Context(), tenant, variant, []uuid.UUID{loc.ID()},
 					func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 						m, err := levels[0].Issue(dec("10"), domain.StockPolicy{}, info(newID()))
 						return []*domain.StockMovement{m}, err
@@ -210,22 +236,22 @@ func TestStockRepositoryApply(t *testing.T) {
 		}
 		require.Equal(t, 1, ok)
 		require.Equal(t, workers-1, insufficient)
-		require.True(t, f.level(t, tenant, product, loc.ID()).IsZero())
-		kardex, err := f.stock.Kardex(t.Context(), tenant, domain.KardexFilter{ProductID: product, Limit: 100})
+		require.True(t, f.level(t, tenant, variant, loc.ID()).IsZero())
+		kardex, err := f.stock.Kardex(t.Context(), tenant, domain.KardexFilter{VariantID: variant, Limit: 100})
 		require.NoError(t, err)
 		require.Equal(t, 2, kardex.Total)
 	})
 
 	t.Run("dos traslados opuestos simultáneos no se bloquean entre sí", func(t *testing.T) {
 		tenant := f.createTenant(t)
-		product := f.createProduct(t, tenant)
+		variant := f.createVariant(t, tenant)
 		a := f.createLocation(t, tenant, "Sede A")
 		b := f.createLocation(t, tenant, "Sede B")
-		f.receive(t, tenant, product, a.ID(), "100", "1000")
-		f.receive(t, tenant, product, b.ID(), "100", "1000")
+		f.receive(t, tenant, variant, a.ID(), "100", "1000")
+		f.receive(t, tenant, variant, b.ID(), "100", "1000")
 
 		transfer := func(from, to uuid.UUID) error {
-			return f.stock.Apply(t.Context(), tenant, product, []uuid.UUID{from, to},
+			return f.stock.Apply(t.Context(), tenant, variant, []uuid.UUID{from, to},
 				func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 					out, in, err := domain.Transfer(levels[0], levels[1], dec("1"), domain.StockPolicy{}, newID(), now)
 					return []*domain.StockMovement{out, in}, err
@@ -246,16 +272,16 @@ func TestStockRepositoryApply(t *testing.T) {
 		for err := range errs {
 			require.NoError(t, err)
 		}
-		require.True(t, dec("100").Equal(f.level(t, tenant, product, a.ID())))
-		require.True(t, dec("100").Equal(f.level(t, tenant, product, b.ID())))
+		require.True(t, dec("100").Equal(f.level(t, tenant, variant, a.ID())))
+		require.True(t, dec("100").Equal(f.level(t, tenant, variant, b.ID())))
 	})
 
 	t.Run("una operación fallida no deja niveles ni movimientos", func(t *testing.T) {
 		tenant := f.createTenant(t)
-		product := f.createProduct(t, tenant)
+		variant := f.createVariant(t, tenant)
 		loc := f.createLocation(t, tenant, "Bodega")
 
-		err := f.stock.Apply(t.Context(), tenant, product, []uuid.UUID{loc.ID()},
+		err := f.stock.Apply(t.Context(), tenant, variant, []uuid.UUID{loc.ID()},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				m, err := levels[0].Issue(dec("1"), domain.StockPolicy{}, info(newID()))
 				return []*domain.StockMovement{m}, err
@@ -265,36 +291,36 @@ func TestStockRepositoryApply(t *testing.T) {
 		levels, err := f.stock.ListLevels(t.Context(), tenant, domain.StockFilter{LocationID: loc.ID(), Limit: 10})
 		require.NoError(t, err)
 		require.Zero(t, levels.Total)
-		kardex, err := f.stock.Kardex(t.Context(), tenant, domain.KardexFilter{ProductID: product, Limit: 10})
+		kardex, err := f.stock.Kardex(t.Context(), tenant, domain.KardexFilter{VariantID: variant, Limit: 10})
 		require.NoError(t, err)
 		require.Zero(t, kardex.Total)
 	})
 
-	t.Run("un producto inexistente da ErrProductNotFound", func(t *testing.T) {
+	t.Run("una variante inexistente da ErrVariantNotFound", func(t *testing.T) {
 		tenant := f.createTenant(t)
 		loc := f.createLocation(t, tenant, "Bodega")
 
 		err := f.stock.Apply(t.Context(), tenant, newID(), []uuid.UUID{loc.ID()},
 			func([]*domain.StockLevel) ([]*domain.StockMovement, error) { return nil, nil })
-		require.ErrorIs(t, err, domain.ErrProductNotFound)
+		require.ErrorIs(t, err, domain.ErrVariantNotFound)
 	})
 
 	t.Run("una sede inexistente da ErrLocationNotFound", func(t *testing.T) {
 		tenant := f.createTenant(t)
-		product := f.createProduct(t, tenant)
+		variant := f.createVariant(t, tenant)
 
-		err := f.stock.Apply(t.Context(), tenant, product, []uuid.UUID{newID()},
+		err := f.stock.Apply(t.Context(), tenant, variant, []uuid.UUID{newID()},
 			func([]*domain.StockLevel) ([]*domain.StockMovement, error) { return nil, nil })
 		require.ErrorIs(t, err, domain.ErrLocationNotFound)
 	})
 
 	t.Run("entrega los niveles en el orden de las sedes pedidas", func(t *testing.T) {
 		tenant := f.createTenant(t)
-		product := f.createProduct(t, tenant)
+		variant := f.createVariant(t, tenant)
 		first := f.createLocation(t, tenant, "Primera")
 		second := f.createLocation(t, tenant, "Segunda")
 
-		err := f.stock.Apply(t.Context(), tenant, product, []uuid.UUID{second.ID(), first.ID()},
+		err := f.stock.Apply(t.Context(), tenant, variant, []uuid.UUID{second.ID(), first.ID()},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				require.Equal(t, second.ID(), levels[0].LocationID())
 				require.Equal(t, first.ID(), levels[1].LocationID())
@@ -309,19 +335,19 @@ func TestKardex(t *testing.T) {
 
 	t.Run("el kardex reconstruye el stock actual", func(t *testing.T) {
 		tenant := f.createTenant(t)
-		product := f.createProduct(t, tenant)
+		variant := f.createVariant(t, tenant)
 		bodega := f.createLocation(t, tenant, "Bodega")
 		centro := f.createLocation(t, tenant, "Centro")
 		user := newID()
 
-		f.receive(t, tenant, product, bodega.ID(), "10", "1000")
-		f.receive(t, tenant, product, bodega.ID(), "2.5", "1200")
-		require.NoError(t, f.stock.Apply(t.Context(), tenant, product, []uuid.UUID{bodega.ID()},
+		f.receive(t, tenant, variant, bodega.ID(), "10", "1000")
+		f.receive(t, tenant, variant, bodega.ID(), "2.5", "1200")
+		require.NoError(t, f.stock.Apply(t.Context(), tenant, variant, []uuid.UUID{bodega.ID()},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				m, err := levels[0].Adjust(dec("-1.25"), "Bulto roto", domain.StockPolicy{}, info(user))
 				return []*domain.StockMovement{m}, err
 			}))
-		require.NoError(t, f.stock.Apply(t.Context(), tenant, product, []uuid.UUID{bodega.ID(), centro.ID()},
+		require.NoError(t, f.stock.Apply(t.Context(), tenant, variant, []uuid.UUID{bodega.ID(), centro.ID()},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				out, in, err := domain.Transfer(levels[0], levels[1], dec("3"), domain.StockPolicy{}, user, now)
 				return []*domain.StockMovement{out, in}, err
@@ -329,42 +355,42 @@ func TestKardex(t *testing.T) {
 
 		for _, loc := range []*domain.Location{bodega, centro} {
 			locID := loc.ID()
-			kardex, err := f.stock.Kardex(t.Context(), tenant, domain.KardexFilter{ProductID: product, LocationID: &locID, Limit: 100})
+			kardex, err := f.stock.Kardex(t.Context(), tenant, domain.KardexFilter{VariantID: variant, LocationID: &locID, Limit: 100})
 			require.NoError(t, err)
 			sum := decimal.Zero
 			for _, m := range kardex.Items {
 				require.Equal(t, locID, m.LocationID())
 				sum = sum.Add(m.Quantity())
 			}
-			current := f.level(t, tenant, product, locID)
+			current := f.level(t, tenant, variant, locID)
 			require.True(t, sum.Equal(current), "%s: kardex %s, level %s", loc.Name(), sum, current)
 			require.True(t, kardex.Items[0].BalanceAfter().Equal(current), "the newest movement carries the balance")
 		}
-		require.True(t, dec("8.25").Equal(f.level(t, tenant, product, bodega.ID())))
-		require.True(t, dec("3").Equal(f.level(t, tenant, product, centro.ID())))
+		require.True(t, dec("8.25").Equal(f.level(t, tenant, variant, bodega.ID())))
+		require.True(t, dec("3").Equal(f.level(t, tenant, variant, centro.ID())))
 	})
 
 	t.Run("devuelve los movimientos completos, el más reciente primero y paginados", func(t *testing.T) {
 		tenant := f.createTenant(t)
-		product := f.createProduct(t, tenant)
+		variant := f.createVariant(t, tenant)
 		bodega := f.createLocation(t, tenant, "Bodega")
 		centro := f.createLocation(t, tenant, "Centro")
 		user := newID()
-		f.receive(t, tenant, product, bodega.ID(), "10", "1000")
-		require.NoError(t, f.stock.Apply(t.Context(), tenant, product, []uuid.UUID{bodega.ID()},
+		f.receive(t, tenant, variant, bodega.ID(), "10", "1000")
+		require.NoError(t, f.stock.Apply(t.Context(), tenant, variant, []uuid.UUID{bodega.ID()},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				m, err := levels[0].Adjust(dec("-1"), "Conteo físico", domain.StockPolicy{}, info(user))
 				return []*domain.StockMovement{m}, err
 			}))
 		var transferOut *domain.StockMovement
-		require.NoError(t, f.stock.Apply(t.Context(), tenant, product, []uuid.UUID{bodega.ID(), centro.ID()},
+		require.NoError(t, f.stock.Apply(t.Context(), tenant, variant, []uuid.UUID{bodega.ID(), centro.ID()},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				out, in, err := domain.Transfer(levels[0], levels[1], dec("2"), domain.StockPolicy{}, user, now)
 				transferOut = out
 				return []*domain.StockMovement{out, in}, err
 			}))
 
-		page, err := f.stock.Kardex(t.Context(), tenant, domain.KardexFilter{ProductID: product, Limit: 2, Offset: 1})
+		page, err := f.stock.Kardex(t.Context(), tenant, domain.KardexFilter{VariantID: variant, Limit: 2, Offset: 1})
 		require.NoError(t, err)
 		require.Equal(t, 4, page.Total)
 		require.Len(t, page.Items, 2)
@@ -389,11 +415,11 @@ func TestTenantIsolation(t *testing.T) {
 	f := newFixture(t)
 	tenantA := f.createTenant(t)
 	tenantB := f.createTenant(t)
-	productA := f.createProduct(t, tenantA)
-	productB := f.createProduct(t, tenantB)
+	variantA := f.createVariant(t, tenantA)
+	variantB := f.createVariant(t, tenantB)
 	locA := f.createLocation(t, tenantA, "Bodega")
 	locB := f.createLocation(t, tenantB, "Bodega")
-	f.receive(t, tenantA, productA, locA.ID(), "10", "1000")
+	f.receive(t, tenantA, variantA, locA.ID(), "10", "1000")
 
 	t.Run("aislamiento: el tenant B no ve sedes, niveles ni kardex del tenant A", func(t *testing.T) {
 		_, err := f.locations.GetByID(t.Context(), tenantB, locA.ID())
@@ -406,42 +432,42 @@ func TestTenantIsolation(t *testing.T) {
 		levels, err := f.stock.ListLevels(t.Context(), tenantB, domain.StockFilter{LocationID: locA.ID(), Limit: 10})
 		require.NoError(t, err)
 		require.Zero(t, levels.Total)
-		kardex, err := f.stock.Kardex(t.Context(), tenantB, domain.KardexFilter{ProductID: productA, Limit: 10})
+		kardex, err := f.stock.Kardex(t.Context(), tenantB, domain.KardexFilter{VariantID: variantA, Limit: 10})
 		require.NoError(t, err)
 		require.Zero(t, kardex.Total)
 	})
 
-	t.Run("aislamiento: el tenant B no puede registrar movimientos sobre un producto del tenant A", func(t *testing.T) {
-		err := f.stock.Apply(t.Context(), tenantB, productA, []uuid.UUID{locB.ID()},
+	t.Run("aislamiento: el tenant B no puede registrar movimientos sobre una variante del tenant A", func(t *testing.T) {
+		err := f.stock.Apply(t.Context(), tenantB, variantA, []uuid.UUID{locB.ID()},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				m, err := levels[0].Receive(dec("1"), dec("1"), info(newID()))
 				return []*domain.StockMovement{m}, err
 			})
-		require.ErrorIs(t, err, domain.ErrProductNotFound)
+		require.ErrorIs(t, err, domain.ErrVariantNotFound)
 	})
 
 	t.Run("aislamiento: el tenant B no puede mover stock en una sede del tenant A", func(t *testing.T) {
-		err := f.stock.Apply(t.Context(), tenantB, productB, []uuid.UUID{locA.ID()},
+		err := f.stock.Apply(t.Context(), tenantB, variantB, []uuid.UUID{locA.ID()},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				m, err := levels[0].Receive(dec("1"), dec("1"), info(newID()))
 				return []*domain.StockMovement{m}, err
 			})
 		require.ErrorIs(t, err, domain.ErrLocationNotFound)
-		require.True(t, dec("10").Equal(f.level(t, tenantA, productA, locA.ID())))
+		require.True(t, dec("10").Equal(f.level(t, tenantA, variantA, locA.ID())))
 	})
 
 	t.Run("aislamiento: un UPDATE desde el tenant B no cambia los niveles del tenant A", func(t *testing.T) {
 		f.exec(t, tenantB, "UPDATE stock_levels SET quantity = 0")
-		require.True(t, dec("10").Equal(f.level(t, tenantA, productA, locA.ID())))
+		require.True(t, dec("10").Equal(f.level(t, tenantA, variantA, locA.ID())))
 	})
 }
 
 func TestMovementsAreImmutable(t *testing.T) {
 	f := newFixture(t)
 	tenant := f.createTenant(t)
-	product := f.createProduct(t, tenant)
+	variant := f.createVariant(t, tenant)
 	loc := f.createLocation(t, tenant, "Bodega")
-	f.receive(t, tenant, product, loc.ID(), "10", "1000")
+	f.receive(t, tenant, variant, loc.ID(), "10", "1000")
 
 	for _, sql := range []string{
 		"UPDATE stock_movements SET quantity = 99",
@@ -462,9 +488,9 @@ func TestMovementsAreImmutable(t *testing.T) {
 func TestStockRepositorySaleMovements(t *testing.T) {
 	f := newFixture(t)
 
-	sell := func(t *testing.T, tenantID, productID, locationID uuid.UUID, ref domain.DocumentRef, qty string) {
+	sell := func(t *testing.T, tenantID, variantID, locationID uuid.UUID, ref domain.DocumentRef, qty string) {
 		t.Helper()
-		err := f.stock.Apply(t.Context(), tenantID, productID, []uuid.UUID{locationID},
+		err := f.stock.Apply(t.Context(), tenantID, variantID, []uuid.UUID{locationID},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				i := info(newID())
 				i.Reference = &ref
@@ -476,12 +502,12 @@ func TestStockRepositorySaleMovements(t *testing.T) {
 
 	t.Run("lista los movimientos de una venta y guarda su sale_void", func(t *testing.T) {
 		tenant := f.createTenant(t)
-		product := f.createProduct(t, tenant)
+		variant := f.createVariant(t, tenant)
 		loc := f.createLocation(t, tenant, "Sede")
-		f.receive(t, tenant, product, loc.ID(), "10", "1000")
+		f.receive(t, tenant, variant, loc.ID(), "10", "1000")
 		sale := domain.DocumentRef{Kind: domain.DocumentSale, ID: newID()}
-		sell(t, tenant, product, loc.ID(), sale, "3")
-		sell(t, tenant, product, loc.ID(), domain.DocumentRef{Kind: domain.DocumentSale, ID: newID()}, "1")
+		sell(t, tenant, variant, loc.ID(), sale, "3")
+		sell(t, tenant, variant, loc.ID(), domain.DocumentRef{Kind: domain.DocumentSale, ID: newID()}, "1")
 
 		got, err := f.stock.MovementsByReference(t.Context(), tenant, sale)
 		require.NoError(t, err)
@@ -489,7 +515,7 @@ func TestStockRepositorySaleMovements(t *testing.T) {
 		require.Equal(t, domain.MovementSaleOut, got[0].Type())
 		require.True(t, dec("-3").Equal(got[0].Quantity()))
 
-		err = f.stock.Apply(t.Context(), tenant, product, []uuid.UUID{loc.ID()},
+		err = f.stock.Apply(t.Context(), tenant, variant, []uuid.UUID{loc.ID()},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
 				i := info(newID())
 				i.Reference = &sale
@@ -497,7 +523,7 @@ func TestStockRepositorySaleMovements(t *testing.T) {
 				return []*domain.StockMovement{m}, err
 			})
 		require.NoError(t, err)
-		require.True(t, dec("9").Equal(f.level(t, tenant, product, loc.ID())))
+		require.True(t, dec("9").Equal(f.level(t, tenant, variant, loc.ID())))
 
 		got, err = f.stock.MovementsByReference(t.Context(), tenant, sale)
 		require.NoError(t, err)
@@ -507,12 +533,12 @@ func TestStockRepositorySaleMovements(t *testing.T) {
 
 	t.Run("la base de datos rechaza un sale_void sin referencia de venta", func(t *testing.T) {
 		tenant := f.createTenant(t)
-		product := f.createProduct(t, tenant)
+		variant := f.createVariant(t, tenant)
 		loc := f.createLocation(t, tenant, "Sede")
 		err := f.db.WithTenantTx(t.Context(), tenant, func(tx pgx.Tx) error {
-			_, err := tx.Exec(t.Context(), `INSERT INTO stock_movements (id, tenant_id, product_id, location_id, type, quantity,
+			_, err := tx.Exec(t.Context(), `INSERT INTO stock_movements (id, tenant_id, variant_id, location_id, type, quantity,
 				unit_cost, balance_after, average_cost_after, reason, user_id, occurred_at)
-				VALUES ($1, $2, $3, $4, 'sale_void', 1, 0, 1, 0, '', $5, $6)`, newID(), tenant, product, loc.ID(), newID(), now)
+				VALUES ($1, $2, $3, $4, 'sale_void', 1, 0, 1, 0, '', $5, $6)`, newID(), tenant, variant, loc.ID(), newID(), now)
 			return err
 		})
 		var pgErr *pgconn.PgError
@@ -522,14 +548,103 @@ func TestStockRepositorySaleMovements(t *testing.T) {
 
 	t.Run("aislamiento: otro tenant no ve los movimientos de la venta", func(t *testing.T) {
 		tenant, other := f.createTenant(t), f.createTenant(t)
-		product := f.createProduct(t, tenant)
+		variant := f.createVariant(t, tenant)
 		loc := f.createLocation(t, tenant, "Sede")
-		f.receive(t, tenant, product, loc.ID(), "10", "1000")
+		f.receive(t, tenant, variant, loc.ID(), "10", "1000")
 		sale := domain.DocumentRef{Kind: domain.DocumentSale, ID: newID()}
-		sell(t, tenant, product, loc.ID(), sale, "3")
+		sell(t, tenant, variant, loc.ID(), sale, "3")
 
 		got, err := f.stock.MovementsByReference(t.Context(), other, sale)
 		require.NoError(t, err)
 		require.Empty(t, got)
+	})
+}
+
+func TestStockLevelsByVariantAndLot(t *testing.T) {
+	f := newFixture(t)
+
+	t.Run("dos variantes del mismo producto tienen niveles y kardex separados", func(t *testing.T) {
+		// Ropa: talla M y talla L de la misma camiseta.
+		tenant := f.createTenant(t)
+		variants := f.createProduct(t, tenant, 1)
+		sizeM, sizeL := variants[0], variants[1]
+		loc := f.createLocation(t, tenant, "Almacén")
+
+		f.receive(t, tenant, sizeM, loc.ID(), "6", "15000")
+		f.receive(t, tenant, sizeL, loc.ID(), "4", "16000")
+
+		require.True(t, dec("6").Equal(f.level(t, tenant, sizeM, loc.ID())))
+		require.True(t, dec("4").Equal(f.level(t, tenant, sizeL, loc.ID())))
+		kardex, err := f.stock.Kardex(t.Context(), tenant, domain.KardexFilter{VariantID: sizeL, Limit: 10})
+		require.NoError(t, err)
+		require.Equal(t, 1, kardex.Total)
+		require.Equal(t, sizeL, kardex.Items[0].VariantID())
+	})
+
+	t.Run("dos EnsureStockLevel concurrentes con lot_id NULL no crean dos niveles", func(t *testing.T) {
+		tenant := f.createTenant(t)
+		variant := f.createVariant(t, tenant)
+		loc := f.createLocation(t, tenant, "Bodega")
+
+		const workers = 8
+		start := make(chan struct{})
+		errs := make([]error, workers)
+		var wg sync.WaitGroup
+		for i := range workers {
+			wg.Go(func() {
+				<-start
+				errs[i] = f.stock.Apply(t.Context(), tenant, variant, []uuid.UUID{loc.ID()},
+					func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
+						m, err := levels[0].Receive(dec("1"), dec("100"), info(newID()))
+						return []*domain.StockMovement{m}, err
+					})
+			})
+		}
+		close(start)
+		wg.Wait()
+
+		for _, err := range errs {
+			require.NoError(t, err)
+		}
+		require.Equal(t, 1, f.levelRows(t, tenant, variant, loc.ID()))
+		require.True(t, dec("8").Equal(f.level(t, tenant, variant, loc.ID())))
+	})
+
+	t.Run("la base rechaza un segundo nivel con la misma variante, sede y lote NULL", func(t *testing.T) {
+		tenant := f.createTenant(t)
+		variant := f.createVariant(t, tenant)
+		loc := f.createLocation(t, tenant, "Bodega")
+		f.receive(t, tenant, variant, loc.ID(), "1", "100")
+
+		err := f.db.WithTenantTx(t.Context(), tenant, func(tx pgx.Tx) error {
+			_, err := tx.Exec(t.Context(), `INSERT INTO stock_levels (tenant_id, variant_id, location_id, lot_id, quantity, average_cost, updated_at)
+				VALUES ($1, $2, $3, NULL, 0, 0, $4)`, tenant, variant, loc.ID(), now)
+			return err
+		})
+		var pgErr *pgconn.PgError
+		require.ErrorAs(t, err, &pgErr)
+		require.Equal(t, "stock_levels_key", pgErr.ConstraintName)
+	})
+
+	t.Run("mover y listar el stock sin lote no toca ni muestra el nivel de un lote", func(t *testing.T) {
+		tenant := f.createTenant(t)
+		variant := f.createVariant(t, tenant)
+		loc := f.createLocation(t, tenant, "Bodega")
+		lot := newID()
+		f.exec(t, tenant, `INSERT INTO stock_levels (tenant_id, variant_id, location_id, lot_id, quantity, average_cost, updated_at)
+			VALUES ($1, $2, $3, $4, 5, 100, $5)`, tenant, variant, loc.ID(), lot, now)
+
+		f.receive(t, tenant, variant, loc.ID(), "2", "100")
+
+		require.Equal(t, 2, f.levelRows(t, tenant, variant, loc.ID()))
+		var lotQty decimal.Decimal
+		require.NoError(t, f.db.WithTenantTx(t.Context(), tenant, func(tx pgx.Tx) error {
+			return tx.QueryRow(t.Context(), "SELECT quantity FROM stock_levels WHERE lot_id = $1", lot).Scan(&lotQty)
+		}))
+		require.True(t, dec("5").Equal(lotQty))
+		page, err := f.stock.ListLevels(t.Context(), tenant, domain.StockFilter{LocationID: loc.ID(), Limit: 10})
+		require.NoError(t, err)
+		require.Equal(t, 1, page.Total, "the core lists only the stock without a lot")
+		require.True(t, dec("2").Equal(page.Items[0].Quantity()))
 	})
 }

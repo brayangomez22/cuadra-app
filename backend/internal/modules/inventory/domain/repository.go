@@ -31,24 +31,26 @@ type StockChange func(levels []*StockLevel) ([]*StockMovement, error)
 
 // StockRepository persists stock levels and the kardex.
 type StockRepository interface {
-	// Apply locks the levels of productID at locationIDs (distinct), starting
+	// Apply locks the levels of variantID at locationIDs (distinct), starting
 	// from empty levels where there is none, and calls change with them in
 	// the order of locationIDs. If change succeeds, it stores the levels and
 	// the movements in the same transaction; otherwise it stores nothing and
-	// returns change's error. ErrProductNotFound or ErrLocationNotFound if the
-	// product or a location does not exist in tenantID.
-	Apply(ctx context.Context, tenantID, productID uuid.UUID, locationIDs []uuid.UUID, change StockChange) error
+	// returns change's error. ErrVariantNotFound or ErrLocationNotFound if the
+	// variant or a location does not exist in tenantID. It works on the stock
+	// without a lot (lot_id NULL).
+	Apply(ctx context.Context, tenantID, variantID uuid.UUID, locationIDs []uuid.UUID, change StockChange) error
 	// ListLevels returns one page of the levels at a location matching f.
 	ListLevels(ctx context.Context, tenantID uuid.UUID, f StockFilter) (StockLevelPage, error)
-	// Kardex returns one page of a product's movements, newest first.
+	// Kardex returns one page of a variant's movements, newest first.
 	Kardex(ctx context.Context, tenantID uuid.UUID, f KardexFilter) (MovementPage, error)
 	MovementsByReference(ctx context.Context, tenantID uuid.UUID, ref DocumentRef) ([]*StockMovement, error)
 }
 
-// StockFilter selects the levels at a location, optionally of one product.
+// StockFilter selects the levels without a lot at a location, optionally of
+// one variant.
 type StockFilter struct {
 	LocationID uuid.UUID
-	ProductID  *uuid.UUID
+	VariantID  *uuid.UUID
 	Limit      int
 	Offset     int
 }
@@ -59,9 +61,9 @@ type StockLevelPage struct {
 	Total int
 }
 
-// KardexFilter selects a product's movements, optionally at one location.
+// KardexFilter selects a variant's movements, optionally at one location.
 type KardexFilter struct {
-	ProductID  uuid.UUID
+	VariantID  uuid.UUID
 	LocationID *uuid.UUID
 	Limit      int
 	Offset     int

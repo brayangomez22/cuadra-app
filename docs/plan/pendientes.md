@@ -33,6 +33,8 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P24 | Poner `POST /api/v1/products/{productId}/variants` (agregar variantes) detrás de `RequireModule("variants")`. Editar una variante (`PUT …/variants/{variantId}`) sigue en el core, porque todo producto tiene al menos su variante por defecto | T24a | T24f |
 | [ ] | P25 | Ejes de variante definidos por el tenant (nombre y valores permitidos, sembrados por la plantilla). Hoy los ejes son texto libre por producto, y "M" y "m" cuentan como valores distintos | T24a | T24e |
 | [ ] | P26 | Verificar en el primer despliegue que las migraciones corren con el administrador de Azure (sin superusuario), como lo reproduce `dbtest` desde T24a | T24a | T46 |
+| [ ] | P29 | Quitar el puerto `ProductVariants` del inventario (`DefaultVariant` y `ProductsOf`) junto con los `product_id` deprecated de inventario: hoy cada respuesta de entradas, ajustes, traslados, existencias y kardex hace una consulta extra al catálogo para llenar `product_id` | T24b | T24j |
+| [ ] | P30 | `salesStock` (cmd/api) resuelve cada producto de la venta a su variante por defecto dentro de la transacción y traduce `VariantStockError` de vuelta al producto. Al vender por variante, la venta debe pasar `variant_id` directo a `IssueSaleStock`, y el error de stock debe nombrar la variante | T24b | T24c |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 

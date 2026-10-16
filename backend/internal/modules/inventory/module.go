@@ -24,7 +24,10 @@ import (
 type Config struct {
 	DB *db.DB
 	// Authorize is the role → permission matrix; it decides who sees costs.
-	Authorize      auth.Authorizer
+	Authorize auth.Authorizer
+	// Variants is the catalog as the inventory needs it; cmd/api adapts the
+	// catalog module to it.
+	Variants       app.ProductVariants
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -39,13 +42,14 @@ type Module struct {
 
 // New builds the module on PostgreSQL.
 func New(cfg Config) (*Module, error) {
-	if cfg.DB == nil || cfg.Authorize == nil || cfg.Logger == nil {
+	if cfg.DB == nil || cfg.Authorize == nil || cfg.Variants == nil || cfg.Logger == nil {
 		return nil, errors.New("inventory: missing module dependency")
 	}
 	svc, err := app.NewService(app.Deps{
 		Locations:      postgres.NewLocationRepository(cfg.DB),
 		Stock:          postgres.NewStockRepository(cfg.DB),
 		Policies:       postgres.NewPolicyRepository(cfg.DB),
+		Variants:       cfg.Variants,
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Logger:         cfg.Logger,
@@ -64,7 +68,7 @@ func (m *Module) RegisterRoutes(mux *http.ServeMux) {
 // IssueSaleStock registers the stock exits of a sale (see
 // app.Service.IssueSaleStock). It is for the sales module, through the port
 // cmd/api adapts; with a ctx from db.InTenantTx it joins the sale's
-// transaction. Errors of one product are *app.ProductStockError.
+// transaction. Errors of one variant are *app.VariantStockError.
 func (m *Module) IssueSaleStock(ctx context.Context, tenantID, userID uuid.UUID, in app.SaleStockInput) error {
 	_, err := m.service.IssueSaleStock(ctx, app.Actor{TenantID: tenantID, UserID: userID}, in)
 	return err

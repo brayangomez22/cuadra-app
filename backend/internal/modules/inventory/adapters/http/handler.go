@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/adapters/http/inventoryapi"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/domain"
@@ -30,8 +32,9 @@ type UseCases interface {
 	ReceiveStock(ctx context.Context, a app.Actor, in app.ReceiptInput) (*domain.StockMovement, error)
 	AdjustStock(ctx context.Context, a app.Actor, in app.AdjustmentInput) (*domain.StockMovement, error)
 	TransferStock(ctx context.Context, a app.Actor, in app.TransferInput) (out, inMov *domain.StockMovement, err error)
-	ListStock(ctx context.Context, a app.Actor, f domain.StockFilter) (domain.StockLevelPage, error)
-	GetKardex(ctx context.Context, a app.Actor, f domain.KardexFilter) (domain.MovementPage, error)
+	ListStock(ctx context.Context, a app.Actor, q app.StockQuery) (domain.StockLevelPage, error)
+	GetKardex(ctx context.Context, a app.Actor, q app.KardexQuery) (domain.MovementPage, error)
+	ProductsOf(ctx context.Context, a app.Actor, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
 }
 
 // Handler implements inventoryapi.StrictServerInterface.
@@ -82,6 +85,20 @@ func (h *Handler) seesCost(ctx context.Context) bool {
 	return h.can(p.Role, permissionCatalogWrite)
 }
 
+// productsOf returns the product of each variant, for the deprecated
+// product_id of the responses (T24j removes it).
+func (h *Handler) productsOf(ctx context.Context, variantIDs ...uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	return h.uc.ProductsOf(ctx, actor(ctx), variantIDs)
+}
+
+// orNil returns the id, or uuid.Nil when the contract left it out.
+func orNil(id *uuid.UUID) uuid.UUID {
+	if id == nil {
+		return uuid.Nil
+	}
+	return *id
+}
+
 // page returns the contract's limit and offset, with their defaults.
 func page(limit, offset *int) (int, int) {
 	l, o := defaultPageSize, 0
@@ -118,9 +135,9 @@ func (h *Handler) CreateLocation(ctx context.Context, req inventoryapi.CreateLoc
 
 // ListStock returns the stock at a location.
 func (h *Handler) ListStock(ctx context.Context, req inventoryapi.ListStockRequestObject) (inventoryapi.ListStockResponseObject, error) {
-	f := domain.StockFilter{LocationID: req.LocationId, ProductID: req.Params.ProductId}
-	f.Limit, f.Offset = page(req.Params.Limit, req.Params.Offset)
-	result, err := h.uc.ListStock(ctx, actor(ctx), f)
+	q := app.StockQuery{LocationID: req.LocationId, VariantID: req.Params.VariantId, ProductID: req.Params.ProductId}
+	q.Limit, q.Offset = page(req.Params.Limit, req.Params.Offset)
+	result, err := h.uc.ListStock(ctx, actor(ctx), q)
 	if errors.Is(err, domain.ErrLocationNotFound) {
 		return inventoryapi.ListStock404JSONResponse{NotFoundJSONResponse: inventoryapi.NotFoundJSONResponse{
 			Error: inventoryapi.ErrorDetail{Code: locationNotFoundCode, Message: locationNotFoundMessage},
@@ -129,28 +146,73 @@ func (h *Handler) ListStock(ctx context.Context, req inventoryapi.ListStockReque
 	if err != nil {
 		return nil, err
 	}
-	seesCost := h.seesCost(ctx)
-	items := make([]inventoryapi.StockLevel, 0, len(result.Items))
+	variantIDs := make([]uuid.UUID, 0, len(result.Items))
 	for _, l := range result.Items {
-		items = append(items, levelBody(l, seesCost))
+		variantIDs = append(variantIDs, l.VariantID())
 	}
-	return inventoryapi.ListStock200JSONResponse{Items: items, Total: result.Total}, nil
-}
-
-// GetKardex returns a product's movements, newest first.
-func (h *Handler) GetKardex(ctx context.Context, req inventoryapi.GetKardexRequestObject) (inventoryapi.GetKardexResponseObject, error) {
-	f := domain.KardexFilter{ProductID: req.ProductId, LocationID: req.Params.LocationId}
-	f.Limit, f.Offset = page(req.Params.Limit, req.Params.Offset)
-	result, err := h.uc.GetKardex(ctx, actor(ctx), f)
+	products, err := h.productsOf(ctx, variantIDs...)
 	if err != nil {
 		return nil, err
 	}
 	seesCost := h.seesCost(ctx)
-	items := make([]inventoryapi.StockMovement, 0, len(result.Items))
-	for _, m := range result.Items {
-		items = append(items, movementBody(m, seesCost))
+	items := make([]inventoryapi.StockLevel, 0, len(result.Items))
+	for _, l := range result.Items {
+		items = append(items, levelBody(l, products, seesCost))
 	}
-	return inventoryapi.GetKardex200JSONResponse{Items: items, Total: result.Total}, nil
+	return inventoryapi.ListStock200JSONResponse{Items: items, Total: result.Total}, nil
+}
+
+// GetVariantKardex returns a variant's movements, newest first.
+func (h *Handler) GetVariantKardex(ctx context.Context, req inventoryapi.GetVariantKardexRequestObject) (inventoryapi.GetVariantKardexResponseObject, error) {
+	q := app.KardexQuery{VariantID: req.VariantId, LocationID: req.Params.LocationId}
+	q.Limit, q.Offset = page(req.Params.Limit, req.Params.Offset)
+	body, err := h.kardex(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	return inventoryapi.GetVariantKardex200JSONResponse(body), nil
+}
+
+// GetKardex returns the movements of a product's default variant
+// (deprecated: GetVariantKardex).
+func (h *Handler) GetKardex(ctx context.Context, req inventoryapi.GetKardexRequestObject) (inventoryapi.GetKardexResponseObject, error) {
+	q := app.KardexQuery{ProductID: req.ProductId, LocationID: req.Params.LocationId}
+	q.Limit, q.Offset = page(req.Params.Limit, req.Params.Offset)
+	body, err := h.kardex(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	return inventoryapi.GetKardex200JSONResponse(body), nil
+}
+
+func (h *Handler) kardex(ctx context.Context, q app.KardexQuery) (inventoryapi.StockMovementPage, error) {
+	result, err := h.uc.GetKardex(ctx, actor(ctx), q)
+	if err != nil {
+		return inventoryapi.StockMovementPage{}, err
+	}
+	items, err := h.movementBodies(ctx, result.Items...)
+	if err != nil {
+		return inventoryapi.StockMovementPage{}, err
+	}
+	return inventoryapi.StockMovementPage{Items: items, Total: result.Total}, nil
+}
+
+// movementBodies writes movements with the product of their variants.
+func (h *Handler) movementBodies(ctx context.Context, movements ...*domain.StockMovement) ([]inventoryapi.StockMovement, error) {
+	variantIDs := make([]uuid.UUID, 0, len(movements))
+	for _, m := range movements {
+		variantIDs = append(variantIDs, m.VariantID())
+	}
+	products, err := h.productsOf(ctx, variantIDs...)
+	if err != nil {
+		return nil, err
+	}
+	seesCost := h.seesCost(ctx)
+	bodies := make([]inventoryapi.StockMovement, 0, len(movements))
+	for _, m := range movements {
+		bodies = append(bodies, movementBody(m, products, seesCost))
+	}
+	return bodies, nil
 }
 
 // ReceiveStock registers an entry of goods.
@@ -164,12 +226,17 @@ func (h *Handler) ReceiveStock(ctx context.Context, req inventoryapi.ReceiveStoc
 		return nil, err
 	}
 	m, err := h.uc.ReceiveStock(ctx, actor(ctx), app.ReceiptInput{
-		ProductID: req.Body.ProductId, LocationID: req.Body.LocationId, Quantity: qty, UnitCost: cost,
+		VariantID: orNil(req.Body.VariantId), ProductID: orNil(req.Body.ProductId),
+		LocationID: req.Body.LocationId, Quantity: qty, UnitCost: cost,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return inventoryapi.ReceiveStock201JSONResponse(movementBody(m, h.seesCost(ctx))), nil
+	bodies, err := h.movementBodies(ctx, m)
+	if err != nil {
+		return nil, err
+	}
+	return inventoryapi.ReceiveStock201JSONResponse(bodies[0]), nil
 }
 
 // AdjustStock registers a correction of the stock.
@@ -179,12 +246,17 @@ func (h *Handler) AdjustStock(ctx context.Context, req inventoryapi.AdjustStockR
 		return nil, err
 	}
 	m, err := h.uc.AdjustStock(ctx, actor(ctx), app.AdjustmentInput{
-		ProductID: req.Body.ProductId, LocationID: req.Body.LocationId, Quantity: qty, Reason: req.Body.Reason,
+		VariantID: orNil(req.Body.VariantId), ProductID: orNil(req.Body.ProductId),
+		LocationID: req.Body.LocationId, Quantity: qty, Reason: req.Body.Reason,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return inventoryapi.AdjustStock201JSONResponse(movementBody(m, h.seesCost(ctx))), nil
+	bodies, err := h.movementBodies(ctx, m)
+	if err != nil {
+		return nil, err
+	}
+	return inventoryapi.AdjustStock201JSONResponse(bodies[0]), nil
 }
 
 // TransferStock moves stock between two locations.
@@ -194,13 +266,17 @@ func (h *Handler) TransferStock(ctx context.Context, req inventoryapi.TransferSt
 		return nil, err
 	}
 	out, in, err := h.uc.TransferStock(ctx, actor(ctx), app.TransferInput{
-		ProductID: req.Body.ProductId, FromLocationID: req.Body.FromLocationId, ToLocationID: req.Body.ToLocationId, Quantity: qty,
+		VariantID: orNil(req.Body.VariantId), ProductID: orNil(req.Body.ProductId),
+		FromLocationID: req.Body.FromLocationId, ToLocationID: req.Body.ToLocationId, Quantity: qty,
 	})
 	if err != nil {
 		return nil, err
 	}
-	seesCost := h.seesCost(ctx)
-	return inventoryapi.TransferStock201JSONResponse{Out: movementBody(out, seesCost), In: movementBody(in, seesCost)}, nil
+	bodies, err := h.movementBodies(ctx, out, in)
+	if err != nil {
+		return nil, err
+	}
+	return inventoryapi.TransferStock201JSONResponse{Out: bodies[0], In: bodies[1]}, nil
 }
 
 func locationBody(l *domain.Location) inventoryapi.Location {
@@ -208,8 +284,12 @@ func locationBody(l *domain.Location) inventoryapi.Location {
 }
 
 // levelBody writes a level; the average cost only for whoever sees costs.
-func levelBody(l *domain.StockLevel, seesCost bool) inventoryapi.StockLevel {
-	body := inventoryapi.StockLevel{ProductId: l.ProductID(), LocationId: l.LocationID(), Quantity: formatQuantity(l.Quantity())}
+// products holds the product of its variant.
+func levelBody(l *domain.StockLevel, products map[uuid.UUID]uuid.UUID, seesCost bool) inventoryapi.StockLevel {
+	body := inventoryapi.StockLevel{
+		VariantId: l.VariantID(), ProductId: products[l.VariantID()],
+		LocationId: l.LocationID(), Quantity: formatQuantity(l.Quantity()),
+	}
 	if seesCost {
 		cost := formatMoney(l.AverageCost())
 		body.AverageCost = &cost
@@ -218,10 +298,12 @@ func levelBody(l *domain.StockLevel, seesCost bool) inventoryapi.StockLevel {
 }
 
 // movementBody writes a movement; its costs only for whoever sees costs.
-func movementBody(m *domain.StockMovement, seesCost bool) inventoryapi.StockMovement {
+// products holds the product of its variant.
+func movementBody(m *domain.StockMovement, products map[uuid.UUID]uuid.UUID, seesCost bool) inventoryapi.StockMovement {
 	body := inventoryapi.StockMovement{
 		Id:           m.ID(),
-		ProductId:    m.ProductID(),
+		VariantId:    m.VariantID(),
+		ProductId:    products[m.VariantID()],
 		LocationId:   m.LocationID(),
 		Type:         inventoryapi.StockMovementType(m.Type()),
 		Quantity:     formatQuantity(m.Quantity()),
