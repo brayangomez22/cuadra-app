@@ -121,18 +121,24 @@ func TestProductVariants(t *testing.T) {
 		p := f.createProduct(t, tenant, "CAM-S", "Camiseta", withAxes(map[string]string{"talla": "S"}))
 
 		// Two requests read the product before either stores its new variant,
-		// so the domain cannot see the other one: only the database can.
-		errs := make([]error, 2)
+		// so the domain cannot see the other one: only the database can. Both
+		// copies are read before any write starts, so the outcome does not
+		// depend on scheduling.
+		copies := make([]*domain.Product, 2)
+		for i := range copies {
+			c, err := f.products.GetByID(t.Context(), tenant, p.ID())
+			require.NoError(t, err)
+			_, err = c.AddVariant(variant("CAM-M-"+string(rune('A'+i)), "", map[string]string{"talla": "M"}), now)
+			require.NoError(t, err)
+			copies[i] = c
+		}
+		errs := make([]error, len(copies))
 		var wg sync.WaitGroup
-		for i := range errs {
-			copyOf, err := f.products.GetByID(t.Context(), tenant, p.ID())
-			require.NoError(t, err)
-			_, err = copyOf.AddVariant(variant("CAM-M-"+string(rune('A'+i)), "", map[string]string{"talla": "M"}), now)
-			require.NoError(t, err)
+		for i, c := range copies {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				errs[i] = f.products.Update(t.Context(), copyOf)
+				errs[i] = f.products.Update(t.Context(), c)
 			}()
 		}
 		wg.Wait()
