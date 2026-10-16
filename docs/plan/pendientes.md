@@ -31,7 +31,7 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P21 | Alertas por tasa de consumo del presupuesto de error (burn rate de varias ventanas) para los dos SLOs de `docs/slo.md`, calibradas con tráfico real | T24 | T47 |
 | [ ] | P22 | Paneles para las métricas de trabajos en segundo plano (`cuadra.jobs.*`: encolados, fallidos, descartados, latencia de la cola) y una alerta si se descartan trabajos | T24 | T47 |
 | [ ] | P24 | Poner `POST /api/v1/products/{productId}/variants` (agregar variantes) detrás de `RequireModule("variants")`. Editar una variante (`PUT …/variants/{variantId}`) sigue en el core, porque todo producto tiene al menos su variante por defecto | T24a | T24f |
-| [ ] | P25 | Ejes de variante definidos por el tenant (nombre y valores permitidos, sembrados por la plantilla). Hoy los ejes son texto libre por producto, y "M" y "m" cuentan como valores distintos | T24a | T24e |
+| [x] | P25 | Ejes de variante definidos por el tenant (nombre y valores permitidos, sembrados por la plantilla). Hoy los ejes son texto libre por producto, y "M" y "m" cuentan como valores distintos. Hecho en T24e (`/variant-axes`); la siembra desde la plantilla pasa a P35 | T24a | T24e |
 | [ ] | P26 | Verificar en el primer despliegue que las migraciones corren con el administrador de Azure (sin superusuario), como lo reproduce `dbtest` desde T24a | T24a | T46 |
 | [ ] | P29 | Quitar el puerto `ProductVariants` del inventario (`DefaultVariant` y `ProductsOf`) junto con los `product_id` deprecated de inventario: hoy cada respuesta de entradas, ajustes, traslados, existencias y kardex hace una consulta extra al catálogo para llenar `product_id` | T24b | T24j |
 | [x] | P30 | `salesStock` (cmd/api) resuelve cada producto de la venta a su variante por defecto dentro de la transacción y traduce `VariantStockError` de vuelta al producto. Al vender por variante, la venta debe pasar `variant_id` directo a `IssueSaleStock`, y el error de stock debe nombrar la variante | T24b | T24c |
@@ -39,6 +39,10 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P32 | Quitar `VariantCatalog.DefaultVariants` y `LineRequest.ProductID` de ventas junto con el `product_id` deprecated de `SaleLineInput` y `details.product_id` de `insufficient_stock` | T24c | T24j |
 | [ ] | P33 | El formulario de producto ofrece la lista fija de unidades de `units.ts` y envía el código en `base_unit` (deprecated). Debe elegir entre las unidades del tenant (`GET /api/v1/units`) y enviar `base_unit_id`; las pantallas muestran `unit.code` en vez de `unitShort(base_unit)` | T24d | T24i |
 | [ ] | P34 | Quitar `defaultUnits` de `catalog/app` (la lista fija, con términos de un nicho como `bulto` y `rollo`) cuando el registro siembre las unidades de la plantilla a través del mismo puerto `TenantSetup` | T24d | T24g |
+| [ ] | P35 | La plantilla también siembra los **ejes de variante** (`variant_axes`, por ejemplo talla y color en `ropa_calzado`) a través del mismo puerto `TenantSetup`, y sus atributos no se marcan `required` mientras el formulario de producto no envíe atributos (T24i): con un atributo obligatorio, el formulario actual no puede crear productos | T24e | T24g |
+| [ ] | P36 | `ProductInput.attributes` pasa a ser obligatorio. Hoy, omitirlo al editar conserva los valores actuales, para que el formulario que no conoce los atributos no los borre | T24e | T24j |
+| [ ] | P37 | Pantalla de configuración de **ejes de variante** (crear, editar valores y borrar con `/api/v1/variant-axes`), junto a la de unidades y atributos | T24e | T24j |
+| [ ] | P38 | Con el módulo `variants` activo, el formulario de variantes ofrece los ejes y valores del tenant (`GET /api/v1/variant-axes`) en vez de texto libre: un eje o valor no definido responde `unknown_axis` o `axis_value_not_allowed` | T24e | T24i |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 

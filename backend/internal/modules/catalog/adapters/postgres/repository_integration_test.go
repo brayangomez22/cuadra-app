@@ -34,6 +34,8 @@ type fixture struct {
 	products   *postgres.ProductRepository
 	categories *postgres.CategoryRepository
 	units      *postgres.UnitRepository
+	attributes *postgres.AttributeRepository
+	axes       *postgres.VariantAxisRepository
 	// piece is the "und" unit createTenant gives each tenant.
 	piece map[uuid.UUID]domain.UnitRef
 }
@@ -43,7 +45,8 @@ func newFixture(t *testing.T) fixture {
 	d := dbtest.New(t)
 	return fixture{
 		db: d, products: postgres.NewProductRepository(d), categories: postgres.NewCategoryRepository(d),
-		units: postgres.NewUnitRepository(d), piece: map[uuid.UUID]domain.UnitRef{},
+		units: postgres.NewUnitRepository(d), attributes: postgres.NewAttributeRepository(d),
+		axes: postgres.NewVariantAxisRepository(d), piece: map[uuid.UUID]domain.UnitRef{},
 	}
 }
 
@@ -74,6 +77,10 @@ type productOption func(*domain.NewProductParams)
 
 func withBarcode(code string) productOption {
 	return func(p *domain.NewProductParams) { p.Variant.Barcode = code }
+}
+
+func withAttributes(attrs domain.Attributes) productOption {
+	return func(p *domain.NewProductParams) { p.Attributes = attrs }
 }
 
 func withCategory(id uuid.UUID) productOption {

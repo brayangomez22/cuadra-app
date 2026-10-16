@@ -391,6 +391,11 @@ func TestSalesFlow(t *testing.T) {
 	})
 
 	t.Run("venta por variante: descuenta cada variante por separado y la anulación la devuelve", func(t *testing.T) {
+		// The axes the variants use, as the tenant defines them.
+		for _, axis := range []string{`{"name":"talla","values":["S","M"]}`, `{"name":"color","values":["Rojo"]}`} {
+			rec := do(t, http.MethodPost, "/api/v1/variant-axes", axis, ownerToken)
+			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		}
 		rec := do(t, http.MethodPost, "/api/v1/products",
 			`{"sku":"cam-s","name":"Camiseta básica","base_unit":"und","cost":"12000","price":"25000","tax_rate":"0.19"}`, ownerToken)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

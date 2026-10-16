@@ -79,6 +79,12 @@ type ReadyStatus struct {
 // ReadyStatusStatus defines model for ReadyStatus.Status.
 type ReadyStatusStatus string
 
+// AttributeId defines model for AttributeId.
+type AttributeId = openapi_types.UUID
+
+// AxisId defines model for AxisId.
+type AxisId = openapi_types.UUID
+
 // CashSessionId defines model for CashSessionId.
 type CashSessionId = openapi_types.UUID
 

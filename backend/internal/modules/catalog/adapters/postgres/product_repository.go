@@ -27,7 +27,11 @@ func NewProductRepository(d *db.DB) *ProductRepository { return &ProductReposito
 
 // Create stores a new product and its variants in one transaction.
 func (r *ProductRepository) Create(ctx context.Context, p *domain.Product) error {
-	err := r.db.WithTenantTx(ctx, p.TenantID(), func(tx pgx.Tx) error {
+	attrs, err := attributesJSON(p.Attributes())
+	if err != nil {
+		return err
+	}
+	err = r.db.WithTenantTx(ctx, p.TenantID(), func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
 		if err := q.CreateProduct(ctx, sqlcgen.CreateProductParams{
 			ID:          p.ID(),
@@ -37,6 +41,7 @@ func (r *ProductRepository) Create(ctx context.Context, p *domain.Product) error
 			CategoryID:  p.CategoryID(),
 			BaseUnitID:  p.BaseUnit().ID,
 			TaxRate:     p.TaxRate().Rate(),
+			Attributes:  attrs,
 			Active:      p.IsActive(),
 			CreatedAt:   p.CreatedAt(),
 		}); err != nil {
@@ -77,7 +82,11 @@ func (r *ProductRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID)
 // ids, tenant and creation time, and inserts the variants it does not have
 // yet. Variants are never deleted: they are deactivated.
 func (r *ProductRepository) Update(ctx context.Context, p *domain.Product) error {
-	err := r.db.WithTenantTx(ctx, p.TenantID(), func(tx pgx.Tx) error {
+	attrs, err := attributesJSON(p.Attributes())
+	if err != nil {
+		return err
+	}
+	err = r.db.WithTenantTx(ctx, p.TenantID(), func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
 		affected, err := q.UpdateProduct(ctx, sqlcgen.UpdateProductParams{
 			ID:          p.ID(),
@@ -86,6 +95,7 @@ func (r *ProductRepository) Update(ctx context.Context, p *domain.Product) error
 			CategoryID:  p.CategoryID(),
 			BaseUnitID:  p.BaseUnit().ID,
 			TaxRate:     p.TaxRate().Rate(),
+			Attributes:  attrs,
 			Active:      p.IsActive(),
 		})
 		if err != nil {
@@ -275,6 +285,10 @@ func productFromRows(row sqlcgen.GetProductRow, variantRows []sqlcgen.ListVarian
 	if err != nil {
 		return nil, fmt.Errorf("catalog: product %s: stored tax rate: %w", row.ID, err)
 	}
+	attrs, err := attributesFromJSON(row.Attributes)
+	if err != nil {
+		return nil, fmt.Errorf("catalog: product %s: stored attributes: %w", row.ID, err)
+	}
 	variants := make([]domain.VariantSnapshot, 0, len(variantRows))
 	for _, v := range variantRows {
 		var axes map[string]string
@@ -305,6 +319,7 @@ func productFromRows(row sqlcgen.GetProductRow, variantRows []sqlcgen.ListVarian
 		CategoryID:  row.CategoryID,
 		BaseUnit:    unit,
 		TaxRate:     rate,
+		Attributes:  attrs,
 		Active:      row.Active,
 		CreatedAt:   row.CreatedAt,
 		Variants:    variants,
@@ -340,4 +355,40 @@ func (r *ProductRepository) VariantProducts(ctx context.Context, tenantID uuid.U
 		out[row.ID] = row.ProductID
 	}
 	return out, nil
+}
+
+// attributesJSON encodes a product's attributes as the JSON object stored
+// in products.attributes: a string for text, number and list values, a
+// boolean for yes/no ones.
+func attributesJSON(a domain.Attributes) ([]byte, error) {
+	values := a.Values()
+	out := make(map[string]any, len(values))
+	for key, v := range values {
+		if v.IsBool() {
+			out[key] = v.Bool()
+		} else {
+			out[key] = v.Text()
+		}
+	}
+	return json.Marshal(out)
+}
+
+// attributesFromJSON decodes products.attributes.
+func attributesFromJSON(raw []byte) (domain.Attributes, error) {
+	var stored map[string]any
+	if err := json.Unmarshal(raw, &stored); err != nil {
+		return domain.Attributes{}, err
+	}
+	values := make(map[string]domain.AttributeValue, len(stored))
+	for key, v := range stored {
+		switch v := v.(type) {
+		case string:
+			values[key] = domain.TextValue(v)
+		case bool:
+			values[key] = domain.BoolValue(v)
+		default:
+			return domain.Attributes{}, fmt.Errorf("attribute %q holds a %T", key, v)
+		}
+	}
+	return domain.RehydrateAttributes(values)
 }

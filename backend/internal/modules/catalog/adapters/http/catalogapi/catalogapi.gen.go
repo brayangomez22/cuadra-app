@@ -18,6 +18,30 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AttributeType.
+const (
+	Boolean AttributeType = "boolean"
+	List    AttributeType = "list"
+	Number  AttributeType = "number"
+	Text    AttributeType = "text"
+)
+
+// Valid indicates whether the value is a known member of the AttributeType enum.
+func (e AttributeType) Valid() bool {
+	switch e {
+	case Boolean:
+		return true
+	case List:
+		return true
+	case Number:
+		return true
+	case Text:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListProductsParamsStatus.
 const (
 	Active   ListProductsParamsStatus = "active"
@@ -39,8 +63,76 @@ func (e ListProductsParamsStatus) Valid() bool {
 	}
 }
 
-// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`), hasta 5 ejes. Los nombres
-// de los ejes se guardan en minúsculas. Vacío en la variante de un producto simple.
+// AttributeDefinition Un atributo que la empresa define para sus productos (marca, material, principio activo...).
+type AttributeDefinition struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Key La clave con la que los productos guardan el valor. No cambia.
+	//
+	// Example: marca
+	Key string `json:"key"`
+
+	// Label Example: Marca
+	Label string `json:"label"`
+
+	// Options Las opciones de un atributo de lista, en su orden; vacío para los demás tipos.
+	Options []string `json:"options"`
+
+	// Required Si todo producto debe tener un valor.
+	Required bool `json:"required"`
+
+	// Type El tipo de valor del atributo: texto libre (`text`), número decimal (`number`), una opción de una lista
+	// (`list`) o sí/no (`boolean`).
+	Type AttributeType `json:"type"`
+}
+
+// AttributeDefinitionInput defines model for AttributeDefinitionInput.
+type AttributeDefinitionInput struct {
+	// Key Minúsculas sin tildes, números y `_`, empezando por una letra. No se puede cambiar después.
+	//
+	// Example: principio_activo
+	Key string `json:"key"`
+
+	// Label Example: Principio activo
+	Label string `json:"label"`
+
+	// Options Obligatorias para un atributo de lista y prohibidas para los demás. Sin repetir (sin importar las mayúsculas).
+	Options  *AttributeOptions `json:"options,omitempty"`
+	Required bool              `json:"required"`
+
+	// Type El tipo de valor del atributo: texto libre (`text`), número decimal (`number`), una opción de una lista
+	// (`list`) o sí/no (`boolean`).
+	Type AttributeType `json:"type"`
+}
+
+// AttributeDefinitionList defines model for AttributeDefinitionList.
+type AttributeDefinitionList struct {
+	Items []AttributeDefinition `json:"items"`
+}
+
+// AttributeDefinitionUpdate defines model for AttributeDefinitionUpdate.
+type AttributeDefinitionUpdate struct {
+	Label string `json:"label"`
+
+	// Options Obligatorias para un atributo de lista y prohibidas para los demás. Sin repetir (sin importar las mayúsculas).
+	Options  *AttributeOptions `json:"options,omitempty"`
+	Required bool              `json:"required"`
+}
+
+// AttributeOptions Obligatorias para un atributo de lista y prohibidas para los demás. Sin repetir (sin importar las mayúsculas).
+type AttributeOptions = []string
+
+// AttributeType El tipo de valor del atributo: texto libre (`text`), número decimal (`number`), una opción de una lista
+// (`list`) o sí/no (`boolean`).
+type AttributeType string
+
+// AttributeValue Un texto para los atributos de texto, número y lista (un número va como texto decimal, `"2.5"`, nunca como
+// número JSON) o un booleano para los de sí/no.
+type AttributeValue = interface{}
+
+// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`, ver `/variant-axes`), hasta
+// 5 ejes. Los nombres de los ejes se guardan en minúsculas y cada valor como lo escribe su eje ("azul" se
+// guarda "Azul"). Vacío en la variante de un producto simple.
 //
 // Example: {"color":"Azul"}
 type AxisValues map[string]string
@@ -100,6 +192,13 @@ type Product struct {
 	// Active Un producto inactivo no se vende, con ninguna de sus variantes.
 	Active bool `json:"active"`
 
+	// Attributes Los valores del producto para los atributos de la empresa, por clave. Cada valor se valida contra la
+	// definición de su atributo.
+	//
+	//
+	// Example: {"importado":true,"marca":"Acme"}
+	Attributes ProductAttributes `json:"attributes"`
+
 	// Barcode El de la variante por defecto; se omite si no tiene. Use `variants`.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Barcode *string `json:"barcode,omitempty"`
@@ -154,10 +253,20 @@ type Product struct {
 	Variants []ProductVariant `json:"variants"`
 }
 
+// ProductAttributes Los valores del producto para los atributos de la empresa, por clave. Cada valor se valida contra la
+// definición de su atributo.
+//
+// Example: {"importado":true,"marca":"Acme"}
+type ProductAttributes map[string]AttributeValue
+
 // ProductInput Los datos del producto y los de su variante por defecto (`sku`, `barcode`, `cost` y `price`). Las demás
 // variantes se editan con `/products/{productId}/variants`. La unidad base va en `base_unit_id` o, mientras
-// el frontend pasa a `base_unit_id`, por su código en `base_unit` (deprecated): una de las dos.
+// el frontend pasa a `base_unit_id`, por su código en `base_unit` (deprecated): una de las dos. Los
+// atributos se validan contra las definiciones de la empresa (`/product-attributes`).
 type ProductInput struct {
+	// Attributes Los valores de los atributos de la empresa. Si se omite al editar, el producto conserva los que tiene.
+	Attributes *ProductAttributes `json:"attributes,omitempty"`
+
 	// Barcode Código de barras, único en la empresa. Vacío u omitido si no tiene.
 	//
 	// Example: 7701234567890
@@ -210,8 +319,9 @@ type ProductPage struct {
 type ProductVariant struct {
 	Active bool `json:"active"`
 
-	// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`), hasta 5 ejes. Los nombres
-	// de los ejes se guardan en minúsculas. Vacío en la variante de un producto simple.
+	// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`, ver `/variant-axes`), hasta
+	// 5 ejes. Los nombres de los ejes se guardan en minúsculas y cada valor como lo escribe su eje ("azul" se
+	// guarda "Azul"). Vacío en la variante de un producto simple.
 	//
 	//
 	// Example: {"color":"Azul"}
@@ -249,8 +359,9 @@ type ProductVariant struct {
 
 // ProductVariantInput defines model for ProductVariantInput.
 type ProductVariantInput struct {
-	// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`), hasta 5 ejes. Los nombres
-	// de los ejes se guardan en minúsculas. Vacío en la variante de un producto simple.
+	// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`, ver `/variant-axes`), hasta
+	// 5 ejes. Los nombres de los ejes se guardan en minúsculas y cada valor como lo escribe su eje ("azul" se
+	// guarda "Azul"). Vacío en la variante de un producto simple.
 	//
 	//
 	// Example: {"color":"Azul"}
@@ -278,8 +389,9 @@ type ProductVariantUpdate struct {
 	// Active Una variante inactiva no se vende.
 	Active bool `json:"active"`
 
-	// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`), hasta 5 ejes. Los nombres
-	// de los ejes se guardan en minúsculas. Vacío en la variante de un producto simple.
+	// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`, ver `/variant-axes`), hasta
+	// 5 ejes. Los nombres de los ejes se guardan en minúsculas y cada valor como lo escribe su eje ("azul" se
+	// guarda "Azul"). Vacío en la variante de un producto simple.
 	//
 	//
 	// Example: {"color":"Azul"}
@@ -339,6 +451,52 @@ type UnitOfMeasure struct {
 	// Name Example: Metro
 	Name string `json:"name"`
 }
+
+// VariantAxis Un eje en el que varían las variantes de la empresa (color, tamaño, presentación...) y sus valores.
+type VariantAxis struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Name En minúsculas. Es el nombre del eje en `axis_values` y no cambia.
+	//
+	// Example: color
+	Name string `json:"name"`
+
+	// Values Los valores que admite el eje, en su orden.
+	//
+	// Example: ["Rojo","Azul"]
+	Values []string `json:"values"`
+}
+
+// VariantAxisInput defines model for VariantAxisInput.
+type VariantAxisInput struct {
+	// Name Único en la empresa. Se guarda en minúsculas.
+	//
+	// Example: Color
+	Name string `json:"name"`
+
+	// Values Al menos un valor, sin repetir (sin importar las mayúsculas).
+	Values VariantAxisValues `json:"values"`
+}
+
+// VariantAxisList defines model for VariantAxisList.
+type VariantAxisList struct {
+	Items []VariantAxis `json:"items"`
+}
+
+// VariantAxisUpdate defines model for VariantAxisUpdate.
+type VariantAxisUpdate struct {
+	// Values Al menos un valor, sin repetir (sin importar las mayúsculas).
+	Values VariantAxisValues `json:"values"`
+}
+
+// VariantAxisValues Al menos un valor, sin repetir (sin importar las mayúsculas).
+type VariantAxisValues = []string
+
+// AttributeId defines model for AttributeId.
+type AttributeId = openapi_types.UUID
+
+// AxisId defines model for AxisId.
+type AxisId = openapi_types.UUID
 
 // CashSessionId defines model for CashSessionId.
 type CashSessionId = openapi_types.UUID
@@ -413,6 +571,12 @@ type CreateCategoryJSONRequestBody = CategoryInput
 // UpdateCategoryJSONRequestBody defines body for UpdateCategory for application/json ContentType.
 type UpdateCategoryJSONRequestBody = CategoryInput
 
+// CreateAttributeJSONRequestBody defines body for CreateAttribute for application/json ContentType.
+type CreateAttributeJSONRequestBody = AttributeDefinitionInput
+
+// UpdateAttributeJSONRequestBody defines body for UpdateAttribute for application/json ContentType.
+type UpdateAttributeJSONRequestBody = AttributeDefinitionUpdate
+
 // CreateProductJSONRequestBody defines body for CreateProduct for application/json ContentType.
 type CreateProductJSONRequestBody = ProductInput
 
@@ -431,6 +595,12 @@ type CreateUnitJSONRequestBody = UnitInput
 // UpdateUnitJSONRequestBody defines body for UpdateUnit for application/json ContentType.
 type UpdateUnitJSONRequestBody = UnitInput
 
+// CreateVariantAxisJSONRequestBody defines body for CreateVariantAxis for application/json ContentType.
+type CreateVariantAxisJSONRequestBody = VariantAxisInput
+
+// UpdateVariantAxisJSONRequestBody defines body for UpdateVariantAxis for application/json ContentType.
+type UpdateVariantAxisJSONRequestBody = VariantAxisUpdate
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// ListCategories Listar categorías
@@ -445,6 +615,18 @@ type ServerInterface interface {
 	// UpdateCategory Editar una categoría
 	// (PUT /api/v1/categories/{categoryId})
 	UpdateCategory(w http.ResponseWriter, r *http.Request, categoryId CategoryId)
+	// ListAttributes Listar los atributos de producto
+	// (GET /api/v1/product-attributes)
+	ListAttributes(w http.ResponseWriter, r *http.Request)
+	// CreateAttribute Definir un atributo de producto
+	// (POST /api/v1/product-attributes)
+	CreateAttribute(w http.ResponseWriter, r *http.Request)
+	// DeleteAttribute Borrar un atributo de producto
+	// (DELETE /api/v1/product-attributes/{attributeId})
+	DeleteAttribute(w http.ResponseWriter, r *http.Request, attributeId AttributeId)
+	// UpdateAttribute Editar un atributo de producto
+	// (PUT /api/v1/product-attributes/{attributeId})
+	UpdateAttribute(w http.ResponseWriter, r *http.Request, attributeId AttributeId)
 	// ListProducts Buscar productos
 	// (GET /api/v1/products)
 	ListProducts(w http.ResponseWriter, r *http.Request, params ListProductsParams)
@@ -481,6 +663,18 @@ type ServerInterface interface {
 	// UpdateUnit Editar una unidad de medida
 	// (PUT /api/v1/units/{unitId})
 	UpdateUnit(w http.ResponseWriter, r *http.Request, unitId UnitId)
+	// ListVariantAxes Listar los ejes de variante
+	// (GET /api/v1/variant-axes)
+	ListVariantAxes(w http.ResponseWriter, r *http.Request)
+	// CreateVariantAxis Definir un eje de variante
+	// (POST /api/v1/variant-axes)
+	CreateVariantAxis(w http.ResponseWriter, r *http.Request)
+	// DeleteVariantAxis Borrar un eje de variante
+	// (DELETE /api/v1/variant-axes/{axisId})
+	DeleteVariantAxis(w http.ResponseWriter, r *http.Request, axisId AxisId)
+	// UpdateVariantAxis Editar los valores de un eje de variante
+	// (PUT /api/v1/variant-axes/{axisId})
+	UpdateVariantAxis(w http.ResponseWriter, r *http.Request, axisId AxisId)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -563,6 +757,86 @@ func (siw *ServerInterfaceWrapper) UpdateCategory(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateCategory(w, r, categoryId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAttributes operation middleware
+func (siw *ServerInterfaceWrapper) ListAttributes(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAttributes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateAttribute operation middleware
+func (siw *ServerInterfaceWrapper) CreateAttribute(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateAttribute(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAttribute operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAttribute(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "attributeId" -------------
+	var attributeId AttributeId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "attributeId", r.PathValue("attributeId"), &attributeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "attributeId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAttribute(w, r, attributeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAttribute operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAttribute(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "attributeId" -------------
+	var attributeId AttributeId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "attributeId", r.PathValue("attributeId"), &attributeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "attributeId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAttribute(w, r, attributeId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -929,6 +1203,86 @@ func (siw *ServerInterfaceWrapper) UpdateUnit(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListVariantAxes operation middleware
+func (siw *ServerInterfaceWrapper) ListVariantAxes(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListVariantAxes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateVariantAxis operation middleware
+func (siw *ServerInterfaceWrapper) CreateVariantAxis(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateVariantAxis(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteVariantAxis operation middleware
+func (siw *ServerInterfaceWrapper) DeleteVariantAxis(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "axisId" -------------
+	var axisId AxisId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "axisId", r.PathValue("axisId"), &axisId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "axisId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteVariantAxis(w, r, axisId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateVariantAxis operation middleware
+func (siw *ServerInterfaceWrapper) UpdateVariantAxis(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "axisId" -------------
+	var axisId AxisId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "axisId", r.PathValue("axisId"), &axisId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "axisId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateVariantAxis(w, r, axisId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -1065,6 +1419,14 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/units", wrapper.CreateUnit)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/units/{unitId}", wrapper.DeleteUnit)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/units/{unitId}", wrapper.UpdateUnit)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/product-attributes", wrapper.ListAttributes)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/product-attributes", wrapper.CreateAttribute)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/product-attributes/{attributeId}", wrapper.DeleteAttribute)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/product-attributes/{attributeId}", wrapper.UpdateAttribute)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/variant-axes", wrapper.ListVariantAxes)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/variant-axes", wrapper.CreateVariantAxis)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/variant-axes/{axisId}", wrapper.DeleteVariantAxis)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/variant-axes/{axisId}", wrapper.UpdateVariantAxis)
 
 	return m
 }
@@ -1430,6 +1792,396 @@ func (response UpdateCategory422JSONResponse) VisitUpdateCategoryResponse(w http
 type UpdateCategory500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response UpdateCategory500JSONResponse) VisitUpdateCategoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAttributesRequestObject struct {
+}
+
+type ListAttributesResponseObject interface {
+	VisitListAttributesResponse(w http.ResponseWriter) error
+}
+
+type ListAttributes200JSONResponse AttributeDefinitionList
+
+func (response ListAttributes200JSONResponse) VisitListAttributesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAttributes401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListAttributes401JSONResponse) VisitListAttributesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAttributes403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListAttributes403JSONResponse) VisitListAttributesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAttributes500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListAttributes500JSONResponse) VisitListAttributesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAttributeRequestObject struct {
+	Body *CreateAttributeJSONRequestBody
+}
+
+type CreateAttributeResponseObject interface {
+	VisitCreateAttributeResponse(w http.ResponseWriter) error
+}
+
+type CreateAttribute201JSONResponse AttributeDefinition
+
+func (response CreateAttribute201JSONResponse) VisitCreateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAttribute400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateAttribute400JSONResponse) VisitCreateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAttribute401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateAttribute401JSONResponse) VisitCreateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAttribute403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateAttribute403JSONResponse) VisitCreateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAttribute409JSONResponse Error
+
+func (response CreateAttribute409JSONResponse) VisitCreateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAttribute422JSONResponse Error
+
+func (response CreateAttribute422JSONResponse) VisitCreateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAttribute500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateAttribute500JSONResponse) VisitCreateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAttributeRequestObject struct {
+	AttributeId AttributeId `json:"attributeId"`
+}
+
+type DeleteAttributeResponseObject interface {
+	VisitDeleteAttributeResponse(w http.ResponseWriter) error
+}
+
+type DeleteAttribute204Response struct {
+}
+
+func (response DeleteAttribute204Response) VisitDeleteAttributeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAttribute400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteAttribute400JSONResponse) VisitDeleteAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAttribute401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteAttribute401JSONResponse) VisitDeleteAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAttribute403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteAttribute403JSONResponse) VisitDeleteAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAttribute404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteAttribute404JSONResponse) VisitDeleteAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAttribute409JSONResponse Error
+
+func (response DeleteAttribute409JSONResponse) VisitDeleteAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAttribute500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteAttribute500JSONResponse) VisitDeleteAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAttributeRequestObject struct {
+	AttributeId AttributeId `json:"attributeId"`
+	Body        *UpdateAttributeJSONRequestBody
+}
+
+type UpdateAttributeResponseObject interface {
+	VisitUpdateAttributeResponse(w http.ResponseWriter) error
+}
+
+type UpdateAttribute200JSONResponse AttributeDefinition
+
+func (response UpdateAttribute200JSONResponse) VisitUpdateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAttribute400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateAttribute400JSONResponse) VisitUpdateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAttribute401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateAttribute401JSONResponse) VisitUpdateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAttribute403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateAttribute403JSONResponse) VisitUpdateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAttribute404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateAttribute404JSONResponse) VisitUpdateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAttribute409JSONResponse Error
+
+func (response UpdateAttribute409JSONResponse) VisitUpdateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAttribute422JSONResponse Error
+
+func (response UpdateAttribute422JSONResponse) VisitUpdateAttributeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAttribute500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateAttribute500JSONResponse) VisitUpdateAttributeResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -2655,6 +3407,396 @@ func (response UpdateUnit500JSONResponse) VisitUpdateUnitResponse(w http.Respons
 	return err
 }
 
+type ListVariantAxesRequestObject struct {
+}
+
+type ListVariantAxesResponseObject interface {
+	VisitListVariantAxesResponse(w http.ResponseWriter) error
+}
+
+type ListVariantAxes200JSONResponse VariantAxisList
+
+func (response ListVariantAxes200JSONResponse) VisitListVariantAxesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListVariantAxes401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListVariantAxes401JSONResponse) VisitListVariantAxesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListVariantAxes403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListVariantAxes403JSONResponse) VisitListVariantAxesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListVariantAxes500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListVariantAxes500JSONResponse) VisitListVariantAxesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateVariantAxisRequestObject struct {
+	Body *CreateVariantAxisJSONRequestBody
+}
+
+type CreateVariantAxisResponseObject interface {
+	VisitCreateVariantAxisResponse(w http.ResponseWriter) error
+}
+
+type CreateVariantAxis201JSONResponse VariantAxis
+
+func (response CreateVariantAxis201JSONResponse) VisitCreateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateVariantAxis400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateVariantAxis400JSONResponse) VisitCreateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateVariantAxis401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateVariantAxis401JSONResponse) VisitCreateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateVariantAxis403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateVariantAxis403JSONResponse) VisitCreateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateVariantAxis409JSONResponse Error
+
+func (response CreateVariantAxis409JSONResponse) VisitCreateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateVariantAxis422JSONResponse Error
+
+func (response CreateVariantAxis422JSONResponse) VisitCreateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateVariantAxis500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateVariantAxis500JSONResponse) VisitCreateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteVariantAxisRequestObject struct {
+	AxisId AxisId `json:"axisId"`
+}
+
+type DeleteVariantAxisResponseObject interface {
+	VisitDeleteVariantAxisResponse(w http.ResponseWriter) error
+}
+
+type DeleteVariantAxis204Response struct {
+}
+
+func (response DeleteVariantAxis204Response) VisitDeleteVariantAxisResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteVariantAxis400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteVariantAxis400JSONResponse) VisitDeleteVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteVariantAxis401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteVariantAxis401JSONResponse) VisitDeleteVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteVariantAxis403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteVariantAxis403JSONResponse) VisitDeleteVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteVariantAxis404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteVariantAxis404JSONResponse) VisitDeleteVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteVariantAxis409JSONResponse Error
+
+func (response DeleteVariantAxis409JSONResponse) VisitDeleteVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteVariantAxis500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteVariantAxis500JSONResponse) VisitDeleteVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateVariantAxisRequestObject struct {
+	AxisId AxisId `json:"axisId"`
+	Body   *UpdateVariantAxisJSONRequestBody
+}
+
+type UpdateVariantAxisResponseObject interface {
+	VisitUpdateVariantAxisResponse(w http.ResponseWriter) error
+}
+
+type UpdateVariantAxis200JSONResponse VariantAxis
+
+func (response UpdateVariantAxis200JSONResponse) VisitUpdateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateVariantAxis400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateVariantAxis400JSONResponse) VisitUpdateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateVariantAxis401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateVariantAxis401JSONResponse) VisitUpdateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateVariantAxis403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateVariantAxis403JSONResponse) VisitUpdateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateVariantAxis404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateVariantAxis404JSONResponse) VisitUpdateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateVariantAxis409JSONResponse Error
+
+func (response UpdateVariantAxis409JSONResponse) VisitUpdateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateVariantAxis422JSONResponse Error
+
+func (response UpdateVariantAxis422JSONResponse) VisitUpdateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateVariantAxis500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateVariantAxis500JSONResponse) VisitUpdateVariantAxisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// ListCategories Listar categorías
@@ -2669,6 +3811,18 @@ type StrictServerInterface interface {
 	// UpdateCategory Editar una categoría
 	// (PUT /api/v1/categories/{categoryId})
 	UpdateCategory(ctx context.Context, request UpdateCategoryRequestObject) (UpdateCategoryResponseObject, error)
+	// ListAttributes Listar los atributos de producto
+	// (GET /api/v1/product-attributes)
+	ListAttributes(ctx context.Context, request ListAttributesRequestObject) (ListAttributesResponseObject, error)
+	// CreateAttribute Definir un atributo de producto
+	// (POST /api/v1/product-attributes)
+	CreateAttribute(ctx context.Context, request CreateAttributeRequestObject) (CreateAttributeResponseObject, error)
+	// DeleteAttribute Borrar un atributo de producto
+	// (DELETE /api/v1/product-attributes/{attributeId})
+	DeleteAttribute(ctx context.Context, request DeleteAttributeRequestObject) (DeleteAttributeResponseObject, error)
+	// UpdateAttribute Editar un atributo de producto
+	// (PUT /api/v1/product-attributes/{attributeId})
+	UpdateAttribute(ctx context.Context, request UpdateAttributeRequestObject) (UpdateAttributeResponseObject, error)
 	// ListProducts Buscar productos
 	// (GET /api/v1/products)
 	ListProducts(ctx context.Context, request ListProductsRequestObject) (ListProductsResponseObject, error)
@@ -2705,6 +3859,18 @@ type StrictServerInterface interface {
 	// UpdateUnit Editar una unidad de medida
 	// (PUT /api/v1/units/{unitId})
 	UpdateUnit(ctx context.Context, request UpdateUnitRequestObject) (UpdateUnitResponseObject, error)
+	// ListVariantAxes Listar los ejes de variante
+	// (GET /api/v1/variant-axes)
+	ListVariantAxes(ctx context.Context, request ListVariantAxesRequestObject) (ListVariantAxesResponseObject, error)
+	// CreateVariantAxis Definir un eje de variante
+	// (POST /api/v1/variant-axes)
+	CreateVariantAxis(ctx context.Context, request CreateVariantAxisRequestObject) (CreateVariantAxisResponseObject, error)
+	// DeleteVariantAxis Borrar un eje de variante
+	// (DELETE /api/v1/variant-axes/{axisId})
+	DeleteVariantAxis(ctx context.Context, request DeleteVariantAxisRequestObject) (DeleteVariantAxisResponseObject, error)
+	// UpdateVariantAxis Editar los valores de un eje de variante
+	// (PUT /api/v1/variant-axes/{axisId})
+	UpdateVariantAxis(ctx context.Context, request UpdateVariantAxisRequestObject) (UpdateVariantAxisResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -2853,6 +4019,120 @@ func (sh *strictHandler) UpdateCategory(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateCategoryResponseObject); ok {
 		if err := validResponse.VisitUpdateCategoryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListAttributes operation middleware
+func (sh *strictHandler) ListAttributes(w http.ResponseWriter, r *http.Request) {
+	var request ListAttributesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAttributes(ctx, request.(ListAttributesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAttributes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAttributesResponseObject); ok {
+		if err := validResponse.VisitListAttributesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateAttribute operation middleware
+func (sh *strictHandler) CreateAttribute(w http.ResponseWriter, r *http.Request) {
+	var request CreateAttributeRequestObject
+
+	var body CreateAttributeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateAttribute(ctx, request.(CreateAttributeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateAttribute")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateAttributeResponseObject); ok {
+		if err := validResponse.VisitCreateAttributeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAttribute operation middleware
+func (sh *strictHandler) DeleteAttribute(w http.ResponseWriter, r *http.Request, attributeId AttributeId) {
+	var request DeleteAttributeRequestObject
+
+	request.AttributeId = attributeId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAttribute(ctx, request.(DeleteAttributeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAttribute")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAttributeResponseObject); ok {
+		if err := validResponse.VisitDeleteAttributeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateAttribute operation middleware
+func (sh *strictHandler) UpdateAttribute(w http.ResponseWriter, r *http.Request, attributeId AttributeId) {
+	var request UpdateAttributeRequestObject
+
+	request.AttributeId = attributeId
+
+	var body UpdateAttributeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateAttribute(ctx, request.(UpdateAttributeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateAttribute")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateAttributeResponseObject); ok {
+		if err := validResponse.VisitUpdateAttributeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3202,6 +4482,120 @@ func (sh *strictHandler) UpdateUnit(w http.ResponseWriter, r *http.Request, unit
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateUnitResponseObject); ok {
 		if err := validResponse.VisitUpdateUnitResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListVariantAxes operation middleware
+func (sh *strictHandler) ListVariantAxes(w http.ResponseWriter, r *http.Request) {
+	var request ListVariantAxesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListVariantAxes(ctx, request.(ListVariantAxesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListVariantAxes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListVariantAxesResponseObject); ok {
+		if err := validResponse.VisitListVariantAxesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateVariantAxis operation middleware
+func (sh *strictHandler) CreateVariantAxis(w http.ResponseWriter, r *http.Request) {
+	var request CreateVariantAxisRequestObject
+
+	var body CreateVariantAxisJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateVariantAxis(ctx, request.(CreateVariantAxisRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateVariantAxis")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateVariantAxisResponseObject); ok {
+		if err := validResponse.VisitCreateVariantAxisResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteVariantAxis operation middleware
+func (sh *strictHandler) DeleteVariantAxis(w http.ResponseWriter, r *http.Request, axisId AxisId) {
+	var request DeleteVariantAxisRequestObject
+
+	request.AxisId = axisId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteVariantAxis(ctx, request.(DeleteVariantAxisRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteVariantAxis")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteVariantAxisResponseObject); ok {
+		if err := validResponse.VisitDeleteVariantAxisResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateVariantAxis operation middleware
+func (sh *strictHandler) UpdateVariantAxis(w http.ResponseWriter, r *http.Request, axisId AxisId) {
+	var request UpdateVariantAxisRequestObject
+
+	request.AxisId = axisId
+
+	var body UpdateVariantAxisJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateVariantAxis(ctx, request.(UpdateVariantAxisRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateVariantAxis")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateVariantAxisResponseObject); ok {
+		if err := validResponse.VisitUpdateVariantAxisResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

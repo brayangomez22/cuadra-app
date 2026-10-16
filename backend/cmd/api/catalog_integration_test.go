@@ -216,4 +216,167 @@ func TestCatalogFlow(t *testing.T) {
 		rec := do(t, http.MethodGet, "/api/v1/products?limit=101", "", ownerToken)
 		require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	})
+
+	var attributeID string
+
+	t.Run("el dueño define atributos y el cajero los lista", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/product-attributes",
+			`{"key":"material","label":"Material","type":"list","options":["PVC","Cobre"],"required":false}`, ownerToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		var d struct {
+			ID      string   `json:"id"`
+			Key     string   `json:"key"`
+			Type    string   `json:"type"`
+			Options []string `json:"options"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &d))
+		require.Equal(t, "material", d.Key)
+		require.Equal(t, "list", d.Type)
+		require.Equal(t, []string{"PVC", "Cobre"}, d.Options)
+		attributeID = d.ID
+
+		rec = do(t, http.MethodPost, "/api/v1/product-attributes",
+			`{"key":"importado","label":"Importado","type":"boolean","required":false}`, ownerToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+		rec = do(t, http.MethodGet, "/api/v1/product-attributes", "", cashierToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"material"`)
+		require.Contains(t, rec.Body.String(), `"importado"`)
+	})
+
+	t.Run("el cajero no define atributos", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/product-attributes",
+			`{"key":"marca","label":"Marca","type":"text","required":false}`, cashierToken)
+		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+	})
+
+	t.Run("una clave repetida responde 409 attribute_key_taken y un tipo desconocido 400", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/product-attributes",
+			`{"key":"material","label":"Otro","type":"text","required":false}`, ownerToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "attribute_key_taken")
+
+		rec = do(t, http.MethodPost, "/api/v1/product-attributes",
+			`{"key":"vence","label":"Vence","type":"date","required":false}`, ownerToken)
+		require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	})
+
+	t.Run("crea un producto con atributos y los devuelve normalizados", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/products",
+			`{"sku":"tub-cobre","name":"Tubo de cobre","base_unit_id":"`+unitID("m")+`","cost":"1000","price":"2000","tax_rate":"0.19",`+
+				`"attributes":{"material":"cobre","importado":true}}`, ownerToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		var p struct {
+			ID         string         `json:"id"`
+			Attributes map[string]any `json:"attributes"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &p))
+		require.Equal(t, map[string]any{"material": "Cobre", "importado": true}, p.Attributes)
+
+		rec = do(t, http.MethodGet, "/api/v1/products/"+p.ID, "", cashierToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"attributes":{`)
+	})
+
+	t.Run("un producto sin atributos los devuelve vacíos", func(t *testing.T) {
+		rec := do(t, http.MethodGet, "/api/v1/products/"+productID, "", ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"attributes":{}`)
+	})
+
+	t.Run("una opción no definida responde 422 invalid_attribute_value con el atributo", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/products",
+			`{"sku":"tub-hierro","name":"Tubo de hierro","base_unit_id":"`+unitID("m")+`","cost":"1000","price":"2000","tax_rate":"0.19",`+
+				`"attributes":{"material":"Hierro"}}`, ownerToken)
+		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		var body struct {
+			Error struct {
+				Code    string            `json:"code"`
+				Message string            `json:"message"`
+				Details map[string]string `json:"details"`
+			} `json:"error"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+		require.Equal(t, "invalid_attribute_value", body.Error.Code)
+		require.Equal(t, map[string]string{"attribute": "material"}, body.Error.Details)
+		require.Contains(t, body.Error.Message, "Material")
+	})
+
+	t.Run("un atributo no definido responde 422 unknown_attribute y un valor numérico JSON 400", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/products",
+			`{"sku":"tub-x","name":"Tubo","base_unit_id":"`+unitID("m")+`","cost":"1000","price":"2000","tax_rate":"0.19",`+
+				`"attributes":{"color":"Rojo"}}`, ownerToken)
+		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "unknown_attribute")
+
+		rec = do(t, http.MethodPost, "/api/v1/products",
+			`{"sku":"tub-x","name":"Tubo","base_unit_id":"`+unitID("m")+`","cost":"1000","price":"2000","tax_rate":"0.19",`+
+				`"attributes":{"material":12}}`, ownerToken)
+		require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	})
+
+	t.Run("borrar un atributo en uso responde 409 attribute_in_use", func(t *testing.T) {
+		rec := do(t, http.MethodDelete, "/api/v1/product-attributes/"+attributeID, "", ownerToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "attribute_in_use")
+
+		rec = do(t, http.MethodPut, "/api/v1/product-attributes/"+attributeID,
+			`{"label":"Material","options":["PVC"],"required":false}`, ownerToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "attribute_option_in_use")
+
+		rec = do(t, http.MethodDelete, "/api/v1/product-attributes/"+uuid.Must(uuid.NewV7()).String(), "", ownerToken)
+		require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "attribute_not_found")
+	})
+
+	t.Run("las variantes usan los ejes del tenant", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/variant-axes", `{"name":"Color","values":["Rojo","Azul"]}`, ownerToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		var axis struct {
+			ID     string   `json:"id"`
+			Name   string   `json:"name"`
+			Values []string `json:"values"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &axis))
+		require.Equal(t, "color", axis.Name)
+		require.Equal(t, []string{"Rojo", "Azul"}, axis.Values)
+
+		rec = do(t, http.MethodGet, "/api/v1/products/"+productID, "", ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var p struct {
+			Variants []struct {
+				ID string `json:"id"`
+			} `json:"variants"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &p))
+		variantPath := "/api/v1/products/" + productID + "/variants"
+
+		rec = do(t, http.MethodPut, variantPath+"/"+p.Variants[0].ID,
+			`{"sku":"tub-pvc-12","cost":"8333.33","price":"10000","axis_values":{"color":"rojo"},"active":true}`, ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"axis_values":{"color":"Rojo"}`)
+
+		rec = do(t, http.MethodPost, variantPath, `{"sku":"tub-pvc-12-v","cost":"1","price":"2","axis_values":{"color":"Verde"}}`, ownerToken)
+		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "axis_value_not_allowed")
+		require.Contains(t, rec.Body.String(), `"axis":"color"`)
+
+		rec = do(t, http.MethodPost, variantPath, `{"sku":"tub-pvc-12-v","cost":"1","price":"2","axis_values":{"talla":"M"}}`, ownerToken)
+		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "unknown_axis")
+
+		rec = do(t, http.MethodPut, "/api/v1/variant-axes/"+axis.ID, `{"values":["Azul"]}`, ownerToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "axis_value_in_use")
+
+		rec = do(t, http.MethodDelete, "/api/v1/variant-axes/"+axis.ID, "", ownerToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "axis_in_use")
+
+		rec = do(t, http.MethodGet, "/api/v1/variant-axes", "", cashierToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"color"`)
+	})
 }

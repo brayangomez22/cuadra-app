@@ -87,3 +87,42 @@ type UnitRepository interface {
 	// ErrUnitNotFound if it does not exist.
 	Delete(ctx context.Context, tenantID, id uuid.UUID) error
 }
+
+// AttributeRepository persists attribute definitions, scoped to a tenant
+// like ProductRepository.
+type AttributeRepository interface {
+	// Create stores a new definition; ErrAttributeKeyTaken if another
+	// definition of the tenant has its key.
+	Create(ctx context.Context, d *AttributeDefinition) error
+	// GetByID returns ErrAttributeNotFound when the definition does not
+	// exist in tenantID.
+	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*AttributeDefinition, error)
+	// List returns every definition of the tenant, by label.
+	List(ctx context.Context, tenantID uuid.UUID) ([]*AttributeDefinition, error)
+	// Update stores the label, the options and whether it is required;
+	// ErrAttributeNotFound if it does not exist, ErrAttributeOptionInUse
+	// (and nothing changes) if a product has one of removedOptions.
+	Update(ctx context.Context, d *AttributeDefinition, removedOptions []string) error
+	// Delete removes the definition; ErrAttributeInUse if a product has a
+	// value for it, ErrAttributeNotFound if it does not exist.
+	Delete(ctx context.Context, tenantID, id uuid.UUID) error
+}
+
+// VariantAxisRepository persists variant axes, scoped to a tenant like
+// ProductRepository.
+type VariantAxisRepository interface {
+	// Create stores a new axis; ErrAxisNameTaken if another axis of the
+	// tenant has its name.
+	Create(ctx context.Context, a *VariantAxis) error
+	// GetByID returns ErrAxisNotFound when the axis does not exist in tenantID.
+	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*VariantAxis, error)
+	// List returns every axis of the tenant, by name.
+	List(ctx context.Context, tenantID uuid.UUID) ([]*VariantAxis, error)
+	// Update stores the allowed values; ErrAxisNotFound if the axis does not
+	// exist, ErrAxisValueInUse (and nothing changes) if a variant has one of
+	// removedValues, in any case.
+	Update(ctx context.Context, a *VariantAxis, removedValues []string) error
+	// Delete removes the axis; ErrAxisInUse if a variant has a value on it,
+	// ErrAxisNotFound if it does not exist.
+	Delete(ctx context.Context, tenantID, id uuid.UUID) error
+}

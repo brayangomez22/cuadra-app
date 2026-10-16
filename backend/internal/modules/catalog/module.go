@@ -1,6 +1,6 @@
-// Package catalog wires the catalog module: products, categories and units
-// of measure. cmd/api
-// builds it with New and mounts its routes.
+// Package catalog wires the catalog module: products, categories, units of
+// measure, attribute definitions and variant axes. cmd/api builds it with
+// New and mounts its routes.
 package catalog
 
 import (
@@ -51,6 +51,8 @@ func New(cfg Config) (*Module, error) {
 		Products:       products,
 		Categories:     postgres.NewCategoryRepository(cfg.DB),
 		Units:          postgres.NewUnitRepository(cfg.DB),
+		Attributes:     postgres.NewAttributeRepository(cfg.DB),
+		VariantAxes:    postgres.NewVariantAxisRepository(cfg.DB),
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Logger:         cfg.Logger,
