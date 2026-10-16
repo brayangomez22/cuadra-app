@@ -1,6 +1,6 @@
 # Propuesta: core genérico multi-negocio
 
-**Estado:** aprobada · **Fecha:** 2026-10-14 · **Se ejecuta:** entre T24 y T25, como el bloque T24a–T24g.
+**Estado:** aprobada · **Fecha:** 2026-10-14 · **Se ejecuta:** entre T24 y T25, como el bloque T24a–T24k (renumerado y dividido el 2026-10-15 tras `docs/auditoria-core-generico.md`; el texto vigente de las tareas está en `docs/plan/fase-2-vender.md`).
 
 Cuadra debe servir a ferreterías, tiendas y minimercados, droguerías, papelerías, almacenes de ropa y calzado, y negocios similares. Las ferreterías son el primer mercado del piloto, no el modelo del diseño. Este documento contiene los cambios exactos a `CLAUDE.md`, al plan y a `docs/decisiones.md`, y las tareas de refactor.
 
@@ -58,7 +58,7 @@ Y además:
 ## D. Plan: cambios en tareas existentes
 
 **Tareas ya terminadas (T08, T10):** no se reescriben. Al final de cada una se agrega la nota:
-`> Modelo actualizado en el bloque T24a–T24g (core genérico): ver docs/propuestas/core-generico.md.`
+`> Modelo actualizado en el bloque T24a–T24k (core genérico): ver docs/propuestas/core-generico.md.`
 
 **`fase-1-nucleo.md`, línea 3:** reemplazar por
 ```markdown
@@ -87,6 +87,8 @@ que crea un tenant demo **por plantilla de tipo de negocio** (como mínimo "Ferr
 ```
 
 ## E. Plan: bloque nuevo en `fase-2-vender.md`, después de T24 y antes de T25
+
+> **Texto original, ya reemplazado.** Tras la auditoría (`docs/auditoria-core-generico.md`), el bloque se dividió y renumeró como T24a–T24k. El texto vigente está en `docs/plan/fase-2-vender.md`; no implementes desde esta sección.
 
 ```markdown
 ---
@@ -130,14 +132,14 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 ```
 
 Además, en `docs/plan/README.md`:
-- en la tabla de fases, la fila de la fase 2 pasa a decir `T18–T25 (+ T24a–T24g)`;
-- en el mapa de funcionalidades, agregar: `Core genérico: variantes, unidades y atributos por tenant, módulos y plantillas | T24a–T24g`.
+- en la tabla de fases, la fila de la fase 2 pasa a decir `T18–T25 (+ T24a–T24k)`;
+- en el mapa de funcionalidades, agregar: `Core genérico: variantes, unidades y atributos por tenant, módulos, permisos y plantillas | T24a–T24k`.
 
 ## F. `fase-7-v2.md`: épicas nuevas al final
 
 ```markdown
 ### Épica V2-11 · Variantes completas (ropa, calzado, papelería)
-El modelo ya tiene variantes (T24a) y la UI básica (T24f). Esta épica agrega: importación de Excel con variantes, etiquetas con código de barras por variante, reportes por eje (ventas por talla o color) y traslados de variantes entre sedes desde una matriz.
+El modelo ya tiene variantes (T24a) y la UI básica (T24i). Esta épica agrega: importación de Excel con variantes, etiquetas con código de barras por variante, reportes por eje (ventas por talla o color) y traslados de variantes entre sedes desde una matriz.
 
 ### Épica V2-12 · Lotes y vencimientos (droguerías, alimentos)
 Módulo `lots_expiry`: lote y fecha de vencimiento en compras y entradas, salida **FEFO** (primero lo que vence primero), alertas de próximos a vencer, bloqueo de venta de vencidos y reporte de vencimientos. Los requisitos regulatorios del sector farmacéutico (INVIMA, control de medicamentos) quedan fuera hasta validarlos con droguerías reales.
@@ -182,7 +184,7 @@ Módulo `volume_pricing`: escalas por variante ("1–11 und a $X, 12+ a $Y"), ap
 - **V2-3 · Listas de precios:** cambiar *"Listas por tipo de cliente (público, maestro de obra, contratista, empresa)"* por *"Módulo `price_lists`: listas por segmento de cliente (configurables por tenant), implementadas como regla del `PriceResolver`"*.
 - **V2-7:** renombrar *"Diferenciadores del nicho"* por *"Módulos de nicho"*, y agregar al inicio: *"Cada punto es un módulo activable (`cross_references`, `kits`, `deliveries`, `warranties`, `projects`) que las plantillas activan según el tipo de negocio. Ninguno entra al core."*
 - **V3-3 · IA:** cambiar el ejemplo *"¿cuánto vendí de cemento…?"* por *"¿cuánto vendí de [producto] este mes…?"*.
-- **V3-6 · Talleres:** agregar *"Se implementa como la plantilla `taller` más el módulo `work_orders`, sobre el mecanismo de T24e."*
+- **V3-6 · Talleres:** agregar *"Se implementa como la plantilla `taller` más el módulo `work_orders`, sobre el mecanismo de T24f (módulos) y T24g (plantillas)."*
 - **V2-9 · Suscripciones:** agregar *"Los planes definen qué módulos puede activar cada tenant."*
 
 **Comando `/tarea`** (`.claude/commands/tarea.md`): en el paso 1 (Contexto), agregar este punto:

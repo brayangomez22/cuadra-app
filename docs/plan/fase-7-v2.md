@@ -40,7 +40,7 @@ Planes (Básico, Pro, Empresa) con límites por sede y usuarios, cobro recurrent
 Generar desde el POS un QR de cobro por el valor exacto de la venta y **conciliar el pago automáticamente** (la venta se marca pagada al confirmarse la transferencia, sin que el cajero revise el celular). Empezar con un spike: qué APIs o servicios para comercios ofrecen hoy los bancos, billeteras y agregadores para pagos inmediatos con QR (incluido el sistema Bre-B), costos por transacción, webhooks de confirmación y requisitos para el comercio. Medio de pago `qr` con referencia de la transacción, y conciliación diaria contra el extracto.
 
 ### Épica V2-11 · Variantes completas (ropa, calzado, papelería)
-El modelo ya tiene variantes (T24a) y la UI básica (T24f). Esta épica agrega: importación de Excel con variantes, etiquetas con código de barras por variante, reportes por eje (ventas por talla o color) y traslados de variantes entre sedes desde una matriz.
+El modelo ya tiene variantes (T24a) y la UI básica (T24i). Esta épica agrega: importación de Excel con variantes, etiquetas con código de barras por variante, reportes por eje (ventas por talla o color) y traslados de variantes entre sedes desde una matriz.
 
 ### Épica V2-12 · Lotes y vencimientos (droguerías, alimentos)
 Módulo `lots_expiry`: lote y fecha de vencimiento en compras y entradas, salida **FEFO** (primero lo que vence primero), alertas de próximos a vencer, bloqueo de venta de vencidos y reporte de vencimientos. Los requisitos regulatorios del sector farmacéutico (INVIMA, control de medicamentos) quedan fuera hasta validarlos con droguerías reales.
