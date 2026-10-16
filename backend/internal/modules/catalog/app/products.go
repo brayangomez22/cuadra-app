@@ -17,7 +17,8 @@ const (
 	maxPageSize     = 100
 )
 
-// ProductInput is the editable data of a product.
+// ProductInput is the editable data of a product and of its default
+// variant (SKU, barcode, cost and price).
 type ProductInput struct {
 	SKU         string
 	Barcode     string
@@ -32,38 +33,37 @@ type ProductInput struct {
 
 func (in ProductInput) details() domain.ProductDetails {
 	return domain.ProductDetails{
-		SKU:         in.SKU,
-		Barcode:     in.Barcode,
 		Name:        in.Name,
 		Description: in.Description,
 		CategoryID:  in.CategoryID,
 		BaseUnit:    in.BaseUnit,
-		Cost:        in.Cost,
 		TaxRate:     in.TaxRate,
 	}
 }
 
-// CreateProduct stores a new, active product.
+// CreateProduct stores a new, active product with its default variant.
 func (s *Service) CreateProduct(ctx context.Context, a Actor, in ProductInput) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "CreateProduct", a)
 	defer func() { endSpan(span, err) }()
 
 	p, err := domain.NewProduct(domain.NewProductParams{
 		TenantID:    a.TenantID,
-		SKU:         in.SKU,
-		Barcode:     in.Barcode,
 		Name:        in.Name,
 		Description: in.Description,
 		CategoryID:  in.CategoryID,
 		BaseUnit:    in.BaseUnit,
-		Cost:        in.Cost,
-		Price:       in.Price,
 		TaxRate:     in.TaxRate,
+		Variant: domain.VariantParams{
+			SKU:     in.SKU,
+			Barcode: in.Barcode,
+			Cost:    in.Cost,
+			Price:   in.Price,
+		},
 	}, s.Now())
 	if err != nil {
 		return nil, err
 	}
-	span.SetAttributes(productAttr(p.ID()))
+	span.SetAttributes(productAttr(p.ID()), variantAttr(p.DefaultVariant().ID()))
 	if err := s.requireCategory(ctx, a, p.CategoryID()); err != nil {
 		return nil, err
 	}
@@ -74,8 +74,8 @@ func (s *Service) CreateProduct(ctx context.Context, a Actor, in ProductInput) (
 	return p, nil
 }
 
-// UpdateProduct replaces the product's data. A new price follows
-// ChangePrice: an inactive product keeps its price.
+// UpdateProduct replaces the product's data and its default variant's. A
+// new price follows ChangeVariantPrice: an inactive product keeps its price.
 func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in ProductInput) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "UpdateProduct", a, productAttr(id))
 	defer func() { endSpan(span, err) }()
@@ -87,9 +87,16 @@ func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in P
 	if err := p.UpdateDetails(in.details()); err != nil {
 		return nil, err
 	}
-	priceChanged := !in.Price.Equal(p.Price())
+	def := p.DefaultVariant()
+	span.SetAttributes(variantAttr(def.ID()))
+	if err := p.UpdateVariant(def.ID(), domain.VariantDetails{
+		SKU: in.SKU, Barcode: in.Barcode, Cost: in.Cost, AxisValues: def.AxisValues(),
+	}); err != nil {
+		return nil, err
+	}
+	priceChanged := !in.Price.Equal(def.Price())
 	if priceChanged {
-		if err := p.ChangePrice(in.Price); err != nil {
+		if err := p.ChangeVariantPrice(def.ID(), in.Price); err != nil {
 			return nil, err
 		}
 	}

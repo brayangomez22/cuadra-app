@@ -75,6 +75,12 @@ func (e ListProductsParamsStatus) Valid() bool {
 	}
 }
 
+// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`), hasta 5 ejes. Los nombres
+// de los ejes se guardan en minúsculas. Vacío en la variante de un producto simple.
+//
+// Example: {"color":"Azul"}
+type AxisValues map[string]string
+
 // Category defines model for Category.
 type Category struct {
 	CreatedAt time.Time          `json:"created_at"`
@@ -122,12 +128,16 @@ type ErrorDetail struct {
 // Example: 12500.00
 type Money = string
 
-// Product Un producto del catálogo. El precio no incluye IVA; `price_with_tax` lo incluye, redondeado a 2 decimales.
-// `cost` y `margin_percent` solo se envían a quien puede editar el catálogo (`catalog:write`).
+// Product Un producto del catálogo: lo que comparten sus variantes (nombre, categoría, unidad base y tasa de IVA).
+// `sku`, `barcode`, `cost`, `price`, `price_with_tax` y `margin_percent` son los de la variante por defecto y se
+// mantienen mientras el frontend pasa a `variants`. `cost` y `margin_percent` solo se envían a quien puede
+// editar el catálogo (`catalog:write`).
 type Product struct {
+	// Active Un producto inactivo no se vende, con ninguna de sus variantes.
 	Active bool `json:"active"`
 
-	// Barcode Se omite si el producto no tiene.
+	// Barcode El de la variante por defecto; se omite si no tiene. Use `variants`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Barcode *string `json:"barcode,omitempty"`
 
 	// BaseUnit Unidad base en la que se cuenta y se vende el producto.
@@ -136,9 +146,8 @@ type Product struct {
 	// CategoryId Se omite si el producto no tiene categoría.
 	CategoryId *openapi_types.UUID `json:"category_id,omitempty"`
 
-	// Cost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
-	//
-	// Example: 12500.00
+	// Cost El de la variante por defecto. Use `variants`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Cost      *Money    `json:"cost,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 
@@ -146,32 +155,38 @@ type Product struct {
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
 
-	// MarginPercent Margen sobre el precio de venta, en porcentaje. Es negativo si el precio está por debajo del costo.
+	// MarginPercent El de la variante por defecto. Use `variants`.
 	//
 	// Example: 16.6667
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	MarginPercent *string `json:"margin_percent,omitempty"`
 	Name          string  `json:"name"`
 
-	// Price Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
-	//
-	// Example: 12500.00
+	// Price El de la variante por defecto. Use `variants`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Price Money `json:"price"`
 
-	// PriceWithTax Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
-	//
-	// Example: 12500.00
+	// PriceWithTax El de la variante por defecto. Use `variants`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	PriceWithTax Money `json:"price_with_tax"`
 
-	// Sku Example: TUB-PVC-12
+	// Sku El de la variante por defecto. Use `variants`.
+	//
+	// Example: TUB-PVC-12
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Sku string `json:"sku"`
 
 	// TaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
 	//
 	// Example: 0.19
 	TaxRate TaxRate `json:"tax_rate"`
+
+	// Variants Sus variantes, en el orden en que se agregaron; la variante por defecto va primero.
+	Variants []ProductVariant `json:"variants"`
 }
 
-// ProductInput defines model for ProductInput.
+// ProductInput Los datos del producto y los de su variante por defecto (`sku`, `barcode`, `cost` y `price`). Las demás
+// variantes se editan con `/products/{productId}/variants`.
 type ProductInput struct {
 	// Barcode Código de barras, único en la empresa. Vacío u omitido si no tiene.
 	//
@@ -196,7 +211,7 @@ type ProductInput struct {
 	// Example: 12500.00
 	Price Money `json:"price"`
 
-	// Sku Código interno, único en la empresa. Se guarda en mayúsculas.
+	// Sku Código interno de la variante por defecto, único en la empresa. Se guarda en mayúsculas.
 	//
 	// Example: TUB-PVC-12
 	Sku string `json:"sku"`
@@ -213,6 +228,104 @@ type ProductPage struct {
 
 	// Total Cantidad total de productos que cumplen el filtro, sin paginar.
 	Total int `json:"total"`
+}
+
+// ProductVariant Lo que se vende y se cuenta: el producto en una combinación de sus ejes. El precio no incluye IVA;
+// `price_with_tax` lo incluye con la tasa del producto, redondeado a 2 decimales. `cost` y `margin_percent`
+// solo se envían a quien puede editar el catálogo (`catalog:write`).
+type ProductVariant struct {
+	Active bool `json:"active"`
+
+	// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`), hasta 5 ejes. Los nombres
+	// de los ejes se guardan en minúsculas. Vacío en la variante de un producto simple.
+	//
+	//
+	// Example: {"color":"Azul"}
+	AxisValues AxisValues `json:"axis_values"`
+
+	// Barcode Se omite si la variante no tiene.
+	Barcode *string `json:"barcode,omitempty"`
+
+	// Cost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Cost      *Money             `json:"cost,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// IsDefault La variante creada con el producto. Un producto simple solo tiene esta.
+	IsDefault bool `json:"is_default"`
+
+	// MarginPercent Margen sobre el precio de venta, en porcentaje. Es negativo si el precio está por debajo del costo.
+	//
+	// Example: 16.6667
+	MarginPercent *string `json:"margin_percent,omitempty"`
+
+	// Price Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Price Money `json:"price"`
+
+	// PriceWithTax Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	PriceWithTax Money  `json:"price_with_tax"`
+	Sku          string `json:"sku"`
+}
+
+// ProductVariantInput defines model for ProductVariantInput.
+type ProductVariantInput struct {
+	// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`), hasta 5 ejes. Los nombres
+	// de los ejes se guardan en minúsculas. Vacío en la variante de un producto simple.
+	//
+	//
+	// Example: {"color":"Azul"}
+	AxisValues AxisValues `json:"axis_values"`
+
+	// Barcode Código de barras, único en la empresa. Vacío u omitido si no tiene.
+	Barcode *string `json:"barcode,omitempty"`
+
+	// Cost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Cost Money `json:"cost"`
+
+	// Price Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Price Money `json:"price"`
+
+	// Sku Código interno, único en la empresa. Se guarda en mayúsculas.
+	Sku string `json:"sku"`
+}
+
+// ProductVariantUpdate defines model for ProductVariantUpdate.
+type ProductVariantUpdate struct {
+	// Active Una variante inactiva no se vende.
+	Active bool `json:"active"`
+
+	// AxisValues El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`), hasta 5 ejes. Los nombres
+	// de los ejes se guardan en minúsculas. Vacío en la variante de un producto simple.
+	//
+	//
+	// Example: {"color":"Azul"}
+	AxisValues AxisValues `json:"axis_values"`
+
+	// Barcode Código de barras, único en la empresa. Vacío u omitido si no tiene.
+	Barcode *string `json:"barcode,omitempty"`
+
+	// Cost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Cost Money `json:"cost"`
+
+	// Price Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Price Money `json:"price"`
+
+	// Sku Código interno, único en la empresa. Se guarda en mayúsculas.
+	Sku string `json:"sku"`
 }
 
 // TaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
@@ -243,6 +356,9 @@ type ProductId = openapi_types.UUID
 
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
+
+// VariantId defines model for VariantId.
+type VariantId = openapi_types.UUID
 
 // BadRequest Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
 type BadRequest = Error
@@ -296,6 +412,12 @@ type CreateProductJSONRequestBody = ProductInput
 // UpdateProductJSONRequestBody defines body for UpdateProduct for application/json ContentType.
 type UpdateProductJSONRequestBody = ProductInput
 
+// AddProductVariantJSONRequestBody defines body for AddProductVariant for application/json ContentType.
+type AddProductVariantJSONRequestBody = ProductVariantInput
+
+// UpdateProductVariantJSONRequestBody defines body for UpdateProductVariant for application/json ContentType.
+type UpdateProductVariantJSONRequestBody = ProductVariantUpdate
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// ListCategories Listar categorías
@@ -328,6 +450,12 @@ type ServerInterface interface {
 	// DeactivateProduct Desactivar un producto
 	// (POST /api/v1/products/{productId}/deactivate)
 	DeactivateProduct(w http.ResponseWriter, r *http.Request, productId ProductId)
+	// AddProductVariant Agregar una variante a un producto
+	// (POST /api/v1/products/{productId}/variants)
+	AddProductVariant(w http.ResponseWriter, r *http.Request, productId ProductId)
+	// UpdateProductVariant Editar una variante
+	// (PUT /api/v1/products/{productId}/variants/{variantId})
+	UpdateProductVariant(w http.ResponseWriter, r *http.Request, productId ProductId, variantId VariantId)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -635,6 +763,67 @@ func (siw *ServerInterfaceWrapper) DeactivateProduct(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// AddProductVariant operation middleware
+func (siw *ServerInterfaceWrapper) AddProductVariant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "productId" -------------
+	var productId ProductId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "productId", r.PathValue("productId"), &productId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "productId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddProductVariant(w, r, productId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProductVariant operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProductVariant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "productId" -------------
+	var productId ProductId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "productId", r.PathValue("productId"), &productId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "productId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "variantId" -------------
+	var variantId VariantId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "variantId", r.PathValue("variantId"), &variantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variantId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProductVariant(w, r, productId, variantId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -761,6 +950,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/products/{productId}", wrapper.UpdateProduct)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/products/{productId}/deactivate", wrapper.DeactivateProduct)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/products/{productId}/activate", wrapper.ActivateProduct)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/products/{productId}/variants", wrapper.AddProductVariant)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/products/{productId}/variants/{variantId}", wrapper.UpdateProductVariant)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/categories", wrapper.ListCategories)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/categories", wrapper.CreateCategory)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/categories/{categoryId}", wrapper.DeleteCategory)
@@ -1722,6 +1913,249 @@ func (response DeactivateProduct500JSONResponse) VisitDeactivateProductResponse(
 	return err
 }
 
+type AddProductVariantRequestObject struct {
+	ProductId ProductId `json:"productId"`
+	Body      *AddProductVariantJSONRequestBody
+}
+
+type AddProductVariantResponseObject interface {
+	VisitAddProductVariantResponse(w http.ResponseWriter) error
+}
+
+type AddProductVariant201JSONResponse Product
+
+func (response AddProductVariant201JSONResponse) VisitAddProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddProductVariant400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AddProductVariant400JSONResponse) VisitAddProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddProductVariant401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AddProductVariant401JSONResponse) VisitAddProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddProductVariant403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AddProductVariant403JSONResponse) VisitAddProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddProductVariant404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AddProductVariant404JSONResponse) VisitAddProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddProductVariant409JSONResponse Error
+
+func (response AddProductVariant409JSONResponse) VisitAddProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddProductVariant422JSONResponse Error
+
+func (response AddProductVariant422JSONResponse) VisitAddProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddProductVariant500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response AddProductVariant500JSONResponse) VisitAddProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProductVariantRequestObject struct {
+	ProductId ProductId `json:"productId"`
+	VariantId VariantId `json:"variantId"`
+	Body      *UpdateProductVariantJSONRequestBody
+}
+
+type UpdateProductVariantResponseObject interface {
+	VisitUpdateProductVariantResponse(w http.ResponseWriter) error
+}
+
+type UpdateProductVariant200JSONResponse Product
+
+func (response UpdateProductVariant200JSONResponse) VisitUpdateProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProductVariant400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateProductVariant400JSONResponse) VisitUpdateProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProductVariant401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateProductVariant401JSONResponse) VisitUpdateProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProductVariant403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateProductVariant403JSONResponse) VisitUpdateProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProductVariant404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateProductVariant404JSONResponse) VisitUpdateProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProductVariant409JSONResponse Error
+
+func (response UpdateProductVariant409JSONResponse) VisitUpdateProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProductVariant422JSONResponse Error
+
+func (response UpdateProductVariant422JSONResponse) VisitUpdateProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProductVariant500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateProductVariant500JSONResponse) VisitUpdateProductVariantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// ListCategories Listar categorías
@@ -1754,6 +2188,12 @@ type StrictServerInterface interface {
 	// DeactivateProduct Desactivar un producto
 	// (POST /api/v1/products/{productId}/deactivate)
 	DeactivateProduct(ctx context.Context, request DeactivateProductRequestObject) (DeactivateProductResponseObject, error)
+	// AddProductVariant Agregar una variante a un producto
+	// (POST /api/v1/products/{productId}/variants)
+	AddProductVariant(ctx context.Context, request AddProductVariantRequestObject) (AddProductVariantResponseObject, error)
+	// UpdateProductVariant Editar una variante
+	// (PUT /api/v1/products/{productId}/variants/{variantId})
+	UpdateProductVariant(ctx context.Context, request UpdateProductVariantRequestObject) (UpdateProductVariantResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -2070,6 +2510,73 @@ func (sh *strictHandler) DeactivateProduct(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeactivateProductResponseObject); ok {
 		if err := validResponse.VisitDeactivateProductResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddProductVariant operation middleware
+func (sh *strictHandler) AddProductVariant(w http.ResponseWriter, r *http.Request, productId ProductId) {
+	var request AddProductVariantRequestObject
+
+	request.ProductId = productId
+
+	var body AddProductVariantJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddProductVariant(ctx, request.(AddProductVariantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddProductVariant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddProductVariantResponseObject); ok {
+		if err := validResponse.VisitAddProductVariantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProductVariant operation middleware
+func (sh *strictHandler) UpdateProductVariant(w http.ResponseWriter, r *http.Request, productId ProductId, variantId VariantId) {
+	var request UpdateProductVariantRequestObject
+
+	request.ProductId = productId
+	request.VariantId = variantId
+
+	var body UpdateProductVariantJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProductVariant(ctx, request.(UpdateProductVariantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProductVariant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProductVariantResponseObject); ok {
+		if err := validResponse.VisitUpdateProductVariantResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

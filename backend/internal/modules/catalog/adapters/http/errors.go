@@ -14,8 +14,9 @@ const unauthorizedMessage = "Su sesión no es válida o expiró. Inicie sesión 
 // errorRules maps the catalog domain errors to HTTP.
 var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrProductNotFound, Status: http.StatusNotFound, Code: "product_not_found", Message: "El producto no existe."},
-	{Err: domain.ErrSKUTaken, Status: http.StatusConflict, Code: "sku_taken", Message: "Ya existe un producto con ese SKU."},
-	{Err: domain.ErrBarcodeTaken, Status: http.StatusConflict, Code: "barcode_taken", Message: "Ya existe un producto con ese código de barras."},
+	{Err: domain.ErrVariantNotFound, Status: http.StatusNotFound, Code: "variant_not_found", Message: "La variante no existe en este producto."},
+	{Err: domain.ErrSKUTaken, Status: http.StatusConflict, Code: "sku_taken", Message: "Ya existe un producto o una variante con ese SKU."},
+	{Err: domain.ErrBarcodeTaken, Status: http.StatusConflict, Code: "barcode_taken", Message: "Ya existe un producto o una variante con ese código de barras."},
 	{Err: domain.ErrCategoryInUse, Status: http.StatusConflict, Code: "category_in_use", Message: "La categoría tiene productos o subcategorías. Muévelos antes de borrarla."},
 	{Err: domain.ErrProductInactive, Status: http.StatusUnprocessableEntity, Code: "product_inactive", Message: "El producto está inactivo. Actívelo antes de cambiarle el precio."},
 	{Err: domain.ErrCategoryCycle, Status: http.StatusUnprocessableEntity, Code: "category_cycle", Message: "Una categoría no puede quedar dentro de sus propias subcategorías."},
@@ -24,6 +25,9 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrInvalidBarcode, Status: http.StatusUnprocessableEntity, Code: "invalid_barcode", Message: "El código de barras no es válido: sin espacios y máximo 64 caracteres."},
 	{Err: domain.ErrInvalidProductName, Status: http.StatusUnprocessableEntity, Code: "invalid_product_name", Message: "Escriba el nombre del producto (máximo 200 caracteres)."},
 	{Err: domain.ErrInvalidDescription, Status: http.StatusUnprocessableEntity, Code: "invalid_description", Message: "La descripción puede tener máximo 2.000 caracteres."},
+	{Err: domain.ErrInvalidAxisValues, Status: http.StatusUnprocessableEntity, Code: "invalid_axis_values", Message: "Los ejes de la variante no son válidos: máximo 5, con nombre y valor (máximo 50 y 100 caracteres)."},
+	{Err: domain.ErrVariantAxesMismatch, Status: http.StatusUnprocessableEntity, Code: "variant_axes_mismatch", Message: "La variante debe usar los mismos ejes que las demás variantes del producto."},
+	{Err: domain.ErrDuplicateVariant, Status: http.StatusUnprocessableEntity, Code: "duplicate_variant", Message: "Ya existe una variante del producto con esos valores."},
 	{Err: domain.ErrInvalidUnit, Status: http.StatusUnprocessableEntity, Code: "invalid_unit", Message: "La unidad de medida no es válida."},
 	{Err: domain.ErrInvalidPrice, Status: http.StatusUnprocessableEntity, Code: "invalid_price", Message: "El precio debe ser mayor que cero, con máximo 4 decimales."},
 	{Err: domain.ErrInvalidCost, Status: http.StatusUnprocessableEntity, Code: "invalid_cost", Message: "El costo no puede ser negativo y tiene máximo 4 decimales."},

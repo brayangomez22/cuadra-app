@@ -32,10 +32,17 @@ type store struct {
 }
 
 func cloneProduct(p *domain.Product) *domain.Product {
+	variants := make([]domain.VariantSnapshot, 0, len(p.Variants()))
+	for _, v := range p.Variants() {
+		variants = append(variants, domain.VariantSnapshot{
+			ID: v.ID(), SKU: v.SKU(), Barcode: v.Barcode(), Cost: v.Cost(), Price: v.Price(),
+			AxisValues: v.AxisValues(), IsDefault: v.IsDefault(), Active: v.IsActive(), CreatedAt: v.CreatedAt(),
+		})
+	}
 	c, err := domain.RehydrateProduct(domain.ProductSnapshot{
-		ID: p.ID(), TenantID: p.TenantID(), SKU: p.SKU(), Barcode: p.Barcode(), Name: p.Name(),
+		ID: p.ID(), TenantID: p.TenantID(), Name: p.Name(),
 		Description: p.Description(), CategoryID: p.CategoryID(), BaseUnit: p.BaseUnit(),
-		Cost: p.Cost(), Price: p.Price(), TaxRate: p.TaxRate(), Active: p.IsActive(), CreatedAt: p.CreatedAt(),
+		TaxRate: p.TaxRate(), Active: p.IsActive(), CreatedAt: p.CreatedAt(), Variants: variants,
 	})
 	if err != nil {
 		panic(err)
@@ -55,16 +62,22 @@ func cloneCategory(c *domain.Category) *domain.Category {
 
 type fakeProducts struct{ *store }
 
+// check enforces the per-tenant uniqueness of the variants' SKU and barcode
+// against the other products (the product checks its own variants).
 func (f fakeProducts) check(p *domain.Product) error {
 	for _, other := range f.products {
 		if other.TenantID() != p.TenantID() || other.ID() == p.ID() {
 			continue
 		}
-		if other.SKU() == p.SKU() {
-			return domain.ErrSKUTaken
-		}
-		if p.Barcode() != "" && other.Barcode() == p.Barcode() {
-			return domain.ErrBarcodeTaken
+		for _, v := range p.Variants() {
+			for _, ov := range other.Variants() {
+				if ov.SKU() == v.SKU() {
+					return domain.ErrSKUTaken
+				}
+				if v.Barcode() != "" && ov.Barcode() == v.Barcode() {
+					return domain.ErrBarcodeTaken
+				}
+			}
 		}
 	}
 	if id := p.CategoryID(); id != nil {

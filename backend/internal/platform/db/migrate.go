@@ -16,6 +16,12 @@ import (
 // password, so the password never lives in a migration and can be rotated by
 // running Migrate again.
 func Migrate(ctx context.Context, adminURL, appPassword string) error {
+	return MigrateTo(ctx, adminURL, appPassword, goose.MaxVersion)
+}
+
+// MigrateTo is Migrate up to version (inclusive), for tests that load data
+// in an older schema before migrating it.
+func MigrateTo(ctx context.Context, adminURL, appPassword string, version int64) error {
 	cfg, err := pgx.ParseConfig(adminURL)
 	if err != nil {
 		return fmt.Errorf("db: parse migration url: %w", err)
@@ -27,7 +33,7 @@ func Migrate(ctx context.Context, adminURL, appPassword string) error {
 	if err != nil {
 		return fmt.Errorf("db: load migrations: %w", err)
 	}
-	if _, err := provider.Up(ctx); err != nil {
+	if _, err := provider.UpTo(ctx, version); err != nil {
 		return fmt.Errorf("db: apply migrations: %w", err)
 	}
 

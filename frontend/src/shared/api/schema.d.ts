@@ -154,9 +154,11 @@ export interface paths {
         };
         /**
          * Buscar productos
-         * @description Lista los productos de la empresa. Con `q` busca por nombre (cada palabra debe aparecer, sin
-         *     importar tildes ni mayúsculas) o por SKU o código de barras exactos, que salen primero.
-         *     Sin `q`, ordena por nombre.
+         * @description Lista los productos de la empresa, cada uno con sus variantes. Con `q` busca por nombre (cada palabra
+         *     debe aparecer, sin importar tildes ni mayúsculas) o por el SKU o el código de barras exactos de
+         *     cualquiera de sus variantes, que salen primero. Sin `q`, ordena por nombre.
+         *
+         *     Es la búsqueda del POS: con `q`, la request se mide con `cuadra.operation=pos.search` (SLO de latencia).
          */
         get: operations["listProducts"];
         put?: never;
@@ -232,6 +234,53 @@ export interface paths {
          * @description El producto se puede vender de nuevo. Es idempotente.
          */
         post: operations["activateProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{productId}/variants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Agregar una variante a un producto
+         * @description Agrega una variante activa. Debe usar los mismos ejes que las demás variantes del producto, con valores
+         *     distintos. A un producto simple primero se le asignan ejes a su variante por defecto (editar la variante).
+         */
+        post: operations["addProductVariant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{productId}/variants/{variantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+                variantId: components["parameters"]["VariantId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Editar una variante
+         * @description Reemplaza los datos editables de la variante y su estado. El precio de una variante de un producto
+         *     inactivo no se puede cambiar. Una variante inactiva no se vende aunque el producto esté activo.
+         */
+        put: operations["updateProductVariant"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -748,9 +797,13 @@ export interface components {
          * @enum {string}
          */
         UnitOfMeasure: "und" | "m" | "kg" | "l" | "caja" | "rollo" | "bulto" | "galon";
+        /**
+         * @description Los datos del producto y los de su variante por defecto (`sku`, `barcode`, `cost` y `price`). Las demás
+         *     variantes se editan con `/products/{productId}/variants`.
+         */
         ProductInput: {
             /**
-             * @description Código interno, único en la empresa. Se guarda en mayúsculas.
+             * @description Código interno de la variante por defecto, único en la empresa. Se guarda en mayúsculas.
              * @example TUB-PVC-12
              */
             sku: string;
@@ -770,15 +823,80 @@ export interface components {
             tax_rate: components["schemas"]["TaxRate"];
         };
         /**
-         * @description Un producto del catálogo. El precio no incluye IVA; `price_with_tax` lo incluye, redondeado a 2 decimales.
-         *     `cost` y `margin_percent` solo se envían a quien puede editar el catálogo (`catalog:write`).
+         * @description El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`), hasta 5 ejes. Los nombres
+         *     de los ejes se guardan en minúsculas. Vacío en la variante de un producto simple.
+         * @example {
+         *       "color": "Azul"
+         *     }
+         */
+        AxisValues: {
+            [key: string]: string;
+        };
+        ProductVariantInput: {
+            /** @description Código interno, único en la empresa. Se guarda en mayúsculas. */
+            sku: string;
+            /** @description Código de barras, único en la empresa. Vacío u omitido si no tiene. */
+            barcode?: string;
+            cost: components["schemas"]["Money"];
+            price: components["schemas"]["Money"];
+            axis_values: components["schemas"]["AxisValues"];
+        };
+        ProductVariantUpdate: {
+            /** @description Código interno, único en la empresa. Se guarda en mayúsculas. */
+            sku: string;
+            /** @description Código de barras, único en la empresa. Vacío u omitido si no tiene. */
+            barcode?: string;
+            cost: components["schemas"]["Money"];
+            price: components["schemas"]["Money"];
+            axis_values: components["schemas"]["AxisValues"];
+            /** @description Una variante inactiva no se vende. */
+            active: boolean;
+        };
+        /**
+         * @description Lo que se vende y se cuenta: el producto en una combinación de sus ejes. El precio no incluye IVA;
+         *     `price_with_tax` lo incluye con la tasa del producto, redondeado a 2 decimales. `cost` y `margin_percent`
+         *     solo se envían a quien puede editar el catálogo (`catalog:write`).
+         */
+        ProductVariant: {
+            /** Format: uuid */
+            id: string;
+            sku: string;
+            /** @description Se omite si la variante no tiene. */
+            barcode?: string;
+            price: components["schemas"]["Money"];
+            price_with_tax: components["schemas"]["Money"];
+            cost?: components["schemas"]["Money"];
+            /**
+             * @description Margen sobre el precio de venta, en porcentaje. Es negativo si el precio está por debajo del costo.
+             * @example 16.6667
+             */
+            margin_percent?: string;
+            axis_values: components["schemas"]["AxisValues"];
+            /** @description La variante creada con el producto. Un producto simple solo tiene esta. */
+            is_default: boolean;
+            active: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description Un producto del catálogo: lo que comparten sus variantes (nombre, categoría, unidad base y tasa de IVA).
+         *     `sku`, `barcode`, `cost`, `price`, `price_with_tax` y `margin_percent` son los de la variante por defecto y se
+         *     mantienen mientras el frontend pasa a `variants`. `cost` y `margin_percent` solo se envían a quien puede
+         *     editar el catálogo (`catalog:write`).
          */
         Product: {
             /** Format: uuid */
             id: string;
-            /** @example TUB-PVC-12 */
+            /**
+             * @deprecated
+             * @description El de la variante por defecto. Use `variants`.
+             * @example TUB-PVC-12
+             */
             sku: string;
-            /** @description Se omite si el producto no tiene. */
+            /**
+             * @deprecated
+             * @description El de la variante por defecto; se omite si no tiene. Use `variants`.
+             */
             barcode?: string;
             name: string;
             /** @description Se omite si está vacía. */
@@ -789,18 +907,34 @@ export interface components {
              */
             category_id?: string;
             base_unit: components["schemas"]["UnitOfMeasure"];
+            /**
+             * @deprecated
+             * @description El de la variante por defecto. Use `variants`.
+             */
             cost?: components["schemas"]["Money"];
+            /**
+             * @deprecated
+             * @description El de la variante por defecto. Use `variants`.
+             */
             price: components["schemas"]["Money"];
+            /**
+             * @deprecated
+             * @description El de la variante por defecto. Use `variants`.
+             */
             price_with_tax: components["schemas"]["Money"];
             tax_rate: components["schemas"]["TaxRate"];
             /**
-             * @description Margen sobre el precio de venta, en porcentaje. Es negativo si el precio está por debajo del costo.
+             * @deprecated
+             * @description El de la variante por defecto. Use `variants`.
              * @example 16.6667
              */
             margin_percent?: string;
+            /** @description Un producto inactivo no se vende, con ninguna de sus variantes. */
             active: boolean;
             /** Format: date-time */
             created_at: string;
+            /** @description Sus variantes, en el orden en que se agregaron; la variante por defecto va primero. */
+            variants: components["schemas"]["ProductVariant"][];
         };
         ProductPage: {
             items: components["schemas"]["Product"][];
@@ -1268,6 +1402,7 @@ export interface components {
         /** @description Cantidad de resultados a saltar. */
         Offset: number;
         ProductId: string;
+        VariantId: string;
         CategoryId: string;
         LocationId: string;
         SaleId: string;
@@ -1742,6 +1877,112 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    addProductVariant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductVariantInput"];
+            };
+        };
+        responses: {
+            /** @description El producto con la variante nueva. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Product"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description El SKU o el código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description Algún dato no cumple las reglas (`invalid_sku`, `invalid_barcode`, `invalid_price`, `invalid_cost`,
+             *     `invalid_axis_values`), los ejes no son los de las demás variantes (`variant_axes_mismatch`) u otra
+             *     variante ya tiene esos valores (`duplicate_variant`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateProductVariant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+                variantId: components["parameters"]["VariantId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductVariantUpdate"];
+            };
+        };
+        responses: {
+            /** @description El producto con la variante actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Product"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description El SKU o el código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description Algún dato no cumple las reglas (los mismos códigos de agregar una variante) o se cambió el precio
+             *     de una variante de un producto inactivo (`product_inactive`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             500: components["responses"]["InternalError"];
         };
     };

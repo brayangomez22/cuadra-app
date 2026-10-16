@@ -7,6 +7,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -24,6 +25,10 @@ const permissionCatalogWrite = "catalog:write"
 // defaultPageSize is the contract's default limit.
 const defaultPageSize = 20
 
+// opPOSSearch is the operation the POS latency SLO measures for a search
+// with text (docs/slo.md).
+const opPOSSearch = "pos.search"
+
 // UseCases are the catalog use cases the handlers call (*app.Service).
 type UseCases interface {
 	CreateProduct(ctx context.Context, a app.Actor, in app.ProductInput) (*domain.Product, error)
@@ -32,6 +37,8 @@ type UseCases interface {
 	SearchProducts(ctx context.Context, a app.Actor, f domain.ProductFilter) (domain.ProductPage, error)
 	DeactivateProduct(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Product, error)
 	ActivateProduct(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Product, error)
+	AddVariant(ctx context.Context, a app.Actor, productID uuid.UUID, in app.VariantInput) (*domain.Product, error)
+	UpdateVariant(ctx context.Context, a app.Actor, productID, variantID uuid.UUID, in app.VariantUpdate) (*domain.Product, error)
 	CreateCategory(ctx context.Context, a app.Actor, name string, parentID *uuid.UUID) (*domain.Category, error)
 	UpdateCategory(ctx context.Context, a app.Actor, id uuid.UUID, name string, parentID *uuid.UUID) (*domain.Category, error)
 	ListCategories(ctx context.Context, a app.Actor) ([]*domain.Category, error)
@@ -92,6 +99,10 @@ func (h *Handler) ListProducts(ctx context.Context, req catalogapi.ListProductsR
 	f := domain.ProductFilter{CategoryID: params.CategoryId, Limit: defaultPageSize}
 	if params.Q != nil {
 		f.Query = *params.Q
+	}
+	if strings.TrimSpace(f.Query) != "" {
+		// A typed text or a scanned code: the cashier is waiting for it.
+		httpx.SetOperation(ctx, opPOSSearch)
 	}
 	if params.Ids != nil {
 		f.IDs = *params.Ids
@@ -176,6 +187,34 @@ func (h *Handler) DeactivateProduct(ctx context.Context, req catalogapi.Deactiva
 	return catalogapi.DeactivateProduct200JSONResponse(productBody(p, h.seesCost(ctx))), nil
 }
 
+// AddProductVariant adds a variant to a product.
+func (h *Handler) AddProductVariant(ctx context.Context, req catalogapi.AddProductVariantRequestObject) (catalogapi.AddProductVariantResponseObject, error) {
+	b := req.Body
+	in, err := variantInput(b.Sku, b.Barcode, b.Cost, b.Price, b.AxisValues)
+	if err != nil {
+		return nil, err
+	}
+	p, err := h.uc.AddVariant(ctx, actor(ctx), req.ProductId, in)
+	if err != nil {
+		return nil, err
+	}
+	return catalogapi.AddProductVariant201JSONResponse(productBody(p, h.seesCost(ctx))), nil
+}
+
+// UpdateProductVariant replaces a variant's data and state.
+func (h *Handler) UpdateProductVariant(ctx context.Context, req catalogapi.UpdateProductVariantRequestObject) (catalogapi.UpdateProductVariantResponseObject, error) {
+	b := req.Body
+	in, err := variantInput(b.Sku, b.Barcode, b.Cost, b.Price, b.AxisValues)
+	if err != nil {
+		return nil, err
+	}
+	p, err := h.uc.UpdateVariant(ctx, actor(ctx), req.ProductId, req.VariantId, app.VariantUpdate{VariantInput: in, Active: b.Active})
+	if err != nil {
+		return nil, err
+	}
+	return catalogapi.UpdateProductVariant200JSONResponse(productBody(p, h.seesCost(ctx))), nil
+}
+
 // ListCategories returns every category of the tenant.
 func (h *Handler) ListCategories(ctx context.Context, _ catalogapi.ListCategoriesRequestObject) (catalogapi.ListCategoriesResponseObject, error) {
 	list, err := h.uc.ListCategories(ctx, actor(ctx))
@@ -256,30 +295,74 @@ func productInput(body catalogapi.ProductInput) (app.ProductInput, error) {
 	return in, nil
 }
 
-// productBody builds the response; cost and margin only for who may edit
-// the catalog.
-func productBody(p *domain.Product, seesCost bool) catalogapi.Product {
-	body := catalogapi.Product{
-		Id:           p.ID(),
-		Sku:          p.SKU(),
-		Name:         p.Name(),
-		CategoryId:   p.CategoryID(),
-		BaseUnit:     catalogapi.UnitOfMeasure(p.BaseUnit()),
-		Price:        formatMoney(p.Price()),
-		PriceWithTax: formatMoney(p.PriceWithTax()),
-		TaxRate:      formatRate(p.TaxRate()),
-		Active:       p.IsActive(),
-		CreatedAt:    p.CreatedAt(),
+// variantInput translates a variant body. The contract already checked the
+// formats; the business rules are the domain's.
+func variantInput(sku string, barcode *string, costText, priceText string, axes catalogapi.AxisValues) (app.VariantInput, error) {
+	cost, err := parseAmount(costText, domain.ErrInvalidCost)
+	if err != nil {
+		return app.VariantInput{}, err
 	}
-	if barcode := p.Barcode(); barcode != "" {
-		body.Barcode = &barcode
+	price, err := parseAmount(priceText, domain.ErrInvalidPrice)
+	if err != nil {
+		return app.VariantInput{}, err
+	}
+	in := app.VariantInput{SKU: sku, Cost: cost, Price: price, AxisValues: axes}
+	if barcode != nil {
+		in.Barcode = *barcode
+	}
+	return in, nil
+}
+
+// productBody builds the response; cost and margin only for who may edit
+// the catalog. The deprecated top-level fields repeat the default variant's
+// until the frontend reads variants (removed in T24j).
+func productBody(p *domain.Product, seesCost bool) catalogapi.Product {
+	variants := make([]catalogapi.ProductVariant, 0, len(p.Variants()))
+	for _, v := range p.Variants() {
+		variants = append(variants, variantBody(v, p.TaxRate(), seesCost))
+	}
+	def := variantBody(p.DefaultVariant(), p.TaxRate(), seesCost)
+	body := catalogapi.Product{
+		Id:            p.ID(),
+		Sku:           def.Sku,
+		Barcode:       def.Barcode,
+		Name:          p.Name(),
+		CategoryId:    p.CategoryID(),
+		BaseUnit:      catalogapi.UnitOfMeasure(p.BaseUnit()),
+		Cost:          def.Cost,
+		Price:         def.Price,
+		PriceWithTax:  def.PriceWithTax,
+		MarginPercent: def.MarginPercent,
+		TaxRate:       formatRate(p.TaxRate()),
+		Active:        p.IsActive(),
+		CreatedAt:     p.CreatedAt(),
+		Variants:      variants,
 	}
 	if description := p.Description(); description != "" {
 		body.Description = &description
 	}
+	return body
+}
+
+// variantBody builds a variant of the response; its price with tax uses the
+// product's rate.
+func variantBody(v *domain.ProductVariant, rate domain.TaxRate, seesCost bool) catalogapi.ProductVariant {
+	body := catalogapi.ProductVariant{
+		Id:           v.ID(),
+		Sku:          v.SKU(),
+		Price:        formatMoney(v.Price()),
+		PriceWithTax: formatMoney(v.PriceWithTax(rate)),
+		AxisValues:   v.AxisValues(),
+		IsDefault:    v.IsDefault(),
+		Active:       v.IsActive(),
+		CreatedAt:    v.CreatedAt(),
+	}
+	if barcode := v.Barcode(); barcode != "" {
+		body.Barcode = &barcode
+	}
 	if seesCost {
-		cost := formatMoney(p.Cost())
-		margin := p.MarginPercent().String()
+		cost := formatMoney(v.Cost())
+		margin := v.MarginPercent().String()
 		body.Cost, body.MarginPercent = &cost, &margin
 	}
 	return body

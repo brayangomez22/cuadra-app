@@ -12,12 +12,14 @@ const (
 	foreignKeyViolation = "23503"
 )
 
-// Constraints of migrations/00004_catalog.sql the adapter maps to domain errors.
+// Constraints of migrations/00004_catalog.sql and 00010_product_variants.sql
+// the adapter maps to domain errors.
 const (
-	productsSKUKey       = "products_tenant_id_sku_key"
-	productsBarcodeKey   = "products_tenant_id_barcode_key"
-	productsCategoryFKey = "products_category_fkey"
-	categoriesParentFKey = "categories_parent_fkey"
+	productsCategoryFKey  = "products_category_fkey"
+	categoriesParentFKey  = "categories_parent_fkey"
+	variantsSKUKey        = "product_variants_tenant_id_sku_key"
+	variantsBarcodeKey    = "product_variants_tenant_id_barcode_key"
+	variantsAxisValuesKey = "product_variants_axis_values_key"
 )
 
 // violates reports whether err violates the constraint named constraint with

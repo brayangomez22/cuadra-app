@@ -223,7 +223,7 @@
       "id": 4,
       "type": "stat",
       "title": "Requests del POS en menos de 300 ms",
-      "description": "SLI del SLO de latencia del POS (docs/slo.md): búsqueda de productos y confirmación de ventas. Objetivo: 99,5%.",
+      "description": "SLI del SLO de latencia del POS (docs/slo.md): las requests con cuadra.operation pos.search (búsqueda con texto o código) y pos.confirm_sale (cobrar). Objetivo: 99,5%.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -240,7 +240,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(http_server_request_duration_seconds_bucket{service_name=\"cuadra-api\", le=\"0.3\", http_route=~\"/api/v1/products|/api/v1/sales\", http_request_method=~\"GET|POST\"}[$__rate_interval])) / sum(rate(http_server_request_duration_seconds_count{service_name=\"cuadra-api\", http_route=~\"/api/v1/products|/api/v1/sales\", http_request_method=~\"GET|POST\"}[$__rate_interval]))",
+          "expr": "sum(rate(http_server_request_duration_seconds_bucket{service_name=\"cuadra-api\", le=\"0.3\", cuadra_operation=~\"pos.search|pos.confirm_sale\"}[$__rate_interval])) / sum(rate(http_server_request_duration_seconds_count{service_name=\"cuadra-api\", cuadra_operation=~\"pos.search|pos.confirm_sale\"}[$__rate_interval]))",
           "legendFormat": "< 300 ms",
           "refId": "A",
           "range": true

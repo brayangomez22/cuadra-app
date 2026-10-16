@@ -68,8 +68,11 @@ func (f fixture) createTenant(t *testing.T) tenant {
 	t.Helper()
 	tn := tenant{id: newID(), product: newID()}
 	f.exec(t, tn.id, "INSERT INTO tenants (id, name, nit, status, created_at) VALUES ($1, 'Ferretería', '890903938-8', 'active', $2)", tn.id, now)
-	f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, sku, name, description, base_unit, cost, price, tax_rate, active, created_at)
-		VALUES ($1, $2, $3, 'Cemento gris 50kg', '', 'bulto', 25000, 30000, 0.19, true, $4)`,
+	f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit, tax_rate, active, created_at)
+		VALUES ($1, $2, 'Cemento gris 50kg', '', 'bulto', 0.19, true, $3)`,
+		tn.product, tn.id, now)
+	f.exec(t, tn.id, `INSERT INTO product_variants (id, tenant_id, product_id, sku, cost, price, is_default, active, created_at)
+		VALUES ($1, $2, $1, $3, 25000, 30000, true, true, $4)`,
 		tn.product, tn.id, "SKU-"+strings.ToUpper(tn.product.String()), now)
 	tn.location = f.createLocation(t, tn.id)
 	return tn

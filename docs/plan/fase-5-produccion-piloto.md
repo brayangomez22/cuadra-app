@@ -21,7 +21,7 @@ Estado remoto de Terraform en un Storage Account con bloqueo. Paso en el CI de `
 
 ### [ ] T46 · Entrega continua (CD)
 **Depende de:** T45.
-**Alcance:** al integrar a `main`, el CI construye la imagen con tag del commit, la publica en ACR, ejecuta las migraciones (job separado, con el rol de migraciones) y despliega a **staging**. Despliegue a **producción** con aprobación manual (GitHub Environments). Smoke test post-despliegue contra `/readyz` y rollback automático a la revisión anterior si falla. Autenticación del CI con Azure por OIDC (sin secretos de larga duración).
+**Alcance:** al integrar a `main`, el CI construye la imagen con tag del commit, la publica en ACR, ejecuta las migraciones (job separado, con el rol de migraciones, que en Azure no es superusuario: verificar que corren igual que en `dbtest`, P26) y despliega a **staging**. Despliegue a **producción** con aprobación manual (GitHub Environments). Smoke test post-despliegue contra `/readyz` y rollback automático a la revisión anterior si falla. Autenticación del CI con Azure por OIDC (sin secretos de larga duración).
 **Pendientes que entran a esta tarea:** P13 (`docs/plan/pendientes.md`).
 **Aceptación:** de merge a staging sin intervención; de staging a producción con un clic.
 

@@ -56,7 +56,7 @@ func (f fixture) createTenant(t *testing.T) uuid.UUID {
 type productOption func(*domain.NewProductParams)
 
 func withBarcode(code string) productOption {
-	return func(p *domain.NewProductParams) { p.Barcode = code }
+	return func(p *domain.NewProductParams) { p.Variant.Barcode = code }
 }
 
 func withCategory(id uuid.UUID) productOption {
@@ -68,8 +68,8 @@ func (f fixture) newProduct(t *testing.T, tenantID uuid.UUID, sku, name string, 
 	rate, err := domain.ParseTaxRate(dec("0.19"))
 	require.NoError(t, err)
 	params := domain.NewProductParams{
-		TenantID: tenantID, SKU: sku, Name: name, Description: "Producto de prueba",
-		BaseUnit: domain.UnitPiece, Cost: dec("8333.3333"), Price: dec("10000.1234"), TaxRate: rate,
+		TenantID: tenantID, Name: name, Description: "Producto de prueba", BaseUnit: domain.UnitPiece, TaxRate: rate,
+		Variant: domain.VariantParams{SKU: sku, Cost: dec("8333.3333"), Price: dec("10000.1234")},
 	}
 	for _, opt := range opts {
 		opt(&params)
@@ -114,14 +114,21 @@ func TestProductRepository(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, p.ID(), got.ID())
-		require.Equal(t, "TUB-PVC-12", got.SKU())
-		require.Equal(t, "7701234567890", got.Barcode())
+		v := got.DefaultVariant()
+		require.Equal(t, p.DefaultVariant().ID(), v.ID())
+		require.Equal(t, p.ID(), v.ProductID())
+		require.Equal(t, "TUB-PVC-12", v.SKU())
+		require.Equal(t, "7701234567890", v.Barcode())
 		require.Equal(t, "Tubo PVC presión 1/2 pulgada", got.Name())
 		require.Equal(t, "Producto de prueba", got.Description())
 		require.Equal(t, p.CategoryID(), got.CategoryID())
 		require.Equal(t, domain.UnitPiece, got.BaseUnit())
-		require.True(t, dec("8333.3333").Equal(got.Cost()), got.Cost().String())
-		require.True(t, dec("10000.1234").Equal(got.Price()), got.Price().String())
+		require.True(t, dec("8333.3333").Equal(v.Cost()), v.Cost().String())
+		require.True(t, dec("10000.1234").Equal(v.Price()), v.Price().String())
+		require.True(t, v.IsDefault())
+		require.True(t, v.IsActive())
+		require.Empty(t, v.AxisValues())
+		require.Equal(t, now, v.CreatedAt())
 		require.True(t, dec("0.19").Equal(got.TaxRate().Rate()))
 		require.True(t, got.IsActive())
 		require.Equal(t, now, got.CreatedAt())
@@ -179,23 +186,27 @@ func TestProductRepository(t *testing.T) {
 		require.NoError(t, err)
 		categoryID := category.ID()
 		require.NoError(t, p.UpdateDetails(domain.ProductDetails{
-			SKU: "CAB-14", Name: "Cable 14 AWG", CategoryID: &categoryID,
-			BaseUnit: domain.UnitMeter, Cost: dec("1200.5"), TaxRate: rate,
+			Name: "Cable 14 AWG", CategoryID: &categoryID, BaseUnit: domain.UnitMeter, TaxRate: rate,
 		}))
-		require.NoError(t, p.ChangePrice(dec("2500")))
+		id := p.DefaultVariant().ID()
+		require.NoError(t, p.UpdateVariant(id, domain.VariantDetails{SKU: "CAB-14", Cost: dec("1200.5")}))
+		require.NoError(t, p.ChangeVariantPrice(id, dec("2500")))
+		require.NoError(t, p.SetVariantActive(id, false))
 		p.Deactivate()
 
 		require.NoError(t, f.products.Update(t.Context(), p))
 
 		got, err := f.products.GetByID(t.Context(), tenant, p.ID())
 		require.NoError(t, err)
-		require.Equal(t, "CAB-14", got.SKU())
-		require.Empty(t, got.Barcode())
+		v := got.DefaultVariant()
+		require.Equal(t, "CAB-14", v.SKU())
+		require.Empty(t, v.Barcode())
+		require.True(t, dec("1200.5").Equal(v.Cost()))
+		require.True(t, dec("2500").Equal(v.Price()))
+		require.False(t, v.IsActive())
 		require.Equal(t, "Cable 14 AWG", got.Name())
 		require.Equal(t, &categoryID, got.CategoryID())
 		require.Equal(t, domain.UnitMeter, got.BaseUnit())
-		require.True(t, dec("1200.5").Equal(got.Cost()))
-		require.True(t, dec("2500").Equal(got.Price()))
 		require.True(t, dec("0.05").Equal(got.TaxRate().Rate()))
 		require.False(t, got.IsActive())
 	})
@@ -204,9 +215,7 @@ func TestProductRepository(t *testing.T) {
 		tenant := f.createTenant(t)
 		f.createProduct(t, tenant, "A-1", "Producto A")
 		b := f.createProduct(t, tenant, "B-1", "Producto B")
-		require.NoError(t, b.UpdateDetails(domain.ProductDetails{
-			SKU: "A-1", Name: b.Name(), BaseUnit: b.BaseUnit(), Cost: b.Cost(), TaxRate: b.TaxRate(),
-		}))
+		require.NoError(t, b.UpdateVariant(b.DefaultVariant().ID(), domain.VariantDetails{SKU: "A-1", Cost: dec("1")}))
 
 		require.ErrorIs(t, f.products.Update(t.Context(), b), domain.ErrSKUTaken)
 	})
@@ -450,8 +459,12 @@ func TestCatalogTenantIsolation(t *testing.T) {
 	t.Run("el tenant B no edita ni borra datos del tenant A", func(t *testing.T) {
 		// The same entities, but claiming to belong to tenant B.
 		forged, err := domain.RehydrateProduct(domain.ProductSnapshot{
-			ID: productA.ID(), TenantID: tenantB, SKU: "HACK", Name: "Cambiado", BaseUnit: domain.UnitPiece,
-			Cost: dec("1"), Price: dec("1"), TaxRate: productA.TaxRate(), Active: true, CreatedAt: now,
+			ID: productA.ID(), TenantID: tenantB, Name: "Cambiado", BaseUnit: domain.UnitPiece,
+			TaxRate: productA.TaxRate(), Active: true, CreatedAt: now,
+			Variants: []domain.VariantSnapshot{{
+				ID: productA.DefaultVariant().ID(), SKU: "HACK", Cost: dec("1"), Price: dec("1"),
+				IsDefault: true, Active: true, CreatedAt: now,
+			}},
 		})
 		require.NoError(t, err)
 		require.ErrorIs(t, f.products.Update(t.Context(), forged), domain.ErrProductNotFound)
@@ -465,7 +478,8 @@ func TestCatalogTenantIsolation(t *testing.T) {
 
 		got, err := f.products.GetByID(t.Context(), tenantA, productA.ID())
 		require.NoError(t, err)
-		require.Equal(t, "TUB-12", got.SKU())
+		require.Equal(t, "TUB-12", got.DefaultVariant().SKU())
+		require.Equal(t, "Tubo PVC presión 1/2 pulgada", got.Name())
 		gotCategory, err := f.categories.GetByID(t.Context(), tenantA, categoryA.ID())
 		require.NoError(t, err)
 		require.Equal(t, "Plomería", gotCategory.Name())

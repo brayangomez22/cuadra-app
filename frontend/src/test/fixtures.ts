@@ -2,6 +2,7 @@ import type { components } from '@/shared/api/schema';
 
 type Schemas = components['schemas'];
 export type Product = Schemas['Product'];
+export type ProductVariant = Schemas['ProductVariant'];
 export type Location = Schemas['Location'];
 export type StockLevel = Schemas['StockLevel'];
 export type StockMovement = Schemas['StockMovement'];
@@ -19,11 +20,11 @@ export const ids = {
 };
 
 export function aProduct(overrides: Partial<Product> = {}): Product {
-  return {
+  const product = {
     id: ids.pipe,
     sku: 'TUB-PVC-12',
     name: 'Tubo PVC presión 1/2 pulgada',
-    base_unit: 'und',
+    base_unit: 'und' as const,
     cost: '8333.33',
     price: '10000.00',
     price_with_tax: '11900.00',
@@ -33,6 +34,26 @@ export function aProduct(overrides: Partial<Product> = {}): Product {
     created_at: '2026-10-01T15:00:00Z',
     ...overrides,
   };
+  return { ...product, variants: overrides.variants ?? [defaultVariantOf(product)] };
+}
+
+// defaultVariantOf is the variant the API derives a product's top-level SKU,
+// barcode, cost and price from. A product from before variants reuses its id.
+function defaultVariantOf(product: Omit<Product, 'variants'>): ProductVariant {
+  const variant: ProductVariant = {
+    id: product.id,
+    sku: product.sku,
+    price: product.price,
+    price_with_tax: product.price_with_tax,
+    axis_values: {},
+    is_default: true,
+    active: true,
+    created_at: product.created_at,
+  };
+  if (product.barcode !== undefined) variant.barcode = product.barcode;
+  if (product.cost !== undefined) variant.cost = product.cost;
+  if (product.margin_percent !== undefined) variant.margin_percent = product.margin_percent;
+  return variant;
 }
 
 export function aCement(overrides: Partial<Product> = {}): Product {
@@ -54,6 +75,12 @@ export function withoutCost(product: Product): Product {
   const copy = { ...product };
   delete copy.cost;
   delete copy.margin_percent;
+  copy.variants = product.variants.map((variant) => {
+    const v = { ...variant };
+    delete v.cost;
+    delete v.margin_percent;
+    return v;
+  });
   return copy;
 }
 

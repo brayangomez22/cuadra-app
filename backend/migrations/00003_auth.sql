@@ -46,7 +46,20 @@ END
 $$;
 -- +goose StatementEnd
 
-ALTER ROLE auth_lookup NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION NOINHERIT;
+-- Only a superuser may set SUPERUSER, BYPASSRLS and REPLICATION, even to turn
+-- them off. The migration role on Azure is not one: there they are verified.
+-- +goose StatementBegin
+DO $$
+BEGIN
+    ALTER ROLE auth_lookup NOLOGIN NOCREATEDB NOCREATEROLE NOINHERIT;
+    IF (SELECT rolsuper FROM pg_roles WHERE rolname = current_user) THEN
+        ALTER ROLE auth_lookup NOSUPERUSER NOBYPASSRLS NOREPLICATION;
+    ELSIF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'auth_lookup' AND (rolsuper OR rolbypassrls OR rolreplication)) THEN
+        RAISE EXCEPTION 'auth_lookup is a superuser or has BYPASSRLS or REPLICATION: remove them as a superuser';
+    END IF;
+END
+$$;
+-- +goose StatementEnd
 
 GRANT USAGE ON SCHEMA public TO auth_lookup;
 GRANT SELECT (id, tenant_id, email) ON users TO auth_lookup;
@@ -71,7 +84,11 @@ CREATE FUNCTION login_candidates(p_email text)
         LIMIT 10
     $$;
 
+-- A new owner needs CREATE on the schema, which 00001 took from PUBLIC; a
+-- superuser skips that check, the migration role on Azure does not.
+GRANT CREATE ON SCHEMA public TO auth_lookup;
 ALTER FUNCTION login_candidates(text) OWNER TO auth_lookup;
+REVOKE CREATE ON SCHEMA public FROM auth_lookup;
 REVOKE ALL ON FUNCTION login_candidates(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION login_candidates(text) TO app_user;
 
