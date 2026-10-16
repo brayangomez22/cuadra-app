@@ -28,17 +28,19 @@ func NewStockRepository(d *db.DB) *StockRepository { return &StockRepository{db:
 // Apply runs change on the locked levels and stores its result, all in one
 // transaction:
 //
-//  1. creates the missing levels (empty), which checks that the product and
-//     the locations exist in the tenant;
+//  1. creates the missing levels (empty, without a lot), which checks that
+//     the variant and the locations exist in the tenant;
 //  2. locks the levels with SELECT ... FOR UPDATE, so a concurrent movement
-//     of the same product and location waits until this one commits and then
+//     of the same variant and location waits until this one commits and then
 //     reads the new quantity;
 //  3. calls change, which applies the domain rules (stock, average cost);
 //  4. inserts the movements and updates the levels.
 //
 // Steps 1 and 2 go in location order, so two transfers in opposite
-// directions take their locks in the same order and cannot deadlock.
-func (r *StockRepository) Apply(ctx context.Context, tenantID, productID uuid.UUID, locationIDs []uuid.UUID, change domain.StockChange) error {
+// directions take their locks in the same order and cannot deadlock. Callers
+// that apply several variants in one transaction (a sale) go in variant
+// order, so every lock is taken in (variant, location) order.
+func (r *StockRepository) Apply(ctx context.Context, tenantID, variantID uuid.UUID, locationIDs []uuid.UUID, change domain.StockChange) error {
 	sorted := slices.Clone(locationIDs)
 	slices.SortFunc(sorted, func(a, b uuid.UUID) int { return bytes.Compare(a[:], b[:]) })
 	if len(sorted) == 0 || len(slices.Compact(slices.Clone(sorted))) != len(sorted) {
@@ -53,12 +55,12 @@ func (r *StockRepository) Apply(ctx context.Context, tenantID, productID uuid.UU
 		now := r.now().UTC()
 		for _, locationID := range sorted {
 			if err := q.EnsureStockLevel(ctx, sqlcgen.EnsureStockLevelParams{
-				TenantID: tenantID, ProductID: productID, LocationID: locationID, UpdatedAt: now,
+				TenantID: tenantID, VariantID: variantID, LocationID: locationID, UpdatedAt: now,
 			}); err != nil {
 				return err
 			}
 		}
-		rows, err := q.LockStockLevels(ctx, sqlcgen.LockStockLevelsParams{ProductID: productID, LocationIds: sorted})
+		rows, err := q.LockStockLevels(ctx, sqlcgen.LockStockLevelsParams{VariantID: variantID, LocationIds: sorted})
 		if err != nil {
 			return err
 		}
@@ -80,14 +82,14 @@ func (r *StockRepository) Apply(ctx context.Context, tenantID, productID uuid.UU
 		}
 		for _, l := range levels {
 			affected, err := q.UpdateStockLevel(ctx, sqlcgen.UpdateStockLevelParams{
-				ProductID: l.ProductID(), LocationID: l.LocationID(),
+				VariantID: l.VariantID(), LocationID: l.LocationID(),
 				Quantity: l.Quantity(), AverageCost: l.AverageCost(), UpdatedAt: now,
 			})
 			if err != nil {
 				return err
 			}
 			if affected != 1 {
-				return fmt.Errorf("inventory: level of product %s at location %s vanished", l.ProductID(), l.LocationID())
+				return fmt.Errorf("inventory: level of variant %s at location %s vanished", l.VariantID(), l.LocationID())
 			}
 		}
 		return nil
@@ -95,8 +97,8 @@ func (r *StockRepository) Apply(ctx context.Context, tenantID, productID uuid.UU
 	switch {
 	case changeErr != nil:
 		return changeErr
-	case violates(err, foreignKeyViolation, stockLevelsProductFKey):
-		return domain.ErrProductNotFound
+	case violates(err, foreignKeyViolation, stockLevelsVariantFKey):
+		return domain.ErrVariantNotFound
 	case violates(err, foreignKeyViolation, stockLevelsLocationFKey):
 		return domain.ErrLocationNotFound
 	case err != nil:
@@ -110,11 +112,11 @@ func levelsInOrder(rows []sqlcgen.LockStockLevelsRow, locationIDs []uuid.UUID) (
 	byLocation := make(map[uuid.UUID]*domain.StockLevel, len(rows))
 	for _, row := range rows {
 		l, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
-			TenantID: row.TenantID, ProductID: row.ProductID, LocationID: row.LocationID,
+			TenantID: row.TenantID, VariantID: row.VariantID, LocationID: row.LocationID,
 			Quantity: row.Quantity, AverageCost: row.AverageCost,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("inventory: level of product %s at location %s: %w", row.ProductID, row.LocationID, err)
+			return nil, fmt.Errorf("inventory: level of variant %s at location %s: %w", row.VariantID, row.LocationID, err)
 		}
 		byLocation[row.LocationID] = l
 	}
@@ -133,7 +135,7 @@ func movementParams(m *domain.StockMovement) sqlcgen.InsertStockMovementParams {
 	p := sqlcgen.InsertStockMovementParams{
 		ID:               m.ID(),
 		TenantID:         m.TenantID(),
-		ProductID:        m.ProductID(),
+		VariantID:        m.VariantID(),
 		LocationID:       m.LocationID(),
 		Type:             m.Type().String(),
 		Quantity:         m.Quantity(),
@@ -151,7 +153,8 @@ func movementParams(m *domain.StockMovement) sqlcgen.InsertStockMovementParams {
 	return p
 }
 
-// ListLevels returns one page of the levels at a location, by product, and
+// ListLevels returns one page of the levels without a lot at a location, by
+// variant, and
 // how many match in total, read in the same transaction.
 func (r *StockRepository) ListLevels(ctx context.Context, tenantID uuid.UUID, f domain.StockFilter) (domain.StockLevelPage, error) {
 	limit, offset, err := pageBounds(f.Limit, f.Offset)
@@ -164,11 +167,11 @@ func (r *StockRepository) ListLevels(ctx context.Context, tenantID uuid.UUID, f 
 		q := sqlcgen.New(tx)
 		var err error
 		if rows, err = q.ListStockLevels(ctx, sqlcgen.ListStockLevelsParams{
-			LocationID: f.LocationID, ProductID: f.ProductID, RowLimit: limit, RowOffset: offset,
+			LocationID: f.LocationID, VariantID: f.VariantID, RowLimit: limit, RowOffset: offset,
 		}); err != nil {
 			return err
 		}
-		total, err = q.CountStockLevels(ctx, sqlcgen.CountStockLevelsParams{LocationID: f.LocationID, ProductID: f.ProductID})
+		total, err = q.CountStockLevels(ctx, sqlcgen.CountStockLevelsParams{LocationID: f.LocationID, VariantID: f.VariantID})
 		return err
 	})
 	if err != nil {
@@ -177,18 +180,18 @@ func (r *StockRepository) ListLevels(ctx context.Context, tenantID uuid.UUID, f 
 	page := domain.StockLevelPage{Items: make([]*domain.StockLevel, 0, len(rows)), Total: int(total)}
 	for _, row := range rows {
 		l, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
-			TenantID: row.TenantID, ProductID: row.ProductID, LocationID: row.LocationID,
+			TenantID: row.TenantID, VariantID: row.VariantID, LocationID: row.LocationID,
 			Quantity: row.Quantity, AverageCost: row.AverageCost,
 		})
 		if err != nil {
-			return domain.StockLevelPage{}, fmt.Errorf("inventory: level of product %s at location %s: %w", row.ProductID, row.LocationID, err)
+			return domain.StockLevelPage{}, fmt.Errorf("inventory: level of variant %s at location %s: %w", row.VariantID, row.LocationID, err)
 		}
 		page.Items = append(page.Items, l)
 	}
 	return page, nil
 }
 
-// Kardex returns one page of a product's movements, newest first, and how
+// Kardex returns one page of a variant's movements, newest first, and how
 // many match in total, read in the same transaction.
 func (r *StockRepository) Kardex(ctx context.Context, tenantID uuid.UUID, f domain.KardexFilter) (domain.MovementPage, error) {
 	limit, offset, err := pageBounds(f.Limit, f.Offset)
@@ -201,11 +204,11 @@ func (r *StockRepository) Kardex(ctx context.Context, tenantID uuid.UUID, f doma
 		q := sqlcgen.New(tx)
 		var err error
 		if rows, err = q.ListKardex(ctx, sqlcgen.ListKardexParams{
-			ProductID: f.ProductID, LocationID: f.LocationID, RowLimit: limit, RowOffset: offset,
+			VariantID: f.VariantID, LocationID: f.LocationID, RowLimit: limit, RowOffset: offset,
 		}); err != nil {
 			return err
 		}
-		total, err = q.CountKardex(ctx, sqlcgen.CountKardexParams{ProductID: f.ProductID, LocationID: f.LocationID})
+		total, err = q.CountKardex(ctx, sqlcgen.CountKardexParams{VariantID: f.VariantID, LocationID: f.LocationID})
 		return err
 	})
 	if err != nil {
@@ -237,7 +240,7 @@ func movementFromRow(row sqlcgen.StockMovement) (*domain.StockMovement, error) {
 	m, err := domain.RehydrateStockMovement(domain.StockMovementSnapshot{
 		ID:               row.ID,
 		TenantID:         row.TenantID,
-		ProductID:        row.ProductID,
+		VariantID:        row.VariantID,
 		LocationID:       row.LocationID,
 		Type:             t,
 		Quantity:         row.Quantity,

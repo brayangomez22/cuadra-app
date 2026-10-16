@@ -15,3 +15,10 @@ ON CONFLICT (id) DO UPDATE
 SET sku = EXCLUDED.sku, barcode = EXCLUDED.barcode, cost = EXCLUDED.cost, price = EXCLUDED.price,
     axis_values = EXCLUDED.axis_values, active = EXCLUDED.active
 WHERE product_variants.product_id = EXCLUDED.product_id;
+
+-- VariantProducts returns the product of each of the given variants, for
+-- other modules that only know the variant.
+-- name: VariantProducts :many
+SELECT id, product_id
+FROM product_variants
+WHERE id = ANY(sqlc.arg(variant_ids)::uuid[]);

@@ -5,7 +5,7 @@ import "errors"
 // Domain errors of the inventory module. The HTTP adapter maps them to status codes.
 var (
 	ErrInvalidTenantID     = errors.New("inventory: invalid tenant id")
-	ErrInvalidProductID    = errors.New("inventory: invalid product id")
+	ErrInvalidVariantID    = errors.New("inventory: invalid variant id")
 	ErrInvalidLocationID   = errors.New("inventory: invalid location id")
 	ErrInvalidMovementID   = errors.New("inventory: invalid movement id")
 	ErrInvalidUserID       = errors.New("inventory: invalid user id")
@@ -21,11 +21,17 @@ var (
 	ErrAdjustmentReasonRequired = errors.New("inventory: adjustment requires a reason")
 	ErrAdjustmentReasonTooLong  = errors.New("inventory: adjustment reason is too long")
 	ErrSameLocationTransfer     = errors.New("inventory: transfer to the same location")
-	ErrTransferMismatch         = errors.New("inventory: transfer between different products or tenants")
+	ErrTransferMismatch         = errors.New("inventory: transfer between different variants or tenants")
 	ErrLocationInactive         = errors.New("inventory: location is inactive")
 	ErrSaleAlreadyReversed      = errors.New("inventory: the sale's stock was already given back")
+	// ErrVariantRequired is a movement that names neither a variant nor a
+	// product, or names both.
+	ErrVariantRequired = errors.New("inventory: a variant or a product is required, not both")
 
 	ErrLocationNotFound  = errors.New("inventory: location not found")
 	ErrLocationNameTaken = errors.New("inventory: location name taken")
-	ErrProductNotFound   = errors.New("inventory: product not found")
+	ErrVariantNotFound   = errors.New("inventory: variant not found")
+	// ErrProductNotFound is a deprecated product_id that does not resolve to
+	// a default variant in the tenant.
+	ErrProductNotFound = errors.New("inventory: product not found")
 )

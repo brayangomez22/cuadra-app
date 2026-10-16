@@ -28,14 +28,15 @@ func newID() uuid.UUID { return uuid.Must(uuid.NewV7()) }
 
 // stubUseCases records the last call and answers with what each test sets.
 type stubUseCases struct {
-	called       bool
-	actor        app.Actor
-	name         string
-	receipt      app.ReceiptInput
-	adjustment   app.AdjustmentInput
-	transfer     app.TransferInput
-	stockFilter  domain.StockFilter
-	kardexFilter domain.KardexFilter
+	called      bool
+	actor       app.Actor
+	name        string
+	receipt     app.ReceiptInput
+	adjustment  app.AdjustmentInput
+	transfer    app.TransferInput
+	stockQuery  app.StockQuery
+	kardexQuery app.KardexQuery
+	productsOf  []uuid.UUID
 
 	location  *domain.Location
 	locations []*domain.Location
@@ -43,7 +44,9 @@ type stubUseCases struct {
 	out, in   *domain.StockMovement
 	levels    domain.StockLevelPage
 	kardex    domain.MovementPage
-	err       error
+	// products is the product of each variant ProductsOf answers.
+	products map[uuid.UUID]uuid.UUID
+	err      error
 }
 
 func (s *stubUseCases) CreateLocation(_ context.Context, a app.Actor, name string) (*domain.Location, error) {
@@ -71,14 +74,19 @@ func (s *stubUseCases) TransferStock(_ context.Context, a app.Actor, in app.Tran
 	return s.out, s.in, s.err
 }
 
-func (s *stubUseCases) ListStock(_ context.Context, a app.Actor, f domain.StockFilter) (domain.StockLevelPage, error) {
-	s.called, s.actor, s.stockFilter = true, a, f
+func (s *stubUseCases) ListStock(_ context.Context, a app.Actor, q app.StockQuery) (domain.StockLevelPage, error) {
+	s.called, s.actor, s.stockQuery = true, a, q
 	return s.levels, s.err
 }
 
-func (s *stubUseCases) GetKardex(_ context.Context, a app.Actor, f domain.KardexFilter) (domain.MovementPage, error) {
-	s.called, s.actor, s.kardexFilter = true, a, f
+func (s *stubUseCases) GetKardex(_ context.Context, a app.Actor, q app.KardexQuery) (domain.MovementPage, error) {
+	s.called, s.actor, s.kardexQuery = true, a, q
 	return s.kardex, s.err
+}
+
+func (s *stubUseCases) ProductsOf(_ context.Context, _ app.Actor, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	s.productsOf = variantIDs
+	return s.products, nil
 }
 
 // seeCostOnlyOwner grants catalog:write only to owners, like a reduced
@@ -133,7 +141,7 @@ func decodeMap(t *testing.T, rec *httptest.ResponseRecorder) map[string]any {
 func receipt(t *testing.T) *domain.StockMovement {
 	t.Helper()
 	level, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
-		TenantID: owner.TenantID, ProductID: newID(), LocationID: newID(), Quantity: dec("10"), AverageCost: dec("1000"),
+		TenantID: owner.TenantID, VariantID: newID(), LocationID: newID(), Quantity: dec("10"), AverageCost: dec("1000"),
 	})
 	require.NoError(t, err)
 	m, err := level.Receive(dec("2.5"), dec("1200.5"), domain.MovementInfo{UserID: owner.UserID, OccurredAt: now})
@@ -142,17 +150,21 @@ func receipt(t *testing.T) *domain.StockMovement {
 }
 
 func TestReceiveStock(t *testing.T) {
-	productID, locationID := newID(), newID()
-	body := `{"product_id":"` + productID.String() + `","location_id":"` + locationID.String() + `","quantity":"2.5","unit_cost":"1200.5"}`
+	variantID, locationID := newID(), newID()
+	body := `{"variant_id":"` + variantID.String() + `","location_id":"` + locationID.String() + `","quantity":"2.5","unit_cost":"1200.5"}`
 
 	t.Run("registrar una entrada devuelve 201 con cantidades y costos como string", func(t *testing.T) {
 		m := receipt(t)
-		uc := &stubUseCases{movement: m}
+		productID := newID()
+		uc := &stubUseCases{movement: m, products: map[uuid.UUID]uuid.UUID{m.VariantID(): productID}}
 		rec := serve(t, uc, &owner, http.MethodPost, "/api/v1/inventory/receipts", body)
 
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		got := decodeMap(t, rec)
 		require.Equal(t, m.ID().String(), got["id"])
+		require.Equal(t, m.VariantID().String(), got["variant_id"])
+		require.Equal(t, productID.String(), got["product_id"], "the deprecated product_id is the variant's product")
+		require.Equal(t, []uuid.UUID{m.VariantID()}, uc.productsOf)
 		require.Equal(t, "purchase_in", got["type"])
 		require.Equal(t, "2.5", got["quantity"])
 		require.Equal(t, "12.5", got["balance_after"])
@@ -170,7 +182,8 @@ func TestReceiveStock(t *testing.T) {
 
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		require.Equal(t, app.Actor{TenantID: owner.TenantID, UserID: owner.UserID}, uc.actor)
-		require.Equal(t, productID, uc.receipt.ProductID)
+		require.Equal(t, variantID, uc.receipt.VariantID)
+		require.Equal(t, uuid.Nil, uc.receipt.ProductID)
 		require.Equal(t, locationID, uc.receipt.LocationID)
 		require.True(t, dec("2.5").Equal(uc.receipt.Quantity))
 		require.True(t, dec("1200.5").Equal(uc.receipt.UnitCost))
@@ -191,6 +204,32 @@ func TestReceiveStock(t *testing.T) {
 		requireError(t, rec, http.StatusUnprocessableEntity, "location_inactive")
 	})
 
+	t.Run("con product_id (deprecated) lo pasa al caso de uso sin variante", func(t *testing.T) {
+		productID := newID()
+		uc := &stubUseCases{movement: receipt(t)}
+		rec := serve(t, uc, &owner, http.MethodPost, "/api/v1/inventory/receipts",
+			`{"product_id":"`+productID.String()+`","location_id":"`+locationID.String()+`","quantity":"1","unit_cost":"1"}`)
+
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		require.Equal(t, productID, uc.receipt.ProductID)
+		require.Equal(t, uuid.Nil, uc.receipt.VariantID)
+	})
+
+	t.Run("sin variant_id ni product_id responde 422 variant_required", func(t *testing.T) {
+		uc := &stubUseCases{err: domain.ErrVariantRequired}
+		rec := serve(t, uc, &owner, http.MethodPost, "/api/v1/inventory/receipts",
+			`{"location_id":"`+locationID.String()+`","quantity":"1","unit_cost":"1"}`)
+
+		requireError(t, rec, http.StatusUnprocessableEntity, "variant_required")
+		require.Equal(t, uuid.Nil, uc.receipt.VariantID)
+		require.Equal(t, uuid.Nil, uc.receipt.ProductID)
+	})
+
+	t.Run("variante inexistente responde 422 variant_not_found", func(t *testing.T) {
+		rec := serve(t, &stubUseCases{err: domain.ErrVariantNotFound}, &owner, http.MethodPost, "/api/v1/inventory/receipts", body)
+		requireError(t, rec, http.StatusUnprocessableEntity, "variant_not_found")
+	})
+
 	t.Run("producto inexistente responde 422 product_not_found", func(t *testing.T) {
 		rec := serve(t, &stubUseCases{err: domain.ErrProductNotFound}, &owner, http.MethodPost, "/api/v1/inventory/receipts", body)
 		requireError(t, rec, http.StatusUnprocessableEntity, "product_not_found")
@@ -205,12 +244,12 @@ func TestReceiveStock(t *testing.T) {
 }
 
 func TestAdjustStock(t *testing.T) {
-	productID, locationID := newID(), newID()
-	body := `{"product_id":"` + productID.String() + `","location_id":"` + locationID.String() + `","quantity":"-3","reason":"Bulto roto"}`
+	variantID, locationID := newID(), newID()
+	body := `{"variant_id":"` + variantID.String() + `","location_id":"` + locationID.String() + `","quantity":"-3","reason":"Bulto roto"}`
 
 	t.Run("pasa la cantidad con signo y el motivo", func(t *testing.T) {
 		level, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
-			TenantID: owner.TenantID, ProductID: productID, LocationID: locationID, Quantity: dec("5"), AverageCost: dec("100"),
+			TenantID: owner.TenantID, VariantID: variantID, LocationID: locationID, Quantity: dec("5"), AverageCost: dec("100"),
 		})
 		require.NoError(t, err)
 		m, err := level.Adjust(dec("-3"), "Bulto roto", domain.StockPolicy{}, domain.MovementInfo{UserID: owner.UserID, OccurredAt: now})
@@ -220,6 +259,7 @@ func TestAdjustStock(t *testing.T) {
 		rec := serve(t, uc, &owner, http.MethodPost, "/api/v1/inventory/adjustments", body)
 
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		require.Equal(t, variantID, uc.adjustment.VariantID)
 		require.True(t, dec("-3").Equal(uc.adjustment.Quantity))
 		require.Equal(t, "Bulto roto", uc.adjustment.Reason)
 		got := decodeMap(t, rec)
@@ -239,15 +279,15 @@ func TestAdjustStock(t *testing.T) {
 }
 
 func TestTransferStock(t *testing.T) {
-	productID, from, to := newID(), newID(), newID()
-	body := `{"product_id":"` + productID.String() + `","from_location_id":"` + from.String() + `","to_location_id":"` + to.String() + `","quantity":"4"}`
+	variantID, from, to := newID(), newID(), newID()
+	body := `{"variant_id":"` + variantID.String() + `","from_location_id":"` + from.String() + `","to_location_id":"` + to.String() + `","quantity":"4"}`
 
 	t.Run("devuelve 201 con los dos movimientos y su referencia", func(t *testing.T) {
 		origin, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
-			TenantID: owner.TenantID, ProductID: productID, LocationID: from, Quantity: dec("10"), AverageCost: dec("100"),
+			TenantID: owner.TenantID, VariantID: variantID, LocationID: from, Quantity: dec("10"), AverageCost: dec("100"),
 		})
 		require.NoError(t, err)
-		dest, err := domain.NewStockLevel(owner.TenantID, productID, to)
+		dest, err := domain.NewStockLevel(owner.TenantID, variantID, to)
 		require.NoError(t, err)
 		out, in, err := domain.Transfer(origin, dest, dec("4"), domain.StockPolicy{}, owner.UserID, now)
 		require.NoError(t, err)
@@ -256,7 +296,7 @@ func TestTransferStock(t *testing.T) {
 		rec := serve(t, uc, &owner, http.MethodPost, "/api/v1/inventory/transfers", body)
 
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		require.Equal(t, app.TransferInput{ProductID: productID, FromLocationID: from, ToLocationID: to, Quantity: uc.transfer.Quantity}, uc.transfer)
+		require.Equal(t, app.TransferInput{VariantID: variantID, FromLocationID: from, ToLocationID: to, Quantity: uc.transfer.Quantity}, uc.transfer)
 		require.True(t, dec("4").Equal(uc.transfer.Quantity))
 		var got struct {
 			Out, In struct {
@@ -313,7 +353,7 @@ func TestListStock(t *testing.T) {
 
 	t.Run("lista las existencias con la paginación por defecto y oculta el costo a quien no edita el catálogo", func(t *testing.T) {
 		level, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
-			TenantID: owner.TenantID, ProductID: newID(), LocationID: locationID, Quantity: dec("7.5"), AverageCost: dec("100"),
+			TenantID: owner.TenantID, VariantID: newID(), LocationID: locationID, Quantity: dec("7.5"), AverageCost: dec("100"),
 		})
 		require.NoError(t, err)
 		uc := &stubUseCases{levels: domain.StockLevelPage{Items: []*domain.StockLevel{level}, Total: 1}}
@@ -322,14 +362,15 @@ func TestListStock(t *testing.T) {
 		rec := serve(t, uc, &p, http.MethodGet, "/api/v1/locations/"+locationID.String()+"/stock", "")
 
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		require.Equal(t, domain.StockFilter{LocationID: locationID, Limit: 20}, uc.stockFilter)
+		require.Equal(t, app.StockQuery{LocationID: locationID, Limit: 20}, uc.stockQuery)
 		require.Contains(t, rec.Body.String(), `"quantity":"7.5"`)
+		require.Contains(t, rec.Body.String(), `"variant_id":"`+level.VariantID().String()+`"`)
 		require.NotContains(t, rec.Body.String(), "average_cost")
 	})
 
 	t.Run("el dueño ve el costo promedio", func(t *testing.T) {
 		level, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
-			TenantID: owner.TenantID, ProductID: newID(), LocationID: locationID, Quantity: dec("1"), AverageCost: dec("100"),
+			TenantID: owner.TenantID, VariantID: newID(), LocationID: locationID, Quantity: dec("1"), AverageCost: dec("100"),
 		})
 		require.NoError(t, err)
 		uc := &stubUseCases{levels: domain.StockLevelPage{Items: []*domain.StockLevel{level}, Total: 1}}
@@ -340,14 +381,23 @@ func TestListStock(t *testing.T) {
 		require.Contains(t, rec.Body.String(), `"average_cost":"100.00"`)
 	})
 
-	t.Run("pasa producto y paginación", func(t *testing.T) {
-		productID := newID()
+	t.Run("pasa variante y paginación", func(t *testing.T) {
+		variantID := newID()
 		uc := &stubUseCases{}
 		rec := serve(t, uc, &owner, http.MethodGet,
-			"/api/v1/locations/"+locationID.String()+"/stock?product_id="+productID.String()+"&limit=5&offset=10", "")
+			"/api/v1/locations/"+locationID.String()+"/stock?variant_id="+variantID.String()+"&limit=5&offset=10", "")
 
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		require.Equal(t, domain.StockFilter{LocationID: locationID, ProductID: &productID, Limit: 5, Offset: 10}, uc.stockFilter)
+		require.Equal(t, app.StockQuery{LocationID: locationID, VariantID: &variantID, Limit: 5, Offset: 10}, uc.stockQuery)
+	})
+
+	t.Run("pasa el product_id (deprecated) del filtro", func(t *testing.T) {
+		productID := newID()
+		uc := &stubUseCases{}
+		rec := serve(t, uc, &owner, http.MethodGet, "/api/v1/locations/"+locationID.String()+"/stock?product_id="+productID.String(), "")
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Equal(t, app.StockQuery{LocationID: locationID, ProductID: &productID, Limit: 20}, uc.stockQuery)
 	})
 
 	t.Run("sede inexistente responde 404 location_not_found", func(t *testing.T) {
@@ -357,18 +407,29 @@ func TestListStock(t *testing.T) {
 }
 
 func TestGetKardex(t *testing.T) {
-	t.Run("pasa producto, sede y paginación y devuelve la página", func(t *testing.T) {
-		productID, locationID := newID(), newID()
+	t.Run("el kardex de una variante pasa variante, sede y paginación y devuelve la página", func(t *testing.T) {
+		variantID, locationID := newID(), newID()
 		m := receipt(t)
 		uc := &stubUseCases{kardex: domain.MovementPage{Items: []*domain.StockMovement{m}, Total: 3}}
 
 		rec := serve(t, uc, &owner, http.MethodGet,
-			"/api/v1/products/"+productID.String()+"/kardex?location_id="+locationID.String()+"&offset=2", "")
+			"/api/v1/variants/"+variantID.String()+"/kardex?location_id="+locationID.String()+"&offset=2", "")
 
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		require.Equal(t, domain.KardexFilter{ProductID: productID, LocationID: &locationID, Limit: 20, Offset: 2}, uc.kardexFilter)
+		require.Equal(t, app.KardexQuery{VariantID: variantID, LocationID: &locationID, Limit: 20, Offset: 2}, uc.kardexQuery)
 		got := decodeMap(t, rec)
 		require.EqualValues(t, 3, got["total"])
 		require.Len(t, got["items"], 1)
+		require.Equal(t, m.VariantID().String(), got["items"].([]any)[0].(map[string]any)["variant_id"])
+	})
+
+	t.Run("el kardex de un producto (deprecated) pasa el producto", func(t *testing.T) {
+		productID := newID()
+		uc := &stubUseCases{}
+
+		rec := serve(t, uc, &owner, http.MethodGet, "/api/v1/products/"+productID.String()+"/kardex", "")
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Equal(t, app.KardexQuery{ProductID: productID, Limit: 20}, uc.kardexQuery)
 	})
 }

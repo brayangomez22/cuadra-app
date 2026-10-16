@@ -110,3 +110,36 @@ func (q *Queries) SaveVariant(ctx context.Context, arg SaveVariantParams) (int64
 	}
 	return result.RowsAffected(), nil
 }
+
+const variantProducts = `-- name: VariantProducts :many
+SELECT id, product_id
+FROM product_variants
+WHERE id = ANY($1::uuid[])
+`
+
+type VariantProductsRow struct {
+	ID        uuid.UUID
+	ProductID uuid.UUID
+}
+
+// VariantProducts returns the product of each of the given variants, for
+// other modules that only know the variant.
+func (q *Queries) VariantProducts(ctx context.Context, variantIds []uuid.UUID) ([]VariantProductsRow, error) {
+	rows, err := q.db.Query(ctx, variantProducts, variantIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VariantProductsRow
+	for rows.Next() {
+		var i VariantProductsRow
+		if err := rows.Scan(&i.ID, &i.ProductID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -129,6 +129,13 @@ type Location struct {
 	CreatedAt time.Time
 }
 
+type MovementsBefore struct {
+	TenantID  uuid.UUID
+	ProductID uuid.UUID
+	Quantity  int64
+	Movements int64
+}
+
 type Product struct {
 	ID          uuid.UUID
 	TenantID    uuid.UUID
@@ -272,19 +279,27 @@ type SalesSetting struct {
 	RequireCashSession bool
 }
 
+type StockBefore struct {
+	TenantID  uuid.UUID
+	ProductID uuid.UUID
+	Quantity  int64
+	Levels    int64
+}
+
 type StockLevel struct {
 	TenantID    uuid.UUID
-	ProductID   uuid.UUID
+	VariantID   uuid.UUID
 	LocationID  uuid.UUID
 	Quantity    decimal.Decimal
 	AverageCost decimal.Decimal
 	UpdatedAt   time.Time
+	LotID       pgtype.UUID
 }
 
 type StockMovement struct {
 	ID               uuid.UUID
 	TenantID         uuid.UUID
-	ProductID        uuid.UUID
+	VariantID        uuid.UUID
 	LocationID       uuid.UUID
 	Type             string
 	Quantity         decimal.Decimal
@@ -296,6 +311,7 @@ type StockMovement struct {
 	ReferenceID      pgtype.UUID
 	UserID           uuid.UUID
 	OccurredAt       time.Time
+	LotID            pgtype.UUID
 }
 
 type Tenant struct {

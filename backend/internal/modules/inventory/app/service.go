@@ -34,10 +34,23 @@ type Deps struct {
 	Locations      domain.LocationRepository
 	Stock          domain.StockRepository
 	Policies       domain.PolicyRepository
+	Variants       ProductVariants
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
 	Logger         *slog.Logger
+}
+
+// ProductVariants is what the inventory needs of the catalog, through a
+// port cmd/api satisfies with the catalog module: it serves the deprecated
+// product_id of the contract until T24j removes it.
+type ProductVariants interface {
+	// DefaultVariant returns the id of productID's default variant;
+	// domain.ErrProductNotFound if the product does not exist in tenantID.
+	DefaultVariant(ctx context.Context, tenantID, productID uuid.UUID) (uuid.UUID, error)
+	// ProductsOf returns the product of each of variantIDs that exists in
+	// tenantID; the others are left out.
+	ProductsOf(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
 }
 
 // Service runs the inventory use cases.
@@ -52,7 +65,7 @@ type Service struct {
 // NewService builds a Service. It fails if a repository is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if d.Locations == nil || d.Stock == nil || d.Policies == nil {
+	if d.Locations == nil || d.Stock == nil || d.Policies == nil || d.Variants == nil {
 		return nil, errors.New("inventory: missing service dependency")
 	}
 	if d.Now == nil {
@@ -102,8 +115,8 @@ func endSpan(span trace.Span, err error) {
 	span.End()
 }
 
-func productAttr(id uuid.UUID) attribute.KeyValue {
-	return attribute.String("product.id", id.String())
+func variantAttr(id uuid.UUID) attribute.KeyValue {
+	return attribute.String("variant.id", id.String())
 }
 
 func locationAttr(id uuid.UUID) attribute.KeyValue {

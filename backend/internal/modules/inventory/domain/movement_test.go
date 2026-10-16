@@ -30,7 +30,7 @@ func validMovementSnapshot() domain.StockMovementSnapshot {
 	return domain.StockMovementSnapshot{
 		ID:               newID(),
 		TenantID:         newID(),
-		ProductID:        newID(),
+		VariantID:        newID(),
 		LocationID:       newID(),
 		Type:             domain.MovementSaleOut,
 		Quantity:         dec("-2.5"),
@@ -50,7 +50,7 @@ func TestRehydrateStockMovement(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, s.ID, m.ID())
 		require.Equal(t, s.TenantID, m.TenantID())
-		require.Equal(t, s.ProductID, m.ProductID())
+		require.Equal(t, s.VariantID, m.VariantID())
 		require.Equal(t, s.LocationID, m.LocationID())
 		require.Equal(t, s.Type, m.Type())
 		requireDec(t, "-2.5", m.Quantity())
@@ -79,7 +79,7 @@ func TestRehydrateStockMovement(t *testing.T) {
 		}{
 			"id vacío":       {func(s *domain.StockMovementSnapshot) { s.ID = uuid.Nil }, domain.ErrInvalidMovementID},
 			"tenant vacío":   {func(s *domain.StockMovementSnapshot) { s.TenantID = uuid.Nil }, domain.ErrInvalidTenantID},
-			"producto vacío": {func(s *domain.StockMovementSnapshot) { s.ProductID = uuid.Nil }, domain.ErrInvalidProductID},
+			"variante vacía": {func(s *domain.StockMovementSnapshot) { s.VariantID = uuid.Nil }, domain.ErrInvalidVariantID},
 			"sede vacía":     {func(s *domain.StockMovementSnapshot) { s.LocationID = uuid.Nil }, domain.ErrInvalidLocationID},
 			"usuario vacío":  {func(s *domain.StockMovementSnapshot) { s.UserID = uuid.Nil }, domain.ErrInvalidUserID},
 			"tipo inválido":  {func(s *domain.StockMovementSnapshot) { s.Type = "robo" }, domain.ErrInvalidMovementType},

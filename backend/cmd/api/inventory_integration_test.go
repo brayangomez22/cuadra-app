@@ -36,7 +36,10 @@ func TestInventoryFlow(t *testing.T) {
 	require.NoError(t, err)
 	catalogModule, err := catalog.New(catalog.Config{DB: database, Authorize: identity.Authorize, Logger: log, TracerProvider: tp, MeterProvider: mp})
 	require.NoError(t, err)
-	inventoryModule, err := inventory.New(inventory.Config{DB: database, Authorize: identity.Authorize, Logger: log, TracerProvider: tp, MeterProvider: mp})
+	inventoryModule, err := inventory.New(inventory.Config{
+		DB: database, Authorize: identity.Authorize, Variants: inventoryCatalog{catalogModule},
+		Logger: log, TracerProvider: tp, MeterProvider: mp,
+	})
 	require.NoError(t, err)
 	handler, err := newHandler(handlerConfig{
 		Log: log, TracerProvider: tp, DB: readyDB{},
@@ -85,6 +88,13 @@ func TestInventoryFlow(t *testing.T) {
 		`{"sku":"cem-50","name":"Cemento gris 50kg","base_unit":"bulto","cost":"30000","price":"35000","tax_rate":"0.19"}`, ownerToken)
 	require.Equal(t, http.StatusCreated, product.Code, product.Body.String())
 	productID := id(t, product)
+	var created struct {
+		Variants []struct{ ID string } `json:"variants"`
+	}
+	require.NoError(t, json.Unmarshal(product.Body.Bytes(), &created))
+	require.Len(t, created.Variants, 1)
+	variantID := created.Variants[0].ID
+	require.NotEqual(t, productID, variantID, "a new product's default variant has its own id")
 
 	var bodegaID, centroID string
 
@@ -156,6 +166,43 @@ func TestInventoryFlow(t *testing.T) {
 		require.Equal(t, "adjustment", page.Items[0].Type)
 		require.Equal(t, "-0.5", page.Items[0].Quantity)
 		require.NotContains(t, rec.Body.String(), "cost")
+	})
+
+	t.Run("una entrada por variante responde la variante y el producto, y suma a la misma existencia", func(t *testing.T) {
+		body := `{"variant_id":"` + variantID + `","location_id":"` + bodegaID + `","quantity":"0.5","unit_cost":"31000"}`
+		rec := do(t, http.MethodPost, "/api/v1/inventory/receipts", body, ownerToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"variant_id":"`+variantID+`"`)
+		require.Contains(t, rec.Body.String(), `"product_id":"`+productID+`"`)
+		require.Contains(t, rec.Body.String(), `"balance_after":"15"`)
+
+		rec = do(t, http.MethodGet, "/api/v1/locations/"+bodegaID+"/stock?variant_id="+variantID, "", ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"quantity":"15"`)
+		require.Contains(t, rec.Body.String(), `"product_id":"`+productID+`"`)
+	})
+
+	t.Run("el kardex de la variante es el mismo que el del producto", func(t *testing.T) {
+		byVariant := do(t, http.MethodGet, "/api/v1/variants/"+variantID+"/kardex", "", cashierToken)
+		require.Equal(t, http.StatusOK, byVariant.Code, byVariant.Body.String())
+		byProduct := do(t, http.MethodGet, "/api/v1/products/"+productID+"/kardex", "", cashierToken)
+		require.Equal(t, http.StatusOK, byProduct.Code, byProduct.Body.String())
+		require.JSONEq(t, byProduct.Body.String(), byVariant.Body.String())
+		require.Contains(t, byVariant.Body.String(), `"total":6`)
+	})
+
+	t.Run("sin variant_id ni product_id responde 422 variant_required", func(t *testing.T) {
+		body := `{"location_id":"` + bodegaID + `","quantity":"1","unit_cost":"1"}`
+		rec := do(t, http.MethodPost, "/api/v1/inventory/receipts", body, ownerToken)
+		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"variant_required"`)
+	})
+
+	t.Run("una variante de otro tenant responde 422 variant_not_found", func(t *testing.T) {
+		body := `{"variant_id":"` + uuid.Must(uuid.NewV7()).String() + `","location_id":"` + bodegaID + `","quantity":"1","unit_cost":"1"}`
+		rec := do(t, http.MethodPost, "/api/v1/inventory/receipts", body, ownerToken)
+		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"variant_not_found"`)
 	})
 
 	t.Run("una cantidad con formato inválido responde 400 por el contrato", func(t *testing.T) {

@@ -16,17 +16,17 @@ import (
 const countKardex = `-- name: CountKardex :one
 SELECT count(*)
 FROM stock_movements
-WHERE product_id = $1
+WHERE variant_id = $1
   AND ($2::uuid IS NULL OR location_id = $2)
 `
 
 type CountKardexParams struct {
-	ProductID  uuid.UUID
+	VariantID  uuid.UUID
 	LocationID *uuid.UUID
 }
 
 func (q *Queries) CountKardex(ctx context.Context, arg CountKardexParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countKardex, arg.ProductID, arg.LocationID)
+	row := q.db.QueryRow(ctx, countKardex, arg.VariantID, arg.LocationID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -35,42 +35,48 @@ func (q *Queries) CountKardex(ctx context.Context, arg CountKardexParams) (int64
 const countStockLevels = `-- name: CountStockLevels :one
 SELECT count(*)
 FROM stock_levels
-WHERE location_id = $1
-  AND ($2::uuid IS NULL OR product_id = $2)
+WHERE location_id = $1 AND lot_id IS NULL
+  AND ($2::uuid IS NULL OR variant_id = $2)
 `
 
 type CountStockLevelsParams struct {
 	LocationID uuid.UUID
-	ProductID  *uuid.UUID
+	VariantID  *uuid.UUID
 }
 
 func (q *Queries) CountStockLevels(ctx context.Context, arg CountStockLevelsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countStockLevels, arg.LocationID, arg.ProductID)
+	row := q.db.QueryRow(ctx, countStockLevels, arg.LocationID, arg.VariantID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const ensureStockLevel = `-- name: EnsureStockLevel :exec
-INSERT INTO stock_levels (tenant_id, product_id, location_id, quantity, average_cost, updated_at)
-VALUES ($1, $2, $3, 0, 0, $4)
-ON CONFLICT (tenant_id, product_id, location_id) DO NOTHING
+
+INSERT INTO stock_levels (tenant_id, variant_id, location_id, lot_id, quantity, average_cost, updated_at)
+VALUES ($1, $2, $3, NULL, 0, 0, $4)
+ON CONFLICT ON CONSTRAINT stock_levels_key DO NOTHING
 `
 
 type EnsureStockLevelParams struct {
 	TenantID   uuid.UUID
-	ProductID  uuid.UUID
+	VariantID  uuid.UUID
 	LocationID uuid.UUID
 	UpdatedAt  time.Time
 }
 
-// EnsureStockLevel creates an empty level if there is none, so the next
-// statement can lock it. It fails on the foreign keys if the product or the
-// location does not exist in the tenant.
+// The core works on the stock without a lot (lot_id NULL); the lots_expiry
+// module will add the queries of the stock with a lot. The movement queries
+// select lot_id only to read the whole row (sqlcgen.StockMovement).
+// EnsureStockLevel creates an empty level without a lot if there is none, so
+// the next statement can lock it. Two concurrent calls create one level: the
+// conflict is on stock_levels_key, whose NULLS NOT DISTINCT makes NULL lots
+// equal. It fails on the foreign keys if the variant or the location does not
+// exist in the tenant.
 func (q *Queries) EnsureStockLevel(ctx context.Context, arg EnsureStockLevelParams) error {
 	_, err := q.db.Exec(ctx, ensureStockLevel,
 		arg.TenantID,
-		arg.ProductID,
+		arg.VariantID,
 		arg.LocationID,
 		arg.UpdatedAt,
 	)
@@ -78,7 +84,7 @@ func (q *Queries) EnsureStockLevel(ctx context.Context, arg EnsureStockLevelPara
 }
 
 const insertStockMovement = `-- name: InsertStockMovement :exec
-INSERT INTO stock_movements (id, tenant_id, product_id, location_id, type, quantity, unit_cost, balance_after,
+INSERT INTO stock_movements (id, tenant_id, variant_id, location_id, type, quantity, unit_cost, balance_after,
                              average_cost_after, reason, reference_kind, reference_id, user_id, occurred_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 `
@@ -86,7 +92,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 type InsertStockMovementParams struct {
 	ID               uuid.UUID
 	TenantID         uuid.UUID
-	ProductID        uuid.UUID
+	VariantID        uuid.UUID
 	LocationID       uuid.UUID
 	Type             string
 	Quantity         decimal.Decimal
@@ -104,7 +110,7 @@ func (q *Queries) InsertStockMovement(ctx context.Context, arg InsertStockMoveme
 	_, err := q.db.Exec(ctx, insertStockMovement,
 		arg.ID,
 		arg.TenantID,
-		arg.ProductID,
+		arg.VariantID,
 		arg.LocationID,
 		arg.Type,
 		arg.Quantity,
@@ -121,26 +127,26 @@ func (q *Queries) InsertStockMovement(ctx context.Context, arg InsertStockMoveme
 }
 
 const listKardex = `-- name: ListKardex :many
-SELECT id, tenant_id, product_id, location_id, type, quantity, unit_cost, balance_after,
-       average_cost_after, reason, reference_kind, reference_id, user_id, occurred_at
+SELECT id, tenant_id, variant_id, location_id, type, quantity, unit_cost, balance_after,
+       average_cost_after, reason, reference_kind, reference_id, user_id, occurred_at, lot_id
 FROM stock_movements
-WHERE product_id = $1
+WHERE variant_id = $1
   AND ($2::uuid IS NULL OR location_id = $2)
 ORDER BY occurred_at DESC, id DESC
 LIMIT $4 OFFSET $3
 `
 
 type ListKardexParams struct {
-	ProductID  uuid.UUID
+	VariantID  uuid.UUID
 	LocationID *uuid.UUID
 	RowOffset  int32
 	RowLimit   int32
 }
 
-// ListKardex pages a product's movements, newest first.
+// ListKardex pages a variant's movements, newest first.
 func (q *Queries) ListKardex(ctx context.Context, arg ListKardexParams) ([]StockMovement, error) {
 	rows, err := q.db.Query(ctx, listKardex,
-		arg.ProductID,
+		arg.VariantID,
 		arg.LocationID,
 		arg.RowOffset,
 		arg.RowLimit,
@@ -155,7 +161,7 @@ func (q *Queries) ListKardex(ctx context.Context, arg ListKardexParams) ([]Stock
 		if err := rows.Scan(
 			&i.ID,
 			&i.TenantID,
-			&i.ProductID,
+			&i.VariantID,
 			&i.LocationID,
 			&i.Type,
 			&i.Quantity,
@@ -167,6 +173,7 @@ func (q *Queries) ListKardex(ctx context.Context, arg ListKardexParams) ([]Stock
 			&i.ReferenceID,
 			&i.UserID,
 			&i.OccurredAt,
+			&i.LotID,
 		); err != nil {
 			return nil, err
 		}
@@ -179,8 +186,8 @@ func (q *Queries) ListKardex(ctx context.Context, arg ListKardexParams) ([]Stock
 }
 
 const listMovementsByReference = `-- name: ListMovementsByReference :many
-SELECT id, tenant_id, product_id, location_id, type, quantity, unit_cost, balance_after,
-       average_cost_after, reason, reference_kind, reference_id, user_id, occurred_at
+SELECT id, tenant_id, variant_id, location_id, type, quantity, unit_cost, balance_after,
+       average_cost_after, reason, reference_kind, reference_id, user_id, occurred_at, lot_id
 FROM stock_movements
 WHERE reference_kind = $1::text AND reference_id = $2::uuid
 ORDER BY occurred_at, id
@@ -205,7 +212,7 @@ func (q *Queries) ListMovementsByReference(ctx context.Context, arg ListMovement
 		if err := rows.Scan(
 			&i.ID,
 			&i.TenantID,
-			&i.ProductID,
+			&i.VariantID,
 			&i.LocationID,
 			&i.Type,
 			&i.Quantity,
@@ -217,6 +224,7 @@ func (q *Queries) ListMovementsByReference(ctx context.Context, arg ListMovement
 			&i.ReferenceID,
 			&i.UserID,
 			&i.OccurredAt,
+			&i.LotID,
 		); err != nil {
 			return nil, err
 		}
@@ -229,24 +237,24 @@ func (q *Queries) ListMovementsByReference(ctx context.Context, arg ListMovement
 }
 
 const listStockLevels = `-- name: ListStockLevels :many
-SELECT tenant_id, product_id, location_id, quantity, average_cost
+SELECT tenant_id, variant_id, location_id, quantity, average_cost
 FROM stock_levels
-WHERE location_id = $1
-  AND ($2::uuid IS NULL OR product_id = $2)
-ORDER BY product_id
+WHERE location_id = $1 AND lot_id IS NULL
+  AND ($2::uuid IS NULL OR variant_id = $2)
+ORDER BY variant_id
 LIMIT $4 OFFSET $3
 `
 
 type ListStockLevelsParams struct {
 	LocationID uuid.UUID
-	ProductID  *uuid.UUID
+	VariantID  *uuid.UUID
 	RowOffset  int32
 	RowLimit   int32
 }
 
 type ListStockLevelsRow struct {
 	TenantID    uuid.UUID
-	ProductID   uuid.UUID
+	VariantID   uuid.UUID
 	LocationID  uuid.UUID
 	Quantity    decimal.Decimal
 	AverageCost decimal.Decimal
@@ -255,7 +263,7 @@ type ListStockLevelsRow struct {
 func (q *Queries) ListStockLevels(ctx context.Context, arg ListStockLevelsParams) ([]ListStockLevelsRow, error) {
 	rows, err := q.db.Query(ctx, listStockLevels,
 		arg.LocationID,
-		arg.ProductID,
+		arg.VariantID,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -268,7 +276,7 @@ func (q *Queries) ListStockLevels(ctx context.Context, arg ListStockLevelsParams
 		var i ListStockLevelsRow
 		if err := rows.Scan(
 			&i.TenantID,
-			&i.ProductID,
+			&i.VariantID,
 			&i.LocationID,
 			&i.Quantity,
 			&i.AverageCost,
@@ -284,30 +292,30 @@ func (q *Queries) ListStockLevels(ctx context.Context, arg ListStockLevelsParams
 }
 
 const lockStockLevels = `-- name: LockStockLevels :many
-SELECT tenant_id, product_id, location_id, quantity, average_cost
+SELECT tenant_id, variant_id, location_id, quantity, average_cost
 FROM stock_levels
-WHERE product_id = $1 AND location_id = ANY($2::uuid[])
+WHERE variant_id = $1 AND location_id = ANY($2::uuid[]) AND lot_id IS NULL
 ORDER BY location_id
 FOR UPDATE
 `
 
 type LockStockLevelsParams struct {
-	ProductID   uuid.UUID
+	VariantID   uuid.UUID
 	LocationIds []uuid.UUID
 }
 
 type LockStockLevelsRow struct {
 	TenantID    uuid.UUID
-	ProductID   uuid.UUID
+	VariantID   uuid.UUID
 	LocationID  uuid.UUID
 	Quantity    decimal.Decimal
 	AverageCost decimal.Decimal
 }
 
-// LockStockLevels locks the levels of a product at the given locations, in
-// location order, until the transaction ends.
+// LockStockLevels locks the levels without a lot of a variant at the given
+// locations, in location order, until the transaction ends.
 func (q *Queries) LockStockLevels(ctx context.Context, arg LockStockLevelsParams) ([]LockStockLevelsRow, error) {
-	rows, err := q.db.Query(ctx, lockStockLevels, arg.ProductID, arg.LocationIds)
+	rows, err := q.db.Query(ctx, lockStockLevels, arg.VariantID, arg.LocationIds)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +325,7 @@ func (q *Queries) LockStockLevels(ctx context.Context, arg LockStockLevelsParams
 		var i LockStockLevelsRow
 		if err := rows.Scan(
 			&i.TenantID,
-			&i.ProductID,
+			&i.VariantID,
 			&i.LocationID,
 			&i.Quantity,
 			&i.AverageCost,
@@ -335,11 +343,11 @@ func (q *Queries) LockStockLevels(ctx context.Context, arg LockStockLevelsParams
 const updateStockLevel = `-- name: UpdateStockLevel :execrows
 UPDATE stock_levels
 SET quantity = $3, average_cost = $4, updated_at = $5
-WHERE product_id = $1 AND location_id = $2
+WHERE variant_id = $1 AND location_id = $2 AND lot_id IS NULL
 `
 
 type UpdateStockLevelParams struct {
-	ProductID   uuid.UUID
+	VariantID   uuid.UUID
 	LocationID  uuid.UUID
 	Quantity    decimal.Decimal
 	AverageCost decimal.Decimal
@@ -348,7 +356,7 @@ type UpdateStockLevelParams struct {
 
 func (q *Queries) UpdateStockLevel(ctx context.Context, arg UpdateStockLevelParams) (int64, error) {
 	result, err := q.db.Exec(ctx, updateStockLevel,
-		arg.ProductID,
+		arg.VariantID,
 		arg.LocationID,
 		arg.Quantity,
 		arg.AverageCost,

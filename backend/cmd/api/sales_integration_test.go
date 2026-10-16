@@ -39,11 +39,14 @@ func TestSalesFlow(t *testing.T) {
 	require.NoError(t, err)
 	catalogModule, err := catalog.New(catalog.Config{DB: database, Authorize: identity.Authorize, Logger: log, TracerProvider: tp, MeterProvider: mp})
 	require.NoError(t, err)
-	inventoryModule, err := inventory.New(inventory.Config{DB: database, Authorize: identity.Authorize, Logger: log, TracerProvider: tp, MeterProvider: mp})
+	inventoryModule, err := inventory.New(inventory.Config{
+		DB: database, Authorize: identity.Authorize, Variants: inventoryCatalog{catalogModule},
+		Logger: log, TracerProvider: tp, MeterProvider: mp,
+	})
 	require.NoError(t, err)
 	salesModule, err := sales.New(sales.Config{
 		DB: database, Authorize: identity.Authorize,
-		Products: salesCatalog{catalogModule}, Stock: salesStock{inventoryModule},
+		Products: salesCatalog{catalogModule}, Stock: salesStock{inventory: inventoryModule, catalog: catalogModule},
 		Logger: log, TracerProvider: tp, MeterProvider: mp,
 	})
 	require.NoError(t, err)
@@ -98,6 +101,14 @@ func TestSalesFlow(t *testing.T) {
 		`{"sku":"cem-50","name":"Cemento gris 50kg","base_unit":"bulto","cost":"25000","price":"30000","tax_rate":"0.19"}`, ownerToken)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	productID := id(t, rec)
+	// Sales still sells products (T24c moves it to variants): the stock goes
+	// out of the product's default variant, whose id is not the product's.
+	var created struct {
+		Variants []struct{ ID string } `json:"variants"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
+	variantID := created.Variants[0].ID
+	require.NotEqual(t, productID, variantID)
 	rec = do(t, http.MethodPost, "/api/v1/locations", `{"name":"Mostrador"}`, ownerToken)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	locationID := id(t, rec)
@@ -107,7 +118,7 @@ func TestSalesFlow(t *testing.T) {
 
 	stock := func(t *testing.T) string {
 		t.Helper()
-		rec := do(t, http.MethodGet, "/api/v1/locations/"+locationID+"/stock?product_id="+productID, "", ownerToken)
+		rec := do(t, http.MethodGet, "/api/v1/locations/"+locationID+"/stock?variant_id="+variantID, "", ownerToken)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		var page struct {
 			Items []struct{ Quantity string }

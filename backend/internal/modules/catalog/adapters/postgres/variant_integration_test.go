@@ -201,3 +201,28 @@ func TestVariantTenantIsolation(t *testing.T) {
 		require.Equal(t, "CAM-M", v.SKU())
 	})
 }
+
+func TestVariantProducts(t *testing.T) {
+	f := newFixture(t)
+	tenantA, tenantB := f.createTenant(t), f.createTenant(t)
+	shirt := f.createProduct(t, tenantA, "CAM-S", "Camiseta", withAxes(map[string]string{"talla": "S"}))
+	sizeM := f.addVariant(t, shirt, variant("CAM-M", "", map[string]string{"talla": "M"}))
+	cement := f.createProduct(t, tenantA, "CEM-50", "Cemento gris 50 kg")
+
+	t.Run("dice el producto de cada variante y omite las que no existen", func(t *testing.T) {
+		got, err := f.products.VariantProducts(t.Context(), tenantA,
+			[]uuid.UUID{shirt.DefaultVariant().ID(), sizeM.ID(), cement.DefaultVariant().ID(), uuid.Must(uuid.NewV7())})
+		require.NoError(t, err)
+		require.Equal(t, map[uuid.UUID]uuid.UUID{
+			shirt.DefaultVariant().ID():  shirt.ID(),
+			sizeM.ID():                   shirt.ID(),
+			cement.DefaultVariant().ID(): cement.ID(),
+		}, got)
+	})
+
+	t.Run("aislamiento: el tenant B no ve el producto de las variantes del tenant A", func(t *testing.T) {
+		got, err := f.products.VariantProducts(t.Context(), tenantB, []uuid.UUID{sizeM.ID()})
+		require.NoError(t, err)
+		require.Empty(t, got)
+	})
+}

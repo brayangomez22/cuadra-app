@@ -23,7 +23,7 @@ import (
 // In-memory fakes of the inventory ports. They copy entities in and out, like
 // a database would, and enforce the same per-tenant constraints.
 
-type levelKey struct{ tenantID, productID, locationID uuid.UUID }
+type levelKey struct{ tenantID, variantID, locationID uuid.UUID }
 
 type store struct {
 	mu        sync.Mutex
@@ -31,6 +31,8 @@ type store struct {
 	levels    map[levelKey]domain.StockLevelSnapshot
 	movements []*domain.StockMovement
 	policies  map[uuid.UUID]domain.StockPolicy
+	// variants are the catalog's variants the fake ProductVariants knows.
+	variants map[uuid.UUID]catalogVariant
 	// stockFilters and kardexFilters record the filters the queries received.
 	stockFilters  []domain.StockFilter
 	kardexFilters []domain.KardexFilter
@@ -48,7 +50,7 @@ func cloneLocation(l *domain.Location) *domain.Location {
 
 func snapshot(l *domain.StockLevel) domain.StockLevelSnapshot {
 	return domain.StockLevelSnapshot{
-		TenantID: l.TenantID(), ProductID: l.ProductID(), LocationID: l.LocationID(),
+		TenantID: l.TenantID(), VariantID: l.VariantID(), LocationID: l.LocationID(),
 		Quantity: l.Quantity(), AverageCost: l.AverageCost(),
 	}
 }
@@ -100,7 +102,7 @@ func (f fakePolicies) Get(_ context.Context, tenantID uuid.UUID) (domain.StockPo
 
 type fakeStock struct{ *store }
 
-func (f fakeStock) Apply(_ context.Context, tenantID, productID uuid.UUID, locationIDs []uuid.UUID, change domain.StockChange) error {
+func (f fakeStock) Apply(_ context.Context, tenantID, variantID uuid.UUID, locationIDs []uuid.UUID, change domain.StockChange) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	levels := make([]*domain.StockLevel, 0, len(locationIDs))
@@ -109,9 +111,9 @@ func (f fakeStock) Apply(_ context.Context, tenantID, productID uuid.UUID, locat
 		if l, ok := f.locations[locationID]; !ok || l.TenantID() != tenantID {
 			return domain.ErrLocationNotFound
 		}
-		s, ok := f.levels[levelKey{tenantID, productID, locationID}]
+		s, ok := f.levels[levelKey{tenantID, variantID, locationID}]
 		if !ok {
-			s = domain.StockLevelSnapshot{TenantID: tenantID, ProductID: productID, LocationID: locationID}
+			s = domain.StockLevelSnapshot{TenantID: tenantID, VariantID: variantID, LocationID: locationID}
 		}
 		level, err := domain.RehydrateStockLevel(s)
 		if err != nil {
@@ -124,7 +126,7 @@ func (f fakeStock) Apply(_ context.Context, tenantID, productID uuid.UUID, locat
 		return err
 	}
 	for _, l := range levels {
-		f.levels[levelKey{tenantID, productID, l.LocationID()}] = snapshot(l)
+		f.levels[levelKey{tenantID, variantID, l.LocationID()}] = snapshot(l)
 	}
 	f.movements = append(f.movements, movements...)
 	return nil
@@ -136,7 +138,7 @@ func (f fakeStock) ListLevels(_ context.Context, tenantID uuid.UUID, filter doma
 	f.stockFilters = append(f.stockFilters, filter)
 	var page domain.StockLevelPage
 	for k, s := range f.levels {
-		if k.tenantID != tenantID || k.locationID != filter.LocationID || filter.ProductID != nil && k.productID != *filter.ProductID {
+		if k.tenantID != tenantID || k.locationID != filter.LocationID || filter.VariantID != nil && k.variantID != *filter.VariantID {
 			continue
 		}
 		l, err := domain.RehydrateStockLevel(s)
@@ -155,7 +157,7 @@ func (f fakeStock) Kardex(_ context.Context, tenantID uuid.UUID, filter domain.K
 	f.kardexFilters = append(f.kardexFilters, filter)
 	var page domain.MovementPage
 	for _, m := range slices.Backward(f.movements) {
-		if m.TenantID() != tenantID || m.ProductID() != filter.ProductID ||
+		if m.TenantID() != tenantID || m.VariantID() != filter.VariantID ||
 			filter.LocationID != nil && m.LocationID() != *filter.LocationID {
 			continue
 		}
@@ -172,6 +174,38 @@ func (f fakeStock) MovementsByReference(_ context.Context, tenantID uuid.UUID, r
 	for _, m := range f.movements {
 		if r := m.Reference(); m.TenantID() == tenantID && r != nil && *r == ref {
 			out = append(out, m)
+		}
+	}
+	return out, nil
+}
+
+// catalogVariant is a variant as the catalog stores it.
+type catalogVariant struct {
+	tenantID, productID uuid.UUID
+	isDefault           bool
+}
+
+// fakeVariants is the catalog behind the ProductVariants port.
+type fakeVariants struct{ *store }
+
+func (f fakeVariants) DefaultVariant(_ context.Context, tenantID, productID uuid.UUID) (uuid.UUID, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for id, v := range f.variants {
+		if v.tenantID == tenantID && v.productID == productID && v.isDefault {
+			return id, nil
+		}
+	}
+	return uuid.Nil, domain.ErrProductNotFound
+}
+
+func (f fakeVariants) ProductsOf(_ context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := map[uuid.UUID]uuid.UUID{}
+	for _, id := range variantIDs {
+		if v, ok := f.variants[id]; ok && v.tenantID == tenantID {
+			out[id] = v.productID
 		}
 	}
 	return out, nil
@@ -195,6 +229,7 @@ func newEnv(t *testing.T) *env {
 			locations: map[uuid.UUID]*domain.Location{},
 			levels:    map[levelKey]domain.StockLevelSnapshot{},
 			policies:  map[uuid.UUID]domain.StockPolicy{},
+			variants:  map[uuid.UUID]catalogVariant{},
 		},
 		actor: app.Actor{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())},
 		spans: tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
@@ -209,6 +244,7 @@ func newEnv(t *testing.T) *env {
 		Locations:      fakeLocations{e.store},
 		Stock:          fakeStock{e.store},
 		Policies:       fakePolicies{e.store},
+		Variants:       fakeVariants{e.store},
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,
@@ -218,11 +254,27 @@ func newEnv(t *testing.T) *env {
 	return e
 }
 
-// level returns the stored level of a product at a location, or an empty one.
-func (e *env) level(productID, locationID uuid.UUID) domain.StockLevelSnapshot {
+// addProduct registers in the fake catalog a product of the actor's tenant
+// with its default variant and the extra variants given; it returns the
+// product id and the variant ids, the default one first. Every variant id
+// is distinct from the product id, like a product created after variants.
+func (e *env) addProduct(extra int) (productID uuid.UUID, variantIDs []uuid.UUID) {
 	e.store.mu.Lock()
 	defer e.store.mu.Unlock()
-	return e.store.levels[levelKey{e.actor.TenantID, productID, locationID}]
+	productID = uuid.Must(uuid.NewV7())
+	for i := range extra + 1 {
+		id := uuid.Must(uuid.NewV7())
+		e.store.variants[id] = catalogVariant{tenantID: e.actor.TenantID, productID: productID, isDefault: i == 0}
+		variantIDs = append(variantIDs, id)
+	}
+	return productID, variantIDs
+}
+
+// level returns the stored level of a variant at a location, or an empty one.
+func (e *env) level(variantID, locationID uuid.UUID) domain.StockLevelSnapshot {
+	e.store.mu.Lock()
+	defer e.store.mu.Unlock()
+	return e.store.levels[levelKey{e.actor.TenantID, variantID, locationID}]
 }
 
 // span returns the attributes of the only ended span named name.

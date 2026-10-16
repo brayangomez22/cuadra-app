@@ -323,3 +323,22 @@ func nullable(s string) *string {
 	}
 	return &s
 }
+
+// VariantProducts returns the product of each of variantIDs that exists in
+// tenantID; the others are left out.
+func (r *ProductRepository) VariantProducts(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	var rows []sqlcgen.VariantProductsRow
+	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
+		var err error
+		rows, err = sqlcgen.New(tx).VariantProducts(ctx, variantIDs)
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("catalog: products of variants: %w", err)
+	}
+	out := make(map[uuid.UUID]uuid.UUID, len(rows))
+	for _, row := range rows {
+		out[row.ID] = row.ProductID
+	}
+	return out, nil
+}

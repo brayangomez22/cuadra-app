@@ -89,12 +89,20 @@ export function aLocation(overrides: Partial<Location> = {}): Location {
 }
 
 export function aStockLevel(overrides: Partial<StockLevel> = {}): StockLevel {
-  return { product_id: ids.pipe, location_id: ids.main, quantity: '120', average_cost: '8333.33', ...overrides };
+  return {
+    variant_id: ids.pipe,
+    product_id: ids.pipe,
+    location_id: ids.main,
+    quantity: '120',
+    average_cost: '8333.33',
+    ...overrides,
+  };
 }
 
 export function aMovement(overrides: Partial<StockMovement> = {}): StockMovement {
   return {
     id: '01920000-0000-7000-8000-000000000401',
+    variant_id: ids.pipe,
     product_id: ids.pipe,
     location_id: ids.main,
     type: 'purchase_in',

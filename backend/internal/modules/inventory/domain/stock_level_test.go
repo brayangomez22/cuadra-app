@@ -44,7 +44,7 @@ func levelWith(t *testing.T, qty, avgCost string) *domain.StockLevel {
 	t.Helper()
 	level, err := domain.RehydrateStockLevel(domain.StockLevelSnapshot{
 		TenantID:    newID(),
-		ProductID:   newID(),
+		VariantID:   newID(),
 		LocationID:  newID(),
 		Quantity:    dec(qty),
 		AverageCost: dec(avgCost),
@@ -54,12 +54,12 @@ func levelWith(t *testing.T, qty, avgCost string) *domain.StockLevel {
 }
 
 func TestNewStockLevel(t *testing.T) {
-	t.Run("crea nivel en cero para producto y sede", func(t *testing.T) {
-		tenantID, productID, locationID := newID(), newID(), newID()
-		level, err := domain.NewStockLevel(tenantID, productID, locationID)
+	t.Run("crea nivel en cero para variante y sede", func(t *testing.T) {
+		tenantID, variantID, locationID := newID(), newID(), newID()
+		level, err := domain.NewStockLevel(tenantID, variantID, locationID)
 		require.NoError(t, err)
 		require.Equal(t, tenantID, level.TenantID())
-		require.Equal(t, productID, level.ProductID())
+		require.Equal(t, variantID, level.VariantID())
 		require.Equal(t, locationID, level.LocationID())
 		requireDec(t, "0", level.Quantity())
 		requireDec(t, "0", level.AverageCost())
@@ -69,7 +69,7 @@ func TestNewStockLevel(t *testing.T) {
 		_, err := domain.NewStockLevel(uuid.Nil, newID(), newID())
 		require.ErrorIs(t, err, domain.ErrInvalidTenantID)
 		_, err = domain.NewStockLevel(newID(), uuid.Nil, newID())
-		require.ErrorIs(t, err, domain.ErrInvalidProductID)
+		require.ErrorIs(t, err, domain.ErrInvalidVariantID)
 		_, err = domain.NewStockLevel(newID(), newID(), uuid.Nil)
 		require.ErrorIs(t, err, domain.ErrInvalidLocationID)
 	})
@@ -86,7 +86,7 @@ func TestStockLevelReceive(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 7, int(m.ID().Version()))
 		require.Equal(t, level.TenantID(), m.TenantID())
-		require.Equal(t, level.ProductID(), m.ProductID())
+		require.Equal(t, level.VariantID(), m.VariantID())
 		require.Equal(t, level.LocationID(), m.LocationID())
 		require.Equal(t, domain.MovementPurchaseIn, m.Type())
 		requireDec(t, "10", m.Quantity())
@@ -348,7 +348,7 @@ func TestRehydrateStockLevel(t *testing.T) {
 	t.Run("rechaza datos corruptos", func(t *testing.T) {
 		valid := func() domain.StockLevelSnapshot {
 			return domain.StockLevelSnapshot{
-				TenantID: newID(), ProductID: newID(), LocationID: newID(),
+				TenantID: newID(), VariantID: newID(), LocationID: newID(),
 				Quantity: dec("1"), AverageCost: dec("1"),
 			}
 		}
@@ -357,7 +357,7 @@ func TestRehydrateStockLevel(t *testing.T) {
 			want   error
 		}{
 			"tenant vacío":             {func(s *domain.StockLevelSnapshot) { s.TenantID = uuid.Nil }, domain.ErrInvalidTenantID},
-			"producto vacío":           {func(s *domain.StockLevelSnapshot) { s.ProductID = uuid.Nil }, domain.ErrInvalidProductID},
+			"variante vacía":           {func(s *domain.StockLevelSnapshot) { s.VariantID = uuid.Nil }, domain.ErrInvalidVariantID},
 			"sede vacía":               {func(s *domain.StockLevelSnapshot) { s.LocationID = uuid.Nil }, domain.ErrInvalidLocationID},
 			"cantidad con 5 decimales": {func(s *domain.StockLevelSnapshot) { s.Quantity = dec("1.00001") }, domain.ErrInvalidStockLevel},
 			"costo promedio negativo":  {func(s *domain.StockLevelSnapshot) { s.AverageCost = dec("-1") }, domain.ErrInvalidStockLevel},

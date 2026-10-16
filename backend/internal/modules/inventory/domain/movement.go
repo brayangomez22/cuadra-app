@@ -97,7 +97,7 @@ type MovementInfo struct {
 	OccurredAt time.Time
 }
 
-// StockMovement is one immutable entry of the kardex: a change of a product's
+// StockMovement is one immutable entry of the kardex: a change of a variant's
 // stock at a location. It is created only by StockLevel (and Transfer), so it
 // always agrees with the level it changed. Quantity is signed: positive in,
 // negative out. BalanceAfter and AverageCostAfter are the level's state right
@@ -106,7 +106,7 @@ type MovementInfo struct {
 type StockMovement struct {
 	id               uuid.UUID
 	tenantID         uuid.UUID
-	productID        uuid.UUID
+	variantID        uuid.UUID
 	locationID       uuid.UUID
 	movementType     MovementType
 	quantity         decimal.Decimal
@@ -128,8 +128,8 @@ func newMovement(s StockMovementSnapshot) (*StockMovement, error) {
 	if s.TenantID == uuid.Nil {
 		return nil, ErrInvalidTenantID
 	}
-	if s.ProductID == uuid.Nil {
-		return nil, ErrInvalidProductID
+	if s.VariantID == uuid.Nil {
+		return nil, ErrInvalidVariantID
 	}
 	if s.LocationID == uuid.Nil {
 		return nil, ErrInvalidLocationID
@@ -167,7 +167,7 @@ func newMovement(s StockMovementSnapshot) (*StockMovement, error) {
 	return &StockMovement{
 		id:               s.ID,
 		tenantID:         s.TenantID,
-		productID:        s.ProductID,
+		variantID:        s.VariantID,
 		locationID:       s.LocationID,
 		movementType:     s.Type,
 		quantity:         s.Quantity,
@@ -200,8 +200,8 @@ func (m *StockMovement) ID() uuid.UUID { return m.id }
 // TenantID returns the tenant the movement belongs to.
 func (m *StockMovement) TenantID() uuid.UUID { return m.tenantID }
 
-// ProductID returns the product whose stock changed.
-func (m *StockMovement) ProductID() uuid.UUID { return m.productID }
+// VariantID returns the variant whose stock changed.
+func (m *StockMovement) VariantID() uuid.UUID { return m.variantID }
 
 // LocationID returns the location whose stock changed.
 func (m *StockMovement) LocationID() uuid.UUID { return m.locationID }
@@ -238,7 +238,7 @@ func (m *StockMovement) OccurredAt() time.Time { return m.occurredAt }
 type StockMovementSnapshot struct {
 	ID               uuid.UUID
 	TenantID         uuid.UUID
-	ProductID        uuid.UUID
+	VariantID        uuid.UUID
 	LocationID       uuid.UUID
 	Type             MovementType
 	Quantity         decimal.Decimal

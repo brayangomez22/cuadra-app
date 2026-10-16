@@ -173,7 +173,7 @@ func TestSaleRepository(t *testing.T) {
 		err := f.sales.SaveConfirmed(t.Context(), s, func(ctx context.Context) error {
 			// reserve escribe en la misma transacción, como lo hace inventory.
 			if err := f.db.WithTenantTx(ctx, tn.id, func(tx pgx.Tx) error {
-				_, err := tx.Exec(ctx, `INSERT INTO stock_levels (tenant_id, product_id, location_id, quantity, average_cost, updated_at)
+				_, err := tx.Exec(ctx, `INSERT INTO stock_levels (tenant_id, variant_id, location_id, quantity, average_cost, updated_at)
 					VALUES ($1, $2, $3, -2.5, 0, $4)`, tn.id, tn.product, tn.location, now)
 				return err
 			}); err != nil {
@@ -279,7 +279,7 @@ func TestSaleRepository(t *testing.T) {
 				return err
 			}
 			if err := f.db.WithTenantTx(ctx, tn.id, func(tx pgx.Tx) error {
-				_, err := tx.Exec(ctx, `INSERT INTO stock_levels (tenant_id, product_id, location_id, quantity, average_cost, updated_at)
+				_, err := tx.Exec(ctx, `INSERT INTO stock_levels (tenant_id, variant_id, location_id, quantity, average_cost, updated_at)
 					VALUES ($1, $2, $3, 3.5, 0, $4)`, tn.id, tn.product, tn.location, now)
 				return err
 			}); err != nil {

@@ -7,21 +7,21 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// StockLevel is a product's stock at a location and its weighted average
+// StockLevel is a variant's stock at a location and its weighted average
 // cost. Every change goes through Receive, Issue, ReturnSale, Adjust or
 // Transfer, which return the StockMovement that records it, so the level and
 // the kardex cannot disagree. On error the level is unchanged.
 type StockLevel struct {
 	tenantID    uuid.UUID
-	productID   uuid.UUID
+	variantID   uuid.UUID
 	locationID  uuid.UUID
 	quantity    decimal.Decimal
 	averageCost decimal.Decimal
 }
 
-// NewStockLevel creates an empty level for a product at a location.
-func NewStockLevel(tenantID, productID, locationID uuid.UUID) (*StockLevel, error) {
-	return newStockLevel(StockLevelSnapshot{TenantID: tenantID, ProductID: productID, LocationID: locationID})
+// NewStockLevel creates an empty level for a variant at a location.
+func NewStockLevel(tenantID, variantID, locationID uuid.UUID) (*StockLevel, error) {
+	return newStockLevel(StockLevelSnapshot{TenantID: tenantID, VariantID: variantID, LocationID: locationID})
 }
 
 // newStockLevel checks the invariants shared by NewStockLevel and
@@ -31,8 +31,8 @@ func newStockLevel(s StockLevelSnapshot) (*StockLevel, error) {
 	if s.TenantID == uuid.Nil {
 		return nil, ErrInvalidTenantID
 	}
-	if s.ProductID == uuid.Nil {
-		return nil, ErrInvalidProductID
+	if s.VariantID == uuid.Nil {
+		return nil, ErrInvalidVariantID
 	}
 	if s.LocationID == uuid.Nil {
 		return nil, ErrInvalidLocationID
@@ -42,7 +42,7 @@ func newStockLevel(s StockLevelSnapshot) (*StockLevel, error) {
 	}
 	return &StockLevel{
 		tenantID:    s.TenantID,
-		productID:   s.ProductID,
+		variantID:   s.VariantID,
 		locationID:  s.LocationID,
 		quantity:    s.Quantity,
 		averageCost: s.AverageCost,
@@ -52,8 +52,8 @@ func newStockLevel(s StockLevelSnapshot) (*StockLevel, error) {
 // TenantID returns the tenant the level belongs to.
 func (l *StockLevel) TenantID() uuid.UUID { return l.tenantID }
 
-// ProductID returns the product whose stock this is.
-func (l *StockLevel) ProductID() uuid.UUID { return l.productID }
+// VariantID returns the variant whose stock this is.
+func (l *StockLevel) VariantID() uuid.UUID { return l.variantID }
 
 // LocationID returns the location the stock is at.
 func (l *StockLevel) LocationID() uuid.UUID { return l.locationID }
@@ -119,13 +119,13 @@ func (l *StockLevel) Adjust(delta decimal.Decimal, reason string, policy StockPo
 	return l.apply(c), nil
 }
 
-// Transfer moves qty units of a product from one location to another. It
+// Transfer moves qty units of a variant from one location to another. It
 // creates a transfer_out at the origin and a transfer_in at the destination,
 // both valued at the origin's average cost and sharing a new transfer
 // reference. The origin follows the policy like Issue. Both levels change or
 // neither does.
 func Transfer(from, to *StockLevel, qty decimal.Decimal, policy StockPolicy, userID uuid.UUID, occurredAt time.Time) (out, in *StockMovement, err error) {
-	if from.tenantID != to.tenantID || from.productID != to.productID {
+	if from.tenantID != to.tenantID || from.variantID != to.variantID {
 		return nil, nil, ErrTransferMismatch
 	}
 	if from.locationID == to.locationID {
@@ -219,7 +219,7 @@ func (l *StockLevel) plan(t MovementType, qty, unitCost, next, avg decimal.Decim
 	m, err := newMovement(StockMovementSnapshot{
 		ID:               id,
 		TenantID:         l.tenantID,
-		ProductID:        l.productID,
+		VariantID:        l.variantID,
 		LocationID:       l.locationID,
 		Type:             t,
 		Quantity:         qty,
@@ -240,7 +240,7 @@ func (l *StockLevel) plan(t MovementType, qty, unitCost, next, avg decimal.Decim
 // StockLevelSnapshot holds a stored level's fields, for RehydrateStockLevel.
 type StockLevelSnapshot struct {
 	TenantID    uuid.UUID
-	ProductID   uuid.UUID
+	VariantID   uuid.UUID
 	LocationID  uuid.UUID
 	Quantity    decimal.Decimal
 	AverageCost decimal.Decimal
