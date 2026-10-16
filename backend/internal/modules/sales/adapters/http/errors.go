@@ -22,6 +22,7 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrSaleNotConfirmed, Status: http.StatusConflict, Code: "sale_not_confirmed", Message: "La venta no está confirmada; puede que ya esté anulada."},
 	{Err: domain.ErrSaleNotFound, Status: http.StatusNotFound, Code: "sale_not_found", Message: "La venta no existe."},
 	{Err: domain.ErrDiscountExceedsLimit, Status: http.StatusForbidden, Code: "discount_exceeds_limit", Message: "El descuento supera el máximo que puede dar."},
+	{Err: domain.ErrVariantRequired, Status: http.StatusUnprocessableEntity, Code: "variant_required", Message: "Indique la variante (variant_id) o el producto (product_id) de cada línea, solo uno de los dos."},
 	{Err: domain.ErrProductNotFound, Status: http.StatusUnprocessableEntity, Code: "product_not_found", Message: "Uno de los productos no existe."},
 	{Err: domain.ErrProductInactive, Status: http.StatusUnprocessableEntity, Code: "product_inactive", Message: "Uno de los productos está inactivo y no se puede vender."},
 	{Err: domain.ErrLocationNotFound, Status: http.StatusUnprocessableEntity, Code: "location_not_found", Message: "La sede no existe."},
@@ -52,12 +53,14 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrInvalidCashNotes, Status: http.StatusUnprocessableEntity, Code: "invalid_cash_notes", Message: "Las notas del cierre tienen máximo 500 caracteres."},
 }
 
-// describeInsufficientStock names the product without stock, so the cashier
-// knows which line to change. The name is the catalog's, not personal data.
+// describeInsufficientStock names the variant without stock, so the cashier
+// knows which line to change: the product's name and the variant's label,
+// the catalog's, not personal data. details.product_id is deprecated.
 func describeInsufficientStock(err error) (string, map[string]string, bool) {
 	var e *domain.InsufficientStockError
 	if !errors.As(err, &e) || e.ProductName == "" {
 		return "", nil, false
 	}
-	return "No hay stock suficiente de " + e.ProductName + ".", map[string]string{"product_id": e.ProductID.String()}, true
+	return "No hay stock suficiente de " + e.Description() + ".",
+		map[string]string{"variant_id": e.VariantID.String(), "product_id": e.ProductID.String()}, true
 }

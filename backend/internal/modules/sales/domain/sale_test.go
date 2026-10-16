@@ -39,8 +39,8 @@ func line(qty, price, rate, discount string) domain.LineInput {
 		discount = "0"
 	}
 	return domain.LineInput{
-		ProductID: newID(), ProductName: "Producto", Quantity: dec(qty),
-		UnitPrice: dec(price), TaxRate: dec(rate), Discount: dec(discount),
+		ProductID: newID(), VariantID: newID(), ProductName: "Producto", Quantity: dec(qty),
+		UnitPrice: dec(price), TaxRate: dec(rate), Discount: dec(discount), PriceRule: domain.VariantPriceRule,
 	}
 }
 
@@ -213,13 +213,17 @@ func TestSaleAddLine(t *testing.T) {
 			want   error
 		}{
 			{"sin producto", func(in *domain.LineInput) { in.ProductID = uuid.Nil }, domain.ErrInvalidProductID},
+			{"sin variante", func(in *domain.LineInput) { in.VariantID = uuid.Nil }, domain.ErrInvalidVariantID},
+			{"etiqueta de variante de más de 200 caracteres", func(in *domain.LineInput) { in.VariantLabel = strings.Repeat("M", 201) }, domain.ErrInvalidVariantLabel},
+			{"sin regla de precio", func(in *domain.LineInput) { in.PriceRule = "" }, domain.ErrInvalidPriceRule},
+			{"regla de precio con mayúsculas o espacios", func(in *domain.LineInput) { in.PriceRule = "Lista Mayorista" }, domain.ErrInvalidPriceRule},
 			{"nombre vacío", func(in *domain.LineInput) { in.ProductName = "  " }, domain.ErrInvalidProductName},
 			{"nombre de más de 200 caracteres", func(in *domain.LineInput) { in.ProductName = strings.Repeat("ñ", 201) }, domain.ErrInvalidProductName},
 			{"cantidad cero", func(in *domain.LineInput) { in.Quantity = dec("0") }, domain.ErrInvalidQuantity},
 			{"cantidad negativa", func(in *domain.LineInput) { in.Quantity = dec("-1") }, domain.ErrInvalidQuantity},
 			{"cantidad con más de 4 decimales", func(in *domain.LineInput) { in.Quantity = dec("1.00001") }, domain.ErrInvalidQuantity},
 			{"precio cero", func(in *domain.LineInput) { in.UnitPrice = dec("0") }, domain.ErrInvalidUnitPrice},
-			{"precio con más de 4 decimales", func(in *domain.LineInput) { in.UnitPrice = dec("10.00001") }, domain.ErrInvalidUnitPrice},
+			{"precio que redondeado a 4 decimales es cero", func(in *domain.LineInput) { in.UnitPrice = dec("0.00004") }, domain.ErrInvalidUnitPrice},
 			{"bruto que no cabe", func(in *domain.LineInput) { in.Quantity, in.UnitPrice = dec("10000000"), dec("10000000") }, domain.ErrInvalidQuantity},
 			{"tasa negativa", func(in *domain.LineInput) { in.TaxRate = dec("-0.19") }, domain.ErrInvalidTaxRate},
 			{"tasa del 100%", func(in *domain.LineInput) { in.TaxRate = dec("1") }, domain.ErrInvalidTaxRate},
@@ -246,7 +250,56 @@ func TestSaleAddLine(t *testing.T) {
 		require.Equal(t, "Cemento gris 50kg", firstLine(t, s).ProductName())
 	})
 
-	t.Run("permite el mismo producto en dos líneas", func(t *testing.T) {
+	t.Run("guarda la variante, su etiqueta y la regla de precio", func(t *testing.T) {
+		tests := []struct {
+			name, product, label string
+			rule                 domain.PriceRuleID
+		}{
+			{"producto simple de una ferretería, sin etiqueta", "Cemento gris 50kg", "", domain.VariantPriceRule},
+			{"camiseta por talla y color con una regla de un módulo", "Camiseta básica", "Rojo · M", "price_lists"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				s := newSale(t)
+				in := line("1", "100", "0.19", "")
+				in.ProductName, in.VariantLabel, in.PriceRule = tt.product, tt.label, tt.rule
+				addLine(t, s, in)
+
+				l := firstLine(t, s)
+				require.Equal(t, in.VariantID, l.VariantID())
+				require.Equal(t, in.ProductID, l.ProductID())
+				require.Equal(t, tt.label, l.VariantLabel())
+				require.Equal(t, tt.rule, l.PriceRule())
+			})
+		}
+	})
+
+	t.Run("recorta la etiqueta de la variante; en blanco es sin etiqueta", func(t *testing.T) {
+		s := newSale(t)
+		in := line("1", "100", "0", "")
+		in.VariantLabel = "  Rojo · M "
+		addLine(t, s, in)
+		in.VariantLabel = "   "
+		addLine(t, s, in)
+		require.Equal(t, "Rojo · M", s.Lines()[0].VariantLabel())
+		require.Empty(t, s.Lines()[1].VariantLabel())
+	})
+
+	t.Run("redondea half-up a 4 decimales el precio unitario que da una regla", func(t *testing.T) {
+		tests := []struct{ price, unitPrice, gross string }{
+			{"9259.259259", "9259.2593", "9259.26"}, // 10000 / 1.08
+			{"1000.00005", "1000.0001", "1000.00"},
+			{"1000.00004", "1000", "1000.00"},
+		}
+		for _, tt := range tests {
+			s := newSale(t)
+			addLine(t, s, line("1", tt.price, "0", ""))
+			requireDec(t, tt.unitPrice, firstLine(t, s).UnitPrice())
+			requireDec(t, tt.gross, firstLine(t, s).Gross())
+		}
+	})
+
+	t.Run("permite la misma variante en dos líneas", func(t *testing.T) {
 		s := newSale(t)
 		first := line("1", "100", "0", "")
 		second := first

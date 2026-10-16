@@ -60,13 +60,15 @@ func (f fixture) exec(t *testing.T, tenantID uuid.UUID, sql string, args ...any)
 
 // tenant is a tenant with a location and a product, stored directly: sales
 // does not depend on the other modules, but its tables reference theirs.
+// The product's default variant has its id, as a product from before
+// variants; variant is a second variant with its own id.
 type tenant struct {
-	id, location, product uuid.UUID
+	id, location, product, variant uuid.UUID
 }
 
 func (f fixture) createTenant(t *testing.T) tenant {
 	t.Helper()
-	tn := tenant{id: newID(), product: newID()}
+	tn := tenant{id: newID(), product: newID(), variant: newID()}
 	f.exec(t, tn.id, "INSERT INTO tenants (id, name, nit, status, created_at) VALUES ($1, 'Ferretería', '890903938-8', 'active', $2)", tn.id, now)
 	f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit, tax_rate, active, created_at)
 		VALUES ($1, $2, 'Cemento gris 50kg', '', 'bulto', 0.19, true, $3)`,
@@ -74,6 +76,9 @@ func (f fixture) createTenant(t *testing.T) tenant {
 	f.exec(t, tn.id, `INSERT INTO product_variants (id, tenant_id, product_id, sku, cost, price, is_default, active, created_at)
 		VALUES ($1, $2, $1, $3, 25000, 30000, true, true, $4)`,
 		tn.product, tn.id, "SKU-"+strings.ToUpper(tn.product.String()), now)
+	f.exec(t, tn.id, `INSERT INTO product_variants (id, tenant_id, product_id, sku, cost, price, axis_values, is_default, active, created_at)
+		VALUES ($1, $2, $3, $4, 12000, 15000, '{"presentación": "25kg"}', false, true, $5)`,
+		tn.variant, tn.id, tn.product, "SKU-"+strings.ToUpper(tn.variant.String()), now)
 	tn.location = f.createLocation(t, tn.id)
 	return tn
 }
@@ -87,9 +92,10 @@ func (f fixture) createLocation(t *testing.T, tenantID uuid.UUID) uuid.UUID {
 }
 
 // confirmed builds a confirmed sale of the tenant's product at location, in
-// two lines at 19%: 2.5 × 30000 with a discount of 1000 (base 74000, IVA
-// 14060) and 1 × 30000 (IVA 5700); total 123760.00, paid with 50000 by Nequi
-// and 80000 in cash.
+// two lines at 19%: 2.5 × 30000 of the default variant with a discount of
+// 1000 (base 74000, IVA 14060) and 1 × 30000 of the second variant, with its
+// label and a price list's price (IVA 5700); total 123760.00, paid with
+// 50000 by Nequi and 80000 in cash.
 func confirmed(t *testing.T, tn tenant, location uuid.UUID, confirmedAt time.Time) *domain.Sale {
 	t.Helper()
 	customer := newID()
@@ -105,12 +111,12 @@ func confirmedWith(t *testing.T, tn tenant, p domain.NewSaleParams) *domain.Sale
 	s, err := domain.NewSale(p)
 	require.NoError(t, err)
 	require.NoError(t, s.AddLine(domain.LineInput{
-		ProductID: tn.product, ProductName: "Cemento gris 50kg", Quantity: dec("2.5"),
-		UnitPrice: dec("30000"), TaxRate: dec("0.19"), Discount: dec("1000"),
+		ProductID: tn.product, VariantID: tn.product, ProductName: "Cemento gris 50kg", Quantity: dec("2.5"),
+		UnitPrice: dec("30000"), TaxRate: dec("0.19"), Discount: dec("1000"), PriceRule: domain.VariantPriceRule,
 	}, domain.NoDiscountLimit))
 	require.NoError(t, s.AddLine(domain.LineInput{
-		ProductID: tn.product, ProductName: "Cemento gris 50kg", Quantity: dec("1"),
-		UnitPrice: dec("30000"), TaxRate: dec("0.19"), Discount: dec("0"),
+		ProductID: tn.product, VariantID: tn.variant, ProductName: "Cemento gris 50kg", VariantLabel: "25kg",
+		Quantity: dec("1"), UnitPrice: dec("30000"), TaxRate: dec("0.19"), Discount: dec("0"), PriceRule: "price_lists",
 	}, domain.NoDiscountLimit))
 	nequi, err := domain.NewPayment(domain.PaymentNequi, dec("50000"))
 	require.NoError(t, err)
@@ -128,8 +134,9 @@ func norm(d decimal.Decimal) decimal.Decimal { return decimal.RequireFromString(
 func normalized(snap domain.SaleSnapshot) domain.SaleSnapshot {
 	for i, l := range snap.Lines {
 		snap.Lines[i] = domain.LineSnapshot{
-			ProductID: l.ProductID, ProductName: l.ProductName, Quantity: norm(l.Quantity), UnitPrice: norm(l.UnitPrice),
-			TaxRate: norm(l.TaxRate), Discount: norm(l.Discount), Gross: norm(l.Gross), Tax: norm(l.Tax),
+			ProductID: l.ProductID, VariantID: l.VariantID, ProductName: l.ProductName, VariantLabel: l.VariantLabel,
+			Quantity: norm(l.Quantity), UnitPrice: norm(l.UnitPrice), TaxRate: norm(l.TaxRate), Discount: norm(l.Discount),
+			Gross: norm(l.Gross), Tax: norm(l.Tax), PriceRule: l.PriceRule,
 		}
 	}
 	for i, p := range snap.Payments {
@@ -163,6 +170,35 @@ func TestSaleRepository(t *testing.T) {
 		require.Equal(t, normalized(s.Snapshot()), normalized(got.Snapshot()))
 		require.Equal(t, int64(1), got.Number())
 		require.Equal(t, s.CustomerID(), got.CustomerID())
+		lines := got.Lines()
+		require.Equal(t, tn.product, lines[0].VariantID())
+		require.Empty(t, lines[0].VariantLabel())
+		require.Equal(t, domain.VariantPriceRule, lines[0].PriceRule())
+		require.Equal(t, tn.variant, lines[1].VariantID())
+		require.Equal(t, tn.product, lines[1].ProductID())
+		require.Equal(t, "25kg", lines[1].VariantLabel())
+		require.Equal(t, domain.PriceRuleID("price_lists"), lines[1].PriceRule())
+	})
+
+	t.Run("rechaza una línea cuya variante es de otro producto", func(t *testing.T) {
+		tn := f.createTenant(t)
+		otherProduct := newID()
+		s, err := domain.NewSale(domain.NewSaleParams{ID: newID(), TenantID: tn.id, LocationID: tn.location, UserID: newID(), CreatedAt: now})
+		require.NoError(t, err)
+		// The variant exists in the tenant, but belongs to another product.
+		f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit, tax_rate, active, created_at)
+			VALUES ($1, $2, 'Arena fina', '', 'und', 0.19, true, $3)`, otherProduct, tn.id, now)
+		require.NoError(t, s.AddLine(domain.LineInput{
+			ProductID: otherProduct, VariantID: tn.variant, ProductName: "Arena fina", Quantity: dec("1"),
+			UnitPrice: dec("1000"), TaxRate: dec("0"), Discount: dec("0"), PriceRule: domain.VariantPriceRule,
+		}, domain.NoDiscountLimit))
+		cash, err := domain.NewPayment(domain.PaymentCash, dec("1000"))
+		require.NoError(t, err)
+		require.NoError(t, s.Confirm([]domain.Payment{cash}, now))
+
+		require.ErrorContains(t, f.sales.SaveConfirmed(t.Context(), s, noReserve), "sale_lines_variant_fkey")
+		_, err = f.sales.Get(t.Context(), tn.id, s.ID())
+		require.ErrorIs(t, err, domain.ErrSaleNotFound)
 	})
 
 	t.Run("si reserve falla, la venta no queda guardada y lo que escribió reserve se deshace", func(t *testing.T) {

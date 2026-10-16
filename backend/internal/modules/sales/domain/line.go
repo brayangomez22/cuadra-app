@@ -8,25 +8,37 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const maxProductNameLength = 200
+const (
+	maxProductNameLength  = 200
+	maxVariantLabelLength = 200
+)
 
-// LineInput is a line to add to a sale. ProductName, UnitPrice and TaxRate
-// are the catalog's at the time of the sale; the line keeps them so the sale
-// does not change if the product does.
+// LineInput is a line to add to a sale: a variant of a product. ProductName,
+// VariantLabel and TaxRate are the catalog's at the time of the sale, and
+// UnitPrice is what the price rule PriceRule gave; the line keeps them so
+// the sale does not change if the product does.
 type LineInput struct {
+	VariantID uuid.UUID
+	// ProductID is the variant's product, kept for the reports by product.
 	ProductID   uuid.UUID
 	ProductName string
+	// VariantLabel names the variant ("Rojo · M"); empty for a variant
+	// without axes, as a simple product's.
+	VariantLabel string
 	// Quantity is in the product's base unit; it can be fractional (2.5 m).
 	Quantity decimal.Decimal
-	// UnitPrice is without IVA, as the catalog stores it.
+	// UnitPrice is without IVA. A price rule may give it with more than four
+	// decimals: the line rounds it, half-up, to the four it stores.
 	UnitPrice decimal.Decimal
+	// PriceRule is the rule that gave UnitPrice.
+	PriceRule PriceRuleID
 	// TaxRate is the IVA rate as a fraction (0.19).
 	TaxRate decimal.Decimal
 	// Discount is an amount of COP off the line, before IVA.
 	Discount decimal.Decimal
 }
 
-// SaleLine is a product sold and its amounts:
+// SaleLine is a variant of a product sold and its amounts:
 //
 //	Gross = round2(Quantity × UnitPrice)
 //	Base  = Gross − Discount
@@ -36,19 +48,25 @@ type LineInput struct {
 // Rounding is half-up. Each line's amounts are final, so the totals by rate
 // add up exactly to the lines, as the electronic invoice requires.
 type SaleLine struct {
-	productID   uuid.UUID
-	productName string
-	quantity    decimal.Decimal
-	unitPrice   decimal.Decimal
-	taxRate     decimal.Decimal
-	discount    decimal.Decimal
-	gross       decimal.Decimal
-	tax         decimal.Decimal
+	variantID    uuid.UUID
+	productID    uuid.UUID
+	productName  string
+	variantLabel string
+	priceRule    PriceRuleID
+	quantity     decimal.Decimal
+	unitPrice    decimal.Decimal
+	taxRate      decimal.Decimal
+	discount     decimal.Decimal
+	gross        decimal.Decimal
+	tax          decimal.Decimal
 }
 
 // newLine validates in and computes the line's amounts. The discount must be
 // within limit.
 func newLine(in LineInput, limit DiscountLimit) (SaleLine, error) {
+	if in.VariantID == uuid.Nil {
+		return SaleLine{}, ErrInvalidVariantID
+	}
 	if in.ProductID == uuid.Nil {
 		return SaleLine{}, ErrInvalidProductID
 	}
@@ -56,16 +74,25 @@ func newLine(in LineInput, limit DiscountLimit) (SaleLine, error) {
 	if name == "" || utf8.RuneCountInString(name) > maxProductNameLength {
 		return SaleLine{}, ErrInvalidProductName
 	}
+	label := strings.TrimSpace(in.VariantLabel)
+	if utf8.RuneCountInString(label) > maxVariantLabelLength {
+		return SaleLine{}, ErrInvalidVariantLabel
+	}
+	rule, err := NewPriceRuleID(string(in.PriceRule))
+	if err != nil {
+		return SaleLine{}, err
+	}
 	if !in.Quantity.IsPositive() || !fitsStorage(in.Quantity) {
 		return SaleLine{}, ErrInvalidQuantity
 	}
-	if !in.UnitPrice.IsPositive() || !fitsStorage(in.UnitPrice) {
+	unitPrice := in.UnitPrice.Round(amountScale)
+	if !unitPrice.IsPositive() || !fitsStorage(unitPrice) {
 		return SaleLine{}, ErrInvalidUnitPrice
 	}
 	if in.TaxRate.IsNegative() || in.TaxRate.GreaterThanOrEqual(decimal.NewFromInt(1)) || !fitsStorage(in.TaxRate) {
 		return SaleLine{}, ErrInvalidTaxRate
 	}
-	gross := roundMoney(in.Quantity.Mul(in.UnitPrice))
+	gross := roundMoney(in.Quantity.Mul(unitPrice))
 	if !fitsStorage(gross) {
 		return SaleLine{}, ErrInvalidQuantity
 	}
@@ -77,22 +104,35 @@ func newLine(in LineInput, limit DiscountLimit) (SaleLine, error) {
 	}
 	base := gross.Sub(in.Discount)
 	return SaleLine{
-		productID:   in.ProductID,
-		productName: name,
-		quantity:    in.Quantity,
-		unitPrice:   in.UnitPrice,
-		taxRate:     in.TaxRate,
-		discount:    in.Discount,
-		gross:       gross,
-		tax:         roundMoney(base.Mul(in.TaxRate)),
+		variantID:    in.VariantID,
+		productID:    in.ProductID,
+		productName:  name,
+		variantLabel: label,
+		priceRule:    rule,
+		quantity:     in.Quantity,
+		unitPrice:    unitPrice,
+		taxRate:      in.TaxRate,
+		discount:     in.Discount,
+		gross:        gross,
+		tax:          roundMoney(base.Mul(in.TaxRate)),
 	}, nil
 }
 
-// ProductID returns the product sold.
+// VariantID returns the variant sold: what the stock counts.
+func (l SaleLine) VariantID() uuid.UUID { return l.variantID }
+
+// ProductID returns the product of the variant sold.
 func (l SaleLine) ProductID() uuid.UUID { return l.productID }
 
 // ProductName returns the product's name at the time of the sale.
 func (l SaleLine) ProductName() string { return l.productName }
+
+// VariantLabel returns the variant's label at the time of the sale ("Rojo ·
+// M"), or "" for a variant without axes.
+func (l SaleLine) VariantLabel() string { return l.variantLabel }
+
+// PriceRule returns the rule that gave the line's unit price.
+func (l SaleLine) PriceRule() PriceRuleID { return l.priceRule }
 
 // Quantity returns the quantity sold, in the product's base unit.
 func (l SaleLine) Quantity() decimal.Decimal { return l.quantity }

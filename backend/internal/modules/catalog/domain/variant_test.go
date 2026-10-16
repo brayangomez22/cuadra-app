@@ -337,3 +337,21 @@ func TestVariantPriceWithTax(t *testing.T) {
 		})
 	}
 }
+
+func TestVariantLabel(t *testing.T) {
+	tests := []struct {
+		name string
+		axes map[string]string
+		want string
+	}{
+		{"producto simple de una ferretería: sin ejes no hay etiqueta", nil, ""},
+		{"ferretería: pintura por presentación", map[string]string{"presentación": "Galón"}, "Galón"},
+		{"almacén de ropa: los valores van ordenados por nombre de eje", map[string]string{"talla": "M", "color": "Rojo"}, "Rojo · M"},
+		{"almacén de calzado: tres ejes", map[string]string{"talla": "38", "color": "Negro", "ancho": "E"}, "E · Negro · 38"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, productWithAxes(t, tt.axes).DefaultVariant().Label())
+		})
+	}
+}

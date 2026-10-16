@@ -44,8 +44,8 @@ export function Receipt({ sale, business, location, cashier, paper, className }:
 
       <ul className={styles.lines}>
         {sale.lines.map((line, index) => (
-          <li key={`${line.product_id}-${index}`} className={styles.line} aria-label={line.product_name}>
-            <span className={styles.name}>{line.product_name}</span>
+          <li key={`${line.variant_id}-${index}`} className={styles.line} aria-label={lineName(line)}>
+            <span className={styles.name}>{lineName(line)}</span>
             <span>
               {formatQuantity(line.quantity)} × {formatMoney(line.unit_price)}
             </span>
@@ -102,6 +102,12 @@ export function Receipt({ sale, business, location, cashier, paper, className }:
       </footer>
     </article>
   );
+}
+
+// lineName is the product of a line and, for a variant with axes, its label
+// at the time of the sale: "Camiseta básica (Rojo · M)".
+function lineName(line: Sale['lines'][number]) {
+  return line.variant_label ? `${line.product_name} (${line.variant_label})` : line.product_name;
 }
 
 function Figure({ term, value, strong = false }: { term: string; value: string; strong?: boolean }) {

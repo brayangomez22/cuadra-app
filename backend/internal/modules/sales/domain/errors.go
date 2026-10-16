@@ -15,6 +15,10 @@ var (
 	ErrInvalidCustomerID    = errors.New("sales: invalid customer id")
 	ErrInvalidProductID     = errors.New("sales: invalid product id")
 	ErrInvalidProductName   = errors.New("sales: invalid product name")
+	ErrInvalidVariantID     = errors.New("sales: invalid variant id")
+	ErrInvalidVariantLabel  = errors.New("sales: invalid variant label")
+	ErrInvalidPriceRule     = errors.New("sales: invalid price rule")
+	ErrVariantRequired      = errors.New("sales: a line needs a variant or a product, not both")
 	ErrInvalidQuantity      = errors.New("sales: invalid quantity")
 	ErrInvalidUnitPrice     = errors.New("sales: invalid unit price")
 	ErrInvalidTaxRate       = errors.New("sales: invalid tax rate")
@@ -62,18 +66,31 @@ var (
 	ErrInsufficientStock = errors.New("sales: insufficient stock")
 )
 
-// InsufficientStockError is ErrInsufficientStock for one product of the
+// InsufficientStockError is ErrInsufficientStock for one variant of the
 // sale: errors.Is(err, ErrInsufficientStock) holds. The StockReserver fills
-// ProductID; ConfirmSale adds the name from the catalog so the cashier knows
-// which product to take off.
+// VariantID; ConfirmSale adds its product, name and label from the catalog
+// so the cashier knows which line to change.
 type InsufficientStockError struct {
-	ProductID   uuid.UUID
-	ProductName string
+	VariantID uuid.UUID
+	// ProductID is the variant's product, for the deprecated
+	// details.product_id of the API.
+	ProductID    uuid.UUID
+	ProductName  string
+	VariantLabel string
 }
 
-// Error names the product by id only: the message goes to logs and spans.
+// Description names the variant for the cashier: the product's name and,
+// if the variant has one, its label ("Camiseta básica (Rojo · M)").
+func (e *InsufficientStockError) Description() string {
+	if e.VariantLabel == "" {
+		return e.ProductName
+	}
+	return e.ProductName + " (" + e.VariantLabel + ")"
+}
+
+// Error names the variant by id only: the message goes to logs and spans.
 func (e *InsufficientStockError) Error() string {
-	return ErrInsufficientStock.Error() + " of product " + e.ProductID.String()
+	return ErrInsufficientStock.Error() + " of variant " + e.VariantID.String()
 }
 
 // Is makes the error match ErrInsufficientStock.

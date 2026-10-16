@@ -115,7 +115,7 @@ type ErrorDetail struct {
 	// Code Código estable, en snake_case, para que el cliente decida qué hacer.
 	Code string `json:"code"`
 
-	// Details Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `product_id` en
+	// Details Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `variant_id` en
 	// `insufficient_stock`). Nunca trae datos personales.
 	Details *map[string]string `json:"details,omitempty"`
 

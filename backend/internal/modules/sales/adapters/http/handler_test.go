@@ -102,17 +102,20 @@ func serve(t *testing.T, uc *stubUseCases, p *auth.Principal, method, path, body
 	return rec
 }
 
-// aSale is a stored sale: 2.5 × 8403.3613 at 19% with a discount of 100,
-// plus 1 × 4500 at 0%, paid in cash with 30000.
+// aSale is a stored sale: 2.5 × 8403.3613 at 19% with a discount of 100 of
+// a variant with a label and a price list's price, plus 1 × 4500 at 0% of a
+// simple product, paid in cash with 30000.
 func aSale(t *testing.T) *domain.Sale {
 	t.Helper()
 	s, err := domain.NewSale(domain.NewSaleParams{ID: newID(), TenantID: owner.TenantID, LocationID: newID(), UserID: owner.UserID, CreatedAt: now})
 	require.NoError(t, err)
 	require.NoError(t, s.AddLine(domain.LineInput{
-		ProductID: newID(), ProductName: "Tubo PVC 1/2", Quantity: dec("2.5"), UnitPrice: dec("8403.3613"), TaxRate: dec("0.19"), Discount: dec("100"),
+		ProductID: newID(), VariantID: newID(), ProductName: "Tubo PVC", VariantLabel: "1/2", Quantity: dec("2.5"),
+		UnitPrice: dec("8403.3613"), TaxRate: dec("0.19"), Discount: dec("100"), PriceRule: "price_lists",
 	}, domain.NoDiscountLimit))
 	require.NoError(t, s.AddLine(domain.LineInput{
-		ProductID: newID(), ProductName: "Puntilla 2\"", Quantity: dec("1"), UnitPrice: dec("4500"), TaxRate: dec("0"), Discount: dec("0"),
+		ProductID: newID(), VariantID: newID(), ProductName: "Puntilla 2\"", Quantity: dec("1"), UnitPrice: dec("4500"),
+		TaxRate: dec("0"), Discount: dec("0"), PriceRule: domain.VariantPriceRule,
 	}, domain.NoDiscountLimit))
 	cash, err := domain.NewPayment(domain.PaymentCash, dec("30000"))
 	require.NoError(t, err)
@@ -131,9 +134,9 @@ type errorBody struct {
 func TestConfirmSale(t *testing.T) {
 	t.Run("traduce el carrito y responde la venta con montos en string", func(t *testing.T) {
 		uc := &stubUseCases{sale: aSale(t)}
-		product, location := newID(), newID()
+		variant, product, location := newID(), newID(), newID()
 		body := `{"location_id":"` + location.String() + `","lines":[` +
-			`{"product_id":"` + product.String() + `","quantity":"2.5","discount":"100"},` +
+			`{"variant_id":"` + variant.String() + `","quantity":"2.5","discount":"100"},` +
 			`{"product_id":"` + product.String() + `","quantity":"1"}],` +
 			`"payments":[{"method":"cash","amount":"30000"},{"method":"nequi","amount":"1000.5"}]}`
 
@@ -144,6 +147,10 @@ func TestConfirmSale(t *testing.T) {
 		require.Equal(t, app.Actor{TenantID: owner.TenantID, UserID: owner.UserID, UnlimitedDiscount: false}, uc.actor)
 		require.Equal(t, location, uc.confirm.LocationID)
 		require.Len(t, uc.confirm.Lines, 2)
+		require.Equal(t, variant, uc.confirm.Lines[0].VariantID)
+		require.Equal(t, uuid.Nil, uc.confirm.Lines[0].ProductID)
+		require.Equal(t, product, uc.confirm.Lines[1].ProductID, "product_id (deprecated) llega al caso de uso")
+		require.Equal(t, uuid.Nil, uc.confirm.Lines[1].VariantID)
 		require.True(t, dec("100").Equal(uc.confirm.Lines[0].Discount))
 		require.True(t, uc.confirm.Lines[1].Discount.IsZero(), "sin descuento es 0")
 		require.Equal(t, "nequi", uc.confirm.Payments[1].Method)
@@ -173,6 +180,14 @@ func TestConfirmSale(t *testing.T) {
 		require.Equal(t, "2.5", sale.Lines[0]["quantity"])
 		require.Equal(t, "0.19", sale.Lines[0]["tax_rate"])
 		require.Equal(t, "20908.40", sale.Lines[0]["base"])
+		stored := uc.sale.Lines()
+		require.Equal(t, stored[0].VariantID().String(), sale.Lines[0]["variant_id"])
+		require.Equal(t, stored[0].ProductID().String(), sale.Lines[0]["product_id"])
+		require.Equal(t, "Tubo PVC", sale.Lines[0]["product_name"])
+		require.Equal(t, "1/2", sale.Lines[0]["variant_label"])
+		require.Equal(t, "price_lists", sale.Lines[0]["price_rule"])
+		require.NotContains(t, sale.Lines[1], "variant_label", "un producto simple no lleva etiqueta")
+		require.Equal(t, "variant_price", sale.Lines[1]["price_rule"])
 		require.Equal(t, []map[string]string{
 			{"rate": "0", "base": "4500.00", "tax": "0.00"},
 			{"rate": "0.19", "base": "20908.40", "tax": "3972.60"},
@@ -188,18 +203,30 @@ func TestConfirmSale(t *testing.T) {
 		require.True(t, uc.actor.UnlimitedDiscount)
 	})
 
-	t.Run("sin stock responde 409 con el nombre y el id del producto", func(t *testing.T) {
-		product := newID()
-		uc := &stubUseCases{err: &domain.InsufficientStockError{ProductID: product, ProductName: "Cemento gris 50kg"}}
-		body := `{"location_id":"` + newID().String() + `","lines":[{"product_id":"` + product.String() + `","quantity":"1"}],"payments":[]}`
+	t.Run("sin stock responde 409 con el nombre, la variante y el producto", func(t *testing.T) {
+		tests := []struct {
+			name, product, label, message string
+		}{
+			{"ferretería: producto simple", "Cemento gris 50kg", "", "No hay stock suficiente de Cemento gris 50kg."},
+			{"almacén de ropa: variante con etiqueta", "Camiseta básica", "Rojo · M", "No hay stock suficiente de Camiseta básica (Rojo · M)."},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				variant, product := newID(), newID()
+				uc := &stubUseCases{err: &domain.InsufficientStockError{
+					VariantID: variant, ProductID: product, ProductName: tt.product, VariantLabel: tt.label,
+				}}
+				body := `{"location_id":"` + newID().String() + `","lines":[{"variant_id":"` + variant.String() + `","quantity":"1"}],"payments":[]}`
 
-		rec := serve(t, uc, &owner, http.MethodPost, "/api/v1/sales", body)
-		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
-		var got errorBody
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
-		require.Equal(t, "insufficient_stock", got.Error.Code)
-		require.Equal(t, "No hay stock suficiente de Cemento gris 50kg.", got.Error.Message)
-		require.Equal(t, map[string]string{"product_id": product.String()}, got.Error.Details)
+				rec := serve(t, uc, &owner, http.MethodPost, "/api/v1/sales", body)
+				require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+				var got errorBody
+				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+				require.Equal(t, "insufficient_stock", got.Error.Code)
+				require.Equal(t, tt.message, got.Error.Message)
+				require.Equal(t, map[string]string{"variant_id": variant.String(), "product_id": product.String()}, got.Error.Details)
+			})
+		}
 	})
 
 	t.Run("mapea las reglas del dominio a su status y código", func(t *testing.T) {
@@ -215,6 +242,7 @@ func TestConfirmSale(t *testing.T) {
 			{domain.ErrLocationInactive, http.StatusUnprocessableEntity, "location_inactive"},
 			{domain.ErrLocationNotFound, http.StatusUnprocessableEntity, "location_not_found"},
 			{domain.ErrInsufficientStock, http.StatusConflict, "insufficient_stock"},
+			{domain.ErrVariantRequired, http.StatusUnprocessableEntity, "variant_required"},
 		}
 		body := `{"location_id":"` + newID().String() + `","lines":[{"product_id":"` + newID().String() + `","quantity":"1"}],"payments":[]}`
 		for _, tt := range tests {

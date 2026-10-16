@@ -2,6 +2,7 @@ package domain
 
 import (
 	"maps"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -203,6 +204,19 @@ func (v *ProductVariant) Price() decimal.Decimal { return v.price }
 // AxisValues returns a copy of the variant's value per axis; empty for the
 // default variant of a simple product.
 func (v *ProductVariant) AxisValues() map[string]string { return maps.Clone(v.axisValues) }
+
+// Label names the variant by its axis values, ordered by axis name and
+// joined by " · " ({"talla": "M", "color": "Rojo"} is "Rojo · M"), so it
+// is the same every time; "" for a variant without axes. A sale keeps the
+// label of the variant it sold.
+func (v *ProductVariant) Label() string {
+	names := slices.Sorted(maps.Keys(v.axisValues))
+	values := make([]string, 0, len(names))
+	for _, name := range names {
+		values = append(values, v.axisValues[name])
+	}
+	return strings.Join(values, " · ")
+}
 
 // IsDefault reports whether this is the variant created with the product.
 func (v *ProductVariant) IsDefault() bool { return v.isDefault }

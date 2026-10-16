@@ -1,9 +1,9 @@
 // Package app holds the sales use cases: ConfirmSale (the point-of-sale
 // checkout), VoidSale, the queries of a sale and of the day's sales, and the
 // cash sessions (opening, cash ins and outs, closing with the count). The
-// catalog and the stock are reached through the ports
-// ProductCatalog and StockReserver, which cmd/api satisfies with the other
-// modules.
+// catalog and the stock are reached through the ports VariantCatalog and
+// StockReserver, which cmd/api satisfies with the other modules; prices come
+// from a PriceResolver, a chain of rules that modules extend.
 package app
 
 import (
@@ -35,34 +35,42 @@ type Actor struct {
 	UnlimitedDiscount bool
 }
 
-// ProductInfo is what a sale needs of a product: its name, price without
-// IVA, IVA rate and whether it can be sold.
-type ProductInfo struct {
-	ID      uuid.UUID
-	Name    string
-	Price   decimal.Decimal
-	TaxRate decimal.Decimal
-	Active  bool
+// VariantInfo is what a sale needs of a variant: its product, the
+// product's name, the variant's label ("" without axes), its price without
+// IVA, the product's IVA rate and whether it can be sold (the variant and
+// its product are active).
+type VariantInfo struct {
+	ID          uuid.UUID
+	ProductID   uuid.UUID
+	ProductName string
+	Label       string
+	Price       decimal.Decimal
+	TaxRate     decimal.Decimal
+	Active      bool
 }
 
-// ProductCatalog reads products of the catalog module.
-type ProductCatalog interface {
-	// Products returns the products of tenantID among ids (distinct); the
+// VariantCatalog reads variants of the catalog module.
+type VariantCatalog interface {
+	// Variants returns the variants of tenantID among ids (distinct); the
 	// ones that do not exist in the tenant are left out.
-	Products(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) ([]ProductInfo, error)
+	Variants(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) ([]VariantInfo, error)
+	// DefaultVariants returns the default variant of each of productIDs
+	// (distinct) that exists in tenantID. It serves the deprecated
+	// product_id of a sale line, which T24j removes.
+	DefaultVariants(ctx context.Context, tenantID uuid.UUID, productIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
 }
 
-// StockLine is the quantity of a product a sale takes from stock.
+// StockLine is the quantity of a variant a sale takes from stock.
 type StockLine struct {
-	ProductID uuid.UUID
+	VariantID uuid.UUID
 	Quantity  decimal.Decimal
 }
 
 // StockReserver registers the stock exits of a sale in the inventory module.
 type StockReserver interface {
-	// ReserveSale registers one sale_out per line (one line per product) at
+	// ReserveSale registers one sale_out per line (one line per variant) at
 	// locationID, referencing saleID. It fails with a
-	// *domain.InsufficientStockError (without the product's name) if the
+	// *domain.InsufficientStockError (with only the variant's id) if the
 	// tenant's stock policy rejects an exit, and with
 	// domain.ErrLocationNotFound or domain.ErrLocationInactive if the
 	// location cannot sell. It runs within the transaction of
@@ -74,10 +82,12 @@ type StockReserver interface {
 	ReverseSale(ctx context.Context, tenantID, userID, saleID uuid.UUID) error
 }
 
-// Deps are the Service's dependencies. Now defaults to time.Now, the
-// providers to no-ops and Logger to a discarding logger.
+// Deps are the Service's dependencies. Prices defaults to the PriceChain
+// without rules (each variant at its price), Now to time.Now, the providers
+// to no-ops and Logger to a discarding logger.
 type Deps struct {
-	Products       ProductCatalog
+	Catalog        VariantCatalog
+	Prices         PriceResolver
 	Stock          StockReserver
 	Sales          domain.SaleRepository
 	Policies       domain.PolicyRepository
@@ -97,6 +107,7 @@ type Service struct {
 	amount           metric.Float64Histogram
 	discountRejected metric.Int64Counter
 	voided           metric.Int64Counter
+	priceRules       metric.Int64Counter
 
 	cashOpened          metric.Int64Counter
 	cashClosed          metric.Int64Counter
@@ -119,8 +130,15 @@ var cashDifferenceBuckets = []float64{0, 50, 500, 1_000, 5_000, 10_000, 20_000, 
 // NewService builds a Service. It fails if a port is missing or a metric
 // instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if d.Products == nil || d.Stock == nil || d.Sales == nil || d.Policies == nil || d.CashSessions == nil {
+	if d.Catalog == nil || d.Stock == nil || d.Sales == nil || d.Policies == nil || d.CashSessions == nil {
 		return nil, errors.New("sales: missing service dependency")
+	}
+	if d.Prices == nil {
+		chain, err := NewPriceChain()
+		if err != nil {
+			return nil, err
+		}
+		d.Prices = chain
 	}
 	if d.Now == nil {
 		d.Now = time.Now
@@ -157,6 +175,11 @@ func NewService(d Deps) (*Service, error) {
 	if s.voided, err = meter.Int64Counter("cuadra.sales.voided",
 		metric.WithDescription("Sales voided."),
 		metric.WithUnit("{sale}")); err != nil {
+		return nil, err
+	}
+	if s.priceRules, err = meter.Int64Counter("cuadra.sales.price_rule_applied",
+		metric.WithDescription("Lines of confirmed sales priced, by the rule that gave the price (price.rule)."),
+		metric.WithUnit("{line}")); err != nil {
 		return nil, err
 	}
 	if err := s.newCashInstruments(meter); err != nil {

@@ -74,7 +74,8 @@ func insertSale(ctx context.Context, q *sqlcgen.Queries, snap domain.SaleSnapsho
 	for i, l := range snap.Lines {
 		if err := q.InsertSaleLine(ctx, sqlcgen.InsertSaleLineParams{
 			TenantID: snap.TenantID, SaleID: snap.ID, Position: int32(i),
-			ProductID: l.ProductID, ProductName: l.ProductName, Quantity: l.Quantity, UnitPrice: l.UnitPrice,
+			VariantID: l.VariantID, ProductID: l.ProductID, ProductName: l.ProductName, VariantLabel: nonEmpty(l.VariantLabel),
+			Quantity: l.Quantity, UnitPrice: l.UnitPrice, PriceRule: string(l.PriceRule),
 			TaxRate: l.TaxRate, Discount: l.Discount, Gross: l.Gross, Tax: l.Tax,
 		}); err != nil {
 			return err
@@ -179,7 +180,8 @@ func readSale(ctx context.Context, q *sqlcgen.Queries, row sqlcgen.Sale) (*domai
 	}
 	for _, l := range lines {
 		snap.Lines = append(snap.Lines, domain.LineSnapshot{
-			ProductID: l.ProductID, ProductName: l.ProductName, Quantity: l.Quantity, UnitPrice: l.UnitPrice,
+			VariantID: l.VariantID, ProductID: l.ProductID, ProductName: l.ProductName, VariantLabel: valueOf(l.VariantLabel),
+			Quantity: l.Quantity, UnitPrice: l.UnitPrice, PriceRule: domain.PriceRuleID(l.PriceRule),
 			TaxRate: l.TaxRate, Discount: l.Discount, Gross: l.Gross, Tax: l.Tax,
 		})
 	}
@@ -229,4 +231,20 @@ func (r *SaleRepository) List(ctx context.Context, tenantID uuid.UUID, f domain.
 		page.Items = append(page.Items, sum)
 	}
 	return page, nil
+}
+
+// nonEmpty is s as a nullable column: nil when empty.
+func nonEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+// valueOf is a nullable text column as a string: "" when NULL.
+func valueOf(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

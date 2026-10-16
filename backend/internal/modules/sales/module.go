@@ -24,9 +24,12 @@ type Config struct {
 	// Authorize is the role → permission matrix; it decides who discounts
 	// without the tenant's limit.
 	Authorize auth.Authorizer
-	// Products and Stock are the catalog and the inventory, adapted by cmd/api.
-	Products       app.ProductCatalog
-	Stock          app.StockReserver
+	// Catalog and Stock are the catalog and the inventory, adapted by cmd/api.
+	Catalog app.VariantCatalog
+	Stock   app.StockReserver
+	// Prices gives the unit price of each line: the chain of the price rules
+	// of the active modules. Nil sells each variant at its price.
+	Prices         app.PriceResolver
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -45,7 +48,8 @@ func New(cfg Config) (*Module, error) {
 		return nil, errors.New("sales: missing module dependency")
 	}
 	svc, err := app.NewService(app.Deps{
-		Products:       cfg.Products,
+		Catalog:        cfg.Catalog,
+		Prices:         cfg.Prices,
 		Stock:          cfg.Stock,
 		Sales:          postgres.NewSaleRepository(cfg.DB),
 		Policies:       postgres.NewPolicyRepository(cfg.DB),

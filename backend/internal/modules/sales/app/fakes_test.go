@@ -21,7 +21,8 @@ import (
 
 // In-memory fakes of the sales ports.
 
-type productKey struct{ tenantID, productID uuid.UUID }
+// catalogKey is an id (of a variant or of a product) in a tenant.
+type catalogKey struct{ tenantID, id uuid.UUID }
 
 type reservation struct {
 	tenantID, userID, locationID, saleID uuid.UUID
@@ -30,7 +31,9 @@ type reservation struct {
 
 type store struct {
 	mu       sync.Mutex
-	products map[productKey]app.ProductInfo
+	variants map[catalogKey]app.VariantInfo
+	// defaults is the default variant of each product.
+	defaults map[catalogKey]uuid.UUID
 	policies map[uuid.UUID]domain.SalesPolicy
 	sales    map[uuid.UUID]*domain.Sale
 	reserved []reservation
@@ -44,8 +47,13 @@ type store struct {
 	numbers map[uuid.UUID]int64
 	// filters records the filters List received.
 	filters []domain.SaleFilter
-	// catalogCalls records the ids each catalog lookup received.
+	// catalogCalls records the variant ids each catalog lookup received;
+	// defaultCalls, the product ids of each lookup of default variants.
 	catalogCalls [][]uuid.UUID
+	defaultCalls [][]uuid.UUID
+	// events records, in order, when prices were resolved ("resolve") and
+	// when the sale's transaction began ("save").
+	events []string
 	// sessions and movements are the cash sessions and their movements.
 	sessions  map[uuid.UUID]*domain.CashSession
 	movements []domain.CashMovement
@@ -57,17 +65,43 @@ type store struct {
 
 type fakeCatalog struct{ *store }
 
-func (f fakeCatalog) Products(_ context.Context, tenantID uuid.UUID, ids []uuid.UUID) ([]app.ProductInfo, error) {
+func (f fakeCatalog) Variants(_ context.Context, tenantID uuid.UUID, ids []uuid.UUID) ([]app.VariantInfo, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.catalogCalls = append(f.catalogCalls, ids)
-	var out []app.ProductInfo
+	var out []app.VariantInfo
 	for _, id := range ids {
-		if p, ok := f.products[productKey{tenantID, id}]; ok {
-			out = append(out, p)
+		if v, ok := f.variants[catalogKey{tenantID, id}]; ok {
+			out = append(out, v)
 		}
 	}
 	return out, nil
+}
+
+func (f fakeCatalog) DefaultVariants(_ context.Context, tenantID uuid.UUID, productIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.defaultCalls = append(f.defaultCalls, productIDs)
+	out := map[uuid.UUID]uuid.UUID{}
+	for _, id := range productIDs {
+		if v, ok := f.defaults[catalogKey{tenantID, id}]; ok {
+			out[id] = v
+		}
+	}
+	return out, nil
+}
+
+// recordingPrices is the base price chain, recording when it resolves.
+type recordingPrices struct {
+	*store
+	chain *app.PriceChain
+}
+
+func (r recordingPrices) Resolve(ctx context.Context, q app.PriceQuery) (app.ResolvedPrice, error) {
+	r.mu.Lock()
+	r.events = append(r.events, "resolve")
+	r.mu.Unlock()
+	return r.chain.Resolve(ctx, q)
 }
 
 type fakeStock struct{ *store }
@@ -106,6 +140,9 @@ func clone(s *domain.Sale) *domain.Sale {
 type fakeSales struct{ *store }
 
 func (f fakeSales) SaveConfirmed(ctx context.Context, s *domain.Sale, reserve func(context.Context) error) error {
+	f.mu.Lock()
+	f.events = append(f.events, "save")
+	f.mu.Unlock()
 	if err := reserve(ctx); err != nil {
 		return err
 	}
@@ -323,11 +360,13 @@ type env struct {
 	metrics *sdkmetric.ManualReader
 }
 
-func newEnv(t *testing.T) *env {
+// newEnv builds a Service on the fakes; rules go before the base price rule.
+func newEnv(t *testing.T, rules ...app.PriceRule) *env {
 	t.Helper()
 	e := &env{
 		store: &store{
-			products: map[productKey]app.ProductInfo{},
+			variants: map[catalogKey]app.VariantInfo{},
+			defaults: map[catalogKey]uuid.UUID{},
 			policies: map[uuid.UUID]domain.SalesPolicy{},
 			sales:    map[uuid.UUID]*domain.Sale{},
 			numbers:  map[uuid.UUID]int64{},
@@ -339,8 +378,11 @@ func newEnv(t *testing.T) *env {
 	}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(e.spans))
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(e.metrics))
+	chain, err := app.NewPriceChain(rules...)
+	require.NoError(t, err)
 	svc, err := app.NewService(app.Deps{
-		Products:       fakeCatalog{e.store},
+		Catalog:        fakeCatalog{e.store},
+		Prices:         recordingPrices{e.store, chain},
 		Stock:          fakeStock{e.store},
 		Sales:          fakeSales{e.store},
 		Policies:       fakePolicies{e.store},
@@ -367,15 +409,36 @@ func (e *env) requireCashSession() {
 	e.store.policies[e.actor.TenantID] = p
 }
 
-// addProduct puts a product in the actor's catalog.
+// addProduct puts a simple product in the actor's catalog and returns its
+// default variant, whose id is not the product's.
 func (e *env) addProduct(name, price, rate string, active bool) uuid.UUID {
+	productID, variantID := newID(), newID()
+	e.store.mu.Lock()
+	defer e.store.mu.Unlock()
+	e.store.variants[catalogKey{e.actor.TenantID, variantID}] = app.VariantInfo{
+		ID: variantID, ProductID: productID, ProductName: name, Price: dec(price), TaxRate: dec(rate), Active: active,
+	}
+	e.store.defaults[catalogKey{e.actor.TenantID, productID}] = variantID
+	return variantID
+}
+
+// addVariant adds a variant with label to the product of variant sibling
+// and returns it.
+func (e *env) addVariant(sibling uuid.UUID, label, price string, active bool) uuid.UUID {
 	id := newID()
 	e.store.mu.Lock()
 	defer e.store.mu.Unlock()
-	e.store.products[productKey{e.actor.TenantID, id}] = app.ProductInfo{
-		ID: id, Name: name, Price: dec(price), TaxRate: dec(rate), Active: active,
-	}
+	v := e.store.variants[catalogKey{e.actor.TenantID, sibling}]
+	v.ID, v.Label, v.Price, v.Active = id, label, dec(price), active
+	e.store.variants[catalogKey{e.actor.TenantID, id}] = v
 	return id
+}
+
+// productOf returns the product of a variant of the actor's catalog.
+func (e *env) productOf(variantID uuid.UUID) uuid.UUID {
+	e.store.mu.Lock()
+	defer e.store.mu.Unlock()
+	return e.store.variants[catalogKey{e.actor.TenantID, variantID}].ProductID
 }
 
 // setMaxDiscount sets the tenant's discount limit for users without

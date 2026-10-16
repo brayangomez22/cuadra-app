@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/google/uuid"
 
@@ -15,80 +16,71 @@ import (
 )
 
 // The sales module reaches the catalog and the inventory through its own
-// ports (salesapp.ProductCatalog, salesapp.StockReserver), and the inventory
+// ports (salesapp.VariantCatalog, salesapp.StockReserver), and the inventory
 // reaches the catalog through inventoryapp.ProductVariants; these adapters
 // satisfy them with the other modules and translate their errors, so no
 // module imports another.
 
-// salesCatalog satisfies salesapp.ProductCatalog with the catalog module.
+// salesCatalog satisfies salesapp.VariantCatalog with the catalog module.
 type salesCatalog struct{ m *catalog.Module }
 
-func (c salesCatalog) Products(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) ([]salesapp.ProductInfo, error) {
-	products, err := c.m.ProductsByID(ctx, tenantID, ids)
+func (c salesCatalog) Variants(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) ([]salesapp.VariantInfo, error) {
+	products, err := c.m.ProductsOfVariants(ctx, tenantID, ids)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]salesapp.ProductInfo, 0, len(products))
+	out := make([]salesapp.VariantInfo, 0, len(ids))
 	for _, p := range products {
-		// Sales still sells products (T24c moves it to variants): it sells the
-		// default variant, at its price, while both are active.
-		v := p.DefaultVariant()
-		out = append(out, salesapp.ProductInfo{
-			ID: p.ID(), Name: p.Name(), Price: v.Price(), TaxRate: p.TaxRate().Rate(), Active: p.IsActive() && v.IsActive(),
-		})
+		for _, v := range p.Variants() {
+			if !slices.Contains(ids, v.ID()) {
+				continue
+			}
+			out = append(out, salesapp.VariantInfo{
+				ID: v.ID(), ProductID: p.ID(), ProductName: p.Name(), Label: v.Label(),
+				Price: v.Price(), TaxRate: p.TaxRate().Rate(), Active: p.IsActive() && v.IsActive(),
+			})
+		}
 	}
 	return out, nil
 }
 
-// salesStock satisfies salesapp.StockReserver with the inventory module.
-// Sales still sells products (T24c moves it to variants), and the inventory
-// counts variants: each product's stock goes out of its default variant.
-type salesStock struct {
-	inventory *inventory.Module
-	catalog   *catalog.Module
+func (c salesCatalog) DefaultVariants(ctx context.Context, tenantID uuid.UUID, productIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	products, err := c.m.ProductsByID(ctx, tenantID, productIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uuid.UUID]uuid.UUID, len(products))
+	for _, p := range products {
+		out[p.ID()] = p.DefaultVariant().ID()
+	}
+	return out, nil
 }
 
+// salesStock satisfies salesapp.StockReserver with the inventory module: a
+// sale takes its stock out of the variants it sold.
+type salesStock struct{ inventory *inventory.Module }
+
 func (s salesStock) ReserveSale(ctx context.Context, tenantID, userID, locationID, saleID uuid.UUID, lines []salesapp.StockLine) error {
-	productIDs := make([]uuid.UUID, 0, len(lines))
-	for _, l := range lines {
-		productIDs = append(productIDs, l.ProductID)
-	}
-	// Within the sale's transaction (ctx), like the exits.
-	products, err := s.catalog.ProductsByID(ctx, tenantID, productIDs)
-	if err != nil {
-		return err
-	}
-	variantOf := make(map[uuid.UUID]uuid.UUID, len(products))
-	productOf := make(map[uuid.UUID]uuid.UUID, len(products))
-	for _, p := range products {
-		v := p.DefaultVariant().ID()
-		variantOf[p.ID()], productOf[v] = v, p.ID()
-	}
 	in := inventoryapp.SaleStockInput{LocationID: locationID, SaleID: saleID}
 	for _, l := range lines {
-		variantID, ok := variantOf[l.ProductID]
-		if !ok {
-			return salesdomain.ErrProductNotFound
-		}
-		in.Lines = append(in.Lines, inventoryapp.SaleStockLine{VariantID: variantID, Quantity: l.Quantity})
+		in.Lines = append(in.Lines, inventoryapp.SaleStockLine{VariantID: l.VariantID, Quantity: l.Quantity})
 	}
-	return salesStockError(s.inventory.IssueSaleStock(ctx, tenantID, userID, in), productOf)
+	return salesStockError(s.inventory.IssueSaleStock(ctx, tenantID, userID, in))
 }
 
 func (s salesStock) ReverseSale(ctx context.Context, tenantID, userID, saleID uuid.UUID) error {
-	return salesStockError(s.inventory.ReverseSaleStock(ctx, tenantID, userID, saleID), nil)
+	return salesStockError(s.inventory.ReverseSaleStock(ctx, tenantID, userID, saleID))
 }
 
 // salesStockError translates the inventory's errors into the sales domain
-// errors the sales module maps to HTTP; productOf names the product of each
-// variant of the sale. Others pass through as unexpected.
-func salesStockError(err error, productOf map[uuid.UUID]uuid.UUID) error {
+// errors the sales module maps to HTTP. Others pass through as unexpected.
+func salesStockError(err error) error {
 	var variantErr *inventoryapp.VariantStockError
 	switch {
 	case err == nil:
 		return nil
-	case errors.Is(err, inventorydomain.ErrInsufficientStock) && errors.As(err, &variantErr) && productOf[variantErr.VariantID] != uuid.Nil:
-		return &salesdomain.InsufficientStockError{ProductID: productOf[variantErr.VariantID]}
+	case errors.Is(err, inventorydomain.ErrInsufficientStock) && errors.As(err, &variantErr):
+		return &salesdomain.InsufficientStockError{VariantID: variantErr.VariantID}
 	case errors.Is(err, inventorydomain.ErrInsufficientStock):
 		return salesdomain.ErrInsufficientStock
 	case errors.Is(err, inventorydomain.ErrLocationNotFound):

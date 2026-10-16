@@ -712,7 +712,7 @@ export interface components {
             /** @description Mensaje en español que se puede mostrar al usuario. */
             message: string;
             /**
-             * @description Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `product_id` en
+             * @description Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `variant_id` en
              *     `insufficient_stock`). Nunca trae datos personales.
              */
             details?: {
@@ -1142,10 +1142,20 @@ export interface components {
             lines: components["schemas"]["SaleLineInput"][];
             payments: components["schemas"]["PaymentInput"][];
         };
-        /** @description Una línea del carrito. `discount` es un monto en pesos sobre la línea, antes de IVA (por defecto, 0). */
+        /**
+         * @description Una línea del carrito: una variante y la cantidad. Lleva `variant_id` o, por compatibilidad, `product_id`;
+         *     uno de los dos, no ambos (`variant_required`). `discount` es un monto en pesos sobre la línea, antes de IVA
+         *     (por defecto, 0). El precio lo pone el servidor.
+         */
         SaleLineInput: {
             /** Format: uuid */
-            product_id: string;
+            variant_id?: string;
+            /**
+             * Format: uuid
+             * @deprecated
+             * @description Se resuelve a la variante por defecto del producto. Use `variant_id`.
+             */
+            product_id?: string;
             quantity: components["schemas"]["Quantity"];
             discount?: components["schemas"]["Money"];
         };
@@ -1175,17 +1185,34 @@ export interface components {
         /** @enum {string} */
         SaleStatus: "confirmed" | "voided";
         /**
-         * @description Una línea vendida. `unit_price` es sin IVA, en el momento de la venta. `gross` = cantidad × precio redondeado
-         *     a 2 decimales; `base` = `gross` − `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales;
-         *     `total` = `base` + `tax`.
+         * @description Una línea vendida: una variante de un producto. `unit_price` es sin IVA, en el momento de la venta, y
+         *     `price_rule` dice qué regla lo dio. `gross` = cantidad × precio redondeado a 2 decimales; `base` = `gross` −
+         *     `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales; `total` = `base` + `tax`.
          */
         SaleLine: {
             /** Format: uuid */
+            variant_id: string;
+            /**
+             * Format: uuid
+             * @description El producto de la variante.
+             */
             product_id: string;
             /** @description Nombre del producto en el momento de la venta. */
             product_name: string;
+            /**
+             * @description La variante en el momento de la venta: sus valores ordenados por nombre de eje (`Rojo · M`). No viene si
+             *     la variante no tiene ejes, como la de un producto simple.
+             * @example Rojo · M
+             */
+            variant_label?: string;
             quantity: components["schemas"]["Quantity"];
             unit_price: components["schemas"]["Money"];
+            /**
+             * @description ID estable de la regla de precio que dio `unit_price`: `variant_price` (el precio de la variante) o el de
+             *     una regla de un módulo (por ejemplo, `price_lists`).
+             * @example variant_price
+             */
+            price_rule: string;
             tax_rate: components["schemas"]["TaxRate"];
             discount: components["schemas"]["Money"];
             gross: components["schemas"]["Money"];
@@ -2570,7 +2597,8 @@ export interface operations {
                 };
             };
             /**
-             * @description No hay stock suficiente de un producto (`insufficient_stock`); `details.product_id` dice cuál. El usuario
+             * @description No hay stock suficiente de una variante (`insufficient_stock`); `details.variant_id` dice cuál y
+             *     `details.product_id` (deprecated), su producto. El usuario
              *     no tiene caja abierta y la empresa la exige (`cash_session_required`), o la caja se cerró
              *     (`cash_session_closed`).
              */
@@ -2583,7 +2611,8 @@ export interface operations {
                 };
             };
             /**
-             * @description Algún dato no cumple las reglas (`product_not_found`, `product_inactive`, `location_not_found`,
+             * @description Algún dato no cumple las reglas (`variant_required`; `product_not_found` y `product_inactive`, también
+             *     para una variante; `location_not_found`,
              *     `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
              *     `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`).
              */

@@ -96,15 +96,23 @@ func TestSaleVoid(t *testing.T) {
 }
 
 func TestInsufficientStockError(t *testing.T) {
-	t.Run("es ErrInsufficientStock y nombra el producto", func(t *testing.T) {
+	t.Run("es ErrInsufficientStock y nombra la variante", func(t *testing.T) {
 		id := newID()
-		var err error = &domain.InsufficientStockError{ProductID: id, ProductName: "Cemento gris 50kg"}
+		var err error = &domain.InsufficientStockError{VariantID: id, ProductName: "Cemento gris 50kg"}
 
 		require.ErrorIs(t, err, domain.ErrInsufficientStock)
 		var typed *domain.InsufficientStockError
 		require.True(t, errors.As(err, &typed))
-		require.Equal(t, id, typed.ProductID)
+		require.Equal(t, id, typed.VariantID)
 		require.Contains(t, err.Error(), id.String())
+		require.NotContains(t, err.Error(), "Cemento", "the message goes to logs and spans")
+	})
+
+	t.Run("describe el producto con la etiqueta de la variante", func(t *testing.T) {
+		simple := &domain.InsufficientStockError{VariantID: newID(), ProductName: "Cemento gris 50kg"}
+		variant := &domain.InsufficientStockError{VariantID: newID(), ProductName: "Camiseta básica", VariantLabel: "Rojo · M"}
+		require.Equal(t, "Cemento gris 50kg", simple.Description())
+		require.Equal(t, "Camiseta básica (Rojo · M)", variant.Description())
 	})
 }
 
@@ -118,9 +126,9 @@ func snapshotOf(s *domain.Sale) domain.SaleSnapshot {
 	}
 	for _, l := range s.Lines() {
 		snap.Lines = append(snap.Lines, domain.LineSnapshot{
-			ProductID: l.ProductID(), ProductName: l.ProductName(), Quantity: l.Quantity(),
-			UnitPrice: l.UnitPrice(), TaxRate: l.TaxRate(), Discount: l.Discount(),
-			Gross: l.Gross(), Tax: l.Tax(),
+			ProductID: l.ProductID(), VariantID: l.VariantID(), ProductName: l.ProductName(),
+			VariantLabel: l.VariantLabel(), Quantity: l.Quantity(), UnitPrice: l.UnitPrice(), TaxRate: l.TaxRate(),
+			Discount: l.Discount(), Gross: l.Gross(), Tax: l.Tax(), PriceRule: l.PriceRule(),
 		})
 	}
 	for _, p := range s.Payments() {
@@ -151,10 +159,27 @@ func TestRehydrateSale(t *testing.T) {
 		require.Equal(t, int64(7), got.Number())
 		require.Equal(t, domain.SaleConfirmed, got.Status())
 		require.Len(t, got.Lines(), 4)
+		require.Equal(t, orig.Lines(), got.Lines())
 		require.Equal(t, orig.Totals(), got.Totals())
 		requireDec(t, "8289.21", got.Change())
 		require.Equal(t, orig.ConfirmedAt(), got.ConfirmedAt())
 		require.Nil(t, got.VoidInfo())
+	})
+
+	t.Run("conserva la variante, la etiqueta y la regla de precio de cada línea", func(t *testing.T) {
+		orig := newSale(t)
+		in := line("2", "25000", "0.19", "")
+		in.ProductName, in.VariantLabel, in.PriceRule = "Camiseta básica", "Rojo · M", "price_lists"
+		addLine(t, orig, in)
+		addLine(t, orig, line("2.5", "1234.567", "0.19", ""))
+		require.NoError(t, orig.Confirm([]domain.Payment{payment(t, domain.PaymentCash, "100000")}, testNow))
+		require.NoError(t, orig.AssignNumber(1))
+
+		got, err := domain.RehydrateSale(snapshotOf(orig))
+		require.NoError(t, err)
+		require.Equal(t, orig.Lines(), got.Lines())
+		require.Equal(t, "Rojo · M", got.Lines()[0].VariantLabel())
+		require.Equal(t, domain.PriceRuleID("price_lists"), got.Lines()[0].PriceRule())
 	})
 
 	t.Run("reconstruye una venta anulada", func(t *testing.T) {
