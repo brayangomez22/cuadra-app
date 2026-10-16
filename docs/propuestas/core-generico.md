@@ -151,3 +151,41 @@ Módulo `volume_pricing`: escalas por variante ("1–11 und a $X, 12+ a $Y"), ap
 ```markdown
 - 2026-10-14 · Core genérico multi-negocio con variantes, lotes opcionales, precios por reglas, módulos activables por tenant y plantillas de tipo de negocio (bloque T24a–T24g, entre T24 y T25) · Cuadra debe servir a ferreterías, tiendas, droguerías, papelerías, ropa y similares; las ferreterías son el primer mercado, no el modelo. Se hace antes de T25 porque ventas, inventario, caja y POS ya existían sobre "producto = lo que se vende", y cada tarea más encarece el cambio. Lo específico de cada nicho vive en módulos (`unit_conversions`, `variants`, `lots_expiry`, `volume_pricing`, `price_lists`) y en plantillas YAML, nunca en el core. Se usan IDs con sufijo para no renumerar T25 en adelante.
 ```
+
+---
+
+## H. Ajustes a las tareas pendientes (T25 en adelante) y a `/tarea`
+
+`CLAUDE.md` aplica a todas las tareas, pero varias tareas pendientes todavía tienen textos de ferretería o hablan de "producto" donde ahora va "variante". Como el texto de una tarea es más específico que `CLAUDE.md`, Claude Code podría seguirlo al pie de la letra. Estos ajustes eliminan esa contradicción.
+
+**Encabezados de fase**
+- `fase-2-vender.md`, nota inicial: cambiar *"visitas a ferreterías"* por *"visitas a negocios (ferreterías y otros comercios)"*.
+- `fase-5-produccion-piloto.md`: cambiar *"una ferretería real"* por *"un negocio real"*.
+- `fase-7-v2.md`: cambiar *"atraer a ferreterías más grandes"* por *"atraer negocios más grandes y nuevos tipos de comercio"*.
+
+**Tareas**
+- **T25 · E2E:** agregar al Alcance: *"Los flujos críticos se ejecutan con dos plantillas (`ferreteria` y `ropa_calzado`); en la segunda, la venta es de una variante (talla y color)."*
+- **T26 · Fraccionamiento:** en el Alcance, cambiar los ejemplos por *"(rollo de 100 m → metro; caja ×12 → unidad; paca de 6 → unidad; kg → gramos)"*. En los Tests, cambiar el caso del cable por *"vender 2,5 m de una variante cuyo stock es 1 rollo (100 m) deja 97,5 m; vender 3 unidades de una caja ×12 deja 9 unidades de esa caja"*.
+- **T28 · Stock mínimo:** cambiar *"por producto y sede"* por *"por variante y sede"*, y en los Tests *"un producto aparece"* por *"una variante aparece"*.
+- **T29 · Importación de Excel:** agregar al Alcance: *"La plantilla de Excel se genera según la configuración del tenant: incluye columnas para sus atributos de producto, sus unidades y, si el módulo `variants` está activo, una fila por variante (con columnas de ejes) agrupada por producto."* Y a los Tests: *"un archivo con variantes crea un producto con sus N variantes; un atributo obligatorio vacío se reporta como error de la fila."*
+- **T30 · Toma física:** cambiar *"el mismo producto"* por *"la misma variante"*; agregar *"si el módulo `lots_expiry` está activo, se cuenta por lote"*.
+- **T31 · Clientes:** (ya cubierto en la sección D: segmentos configurables).
+- **T33 · Compras:** (ya cubierto en la sección D: líneas por `variant_id`).
+- **T34 · Demo:** (ya cubierto en la sección D: un demo por plantilla).
+- **T42 · Reportes:** agregar al Alcance: *"Los reportes de productos agregan por producto con detalle por variante (por ejemplo, ventas de una camiseta y su desglose por talla y color), y permiten filtrar por atributos del tenant."*
+- **T43 · Tablero:** cambiar *"productos por agotarse"* por *"variantes por agotarse"*.
+- **T44 · Primeros pasos:** los pasos se toman de la **plantilla del tipo de negocio** (por ejemplo, una droguería con `lots_expiry` tiene el paso "registra lotes y vencimientos"). Agregar a los Tests: *"dos plantillas distintas producen listas de pasos distintas."*
+- **T50 · Legal:** cambiar *"con cada ferretería"* por *"con cada negocio cliente"*.
+- **T51 · k6:** agregar *"con tenants de al menos dos plantillas y productos con variantes"*.
+
+**Épicas**
+- **V2-3 · Listas de precios:** cambiar *"Listas por tipo de cliente (público, maestro de obra, contratista, empresa)"* por *"Módulo `price_lists`: listas por segmento de cliente (configurables por tenant), implementadas como regla del `PriceResolver`"*.
+- **V2-7:** renombrar *"Diferenciadores del nicho"* por *"Módulos de nicho"*, y agregar al inicio: *"Cada punto es un módulo activable (`cross_references`, `kits`, `deliveries`, `warranties`, `projects`) que las plantillas activan según el tipo de negocio. Ninguno entra al core."*
+- **V3-3 · IA:** cambiar el ejemplo *"¿cuánto vendí de cemento…?"* por *"¿cuánto vendí de [producto] este mes…?"*.
+- **V3-6 · Talleres:** agregar *"Se implementa como la plantilla `taller` más el módulo `work_orders`, sobre el mecanismo de T24e."*
+- **V2-9 · Suscripciones:** agregar *"Los planes definen qué módulos puede activar cada tenant."*
+
+**Comando `/tarea`** (`.claude/commands/tarea.md`): en el paso 1 (Contexto), agregar este punto:
+```markdown
+   - Si el texto de la tarea contradice la sección "Core genérico y módulos por tipo de negocio" de `CLAUDE.md` (por ejemplo, usa términos de un nicho, enums fijos o "producto" donde corresponde "variante"), **sigue `CLAUDE.md`** y avísame de la contradicción en el plan.
+```

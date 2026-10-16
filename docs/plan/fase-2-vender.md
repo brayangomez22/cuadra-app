@@ -2,7 +2,7 @@
 
 Cuadra ya puede **vender**: API y pantalla del POS, tirilla, caja, y la base para operar el sistema (trabajos en segundo plano, errores, dashboards y pruebas end-to-end).
 
-> **Antes de empezar esta fase:** repriorizar con los hallazgos de las visitas a ferreterías (`docs/negocio.md`, sección "Insumos de la validación").
+> **Antes de empezar esta fase:** repriorizar con los hallazgos de las visitas a negocios (ferreterías y otros comercios) (`docs/negocio.md`, sección "Insumos de la validación").
 
 Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 
@@ -87,5 +87,5 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 **Tests primero:** el script detecta un término prohibido en un archivo de prueba y no marca las rutas excluidas.
 
 ### [ ] T25 · Tests end-to-end (Playwright)
-**Alcance:** `e2e/` con Playwright contra el stack levantado en docker-compose con datos semilla. Flujos críticos: registro → login → crear producto → registrar entrada de inventario → venta con pago mixto → verificar el stock. Corre en el CI en cada PR a `main` (con capturas y traces de Playwright como artefactos si falla).
+**Alcance:** `e2e/` con Playwright contra el stack levantado en docker-compose con datos semilla. Flujos críticos: registro → login → crear producto → registrar entrada de inventario → venta con pago mixto → verificar el stock. Corre en el CI en cada PR a `main` (con capturas y traces de Playwright como artefactos si falla). Los flujos críticos se ejecutan con dos plantillas (`ferreteria` y `ropa_calzado`); en la segunda, la venta es de una variante (talla y color).
 **Aceptación:** el flujo completo pasa en el CI en menos de 5 minutos.
