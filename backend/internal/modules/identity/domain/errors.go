@@ -8,6 +8,8 @@ var (
 	ErrInvalidNIT           = errors.New("identity: invalid NIT")
 	ErrInvalidNITCheckDigit = errors.New("identity: NIT check digit does not match")
 	ErrInvalidRole          = errors.New("identity: invalid role")
+	ErrInvalidPermission    = errors.New("identity: invalid permission")
+	ErrDuplicatePermission  = errors.New("identity: permission registered twice")
 	ErrInvalidTenantName    = errors.New("identity: invalid tenant name")
 	ErrInvalidTenantID      = errors.New("identity: invalid tenant id")
 	ErrInvalidTenantStatus  = errors.New("identity: invalid tenant status")

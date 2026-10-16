@@ -52,7 +52,10 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err er
 	if err := s.Tenants.CreateWithOwner(ctx, tenant, owner, setUp); err != nil {
 		return Session{}, err
 	}
-	profile := Profile{User: owner, Tenant: tenant}
+	profile, err := s.profile(ctx, owner, tenant)
+	if err != nil {
+		return Session{}, err
+	}
 	setProfileAttrs(span, profile)
 	s.signups.Add(ctx, 1)
 	// The request is not authenticated yet: the ids go explicitly.

@@ -96,7 +96,7 @@ func (u *User) IsActive() bool { return u.active }
 func (u *User) CreatedAt() time.Time { return u.createdAt }
 
 // Can reports whether the user may perform p. An inactive user can do nothing.
-func (u *User) Can(p Permission) bool { return u.active && u.role.Can(p) }
+func (u *User) Can(m *PermissionMatrix, p Permission) bool { return u.active && m.Can(u.role, p) }
 
 // Deactivate blocks the user without deleting it. Idempotent.
 func (u *User) Deactivate() { u.active = false }

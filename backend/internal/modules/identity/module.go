@@ -36,7 +36,11 @@ type Config struct {
 	// Issuer issues the access tokens (*auth.JWT).
 	Issuer app.AccessTokenIssuer
 	// Setup prepares a new tenant's data in the other modules at sign-up.
-	Setup          app.TenantSetup
+	Setup app.TenantSetup
+	// Permissions is the role → permission matrix; Modules, the active
+	// modules of each tenant.
+	Permissions    *Permissions
+	Modules        app.ActiveModules
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -50,7 +54,7 @@ type Module struct {
 
 // New builds the module on PostgreSQL, Argon2id and in-memory login limits.
 func New(cfg Config) (*Module, error) {
-	if cfg.DB == nil || cfg.Issuer == nil || cfg.Setup == nil || cfg.Logger == nil {
+	if cfg.DB == nil || cfg.Issuer == nil || cfg.Setup == nil || cfg.Permissions == nil || cfg.Modules == nil || cfg.Logger == nil {
 		return nil, errors.New("identity: missing module dependency")
 	}
 	users := postgres.NewUserRepository(cfg.DB)
@@ -62,6 +66,8 @@ func New(cfg Config) (*Module, error) {
 		Hasher:         argon2id.New(argon2id.DefaultParams),
 		Issuer:         cfg.Issuer,
 		Setup:          cfg.Setup,
+		Permissions:    cfg.Permissions.matrix,
+		Modules:        cfg.Modules,
 		IPLimiter:      ratelimit.NewFixedWindow(loginsPerIP, loginsPerIPWindow),
 		EmailLimiter:   ratelimit.NewFixedWindow(loginsPerEmail, loginsPerEmailWindow),
 		TracerProvider: cfg.TracerProvider,
@@ -79,9 +85,30 @@ func (m *Module) RegisterRoutes(mux *http.ServeMux) {
 	httpadapter.Register(mux, m.service, m.log)
 }
 
-// Authorize reports whether role grants permission, by the identity
-// permission matrix. It is the auth.Authorizer of the API.
-func Authorize(role, permission string) bool {
+// Permissions is the permission matrix of the core and the registered
+// modules. It is built once, at startup, before the modules that authorize
+// with it.
+type Permissions struct{ matrix *domain.PermissionMatrix }
+
+// NewPermissions builds the matrix from the module registry. It fails if a
+// module repeats or misspells a permission, or names an unknown role.
+func NewPermissions(registry app.ModuleRegistry) (*Permissions, error) {
+	matrix, err := app.NewPermissionMatrix(registry)
+	if err != nil {
+		return nil, err
+	}
+	return &Permissions{matrix: matrix}, nil
+}
+
+// Authorize reports whether role grants permission. An unknown role or an
+// unregistered permission grants nothing. It is the auth.Authorizer of the
+// API.
+func (p *Permissions) Authorize(role, permission string) bool {
 	r, err := domain.ParseRole(role)
-	return err == nil && r.Can(domain.Permission(permission))
+	return err == nil && p.matrix.Can(r, domain.Permission(permission))
+}
+
+// Known reports whether permission is registered, by the core or a module.
+func (p *Permissions) Known(permission string) bool {
+	return p.matrix.Known(domain.Permission(permission))
 }

@@ -26,22 +26,24 @@ import (
 // PostgreSQL with Row-Level Security.
 func TestAuthFlow(t *testing.T) {
 	database := dbtest.New(t)
+	moduleService, permissions := testModules(t, database)
 	tokens, err := auth.NewJWT(testSecret, 15*time.Minute)
 	require.NoError(t, err)
 	log := slog.New(slog.DiscardHandler)
 	catalogModule, err := catalog.New(catalog.Config{
-		DB: database, Authorize: identity.Authorize, Logger: log,
+		DB: database, Authorize: permissions.Authorize, Logger: log,
 		TracerProvider: noop.NewTracerProvider(), MeterProvider: metricnoop.NewMeterProvider(),
 	})
 	require.NoError(t, err)
 	module, err := identity.New(identity.Config{
-		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule}, Logger: log,
+		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule},
+		Permissions: permissions, Modules: moduleService, Logger: log,
 		TracerProvider: noop.NewTracerProvider(), MeterProvider: metricnoop.NewMeterProvider(),
 	})
 	require.NoError(t, err)
 	handler, err := newHandler(handlerConfig{
 		Log: log, TracerProvider: noop.NewTracerProvider(), DB: readyDB{},
-		Verifier: tokens, Authorize: identity.Authorize,
+		Verifier: tokens, Permissions: permissions, Modules: moduleService,
 		Routes: []func(*http.ServeMux){module.RegisterRoutes},
 	})
 	require.NoError(t, err)

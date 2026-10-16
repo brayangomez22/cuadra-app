@@ -52,6 +52,10 @@ type Deps struct {
 	Hasher    domain.PasswordHasher
 	Issuer    AccessTokenIssuer
 	Setup     TenantSetup
+	// Permissions is the role → permission matrix; Modules, the active
+	// modules of each tenant.
+	Permissions *domain.PermissionMatrix
+	Modules     ActiveModules
 	// IPLimiter is keyed by client IP and EmailLimiter by normalized email;
 	// both count every login attempt.
 	IPLimiter      RateLimiter
@@ -79,7 +83,8 @@ type Service struct {
 // or a metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
 	if d.Tenants == nil || d.Users == nil || d.Tokens == nil || d.Directory == nil ||
-		d.Hasher == nil || d.Issuer == nil || d.Setup == nil || d.IPLimiter == nil || d.EmailLimiter == nil {
+		d.Hasher == nil || d.Issuer == nil || d.Setup == nil || d.Permissions == nil || d.Modules == nil ||
+		d.IPLimiter == nil || d.EmailLimiter == nil {
 		return nil, errors.New("identity: missing service dependency")
 	}
 	if d.Now == nil {
@@ -123,6 +128,10 @@ func NewService(d Deps) (*Service, error) {
 type Profile struct {
 	User   *domain.User
 	Tenant *domain.Tenant
+	// Modules are the tenant's active modules, and Permissions what the
+	// user's role grants with them.
+	Modules     []string
+	Permissions []domain.Permission
 }
 
 // Session is what a successful sign-up, login or refresh returns. The
@@ -185,3 +194,58 @@ func setProfileAttrs(span trace.Span, p Profile) {
 // normalizeEmailKey lowercases and trims s for rate limiting, also when it is
 // not a valid email.
 func normalizeEmailKey(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
+
+// ModulePermission is a permission an activable module declares, with the
+// roles other than the owner that get it.
+type ModulePermission struct {
+	Module     string
+	Permission string
+	Roles      []string
+}
+
+// ModuleRegistry is the registry of activable modules, as identity sees it:
+// the permissions each one declares. cmd/api satisfies it with
+// platform/modules, which identity does not import.
+type ModuleRegistry interface {
+	Permissions() []ModulePermission
+}
+
+// ActiveModules tells which modules a tenant has active. cmd/api satisfies
+// it with platform/modules.
+type ActiveModules interface {
+	Active(ctx context.Context, tenantID uuid.UUID) ([]string, error)
+}
+
+// NewPermissionMatrix builds the matrix of the core permissions and those
+// the registered modules declare. It fails, so the API does not start, if a
+// module repeats a permission, misspells it or names an unknown role.
+func NewPermissionMatrix(registry ModuleRegistry) (*domain.PermissionMatrix, error) {
+	grants := domain.CoreGrants()
+	for _, mp := range registry.Permissions() {
+		g := domain.Grant{Permission: domain.Permission(mp.Permission), Module: mp.Module}
+		for _, name := range mp.Roles {
+			role, err := domain.ParseRole(name)
+			if err != nil {
+				return nil, fmt.Errorf("identity: module %s, permission %s: %w", mp.Module, mp.Permission, err)
+			}
+			g.Roles = append(g.Roles, role)
+		}
+		grants = append(grants, g)
+	}
+	return domain.NewPermissionMatrix(grants)
+}
+
+// profile completes a user's profile with the tenant's active modules and
+// what the user's role grants with them.
+func (s *Service) profile(ctx context.Context, user *domain.User, tenant *domain.Tenant) (Profile, error) {
+	modules, err := s.Modules.Active(ctx, tenant.ID())
+	if err != nil {
+		return Profile{}, fmt.Errorf("identity: active modules: %w", err)
+	}
+	return Profile{
+		User:        user,
+		Tenant:      tenant,
+		Modules:     modules,
+		Permissions: s.Permissions.Permissions(user.Role(), modules),
+	}, nil
+}

@@ -173,10 +173,13 @@ func (h *Handler) authSession(s app.Session) (identityapi.AuthSession, string) {
 }
 
 func me(p app.Profile) identityapi.Me {
-	permissions := p.User.Role().Permissions()
-	names := make([]string, 0, len(permissions))
-	for _, perm := range permissions {
+	names := make([]string, 0, len(p.Permissions))
+	for _, perm := range p.Permissions {
 		names = append(names, string(perm))
+	}
+	modules := p.Modules
+	if modules == nil {
+		modules = []string{}
 	}
 	return identityapi.Me{
 		Id:          p.User.ID(),
@@ -187,6 +190,7 @@ func me(p app.Profile) identityapi.Me {
 		Email:       p.User.Email().String(),
 		Role:        identityapi.MeRole(p.User.Role()),
 		Permissions: names,
+		Modules:     modules,
 	}
 }
 

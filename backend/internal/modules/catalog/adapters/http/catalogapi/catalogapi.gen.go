@@ -510,6 +510,9 @@ type Limit = int
 // LocationId defines model for LocationId.
 type LocationId = openapi_types.UUID
 
+// ModuleId defines model for ModuleId.
+type ModuleId = string
+
 // Offset defines model for Offset.
 type Offset = int
 

@@ -26,7 +26,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 
 ### [ ] T38 · Endurecimiento de seguridad
 **Alcance:** revisión contra OWASP ASVS nivel 1: headers de seguridad (CSP, HSTS...), CORS estricto, rate limiting global y por tenant **detrás de una interfaz `RateLimiter`** (implementación inicial en memoria o en Postgres; si la API corre en varias réplicas y una medición lo justifica, se agrega un adaptador de Redis sin tocar el resto), límites de tamaño de request, rotación de secretos JWT, **registro de auditoría** (quién anuló, cambió precios o ajustó inventario) consultable por el dueño, política de contraseñas y bloqueo por intentos. Escaneo DAST con OWASP ZAP contra staging desde el CI.
-**Pendientes que entran a esta tarea:** P04–P07 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P04–P07 y P40 (`docs/plan/pendientes.md`).
 **Aceptación:** checklist ASVS en `docs/seguridad.md` con cada punto resuelto o justificado.
 
 ### [ ] T39 · Feature flags por tenant

@@ -347,6 +347,13 @@ type Tenant struct {
 	CreatedAt time.Time
 }
 
+type TenantModule struct {
+	TenantID  uuid.UUID
+	ModuleID  string
+	EnabledAt time.Time
+	EnabledBy *uuid.UUID
+}
+
 type UnitsOfMeasure struct {
 	ID        uuid.UUID
 	TenantID  uuid.UUID

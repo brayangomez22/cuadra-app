@@ -341,8 +341,10 @@ func TestLogout(t *testing.T) {
 }
 
 func TestGetMe(t *testing.T) {
-	t.Run("devuelve el usuario del token con su empresa, su NIT y sus permisos", func(t *testing.T) {
+	t.Run("devuelve el usuario del token con su empresa, su NIT, sus permisos y los módulos activos", func(t *testing.T) {
 		p := profile(t, domain.RoleCashier)
+		p.Modules = []string{"variants"}
+		p.Permissions = []domain.Permission{domain.PermCatalogRead, domain.PermInventoryRead, domain.PermSalesCreate, domain.PermSalesRead}
 		var gotTenant, gotUser uuid.UUID
 		uc := &stubUseCases{me: func(tenantID, userID uuid.UUID) (app.Profile, error) {
 			gotTenant, gotUser = tenantID, userID
@@ -365,8 +367,22 @@ func TestGetMe(t *testing.T) {
 			"name": "Ana Gómez",
 			"email": "ana@eltornillo.co",
 			"role": "cashier",
-			"permissions": ["catalog:read", "inventory:read", "sales:create", "sales:read"]
+			"permissions": ["catalog:read", "inventory:read", "sales:create", "sales:read"],
+			"modules": ["variants"]
 		}`, rec.Body.String())
+	})
+
+	t.Run("sin módulos activos envía listas vacías, no null", func(t *testing.T) {
+		p := profile(t, domain.RoleCashier)
+		uc := &stubUseCases{me: func(uuid.UUID, uuid.UUID) (app.Profile, error) { return p, nil }}
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+		req = req.WithContext(auth.WithPrincipal(req.Context(), auth.Principal{TenantID: p.Tenant.ID(), UserID: p.User.ID(), Role: "cashier"}))
+
+		rec := serve(t, uc, req)
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"modules":[]`)
+		require.Contains(t, rec.Body.String(), `"permissions":[]`)
 	})
 
 	t.Run("sin usuario autenticado responde 401", func(t *testing.T) {

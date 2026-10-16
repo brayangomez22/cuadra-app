@@ -102,9 +102,15 @@ type LoginRequest struct {
 type Me struct {
 	Email string             `json:"email"`
 	Id    openapi_types.UUID `json:"id"`
-	Name  string             `json:"name"`
 
-	// Permissions Permisos del rol, para mostrar u ocultar acciones en la UI.
+	// Modules Módulos activos de la empresa, para mostrar u ocultar menús, columnas y campos.
+	//
+	// Example: ["variants"]
+	Modules []string `json:"modules"`
+	Name    string   `json:"name"`
+
+	// Permissions Permisos del rol, para mostrar u ocultar acciones en la UI. Incluye los de los módulos activos.
+	//
 	//
 	// Example: ["catalog:read","sales:create"]
 	Permissions []string           `json:"permissions"`
@@ -171,6 +177,9 @@ type CategoryId = openapi_types.UUID
 
 // LocationId defines model for LocationId.
 type LocationId = openapi_types.UUID
+
+// ModuleId defines model for ModuleId.
+type ModuleId = string
 
 // ProductId defines model for ProductId.
 type ProductId = openapi_types.UUID

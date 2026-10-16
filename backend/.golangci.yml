@@ -23,6 +23,7 @@ linters:
       locale: US
       ignore-rules:
         - contraseña
+        - dependencias
         - inventario
         - momento
         - previos

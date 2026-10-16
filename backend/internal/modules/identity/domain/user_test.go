@@ -64,25 +64,29 @@ func TestNewUser(t *testing.T) {
 	})
 
 	t.Run("usuario inactivo no tiene permisos", func(t *testing.T) {
+		matrix, err := domain.NewPermissionMatrix(domain.CoreGrants())
+		require.NoError(t, err)
 		user, err := domain.NewUser(tenantID, mustEmail(t, "dueno@ferreteria.co"), "Dueño", fakeHash, domain.RoleOwner, now)
 		require.NoError(t, err)
-		require.True(t, user.Can(domain.PermUsersManage))
+		require.True(t, user.Can(matrix, domain.PermUsersManage))
 
 		user.Deactivate()
 		require.False(t, user.IsActive())
-		require.False(t, user.Can(domain.PermCatalogRead))
+		require.False(t, user.Can(matrix, domain.PermCatalogRead))
 
 		user.Activate()
-		require.True(t, user.Can(domain.PermCatalogRead))
+		require.True(t, user.Can(matrix, domain.PermCatalogRead))
 	})
 
 	t.Run("cambia el rol y con él los permisos", func(t *testing.T) {
+		matrix, err := domain.NewPermissionMatrix(domain.CoreGrants())
+		require.NoError(t, err)
 		user, err := domain.NewUser(tenantID, mustEmail(t, "ana@ferreteria.co"), "Ana", fakeHash, domain.RoleCashier, now)
 		require.NoError(t, err)
-		require.False(t, user.Can(domain.PermCatalogWrite))
+		require.False(t, user.Can(matrix, domain.PermCatalogWrite))
 
 		require.NoError(t, user.ChangeRole(domain.RoleAdmin))
-		require.True(t, user.Can(domain.PermCatalogWrite))
+		require.True(t, user.Can(matrix, domain.PermCatalogWrite))
 
 		require.ErrorIs(t, user.ChangeRole(domain.Role("root")), domain.ErrInvalidRole)
 		require.Equal(t, domain.RoleAdmin, user.Role())
