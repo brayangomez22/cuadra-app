@@ -1,5 +1,5 @@
-// Package app holds the catalog use cases: products and categories of a
-// tenant.
+// Package app holds the catalog use cases: products, categories, units of
+// measure, attribute definitions and variant axes of a tenant.
 package app
 
 import (
@@ -34,6 +34,8 @@ type Deps struct {
 	Products       domain.ProductRepository
 	Categories     domain.CategoryRepository
 	Units          domain.UnitRepository
+	Attributes     domain.AttributeRepository
+	VariantAxes    domain.VariantAxisRepository
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -54,7 +56,7 @@ type Service struct {
 // NewService builds a Service. It fails if a repository is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if d.Products == nil || d.Categories == nil || d.Units == nil {
+	if d.Products == nil || d.Categories == nil || d.Units == nil || d.Attributes == nil || d.VariantAxes == nil {
 		return nil, errors.New("catalog: missing service dependency")
 	}
 	if d.Now == nil {
@@ -128,4 +130,12 @@ func unitAttr(id uuid.UUID) attribute.KeyValue {
 
 func categoryAttr(id uuid.UUID) attribute.KeyValue {
 	return attribute.String("category.id", id.String())
+}
+
+func attributeAttr(id uuid.UUID) attribute.KeyValue {
+	return attribute.String("attribute.id", id.String())
+}
+
+func axisAttr(id uuid.UUID) attribute.KeyValue {
+	return attribute.String("axis.id", id.String())
 }

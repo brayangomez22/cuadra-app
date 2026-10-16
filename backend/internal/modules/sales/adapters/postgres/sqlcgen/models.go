@@ -62,6 +62,17 @@ func (ns NullRiverJobState) Value() (driver.Value, error) {
 	return string(ns.RiverJobState), nil
 }
 
+type AttributeDefinition struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	Key       string
+	Label     string
+	Type      string
+	Options   []string
+	Required  bool
+	CreatedAt time.Time
+}
+
 type CashMovement struct {
 	ID        uuid.UUID
 	TenantID  uuid.UUID
@@ -147,6 +158,7 @@ type Product struct {
 	Active      bool
 	CreatedAt   time.Time
 	BaseUnitID  uuid.UUID
+	Attributes  []byte
 }
 
 type ProductVariant struct {
@@ -352,4 +364,12 @@ type User struct {
 	Role         string
 	Active       bool
 	CreatedAt    time.Time
+}
+
+type VariantAx struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	Name          string
+	AllowedValues []string
+	CreatedAt     time.Time
 }

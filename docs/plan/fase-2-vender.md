@@ -80,7 +80,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 **Alcance:** `units_of_measure` como tabla por tenant (RLS), reemplazando el catálogo fijo: migración que siembra, para cada tenant existente, las unidades que hoy existen, y cambia `products.base_unit` por `base_unit_id`, siguiendo las reglas del bloque. **`SignUp` siembra esas mismas unidades al registrar un tenant**, a través de un puerto del catálogo y dentro de la transacción del registro (T24g lo reemplaza por la siembra de la plantilla). Contrato y CRUD de unidades; `Product` agrega `base_unit_id` y la unidad, y `base_unit` queda `deprecated`.
 **Tests primero:** no se puede borrar una unidad en uso; un tenant nuevo queda con las unidades por defecto; la migración asigna a cada producto la unidad de su tenant con el mismo código; aislamiento multi-tenant.
 
-### [ ] T24e · Atributos de producto por tenant
+### [x] T24e · Atributos de producto por tenant
 **Depende de:** T24d.
 **Alcance:** `AttributeDefinition` por tenant (clave, etiqueta, tipo: texto, número, lista o booleano; opciones; obligatorio), columna `products.attributes` (`JSONB`) y validación de los atributos contra las definiciones en el dominio. Contrato y CRUD de definiciones; `Product` agrega `attributes`. Ejes de variante definidos por el tenant (nombre y valores permitidos), validando `axis_values` contra ellos (P25).
 **Tests primero:** un atributo de tipo número rechaza texto; un atributo de lista rechaza una opción no definida; un atributo obligatorio faltante falla; aislamiento multi-tenant.
@@ -93,7 +93,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 ### [ ] T24g · Plantillas de tipo de negocio y registro
 **Depende de:** T24d, T24e, T24f.
 **Alcance:** plantillas en `backend/templates/business/*.yaml` (`generica`, `ferreteria`, `tienda`, `drogueria`, `papeleria`, `ropa_calzado`) con módulos, unidades, categorías iniciales, atributos de producto, segmentos de cliente y etiquetas de UI (alcance mínimo: los textos de la UI que hoy nombran el negocio). Esquema de validación de las plantillas, con `go.yaml.in/yaml/v3` y `github.com/santhosh-tekuri/jsonschema/v6` como dependencias directas. `SignUp` pide el tipo de negocio y aplica la plantilla en la misma transacción, reemplazando la siembra fija de T24d. `tenants` guarda la plantilla elegida. Migración: los tenants existentes quedan con la plantilla `ferreteria` y sus módulos. Los segmentos de cliente se declaran y se validan, pero se siembran a partir de T31.
-**Pendientes que entran a esta tarea:** P34 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P34 y P35 (`docs/plan/pendientes.md`).
 **Tests primero:** aplicar una plantilla siembra exactamente sus unidades, categorías, atributos y módulos; un registro con una plantilla inexistente falla sin crear el tenant; cada YAML de plantilla se valida en CI contra su esquema; casos de al menos dos plantillas.
 
 ### [ ] T24h · Neutralidad del core
@@ -104,14 +104,14 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 ### [ ] T24i · Frontend: producto y POS
 **Depende de:** T24c, T24e, T24f.
 **Alcance:** formulario de producto con atributos según las definiciones del tenant; **si el módulo `variants` está inactivo, el formulario se ve igual que hoy** (producto simple); si está activo, ejes y matriz de variantes. Lista de productos, selector de productos y pantallas de inventario (stock, kardex, entradas) por variante. POS: búsqueda y carrito por variante (escanear el código de una variante agrega esa variante); el carrito guardado en `sessionStorage` lleva versión y se descarta si es de una versión anterior. La tirilla muestra `variant_label`.
-**Pendientes que entran a esta tarea:** P33 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P33 y P38 (`docs/plan/pendientes.md`).
 **Tests primero:** un producto simple se crea y se vende igual que antes; con `variants` activo, se crean 6 variantes (3 tallas × 2 colores) y el POS agrega la correcta al escanear; un carrito guardado con la versión anterior se descarta sin error.
 **Después:** `/impeccable critique` del formulario de producto y del POS.
 
 ### [ ] T24j · Frontend: configuración y registro, y fin de lo `deprecated`
 **Depende de:** T24g, T24i.
 **Alcance:** registro con selección de tipo de negocio. Configuración: unidades, atributos y módulos. Menús y campos según los `modules` de `/me`. **Elimina todos los campos `deprecated` del bloque** en `api/openapi.yaml` y el código que los usa, en el backend y en el frontend.
-**Pendientes que entran a esta tarea:** P29 y P32 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P29, P32, P36 y P37 (`docs/plan/pendientes.md`).
 **Tests primero:** un menú de un módulo inactivo no aparece; el registro con una plantilla siembra sus unidades y sus módulos (de punta a punta contra la API); `api/openapi.yaml` no tiene campos `deprecated` del bloque.
 **Después:** `/impeccable critique` de la configuración y del registro.
 

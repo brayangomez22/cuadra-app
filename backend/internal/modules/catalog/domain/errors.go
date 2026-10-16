@@ -31,6 +31,24 @@ var (
 	ErrDuplicateVariant    = errors.New("catalog: another variant of the product has the same axis values")
 	ErrVariantNotFound     = errors.New("catalog: variant not found")
 
+	ErrInvalidAttributeID      = errors.New("catalog: invalid attribute id")
+	ErrInvalidAttributeKey     = errors.New("catalog: invalid attribute key")
+	ErrInvalidAttributeLabel   = errors.New("catalog: invalid attribute label")
+	ErrInvalidAttributeType    = errors.New("catalog: invalid attribute type")
+	ErrInvalidAttributeOptions = errors.New("catalog: invalid attribute options")
+	// ErrUnknownAttribute, ErrAttributeRequired and ErrInvalidAttributeValue
+	// come wrapped in an *AttributeError that names the attribute.
+	ErrUnknownAttribute         = errors.New("catalog: attribute not defined in the tenant")
+	ErrAttributeRequired        = errors.New("catalog: required attribute missing")
+	ErrInvalidAttributeValue    = errors.New("catalog: invalid attribute value")
+	ErrInvalidAxisID            = errors.New("catalog: invalid variant axis id")
+	ErrInvalidAxisName          = errors.New("catalog: invalid variant axis name")
+	ErrInvalidAxisAllowedValues = errors.New("catalog: invalid variant axis allowed values")
+	// ErrUnknownAxis and ErrAxisValueNotAllowed come wrapped in an
+	// *AxisError that names the axis.
+	ErrUnknownAxis         = errors.New("catalog: variant axis not defined in the tenant")
+	ErrAxisValueNotAllowed = errors.New("catalog: value not allowed by the variant axis")
+
 	// Errors reported by the repositories and the use cases.
 	ErrProductNotFound  = errors.New("catalog: product not found")
 	ErrCategoryNotFound = errors.New("catalog: category not found")
@@ -44,4 +62,13 @@ var (
 	// ErrUnitRequired reports a product input with neither a unit id nor a
 	// unit code, or with both.
 	ErrUnitRequired = errors.New("catalog: a product needs a unit id or a unit code, not both")
+
+	ErrAttributeNotFound    = errors.New("catalog: attribute definition not found")
+	ErrAttributeKeyTaken    = errors.New("catalog: attribute key already used in the tenant")
+	ErrAttributeInUse       = errors.New("catalog: attribute is used by products")
+	ErrAttributeOptionInUse = errors.New("catalog: a removed attribute option is used by products")
+	ErrAxisNotFound         = errors.New("catalog: variant axis not found")
+	ErrAxisNameTaken        = errors.New("catalog: variant axis name already used in the tenant")
+	ErrAxisInUse            = errors.New("catalog: variant axis is used by variants")
+	ErrAxisValueInUse       = errors.New("catalog: a removed axis value is used by variants")
 )

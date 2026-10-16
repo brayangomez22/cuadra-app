@@ -47,6 +47,14 @@ type UseCases interface {
 	UpdateUnit(ctx context.Context, a app.Actor, id uuid.UUID, code, name string) (*domain.UnitOfMeasure, error)
 	ListUnits(ctx context.Context, a app.Actor) ([]*domain.UnitOfMeasure, error)
 	DeleteUnit(ctx context.Context, a app.Actor, id uuid.UUID) error
+	CreateAttribute(ctx context.Context, a app.Actor, in app.AttributeInput) (*domain.AttributeDefinition, error)
+	UpdateAttribute(ctx context.Context, a app.Actor, id uuid.UUID, in app.AttributeUpdate) (*domain.AttributeDefinition, error)
+	ListAttributes(ctx context.Context, a app.Actor) ([]*domain.AttributeDefinition, error)
+	DeleteAttribute(ctx context.Context, a app.Actor, id uuid.UUID) error
+	CreateVariantAxis(ctx context.Context, a app.Actor, name string, values []string) (*domain.VariantAxis, error)
+	UpdateVariantAxis(ctx context.Context, a app.Actor, id uuid.UUID, values []string) (*domain.VariantAxis, error)
+	ListVariantAxes(ctx context.Context, a app.Actor) ([]*domain.VariantAxis, error)
+	DeleteVariantAxis(ctx context.Context, a app.Actor, id uuid.UUID) error
 }
 
 // Handler implements catalogapi.StrictServerInterface.
@@ -277,6 +285,10 @@ func productInput(body catalogapi.ProductInput) (app.ProductInput, error) {
 	if err != nil {
 		return app.ProductInput{}, err
 	}
+	attrs, err := attributeValues(body.Attributes)
+	if err != nil {
+		return app.ProductInput{}, err
+	}
 	in := app.ProductInput{
 		SKU:        body.Sku,
 		Name:       body.Name,
@@ -285,6 +297,7 @@ func productInput(body catalogapi.ProductInput) (app.ProductInput, error) {
 		Cost:       cost,
 		Price:      price,
 		TaxRate:    rate,
+		Attributes: attrs,
 	}
 	if body.Barcode != nil {
 		in.Barcode = *body.Barcode
@@ -339,6 +352,7 @@ func productBody(p *domain.Product, seesCost bool) catalogapi.Product {
 		PriceWithTax:  def.PriceWithTax,
 		MarginPercent: def.MarginPercent,
 		TaxRate:       formatRate(p.TaxRate()),
+		Attributes:    attributesBody(p.Attributes()),
 		Active:        p.IsActive(),
 		CreatedAt:     p.CreatedAt(),
 		Variants:      variants,

@@ -30,6 +30,8 @@ type store struct {
 	products   map[uuid.UUID]*domain.Product
 	categories map[uuid.UUID]*domain.Category
 	units      map[uuid.UUID]*domain.UnitOfMeasure
+	attributes map[uuid.UUID]*domain.AttributeDefinition
+	axes       map[uuid.UUID]*domain.VariantAxis
 	// searches records the filters received by Search.
 	searches []domain.ProductFilter
 }
@@ -45,7 +47,8 @@ func cloneProduct(p *domain.Product) *domain.Product {
 	c, err := domain.RehydrateProduct(domain.ProductSnapshot{
 		ID: p.ID(), TenantID: p.TenantID(), Name: p.Name(),
 		Description: p.Description(), CategoryID: p.CategoryID(), BaseUnit: p.BaseUnit(),
-		TaxRate: p.TaxRate(), Active: p.IsActive(), CreatedAt: p.CreatedAt(), Variants: variants,
+		TaxRate: p.TaxRate(), Attributes: p.Attributes(), Active: p.IsActive(), CreatedAt: p.CreatedAt(),
+		Variants: variants,
 	})
 	if err != nil {
 		panic(err)
@@ -371,6 +374,8 @@ func newEnv(t *testing.T) *env {
 			products:   map[uuid.UUID]*domain.Product{},
 			categories: map[uuid.UUID]*domain.Category{},
 			units:      map[uuid.UUID]*domain.UnitOfMeasure{},
+			attributes: map[uuid.UUID]*domain.AttributeDefinition{},
+			axes:       map[uuid.UUID]*domain.VariantAxis{},
 		},
 		actor: app.Actor{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())},
 		spans: tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
@@ -385,6 +390,8 @@ func newEnv(t *testing.T) *env {
 		Products:       fakeProducts{e.store},
 		Categories:     fakeCategories{e.store},
 		Units:          fakeUnits{e.store},
+		Attributes:     fakeAttributes{e.store},
+		VariantAxes:    fakeAxes{e.store},
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,
@@ -392,7 +399,29 @@ func newEnv(t *testing.T) *env {
 	require.NoError(t, err)
 	e.svc = svc
 	e.meters = e.addUnit(t, e.actor.TenantID, "m", "Metro")
+	// The axes the variant tests use, as a tenant would define them.
+	e.addAxis(t, e.actor.TenantID, "talla", "S", "M", "L")
+	e.addAxis(t, e.actor.TenantID, "color", "Rojo", "Azul")
+	e.addAxis(t, e.actor.TenantID, "presentación", "Galón", "Cuarto")
 	return e
+}
+
+// addAxis stores a variant axis of tenantID directly in the fake.
+func (e *env) addAxis(t *testing.T, tenantID uuid.UUID, name string, values ...string) *domain.VariantAxis {
+	t.Helper()
+	a, err := domain.NewVariantAxis(tenantID, name, values, testNow)
+	require.NoError(t, err)
+	require.NoError(t, fakeAxes{e.store}.Create(t.Context(), a))
+	return a
+}
+
+// addAttribute stores an attribute definition of tenantID directly in the fake.
+func (e *env) addAttribute(t *testing.T, tenantID uuid.UUID, p domain.AttributeParams) *domain.AttributeDefinition {
+	t.Helper()
+	d, err := domain.NewAttributeDefinition(tenantID, p, testNow)
+	require.NoError(t, err)
+	require.NoError(t, fakeAttributes{e.store}.Create(t.Context(), d))
+	return d
 }
 
 // addUnit stores a unit of tenantID directly in the fake, without the
@@ -444,4 +473,184 @@ func (e *env) counter(t *testing.T, name, key, value string) int64 {
 		}
 	}
 	return total
+}
+
+func cloneAttribute(d *domain.AttributeDefinition) *domain.AttributeDefinition {
+	out, err := domain.RehydrateAttributeDefinition(domain.AttributeSnapshot{
+		ID: d.ID(), TenantID: d.TenantID(), Key: d.Key(), Label: d.Label(), Type: d.Type(),
+		Options: d.Options(), Required: d.Required(), CreatedAt: d.CreatedAt(),
+	})
+	if err != nil {
+		panic(err)
+	}
+	return out
+}
+
+type fakeAttributes struct{ *store }
+
+func (f fakeAttributes) Create(_ context.Context, d *domain.AttributeDefinition) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, other := range f.attributes {
+		if other.TenantID() == d.TenantID() && other.Key() == d.Key() {
+			return domain.ErrAttributeKeyTaken
+		}
+	}
+	f.attributes[d.ID()] = cloneAttribute(d)
+	return nil
+}
+
+func (f fakeAttributes) GetByID(_ context.Context, tenantID, id uuid.UUID) (*domain.AttributeDefinition, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	d, ok := f.attributes[id]
+	if !ok || d.TenantID() != tenantID {
+		return nil, domain.ErrAttributeNotFound
+	}
+	return cloneAttribute(d), nil
+}
+
+func (f fakeAttributes) List(_ context.Context, tenantID uuid.UUID) ([]*domain.AttributeDefinition, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []*domain.AttributeDefinition
+	for _, d := range f.attributes {
+		if d.TenantID() == tenantID {
+			out = append(out, cloneAttribute(d))
+		}
+	}
+	slices.SortFunc(out, func(a, b *domain.AttributeDefinition) int { return strings.Compare(a.Label(), b.Label()) })
+	return out, nil
+}
+
+// valuesOf returns the values the tenant's products have for key.
+func (f fakeAttributes) valuesOf(tenantID uuid.UUID, key string) []domain.AttributeValue {
+	var out []domain.AttributeValue
+	for _, p := range f.products {
+		if v, ok := p.Attributes().Values()[key]; ok && p.TenantID() == tenantID {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func (f fakeAttributes) Update(_ context.Context, d *domain.AttributeDefinition, removed []string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if old, ok := f.attributes[d.ID()]; !ok || old.TenantID() != d.TenantID() {
+		return domain.ErrAttributeNotFound
+	}
+	for _, v := range f.valuesOf(d.TenantID(), d.Key()) {
+		if slices.Contains(removed, v.Text()) {
+			return domain.ErrAttributeOptionInUse
+		}
+	}
+	f.attributes[d.ID()] = cloneAttribute(d)
+	return nil
+}
+
+func (f fakeAttributes) Delete(_ context.Context, tenantID, id uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	d, ok := f.attributes[id]
+	if !ok || d.TenantID() != tenantID {
+		return domain.ErrAttributeNotFound
+	}
+	if len(f.valuesOf(tenantID, d.Key())) > 0 {
+		return domain.ErrAttributeInUse
+	}
+	delete(f.attributes, id)
+	return nil
+}
+
+func cloneAxis(a *domain.VariantAxis) *domain.VariantAxis {
+	out, err := domain.RehydrateVariantAxis(domain.VariantAxisSnapshot{
+		ID: a.ID(), TenantID: a.TenantID(), Name: a.Name(), Values: a.Values(), CreatedAt: a.CreatedAt(),
+	})
+	if err != nil {
+		panic(err)
+	}
+	return out
+}
+
+type fakeAxes struct{ *store }
+
+func (f fakeAxes) Create(_ context.Context, a *domain.VariantAxis) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, other := range f.axes {
+		if other.TenantID() == a.TenantID() && other.Name() == a.Name() {
+			return domain.ErrAxisNameTaken
+		}
+	}
+	f.axes[a.ID()] = cloneAxis(a)
+	return nil
+}
+
+func (f fakeAxes) GetByID(_ context.Context, tenantID, id uuid.UUID) (*domain.VariantAxis, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	a, ok := f.axes[id]
+	if !ok || a.TenantID() != tenantID {
+		return nil, domain.ErrAxisNotFound
+	}
+	return cloneAxis(a), nil
+}
+
+func (f fakeAxes) List(_ context.Context, tenantID uuid.UUID) ([]*domain.VariantAxis, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []*domain.VariantAxis
+	for _, a := range f.axes {
+		if a.TenantID() == tenantID {
+			out = append(out, cloneAxis(a))
+		}
+	}
+	slices.SortFunc(out, func(a, b *domain.VariantAxis) int { return strings.Compare(a.Name(), b.Name()) })
+	return out, nil
+}
+
+// valuesOf returns the values the tenant's variants have on axis name.
+func (f fakeAxes) valuesOf(tenantID uuid.UUID, name string) []string {
+	var out []string
+	for _, p := range f.products {
+		if p.TenantID() != tenantID {
+			continue
+		}
+		for _, v := range p.Variants() {
+			if value, ok := v.AxisValues()[name]; ok {
+				out = append(out, value)
+			}
+		}
+	}
+	return out
+}
+
+func (f fakeAxes) Update(_ context.Context, a *domain.VariantAxis, removed []string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if old, ok := f.axes[a.ID()]; !ok || old.TenantID() != a.TenantID() {
+		return domain.ErrAxisNotFound
+	}
+	for _, v := range f.valuesOf(a.TenantID(), a.Name()) {
+		if slices.ContainsFunc(removed, func(r string) bool { return strings.EqualFold(r, v) }) {
+			return domain.ErrAxisValueInUse
+		}
+	}
+	f.axes[a.ID()] = cloneAxis(a)
+	return nil
+}
+
+func (f fakeAxes) Delete(_ context.Context, tenantID, id uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	a, ok := f.axes[id]
+	if !ok || a.TenantID() != tenantID {
+		return domain.ErrAxisNotFound
+	}
+	if len(f.valuesOf(tenantID, a.Name())) > 0 {
+		return domain.ErrAxisInUse
+	}
+	delete(f.axes, id)
+	return nil
 }

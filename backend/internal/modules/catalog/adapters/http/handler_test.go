@@ -42,6 +42,14 @@ type stubUseCases struct {
 	units    []*domain.UnitOfMeasure
 	code     string
 	err      error
+
+	attrInput  app.AttributeInput
+	attrUpdate app.AttributeUpdate
+	attribute  *domain.AttributeDefinition
+	attributes []*domain.AttributeDefinition
+	axis       *domain.VariantAxis
+	axes       []*domain.VariantAxis
+	values     []string
 }
 
 func (s *stubUseCases) CreateProduct(_ context.Context, a app.Actor, in app.ProductInput) (*domain.Product, error) {

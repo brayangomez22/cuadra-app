@@ -47,6 +47,7 @@ export function aProduct(overrides: Partial<Product> = {}): Product {
     price_with_tax: '11900.00',
     tax_rate: '0.19',
     margin_percent: '16.6667',
+    attributes: {},
     active: true,
     created_at: '2026-10-01T15:00:00Z',
     ...overrides,

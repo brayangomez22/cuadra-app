@@ -381,6 +381,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product-attributes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar los atributos de producto
+         * @description Los atributos que la empresa define para sus productos, ordenados por etiqueta.
+         */
+        get: operations["listAttributes"];
+        put?: never;
+        /** Definir un atributo de producto */
+        post: operations["createAttribute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product-attributes/{attributeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Editar un atributo de producto
+         * @description Cambia la etiqueta, las opciones y si es obligatorio. La clave y el tipo no cambian, porque los productos
+         *     guardan sus valores con esa clave. No se puede quitar una opción que tiene algún producto. Si el atributo
+         *     pasa a ser obligatorio, los productos que no lo tienen deben llenarlo la próxima vez que se editen.
+         */
+        put: operations["updateAttribute"];
+        post?: never;
+        /**
+         * Borrar un atributo de producto
+         * @description Solo se puede borrar un atributo que ningún producto tiene.
+         */
+        delete: operations["deleteAttribute"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/variant-axes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar los ejes de variante
+         * @description Los ejes en los que varían las variantes de la empresa (color, tamaño...), ordenados por nombre.
+         */
+        get: operations["listVariantAxes"];
+        put?: never;
+        /** Definir un eje de variante */
+        post: operations["createVariantAxis"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/variant-axes/{axisId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                axisId: components["parameters"]["AxisId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Editar los valores de un eje de variante
+         * @description Cambia los valores que admite el eje. El nombre no cambia, porque las variantes guardan sus valores con
+         *     ese nombre. No se puede quitar un valor que tiene alguna variante (sin importar las mayúsculas).
+         */
+        put: operations["updateVariantAxis"];
+        post?: never;
+        /**
+         * Borrar un eje de variante
+         * @description Solo se puede borrar un eje que ninguna variante usa.
+         */
+        delete: operations["deleteVariantAxis"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/locations": {
         parameters: {
             query?: never;
@@ -893,9 +990,105 @@ export interface components {
             items: components["schemas"]["UnitOfMeasure"][];
         };
         /**
+         * @description El tipo de valor del atributo: texto libre (`text`), número decimal (`number`), una opción de una lista
+         *     (`list`) o sí/no (`boolean`).
+         * @enum {string}
+         */
+        AttributeType: "text" | "number" | "list" | "boolean";
+        /** @description Un atributo que la empresa define para sus productos (marca, material, principio activo...). */
+        AttributeDefinition: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description La clave con la que los productos guardan el valor. No cambia.
+             * @example marca
+             */
+            key: string;
+            /** @example Marca */
+            label: string;
+            type: components["schemas"]["AttributeType"];
+            /** @description Las opciones de un atributo de lista, en su orden; vacío para los demás tipos. */
+            options: string[];
+            /** @description Si todo producto debe tener un valor. */
+            required: boolean;
+        };
+        AttributeDefinitionInput: {
+            /**
+             * @description Minúsculas sin tildes, números y `_`, empezando por una letra. No se puede cambiar después.
+             * @example principio_activo
+             */
+            key: string;
+            /** @example Principio activo */
+            label: string;
+            type: components["schemas"]["AttributeType"];
+            options?: components["schemas"]["AttributeOptions"];
+            required: boolean;
+        };
+        AttributeDefinitionUpdate: {
+            label: string;
+            options?: components["schemas"]["AttributeOptions"];
+            required: boolean;
+        };
+        /** @description Obligatorias para un atributo de lista y prohibidas para los demás. Sin repetir (sin importar las mayúsculas). */
+        AttributeOptions: string[];
+        AttributeDefinitionList: {
+            items: components["schemas"]["AttributeDefinition"][];
+        };
+        /**
+         * @description Un texto para los atributos de texto, número y lista (un número va como texto decimal, `"2.5"`, nunca como
+         *     número JSON) o un booleano para los de sí/no.
+         */
+        AttributeValue: string | boolean;
+        /**
+         * @description Los valores del producto para los atributos de la empresa, por clave. Cada valor se valida contra la
+         *     definición de su atributo.
+         * @example {
+         *       "marca": "Acme",
+         *       "importado": true
+         *     }
+         */
+        ProductAttributes: {
+            [key: string]: components["schemas"]["AttributeValue"];
+        };
+        /** @description Un eje en el que varían las variantes de la empresa (color, tamaño, presentación...) y sus valores. */
+        VariantAxis: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description En minúsculas. Es el nombre del eje en `axis_values` y no cambia.
+             * @example color
+             */
+            name: string;
+            /**
+             * @description Los valores que admite el eje, en su orden.
+             * @example [
+             *       "Rojo",
+             *       "Azul"
+             *     ]
+             */
+            values: string[];
+        };
+        VariantAxisInput: {
+            /**
+             * @description Único en la empresa. Se guarda en minúsculas.
+             * @example Color
+             */
+            name: string;
+            values: components["schemas"]["VariantAxisValues"];
+        };
+        VariantAxisUpdate: {
+            values: components["schemas"]["VariantAxisValues"];
+        };
+        /** @description Al menos un valor, sin repetir (sin importar las mayúsculas). */
+        VariantAxisValues: string[];
+        VariantAxisList: {
+            items: components["schemas"]["VariantAxis"][];
+        };
+        /**
          * @description Los datos del producto y los de su variante por defecto (`sku`, `barcode`, `cost` y `price`). Las demás
          *     variantes se editan con `/products/{productId}/variants`. La unidad base va en `base_unit_id` o, mientras
-         *     el frontend pasa a `base_unit_id`, por su código en `base_unit` (deprecated): una de las dos.
+         *     el frontend pasa a `base_unit_id`, por su código en `base_unit` (deprecated): una de las dos. Los
+         *     atributos se validan contra las definiciones de la empresa (`/product-attributes`).
          */
         ProductInput: {
             /**
@@ -926,10 +1119,13 @@ export interface components {
             cost: components["schemas"]["Money"];
             price: components["schemas"]["Money"];
             tax_rate: components["schemas"]["TaxRate"];
+            /** @description Los valores de los atributos de la empresa. Si se omite al editar, el producto conserva los que tiene. */
+            attributes?: components["schemas"]["ProductAttributes"];
         };
         /**
-         * @description El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`), hasta 5 ejes. Los nombres
-         *     de los ejes se guardan en minúsculas. Vacío en la variante de un producto simple.
+         * @description El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`, ver `/variant-axes`), hasta
+         *     5 ejes. Los nombres de los ejes se guardan en minúsculas y cada valor como lo escribe su eje ("azul" se
+         *     guarda "Azul"). Vacío en la variante de un producto simple.
          * @example {
          *       "color": "Azul"
          *     }
@@ -1035,6 +1231,7 @@ export interface components {
              */
             price_with_tax: components["schemas"]["Money"];
             tax_rate: components["schemas"]["TaxRate"];
+            attributes: components["schemas"]["ProductAttributes"];
             /**
              * @deprecated
              * @description El de la variante por defecto. Use `variants`.
@@ -1577,6 +1774,8 @@ export interface components {
         VariantId: string;
         CategoryId: string;
         UnitId: string;
+        AttributeId: string;
+        AxisId: string;
         LocationId: string;
         SaleId: string;
         CashSessionId: string;
@@ -1908,8 +2107,10 @@ export interface operations {
             /**
              * @description Algún dato no cumple las reglas (`invalid_sku`, `invalid_barcode`, `invalid_product_name`,
              *     `invalid_description`, `invalid_price`, `invalid_cost`, `invalid_tax_rate`, `category_not_found`), falta
-             *     la unidad o vienen las dos formas de indicarla (`unit_required`), o la unidad no existe en la empresa
-             *     (`unit_not_found`).
+             *     la unidad o vienen las dos formas de indicarla (`unit_required`), la unidad no existe en la empresa
+             *     (`unit_not_found`), o un atributo no está definido (`unknown_attribute`), no tiene un valor válido
+             *     (`invalid_attribute_value`) o es obligatorio y falta (`attribute_required`). Los errores de un atributo
+             *     lo nombran en `details.attribute`.
              */
             422: {
                 headers: {
@@ -2094,8 +2295,9 @@ export interface operations {
             };
             /**
              * @description Algún dato no cumple las reglas (`invalid_sku`, `invalid_barcode`, `invalid_price`, `invalid_cost`,
-             *     `invalid_axis_values`), los ejes no son los de las demás variantes (`variant_axes_mismatch`) u otra
-             *     variante ya tiene esos valores (`duplicate_variant`).
+             *     `invalid_axis_values`), un eje no está definido en la empresa (`unknown_axis`) o no admite el valor
+             *     (`axis_value_not_allowed`), con el eje en `details.axis`, los ejes no son los de las demás variantes
+             *     (`variant_axes_mismatch`) u otra variante ya tiene esos valores (`duplicate_variant`).
              */
             422: {
                 headers: {
@@ -2439,6 +2641,310 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             /** @description Algún producto usa la unidad (`unit_in_use`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listAttributes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las definiciones. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttributeDefinitionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createAttribute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttributeDefinitionInput"];
+            };
+        };
+        responses: {
+            /** @description Atributo definido. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttributeDefinition"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Ya existe un atributo con esa clave en la empresa (`attribute_key_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description La clave, la etiqueta o las opciones no son válidas (`invalid_attribute_key`, `invalid_attribute_label`, `invalid_attribute_options`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateAttribute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttributeDefinitionUpdate"];
+            };
+        };
+        responses: {
+            /** @description El atributo actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttributeDefinition"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Algún producto tiene una de las opciones que se quitaron (`attribute_option_in_use`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description La etiqueta o las opciones no son válidas (`invalid_attribute_label`, `invalid_attribute_options`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteAttribute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Atributo borrado. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Algún producto tiene el atributo (`attribute_in_use`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listVariantAxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Los ejes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VariantAxisList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createVariantAxis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VariantAxisInput"];
+            };
+        };
+        responses: {
+            /** @description Eje definido. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VariantAxis"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Ya existe un eje con ese nombre en la empresa (`axis_name_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El nombre o los valores no son válidos (`invalid_axis_name`, `invalid_axis_allowed_values`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateVariantAxis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                axisId: components["parameters"]["AxisId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VariantAxisUpdate"];
+            };
+        };
+        responses: {
+            /** @description El eje actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VariantAxis"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Alguna variante tiene uno de los valores que se quitaron (`axis_value_in_use`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Los valores no son válidos (`invalid_axis_allowed_values`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteVariantAxis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                axisId: components["parameters"]["AxisId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Eje borrado. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Alguna variante usa el eje (`axis_in_use`). */
             409: {
                 headers: {
                     [name: string]: unknown;

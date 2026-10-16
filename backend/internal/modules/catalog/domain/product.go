@@ -19,7 +19,9 @@ const (
 // Product groups the variants a tenant sells: it holds what they share
 // (name, category, base unit, IVA rate) and the rules between them. It always
 // has exactly one default variant, the one created with it; a simple product
-// has only that one. Its fields are private so it cannot be put in an invalid
+// has only that one. Its attribute values are the tenant's own (brand,
+// material...), checked against the tenant's definitions with
+// ResolveAttributes. Its fields are private so it cannot be put in an invalid
 // state.
 type Product struct {
 	id          uuid.UUID
@@ -29,13 +31,14 @@ type Product struct {
 	categoryID  *uuid.UUID
 	baseUnit    UnitRef
 	taxRate     TaxRate
+	attributes  Attributes
 	active      bool
 	createdAt   time.Time
 	variants    []*ProductVariant
 }
 
 // NewProductParams holds the data of a new product and of its default
-// variant. Description and CategoryID are optional.
+// variant. Description, CategoryID and Attributes are optional.
 type NewProductParams struct {
 	TenantID    uuid.UUID
 	Name        string
@@ -43,6 +46,7 @@ type NewProductParams struct {
 	CategoryID  *uuid.UUID
 	BaseUnit    UnitRef
 	TaxRate     TaxRate
+	Attributes  Attributes
 	Variant     VariantParams
 }
 
@@ -65,6 +69,7 @@ func NewProduct(p NewProductParams, now time.Time) (*Product, error) {
 		CategoryID:  p.CategoryID,
 		BaseUnit:    p.BaseUnit,
 		TaxRate:     p.TaxRate,
+		Attributes:  p.Attributes,
 		Active:      true,
 		CreatedAt:   now,
 		Variants: []VariantSnapshot{{
@@ -135,6 +140,7 @@ func productHeader(s ProductSnapshot) (*Product, error) {
 		categoryID:  copyID(s.CategoryID),
 		baseUnit:    s.BaseUnit,
 		taxRate:     s.TaxRate,
+		attributes:  s.Attributes,
 		active:      s.Active,
 		createdAt:   s.CreatedAt.UTC(),
 	}, nil
@@ -197,6 +203,9 @@ func (p *Product) IsActive() bool { return p.active }
 
 // CreatedAt returns the creation time in UTC.
 func (p *Product) CreatedAt() time.Time { return p.createdAt }
+
+// Attributes returns the product's attribute values.
+func (p *Product) Attributes() Attributes { return p.attributes }
 
 // Variants returns the product's variants, in the order they were added.
 func (p *Product) Variants() []*ProductVariant { return slices.Clone(p.variants) }
@@ -331,6 +340,7 @@ type ProductSnapshot struct {
 	CategoryID  *uuid.UUID
 	BaseUnit    UnitRef
 	TaxRate     TaxRate
+	Attributes  Attributes
 	Active      bool
 	CreatedAt   time.Time
 	Variants    []VariantSnapshot
@@ -348,6 +358,7 @@ type ProductDetails struct {
 	CategoryID  *uuid.UUID
 	BaseUnit    UnitRef
 	TaxRate     TaxRate
+	Attributes  Attributes
 }
 
 // UpdateDetails replaces the product's details with the same rules as
@@ -361,6 +372,7 @@ func (p *Product) UpdateDetails(d ProductDetails) error {
 		CategoryID:  d.CategoryID,
 		BaseUnit:    d.BaseUnit,
 		TaxRate:     d.TaxRate,
+		Attributes:  d.Attributes,
 		Active:      p.active,
 		CreatedAt:   p.createdAt,
 	})

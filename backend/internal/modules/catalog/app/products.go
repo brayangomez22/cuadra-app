@@ -32,15 +32,20 @@ type ProductInput struct {
 	Cost         decimal.Decimal
 	Price        decimal.Decimal
 	TaxRate      domain.TaxRate
+	// Attributes are the product's values by attribute key. Nil keeps the
+	// current values on an update, while the frontend does not send them
+	// (T24j makes them required).
+	Attributes map[string]domain.AttributeValue
 }
 
-func (in ProductInput) details(unit domain.UnitRef) domain.ProductDetails {
+func (in ProductInput) details(unit domain.UnitRef, attrs domain.Attributes) domain.ProductDetails {
 	return domain.ProductDetails{
 		Name:        in.Name,
 		Description: in.Description,
 		CategoryID:  in.CategoryID,
 		BaseUnit:    unit,
 		TaxRate:     in.TaxRate,
+		Attributes:  attrs,
 	}
 }
 
@@ -53,6 +58,10 @@ func (s *Service) CreateProduct(ctx context.Context, a Actor, in ProductInput) (
 	if err != nil {
 		return nil, err
 	}
+	attrs, err := s.resolveAttributes(ctx, a, in.Attributes)
+	if err != nil {
+		return nil, err
+	}
 	p, err := domain.NewProduct(domain.NewProductParams{
 		TenantID:    a.TenantID,
 		Name:        in.Name,
@@ -60,6 +69,7 @@ func (s *Service) CreateProduct(ctx context.Context, a Actor, in ProductInput) (
 		CategoryID:  in.CategoryID,
 		BaseUnit:    unit,
 		TaxRate:     in.TaxRate,
+		Attributes:  attrs,
 		Variant: domain.VariantParams{
 			SKU:     in.SKU,
 			Barcode: in.Barcode,
@@ -83,6 +93,8 @@ func (s *Service) CreateProduct(ctx context.Context, a Actor, in ProductInput) (
 
 // UpdateProduct replaces the product's data and its default variant's. A
 // new price follows ChangeVariantPrice: an inactive product keeps its price.
+// The default variant keeps its axis values, which change through
+// UpdateVariant.
 func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in ProductInput) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "UpdateProduct", a, productAttr(id))
 	defer func() { endSpan(span, err) }()
@@ -95,7 +107,13 @@ func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in P
 	if err != nil {
 		return nil, err
 	}
-	if err := p.UpdateDetails(in.details(unit)); err != nil {
+	attrs := p.Attributes()
+	if in.Attributes != nil {
+		if attrs, err = s.resolveAttributes(ctx, a, in.Attributes); err != nil {
+			return nil, err
+		}
+	}
+	if err := p.UpdateDetails(in.details(unit, attrs)); err != nil {
 		return nil, err
 	}
 	def := p.DefaultVariant()
