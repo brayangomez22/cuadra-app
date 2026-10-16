@@ -34,17 +34,28 @@ func (r *TenantRepository) Create(ctx context.Context, t *domain.Tenant) error {
 	return nil
 }
 
-// CreateWithOwner stores a new tenant and its first user in one transaction
-// scoped to the new tenant: either both are stored or neither is.
-func (r *TenantRepository) CreateWithOwner(ctx context.Context, t *domain.Tenant, owner *domain.User) error {
-	err := r.db.WithTenantTx(ctx, t.ID(), func(tx pgx.Tx) error {
+// CreateWithOwner stores a new tenant and its first user and calls setUp, in
+// one transaction scoped to the new tenant: either all of it is stored or
+// nothing is. setUp gets a context that carries the transaction, so the
+// other modules' repositories join it.
+func (r *TenantRepository) CreateWithOwner(ctx context.Context, t *domain.Tenant, owner *domain.User, setUp func(context.Context) error) error {
+	// setUpErr keeps the other modules' error apart from the database
+	// errors, which are translated and wrapped.
+	var setUpErr error
+	err := r.db.InTenantTx(ctx, t.ID(), func(ctx context.Context, tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
 		if err := createTenant(ctx, q, t); err != nil {
 			return err
 		}
-		return createUser(ctx, q, owner)
+		if err := createUser(ctx, q, owner); err != nil {
+			return err
+		}
+		setUpErr = setUp(ctx)
+		return setUpErr
 	})
 	switch {
+	case setUpErr != nil:
+		return setUpErr
 	case isUniqueViolation(err, usersEmailKey):
 		return domain.ErrEmailTaken
 	case err != nil:

@@ -30,13 +30,13 @@ func TestCatalogFlow(t *testing.T) {
 	tokens, err := auth.NewJWT(testSecret, 15*time.Minute)
 	require.NoError(t, err)
 	log := slog.New(slog.DiscardHandler)
-	identityModule, err := identity.New(identity.Config{
-		DB: database, Issuer: tokens, Logger: log,
+	catalogModule, err := catalog.New(catalog.Config{
+		DB: database, Authorize: identity.Authorize, Logger: log,
 		TracerProvider: noop.NewTracerProvider(), MeterProvider: metricnoop.NewMeterProvider(),
 	})
 	require.NoError(t, err)
-	catalogModule, err := catalog.New(catalog.Config{
-		DB: database, Authorize: identity.Authorize, Logger: log,
+	identityModule, err := identity.New(identity.Config{
+		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule}, Logger: log,
 		TracerProvider: noop.NewTracerProvider(), MeterProvider: metricnoop.NewMeterProvider(),
 	})
 	require.NoError(t, err)
@@ -111,6 +111,105 @@ func TestCatalogFlow(t *testing.T) {
 	t.Run("un precio con formato inválido responde 400 por el contrato", func(t *testing.T) {
 		rec := do(t, http.MethodPost, "/api/v1/products", strings.Replace(body, `"10000"`, `"10.000,50"`, 1), ownerToken)
 		require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	})
+
+	var units struct {
+		Items []struct {
+			ID   string `json:"id"`
+			Code string `json:"code"`
+			Name string `json:"name"`
+		} `json:"items"`
+	}
+	unitID := func(code string) string {
+		for _, u := range units.Items {
+			if u.Code == code {
+				return u.ID
+			}
+		}
+		t.Fatalf("no unit %q", code)
+		return ""
+	}
+
+	t.Run("un tenant nuevo queda con las unidades por defecto", func(t *testing.T) {
+		rec := do(t, http.MethodGet, "/api/v1/units", "", cashierToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &units))
+		got := map[string]string{}
+		for _, u := range units.Items {
+			got[u.Code] = u.Name
+		}
+		require.Equal(t, map[string]string{
+			"und": "Unidad", "m": "Metro", "kg": "Kilogramo", "l": "Litro",
+			"caja": "Caja", "rollo": "Rollo", "bulto": "Bulto", "galon": "Galón",
+		}, got)
+	})
+
+	t.Run("el producto creado con el código deprecated lleva su unidad", func(t *testing.T) {
+		rec := do(t, http.MethodGet, "/api/v1/products/"+productID, "", ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var p map[string]any
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &p))
+		require.Equal(t, "m", p["base_unit"])
+		require.Equal(t, unitID("m"), p["base_unit_id"])
+		require.Equal(t, map[string]any{"id": unitID("m"), "code": "m", "name": "Metro"}, p["unit"])
+	})
+
+	t.Run("crea un producto con base_unit_id y lo devuelve con su unidad", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/products",
+			`{"sku":"cem-50","name":"Cemento gris 50 kg","base_unit_id":"`+unitID("bulto")+`","cost":"25000","price":"30000","tax_rate":"0.19"}`, ownerToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		var p map[string]any
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &p))
+		require.Equal(t, unitID("bulto"), p["base_unit_id"])
+		require.Equal(t, "bulto", p["base_unit"])
+		require.Equal(t, map[string]any{"id": unitID("bulto"), "code": "bulto", "name": "Bulto"}, p["unit"])
+	})
+
+	t.Run("un producto sin unidad responde 422 unit_required", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/products",
+			`{"sku":"cam-s","name":"Camiseta básica","cost":"12000","price":"25000","tax_rate":"0.19"}`, ownerToken)
+		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "unit_required")
+	})
+
+	t.Run("un producto con una unidad de otro tenant responde 422 unit_not_found", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/products",
+			`{"sku":"cam-s","name":"Camiseta básica","base_unit_id":"`+uuid.Must(uuid.NewV7()).String()+`","cost":"12000","price":"25000","tax_rate":"0.19"}`, ownerToken)
+		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "unit_not_found")
+	})
+
+	t.Run("el dueño crea, edita y borra una unidad", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/units", `{"code":"Par","name":"Par"}`, ownerToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		var pair struct {
+			ID   string `json:"id"`
+			Code string `json:"code"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &pair))
+		require.Equal(t, "par", pair.Code)
+
+		rec = do(t, http.MethodPost, "/api/v1/units", `{"code":"par","name":"Pares"}`, ownerToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "unit_code_taken")
+
+		rec = do(t, http.MethodPut, "/api/v1/units/"+pair.ID, `{"code":"pares","name":"Pares"}`, ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"code":"pares"`)
+
+		rec = do(t, http.MethodDelete, "/api/v1/units/"+pair.ID, "", ownerToken)
+		require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
+	})
+
+	t.Run("borrar una unidad en uso responde 409 unit_in_use", func(t *testing.T) {
+		rec := do(t, http.MethodDelete, "/api/v1/units/"+unitID("m"), "", ownerToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "unit_in_use")
+	})
+
+	t.Run("el cajero no crea unidades", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/units", `{"code":"docena","name":"Docena"}`, cashierToken)
+		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 	})
 
 	t.Run("limit mayor a 100 responde 400 por el contrato", func(t *testing.T) {

@@ -3,6 +3,7 @@ import type { components } from '@/shared/api/schema';
 type Schemas = components['schemas'];
 export type Product = Schemas['Product'];
 export type ProductVariant = Schemas['ProductVariant'];
+type UnitOfMeasure = Schemas['UnitOfMeasure'];
 export type Location = Schemas['Location'];
 export type StockLevel = Schemas['StockLevel'];
 export type StockMovement = Schemas['StockMovement'];
@@ -19,12 +20,28 @@ export const ids = {
   cashSession: '01920000-0000-7000-8000-000000000401',
 };
 
+// unitOf is the tenant's unit with a code, as the API embeds it in a product.
+const unitNames: Record<string, string> = { und: 'Unidad', m: 'Metro', bulto: 'Bulto' };
+
+function unitOf(code: string): UnitOfMeasure {
+  const index = Object.keys(unitNames).indexOf(code) + 1;
+  return {
+    id: `01920000-0000-7000-8000-00000000050${index}`,
+    code,
+    name: unitNames[code] ?? code,
+  };
+}
+
 export function aProduct(overrides: Partial<Product> = {}): Product {
+  const code = overrides.base_unit ?? 'und';
+  const unit = overrides.unit ?? unitOf(code);
   const product = {
     id: ids.pipe,
     sku: 'TUB-PVC-12',
     name: 'Tubo PVC presión 1/2 pulgada',
-    base_unit: 'und' as const,
+    base_unit: code,
+    base_unit_id: unit.id,
+    unit,
     cost: '8333.33',
     price: '10000.00',
     price_with_tax: '11900.00',

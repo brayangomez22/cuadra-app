@@ -70,8 +70,10 @@ func (f fixture) createTenant(t *testing.T) tenant {
 	t.Helper()
 	tn := tenant{id: newID(), product: newID(), variant: newID()}
 	f.exec(t, tn.id, "INSERT INTO tenants (id, name, nit, status, created_at) VALUES ($1, 'Ferretería', '890903938-8', 'active', $2)", tn.id, now)
-	f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit, tax_rate, active, created_at)
-		VALUES ($1, $2, 'Cemento gris 50kg', '', 'bulto', 0.19, true, $3)`,
+	f.exec(t, tn.id, "INSERT INTO units_of_measure (id, tenant_id, code, name, created_at) VALUES ($1, $2, 'und', 'Unidad', $3)",
+		newID(), tn.id, now)
+	f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit_id, tax_rate, active, created_at)
+		VALUES ($1, $2, 'Cemento gris 50kg', '', (SELECT id FROM units_of_measure WHERE code = 'und'), 0.19, true, $3)`,
 		tn.product, tn.id, now)
 	f.exec(t, tn.id, `INSERT INTO product_variants (id, tenant_id, product_id, sku, cost, price, is_default, active, created_at)
 		VALUES ($1, $2, $1, $3, 25000, 30000, true, true, $4)`,
@@ -186,8 +188,9 @@ func TestSaleRepository(t *testing.T) {
 		s, err := domain.NewSale(domain.NewSaleParams{ID: newID(), TenantID: tn.id, LocationID: tn.location, UserID: newID(), CreatedAt: now})
 		require.NoError(t, err)
 		// The variant exists in the tenant, but belongs to another product.
-		f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit, tax_rate, active, created_at)
-			VALUES ($1, $2, 'Arena fina', '', 'und', 0.19, true, $3)`, otherProduct, tn.id, now)
+		f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit_id, tax_rate, active, created_at)
+			VALUES ($1, $2, 'Arena fina', '', (SELECT id FROM units_of_measure WHERE code = 'und'), 0.19, true, $3)`,
+			otherProduct, tn.id, now)
 		require.NoError(t, s.AddLine(domain.LineInput{
 			ProductID: otherProduct, VariantID: tn.variant, ProductName: "Arena fina", Quantity: dec("1"),
 			UnitPrice: dec("1000"), TaxRate: dec("0"), Discount: dec("0"), PriceRule: domain.VariantPriceRule,

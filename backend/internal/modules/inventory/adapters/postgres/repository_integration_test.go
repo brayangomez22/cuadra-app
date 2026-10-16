@@ -79,8 +79,10 @@ func (f fixture) createTenant(t *testing.T) uuid.UUID {
 func (f fixture) createProduct(t *testing.T, tenantID uuid.UUID, extra int) []uuid.UUID {
 	t.Helper()
 	productID := newID()
-	f.exec(t, tenantID, `INSERT INTO products (id, tenant_id, name, description, base_unit, tax_rate, active, created_at)
-		VALUES ($1, $2, 'Producto', '', 'und', 0.19, true, $3)`,
+	f.exec(t, tenantID, `INSERT INTO units_of_measure (id, tenant_id, code, name, created_at)
+		VALUES ($1, $2, 'und', 'Unidad', $3) ON CONFLICT (tenant_id, code) DO NOTHING`, newID(), tenantID, now)
+	f.exec(t, tenantID, `INSERT INTO products (id, tenant_id, name, description, base_unit_id, tax_rate, active, created_at)
+		VALUES ($1, $2, 'Producto', '', (SELECT id FROM units_of_measure WHERE code = 'und'), 0.19, true, $3)`,
 		productID, tenantID, now)
 	ids := make([]uuid.UUID, 0, extra+1)
 	for i := range extra + 1 {

@@ -352,7 +352,9 @@ paths:
         "422":
           description: |
             Algún dato no cumple las reglas (`invalid_sku`, `invalid_barcode`, `invalid_product_name`,
-            `invalid_description`, `invalid_price`, `invalid_cost`, `invalid_tax_rate`, `category_not_found`).
+            `invalid_description`, `invalid_price`, `invalid_cost`, `invalid_tax_rate`, `category_not_found`), falta
+            la unidad o vienen las dos formas de indicarla (`unit_required`), o la unidad no existe en la empresa
+            (`unit_not_found`).
           content:
             application/json:
               schema:
@@ -696,6 +698,136 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           description: La categoría tiene productos o subcategorías (`category_in_use`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/units:
+    get:
+      tags: [catalog]
+      operationId: listUnits
+      summary: Listar unidades de medida
+      description: Las unidades de medida de la empresa, ordenadas por nombre.
+      x-permission: catalog:read
+      responses:
+        "200":
+          description: Las unidades.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnitList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [catalog]
+      operationId: createUnit
+      summary: Crear una unidad de medida
+      x-permission: catalog:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnitInput"
+      responses:
+        "201":
+          description: Unidad creada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnitOfMeasure"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Ya existe una unidad con ese código en la empresa (`unit_code_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: El código o el nombre no son válidos (`invalid_unit_code`, `invalid_unit_name`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/units/{unitId}:
+    parameters:
+      - $ref: "#/components/parameters/UnitId"
+    put:
+      tags: [catalog]
+      operationId: updateUnit
+      summary: Editar una unidad de medida
+      description: |
+        Cambia el código y el nombre. Los productos que la usan la siguen usando: la referencian por su id.
+      x-permission: catalog:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnitInput"
+      responses:
+        "200":
+          description: La unidad actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnitOfMeasure"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Ya existe otra unidad con ese código en la empresa (`unit_code_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: El código o el nombre no son válidos (`invalid_unit_code`, `invalid_unit_name`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [catalog]
+      operationId: deleteUnit
+      summary: Borrar una unidad de medida
+      description: Solo se puede borrar una unidad que ningún producto usa.
+      x-permission: catalog:write
+      responses:
+        "204":
+          description: Unidad borrada.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Algún producto usa la unidad (`unit_in_use`).
           content:
             application/json:
               schema:
@@ -1493,6 +1625,13 @@ components:
       schema:
         type: string
         format: uuid
+    UnitId:
+      name: unitId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     LocationId:
       name: locationId
       in: path
@@ -1737,16 +1876,58 @@ components:
       description: Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
       pattern: '^0(\.\d{1,4})?$'
       example: "0.19"
-    UnitOfMeasure:
+    UnitCode:
       type: string
-      description: Unidad base en la que se cuenta y se vende el producto.
-      enum: [und, m, kg, l, caja, rollo, bulto, galon]
+      description: El código de una unidad de medida de la empresa (`und`, `m`).
+      minLength: 1
+      maxLength: 16
+      example: m
+    UnitOfMeasure:
+      type: object
+      required: [id, code, name]
+      description: Una unidad de medida de la empresa, en la que se cuentan y se venden sus productos.
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          description: Lo que se muestra junto a una cantidad ("2,5 m"). Único en la empresa, en minúsculas.
+          example: m
+        name:
+          type: string
+          example: Metro
+    UnitInput:
+      type: object
+      required: [code, name]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          description: Único en la empresa, sin espacios. Se guarda en minúsculas.
+          minLength: 1
+          maxLength: 16
+          example: par
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: Par
+    UnitList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UnitOfMeasure"
     ProductInput:
       type: object
       description: |
         Los datos del producto y los de su variante por defecto (`sku`, `barcode`, `cost` y `price`). Las demás
-        variantes se editan con `/products/{productId}/variants`.
-      required: [sku, name, base_unit, cost, price, tax_rate]
+        variantes se editan con `/products/{productId}/variants`. La unidad base va en `base_unit_id` o, mientras
+        el frontend pasa a `base_unit_id`, por su código en `base_unit` (deprecated): una de las dos.
+      required: [sku, name, cost, price, tax_rate]
       additionalProperties: false
       properties:
         sku:
@@ -1772,8 +1953,15 @@ components:
           type: string
           format: uuid
           nullable: true
+        base_unit_id:
+          type: string
+          format: uuid
+          description: La unidad de medida en la que se cuenta y se vende el producto.
         base_unit:
-          $ref: "#/components/schemas/UnitOfMeasure"
+          allOf:
+            - $ref: "#/components/schemas/UnitCode"
+          deprecated: true
+          description: El código de la unidad base. Use `base_unit_id`.
         cost:
           $ref: "#/components/schemas/Money"
         price:
@@ -1872,7 +2060,7 @@ components:
         solo se envían a quien puede editar el catálogo (`catalog:write`).
     Product:
       type: object
-      required: [id, sku, name, base_unit, price, price_with_tax, tax_rate, active, created_at, variants]
+      required: [id, sku, name, base_unit_id, unit, base_unit, price, price_with_tax, tax_rate, active, created_at, variants]
       properties:
         id:
           type: string
@@ -1895,8 +2083,16 @@ components:
           type: string
           format: uuid
           description: Se omite si el producto no tiene categoría.
-        base_unit:
+        base_unit_id:
+          type: string
+          format: uuid
+        unit:
           $ref: "#/components/schemas/UnitOfMeasure"
+        base_unit:
+          allOf:
+            - $ref: "#/components/schemas/UnitCode"
+          deprecated: true
+          description: El código de `unit`. Use `unit`.
         cost:
           allOf:
             - $ref: "#/components/schemas/Money"

@@ -178,7 +178,7 @@ func TestVariantTenantIsolation(t *testing.T) {
 
 	t.Run("el tenant B no agrega ni modifica variantes de un producto del tenant A", func(t *testing.T) {
 		forged, err := domain.RehydrateProduct(domain.ProductSnapshot{
-			ID: productA.ID(), TenantID: tenantB, Name: "Camiseta", BaseUnit: domain.UnitPiece,
+			ID: productA.ID(), TenantID: tenantB, Name: "Camiseta", BaseUnit: f.piece[tenantB],
 			TaxRate: productA.TaxRate(), Active: true, CreatedAt: now,
 			Variants: []domain.VariantSnapshot{
 				{ID: productA.DefaultVariant().ID(), SKU: "HACK-1", Cost: dec("1"), Price: dec("1"),

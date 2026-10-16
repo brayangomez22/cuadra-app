@@ -33,6 +33,7 @@ type Actor struct {
 type Deps struct {
 	Products       domain.ProductRepository
 	Categories     domain.CategoryRepository
+	Units          domain.UnitRepository
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -53,7 +54,7 @@ type Service struct {
 // NewService builds a Service. It fails if a repository is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if d.Products == nil || d.Categories == nil {
+	if d.Products == nil || d.Categories == nil || d.Units == nil {
 		return nil, errors.New("catalog: missing service dependency")
 	}
 	if d.Now == nil {
@@ -119,6 +120,10 @@ func productAttr(id uuid.UUID) attribute.KeyValue {
 
 func variantAttr(id uuid.UUID) attribute.KeyValue {
 	return attribute.String("variant.id", id.String())
+}
+
+func unitAttr(id uuid.UUID) attribute.KeyValue {
+	return attribute.String("unit.id", id.String())
 }
 
 func categoryAttr(id uuid.UUID) attribute.KeyValue {

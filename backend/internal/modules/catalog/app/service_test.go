@@ -14,17 +14,19 @@ import (
 
 func dec(s string) decimal.Decimal { return decimal.RequireFromString(s) }
 
-func productInput(t *testing.T) app.ProductInput {
+// productInput is a product of the actor's tenant, in meters.
+func (e *env) productInput(t *testing.T) app.ProductInput {
 	t.Helper()
 	rate, err := domain.ParseTaxRate(dec("0.19"))
 	require.NoError(t, err)
+	unitID := e.meters.ID()
 	return app.ProductInput{
-		SKU:      "tub-pvc-12",
-		Name:     "Tubo PVC presión 1/2 pulgada",
-		BaseUnit: domain.UnitMeter,
-		Cost:     dec("8333.33"),
-		Price:    dec("10000"),
-		TaxRate:  rate,
+		SKU:        "tub-pvc-12",
+		Name:       "Tubo PVC presión 1/2 pulgada",
+		BaseUnitID: &unitID,
+		Cost:       dec("8333.33"),
+		Price:      dec("10000"),
+		TaxRate:    rate,
 	}
 }
 
@@ -53,7 +55,7 @@ func TestCreateProduct(t *testing.T) {
 	t.Run("crea un producto activo", func(t *testing.T) {
 		e := newEnv(t)
 		category := e.createCategory(t, "Plomería", nil)
-		in := productInput(t)
+		in := e.productInput(t)
 		categoryID := category.ID()
 		in.CategoryID = &categoryID
 
@@ -71,7 +73,7 @@ func TestCreateProduct(t *testing.T) {
 
 	t.Run("rechaza producto con categoría inexistente", func(t *testing.T) {
 		e := newEnv(t)
-		in := productInput(t)
+		in := e.productInput(t)
 		missing := uuid.Must(uuid.NewV7())
 		in.CategoryID = &missing
 
@@ -83,7 +85,9 @@ func TestCreateProduct(t *testing.T) {
 		e := newEnv(t)
 		category := e.createCategory(t, "Plomería", nil)
 		other := app.Actor{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())}
-		in := productInput(t)
+		in := e.productInput(t)
+		unitID := e.addUnit(t, other.TenantID, "m", "Metro").ID()
+		in.BaseUnitID = &unitID
 		categoryID := category.ID()
 		in.CategoryID = &categoryID
 
@@ -93,7 +97,7 @@ func TestCreateProduct(t *testing.T) {
 
 	t.Run("rechaza producto con datos inválidos", func(t *testing.T) {
 		e := newEnv(t)
-		in := productInput(t)
+		in := e.productInput(t)
 		in.Price = dec("0")
 
 		_, err := e.svc.CreateProduct(t.Context(), e.actor, in)
@@ -102,15 +106,15 @@ func TestCreateProduct(t *testing.T) {
 
 	t.Run("rechaza SKU duplicado", func(t *testing.T) {
 		e := newEnv(t)
-		e.createProduct(t, productInput(t))
+		e.createProduct(t, e.productInput(t))
 
-		_, err := e.svc.CreateProduct(t.Context(), e.actor, productInput(t))
+		_, err := e.svc.CreateProduct(t.Context(), e.actor, e.productInput(t))
 		require.ErrorIs(t, err, domain.ErrSKUTaken)
 	})
 
 	t.Run("cuenta productos creados y abre su span", func(t *testing.T) {
 		e := newEnv(t)
-		p := e.createProduct(t, productInput(t))
+		p := e.createProduct(t, e.productInput(t))
 
 		require.EqualValues(t, 1, e.counter(t, "cuadra.catalog.products_created", "", ""))
 		_, attrs := e.span(t, "catalog.CreateProduct")
@@ -121,7 +125,7 @@ func TestCreateProduct(t *testing.T) {
 
 	t.Run("registra el error en el span", func(t *testing.T) {
 		e := newEnv(t)
-		in := productInput(t)
+		in := e.productInput(t)
 		in.SKU = ""
 
 		_, err := e.svc.CreateProduct(t.Context(), e.actor, in)
@@ -135,8 +139,8 @@ func TestCreateProduct(t *testing.T) {
 func TestUpdateProduct(t *testing.T) {
 	t.Run("actualiza datos y precio", func(t *testing.T) {
 		e := newEnv(t)
-		p := e.createProduct(t, productInput(t))
-		in := productInput(t)
+		p := e.createProduct(t, e.productInput(t))
+		in := e.productInput(t)
 		in.Name, in.Price = "Tubo PVC presión 3/4 pulgada", dec("12500.50")
 
 		updated, err := e.svc.UpdateProduct(t.Context(), e.actor, p.ID(), in)
@@ -152,8 +156,8 @@ func TestUpdateProduct(t *testing.T) {
 
 	t.Run("no cuenta cambio de precio si el precio es el mismo", func(t *testing.T) {
 		e := newEnv(t)
-		p := e.createProduct(t, productInput(t))
-		in := productInput(t)
+		p := e.createProduct(t, e.productInput(t))
+		in := e.productInput(t)
 		in.Price = dec("10000.00")
 
 		_, err := e.svc.UpdateProduct(t.Context(), e.actor, p.ID(), in)
@@ -163,10 +167,10 @@ func TestUpdateProduct(t *testing.T) {
 
 	t.Run("rechaza cambio de precio de un producto inactivo", func(t *testing.T) {
 		e := newEnv(t)
-		p := e.createProduct(t, productInput(t))
+		p := e.createProduct(t, e.productInput(t))
 		_, err := e.svc.DeactivateProduct(t.Context(), e.actor, p.ID())
 		require.NoError(t, err)
-		in := productInput(t)
+		in := e.productInput(t)
 		in.Name, in.Price = "Otro nombre", dec("9000")
 
 		_, err = e.svc.UpdateProduct(t.Context(), e.actor, p.ID(), in)
@@ -178,10 +182,10 @@ func TestUpdateProduct(t *testing.T) {
 
 	t.Run("un producto inactivo puede editar sus datos si no cambia el precio", func(t *testing.T) {
 		e := newEnv(t)
-		p := e.createProduct(t, productInput(t))
+		p := e.createProduct(t, e.productInput(t))
 		_, err := e.svc.DeactivateProduct(t.Context(), e.actor, p.ID())
 		require.NoError(t, err)
-		in := productInput(t)
+		in := e.productInput(t)
 		in.Name = "Otro nombre"
 
 		updated, err := e.svc.UpdateProduct(t.Context(), e.actor, p.ID(), in)
@@ -191,17 +195,17 @@ func TestUpdateProduct(t *testing.T) {
 
 	t.Run("rechaza editar un producto de otro tenant", func(t *testing.T) {
 		e := newEnv(t)
-		p := e.createProduct(t, productInput(t))
+		p := e.createProduct(t, e.productInput(t))
 		other := app.Actor{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())}
 
-		_, err := e.svc.UpdateProduct(t.Context(), other, p.ID(), productInput(t))
+		_, err := e.svc.UpdateProduct(t.Context(), other, p.ID(), e.productInput(t))
 		require.ErrorIs(t, err, domain.ErrProductNotFound)
 	})
 
 	t.Run("rechaza producto con categoría inexistente", func(t *testing.T) {
 		e := newEnv(t)
-		p := e.createProduct(t, productInput(t))
-		in := productInput(t)
+		p := e.createProduct(t, e.productInput(t))
+		in := e.productInput(t)
 		missing := uuid.Must(uuid.NewV7())
 		in.CategoryID = &missing
 
@@ -213,7 +217,7 @@ func TestUpdateProduct(t *testing.T) {
 func TestProductActivation(t *testing.T) {
 	t.Run("desactiva y activa un producto", func(t *testing.T) {
 		e := newEnv(t)
-		p := e.createProduct(t, productInput(t))
+		p := e.createProduct(t, e.productInput(t))
 
 		off, err := e.svc.DeactivateProduct(t.Context(), e.actor, p.ID())
 		require.NoError(t, err)
@@ -237,7 +241,7 @@ func TestProductActivation(t *testing.T) {
 func TestSearchProducts(t *testing.T) {
 	t.Run("busca en el tenant del actor y cuenta la búsqueda con resultados", func(t *testing.T) {
 		e := newEnv(t)
-		e.createProduct(t, productInput(t))
+		e.createProduct(t, e.productInput(t))
 
 		page, err := e.svc.SearchProducts(t.Context(), e.actor, domain.ProductFilter{Query: "tubo pvc", Limit: 20})
 		require.NoError(t, err)
@@ -347,7 +351,7 @@ func TestCategories(t *testing.T) {
 		parentID := parent.ID()
 		e.createCategory(t, "Tubería", &parentID)
 		withProduct := e.createCategory(t, "Grifería", nil)
-		in := productInput(t)
+		in := e.productInput(t)
 		withProductID := withProduct.ID()
 		in.CategoryID = &withProductID
 		e.createProduct(t, in)

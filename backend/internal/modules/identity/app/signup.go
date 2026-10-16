@@ -16,7 +16,8 @@ type SignUpInput struct {
 	Password   string
 }
 
-// SignUp creates the tenant and its owner in one transaction and starts a
+// SignUp creates the tenant and its owner, and prepares the tenant's initial
+// data in the other modules (Setup), in one transaction; then it starts a
 // session. Every field is validated before anything is stored or hashed.
 func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err error) {
 	ctx, span := s.startSpan(ctx, "SignUp")
@@ -47,7 +48,8 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err er
 		return Session{}, err
 	}
 
-	if err := s.Tenants.CreateWithOwner(ctx, tenant, owner); err != nil {
+	setUp := func(ctx context.Context) error { return s.Setup.SetUpTenant(ctx, tenant.ID()) }
+	if err := s.Tenants.CreateWithOwner(ctx, tenant, owner, setUp); err != nil {
 		return Session{}, err
 	}
 	profile := Profile{User: owner, Tenant: tenant}

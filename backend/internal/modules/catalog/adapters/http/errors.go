@@ -29,9 +29,17 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrVariantAxesMismatch, Status: http.StatusUnprocessableEntity, Code: "variant_axes_mismatch", Message: "La variante debe usar los mismos ejes que las demás variantes del producto."},
 	{Err: domain.ErrDuplicateVariant, Status: http.StatusUnprocessableEntity, Code: "duplicate_variant", Message: "Ya existe una variante del producto con esos valores."},
 	{Err: domain.ErrInvalidUnit, Status: http.StatusUnprocessableEntity, Code: "invalid_unit", Message: "La unidad de medida no es válida."},
+	{Err: domain.ErrUnitRequired, Status: http.StatusUnprocessableEntity, Code: "unit_required", Message: "Indique la unidad de medida (base_unit_id) o su código (base_unit), solo uno de los dos."},
+	{Err: domain.ErrInvalidUnitCode, Status: http.StatusUnprocessableEntity, Code: "invalid_unit_code", Message: "El código de la unidad no es válido: sin espacios y máximo 16 caracteres."},
+	{Err: domain.ErrInvalidUnitName, Status: http.StatusUnprocessableEntity, Code: "invalid_unit_name", Message: "Escriba el nombre de la unidad (máximo 50 caracteres)."},
 	{Err: domain.ErrInvalidPrice, Status: http.StatusUnprocessableEntity, Code: "invalid_price", Message: "El precio debe ser mayor que cero, con máximo 4 decimales."},
 	{Err: domain.ErrInvalidCost, Status: http.StatusUnprocessableEntity, Code: "invalid_cost", Message: "El costo no puede ser negativo y tiene máximo 4 decimales."},
 	{Err: domain.ErrInvalidTaxRate, Status: http.StatusUnprocessableEntity, Code: "invalid_tax_rate", Message: "La tasa de IVA debe estar entre 0 y 1 (por ejemplo, 0.19)."},
 	{Err: domain.ErrInvalidCategoryName, Status: http.StatusUnprocessableEntity, Code: "invalid_category_name", Message: "Escriba el nombre de la categoría (máximo 100 caracteres)."},
 	{Err: domain.ErrCategoryNotFound, Status: http.StatusUnprocessableEntity, Code: "category_not_found", Message: "La categoría no existe."},
+	// Before ErrUnitNotFound, which it wraps.
+	{Err: errUnitPathNotFound, Status: http.StatusNotFound, Code: "unit_not_found", Message: "La unidad de medida no existe."},
+	{Err: domain.ErrUnitNotFound, Status: http.StatusUnprocessableEntity, Code: "unit_not_found", Message: "La unidad de medida no existe."},
+	{Err: domain.ErrUnitCodeTaken, Status: http.StatusConflict, Code: "unit_code_taken", Message: "Ya existe una unidad de medida con ese código."},
+	{Err: domain.ErrUnitInUse, Status: http.StatusConflict, Code: "unit_in_use", Message: "Hay productos que usan esta unidad. Cámbieles la unidad antes de borrarla."},
 }

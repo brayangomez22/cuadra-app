@@ -16,9 +16,11 @@ type TenantRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*Tenant, error)
 	// Update stores the name and status; ErrTenantNotFound if it does not exist.
 	Update(ctx context.Context, t *Tenant) error
-	// CreateWithOwner stores a new tenant and its first user in one
-	// transaction: either both are stored or neither is (sign-up).
-	CreateWithOwner(ctx context.Context, t *Tenant, owner *User) error
+	// CreateWithOwner stores a new tenant and its first user and then calls
+	// setUp, in one transaction: either all of it is stored or nothing is
+	// (sign-up). setUp gets a context that carries the transaction, so the
+	// other modules' writes join it.
+	CreateWithOwner(ctx context.Context, t *Tenant, owner *User, setUp func(context.Context) error) error
 }
 
 // UserRepository persists users. Every read is scoped to tenantID: a user of

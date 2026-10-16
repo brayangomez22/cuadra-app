@@ -3,6 +3,8 @@
 package postgres_test
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -35,7 +37,7 @@ func TestTenantRepositoryCreateWithOwner(t *testing.T) {
 		tenant := newTenant(t)
 		owner := f.newUser(t, tenant.ID(), "dueno@eltornillo.co")
 
-		require.NoError(t, f.tenants.CreateWithOwner(t.Context(), tenant, owner))
+		require.NoError(t, f.tenants.CreateWithOwner(t.Context(), tenant, owner, noSetUp))
 
 		_, err := f.tenants.GetByID(t.Context(), tenant.ID())
 		require.NoError(t, err)
@@ -49,13 +51,50 @@ func TestTenantRepositoryCreateWithOwner(t *testing.T) {
 		// An owner of another tenant violates the RLS policy of users.
 		owner := f.newUser(t, uuid.Must(uuid.NewV7()), "dueno@eltornillo.co")
 
-		err := f.tenants.CreateWithOwner(t.Context(), tenant, owner)
+		err := f.tenants.CreateWithOwner(t.Context(), tenant, owner, noSetUp)
 
 		requireRLSViolation(t, err)
 		_, err = f.tenants.GetByID(t.Context(), tenant.ID())
 		require.ErrorIs(t, err, domain.ErrTenantNotFound)
 	})
 }
+
+func TestTenantRepositoryCreateWithOwnerSetUp(t *testing.T) {
+	f := newFixture(t)
+
+	t.Run("setUp corre dentro de la transacción del registro", func(t *testing.T) {
+		tenant := newTenant(t)
+		owner := f.newUser(t, tenant.ID(), "dueno@eltornillo.co")
+		var seen int
+
+		err := f.tenants.CreateWithOwner(t.Context(), tenant, owner, func(ctx context.Context) error {
+			// The new tenant is not committed yet: only a write that joins
+			// the sign-up's transaction sees it.
+			return f.db.WithTenantTx(ctx, tenant.ID(), func(tx pgx.Tx) error {
+				return tx.QueryRow(ctx, "SELECT count(*) FROM users WHERE tenant_id = $1", tenant.ID()).Scan(&seen)
+			})
+		})
+
+		require.NoError(t, err)
+		require.Equal(t, 1, seen, "setUp sees the owner stored in the same transaction")
+	})
+
+	t.Run("si setUp falla no quedan ni el tenant ni el dueño", func(t *testing.T) {
+		tenant := newTenant(t)
+		owner := f.newUser(t, tenant.ID(), "dueno@eltornillo.co")
+		setUpErr := errors.New("catalog down")
+
+		err := f.tenants.CreateWithOwner(t.Context(), tenant, owner, func(context.Context) error { return setUpErr })
+
+		require.ErrorIs(t, err, setUpErr)
+		_, err = f.tenants.GetByID(t.Context(), tenant.ID())
+		require.ErrorIs(t, err, domain.ErrTenantNotFound)
+		_, err = f.users.GetByID(t.Context(), tenant.ID(), owner.ID())
+		require.ErrorIs(t, err, domain.ErrUserNotFound)
+	})
+}
+
+func noSetUp(context.Context) error { return nil }
 
 type tokenFixture struct {
 	fixture

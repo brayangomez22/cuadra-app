@@ -18,42 +18,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// Defines values for UnitOfMeasure.
-const (
-	Bulto UnitOfMeasure = "bulto"
-	Caja  UnitOfMeasure = "caja"
-	Galon UnitOfMeasure = "galon"
-	Kg    UnitOfMeasure = "kg"
-	L     UnitOfMeasure = "l"
-	M     UnitOfMeasure = "m"
-	Rollo UnitOfMeasure = "rollo"
-	Und   UnitOfMeasure = "und"
-)
-
-// Valid indicates whether the value is a known member of the UnitOfMeasure enum.
-func (e UnitOfMeasure) Valid() bool {
-	switch e {
-	case Bulto:
-		return true
-	case Caja:
-		return true
-	case Galon:
-		return true
-	case Kg:
-		return true
-	case L:
-		return true
-	case M:
-		return true
-	case Rollo:
-		return true
-	case Und:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ListProductsParamsStatus.
 const (
 	Active   ListProductsParamsStatus = "active"
@@ -140,8 +104,10 @@ type Product struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Barcode *string `json:"barcode,omitempty"`
 
-	// BaseUnit Unidad base en la que se cuenta y se vende el producto.
-	BaseUnit UnitOfMeasure `json:"base_unit"`
+	// BaseUnit El código de `unit`. Use `unit`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	BaseUnit   UnitCode           `json:"base_unit"`
+	BaseUnitId openapi_types.UUID `json:"base_unit_id"`
 
 	// CategoryId Se omite si el producto no tiene categoría.
 	CategoryId *openapi_types.UUID `json:"category_id,omitempty"`
@@ -181,20 +147,28 @@ type Product struct {
 	// Example: 0.19
 	TaxRate TaxRate `json:"tax_rate"`
 
+	// Unit Una unidad de medida de la empresa, en la que se cuentan y se venden sus productos.
+	Unit UnitOfMeasure `json:"unit"`
+
 	// Variants Sus variantes, en el orden en que se agregaron; la variante por defecto va primero.
 	Variants []ProductVariant `json:"variants"`
 }
 
 // ProductInput Los datos del producto y los de su variante por defecto (`sku`, `barcode`, `cost` y `price`). Las demás
-// variantes se editan con `/products/{productId}/variants`.
+// variantes se editan con `/products/{productId}/variants`. La unidad base va en `base_unit_id` o, mientras
+// el frontend pasa a `base_unit_id`, por su código en `base_unit` (deprecated): una de las dos.
 type ProductInput struct {
 	// Barcode Código de barras, único en la empresa. Vacío u omitido si no tiene.
 	//
 	// Example: 7701234567890
 	Barcode *string `json:"barcode,omitempty"`
 
-	// BaseUnit Unidad base en la que se cuenta y se vende el producto.
-	BaseUnit   UnitOfMeasure       `json:"base_unit"`
+	// BaseUnit El código de la unidad base. Use `base_unit_id`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	BaseUnit *UnitCode `json:"base_unit,omitempty"`
+
+	// BaseUnitId La unidad de medida en la que se cuenta y se vende el producto.
+	BaseUnitId *openapi_types.UUID `json:"base_unit_id,omitempty"`
 	CategoryId *openapi_types.UUID `json:"category_id,omitempty"`
 
 	// Cost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
@@ -333,8 +307,38 @@ type ProductVariantUpdate struct {
 // Example: 0.19
 type TaxRate = string
 
-// UnitOfMeasure Unidad base en la que se cuenta y se vende el producto.
-type UnitOfMeasure string
+// UnitCode El código de una unidad de medida de la empresa (`und`, `m`).
+//
+// Example: m
+type UnitCode = string
+
+// UnitInput defines model for UnitInput.
+type UnitInput struct {
+	// Code Único en la empresa, sin espacios. Se guarda en minúsculas.
+	//
+	// Example: par
+	Code string `json:"code"`
+
+	// Name Example: Par
+	Name string `json:"name"`
+}
+
+// UnitList defines model for UnitList.
+type UnitList struct {
+	Items []UnitOfMeasure `json:"items"`
+}
+
+// UnitOfMeasure Una unidad de medida de la empresa, en la que se cuentan y se venden sus productos.
+type UnitOfMeasure struct {
+	// Code Lo que se muestra junto a una cantidad ("2,5 m"). Único en la empresa, en minúsculas.
+	//
+	// Example: m
+	Code string             `json:"code"`
+	Id   openapi_types.UUID `json:"id"`
+
+	// Name Example: Metro
+	Name string `json:"name"`
+}
 
 // CashSessionId defines model for CashSessionId.
 type CashSessionId = openapi_types.UUID
@@ -356,6 +360,9 @@ type ProductId = openapi_types.UUID
 
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
+
+// UnitId defines model for UnitId.
+type UnitId = openapi_types.UUID
 
 // VariantId defines model for VariantId.
 type VariantId = openapi_types.UUID
@@ -418,6 +425,12 @@ type AddProductVariantJSONRequestBody = ProductVariantInput
 // UpdateProductVariantJSONRequestBody defines body for UpdateProductVariant for application/json ContentType.
 type UpdateProductVariantJSONRequestBody = ProductVariantUpdate
 
+// CreateUnitJSONRequestBody defines body for CreateUnit for application/json ContentType.
+type CreateUnitJSONRequestBody = UnitInput
+
+// UpdateUnitJSONRequestBody defines body for UpdateUnit for application/json ContentType.
+type UpdateUnitJSONRequestBody = UnitInput
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// ListCategories Listar categorías
@@ -456,6 +469,18 @@ type ServerInterface interface {
 	// UpdateProductVariant Editar una variante
 	// (PUT /api/v1/products/{productId}/variants/{variantId})
 	UpdateProductVariant(w http.ResponseWriter, r *http.Request, productId ProductId, variantId VariantId)
+	// ListUnits Listar unidades de medida
+	// (GET /api/v1/units)
+	ListUnits(w http.ResponseWriter, r *http.Request)
+	// CreateUnit Crear una unidad de medida
+	// (POST /api/v1/units)
+	CreateUnit(w http.ResponseWriter, r *http.Request)
+	// DeleteUnit Borrar una unidad de medida
+	// (DELETE /api/v1/units/{unitId})
+	DeleteUnit(w http.ResponseWriter, r *http.Request, unitId UnitId)
+	// UpdateUnit Editar una unidad de medida
+	// (PUT /api/v1/units/{unitId})
+	UpdateUnit(w http.ResponseWriter, r *http.Request, unitId UnitId)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -824,6 +849,86 @@ func (siw *ServerInterfaceWrapper) UpdateProductVariant(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListUnits operation middleware
+func (siw *ServerInterfaceWrapper) ListUnits(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUnits(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateUnit operation middleware
+func (siw *ServerInterfaceWrapper) CreateUnit(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateUnit(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteUnit operation middleware
+func (siw *ServerInterfaceWrapper) DeleteUnit(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "unitId" -------------
+	var unitId UnitId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "unitId", r.PathValue("unitId"), &unitId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "unitId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteUnit(w, r, unitId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateUnit operation middleware
+func (siw *ServerInterfaceWrapper) UpdateUnit(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "unitId" -------------
+	var unitId UnitId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "unitId", r.PathValue("unitId"), &unitId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "unitId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateUnit(w, r, unitId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -956,6 +1061,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/categories", wrapper.CreateCategory)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/categories/{categoryId}", wrapper.DeleteCategory)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/categories/{categoryId}", wrapper.UpdateCategory)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/units", wrapper.ListUnits)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/units", wrapper.CreateUnit)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/units/{unitId}", wrapper.DeleteUnit)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/units/{unitId}", wrapper.UpdateUnit)
 
 	return m
 }
@@ -2156,6 +2265,396 @@ func (response UpdateProductVariant500JSONResponse) VisitUpdateProductVariantRes
 	return err
 }
 
+type ListUnitsRequestObject struct {
+}
+
+type ListUnitsResponseObject interface {
+	VisitListUnitsResponse(w http.ResponseWriter) error
+}
+
+type ListUnits200JSONResponse UnitList
+
+func (response ListUnits200JSONResponse) VisitListUnitsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUnits401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListUnits401JSONResponse) VisitListUnitsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUnits403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListUnits403JSONResponse) VisitListUnitsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUnits500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListUnits500JSONResponse) VisitListUnitsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUnitRequestObject struct {
+	Body *CreateUnitJSONRequestBody
+}
+
+type CreateUnitResponseObject interface {
+	VisitCreateUnitResponse(w http.ResponseWriter) error
+}
+
+type CreateUnit201JSONResponse UnitOfMeasure
+
+func (response CreateUnit201JSONResponse) VisitCreateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUnit400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateUnit400JSONResponse) VisitCreateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUnit401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateUnit401JSONResponse) VisitCreateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUnit403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateUnit403JSONResponse) VisitCreateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUnit409JSONResponse Error
+
+func (response CreateUnit409JSONResponse) VisitCreateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUnit422JSONResponse Error
+
+func (response CreateUnit422JSONResponse) VisitCreateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUnit500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateUnit500JSONResponse) VisitCreateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUnitRequestObject struct {
+	UnitId UnitId `json:"unitId"`
+}
+
+type DeleteUnitResponseObject interface {
+	VisitDeleteUnitResponse(w http.ResponseWriter) error
+}
+
+type DeleteUnit204Response struct {
+}
+
+func (response DeleteUnit204Response) VisitDeleteUnitResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteUnit400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteUnit400JSONResponse) VisitDeleteUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUnit401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteUnit401JSONResponse) VisitDeleteUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUnit403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteUnit403JSONResponse) VisitDeleteUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUnit404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteUnit404JSONResponse) VisitDeleteUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUnit409JSONResponse Error
+
+func (response DeleteUnit409JSONResponse) VisitDeleteUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUnit500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteUnit500JSONResponse) VisitDeleteUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUnitRequestObject struct {
+	UnitId UnitId `json:"unitId"`
+	Body   *UpdateUnitJSONRequestBody
+}
+
+type UpdateUnitResponseObject interface {
+	VisitUpdateUnitResponse(w http.ResponseWriter) error
+}
+
+type UpdateUnit200JSONResponse UnitOfMeasure
+
+func (response UpdateUnit200JSONResponse) VisitUpdateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUnit400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateUnit400JSONResponse) VisitUpdateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUnit401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateUnit401JSONResponse) VisitUpdateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUnit403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateUnit403JSONResponse) VisitUpdateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUnit404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateUnit404JSONResponse) VisitUpdateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUnit409JSONResponse Error
+
+func (response UpdateUnit409JSONResponse) VisitUpdateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUnit422JSONResponse Error
+
+func (response UpdateUnit422JSONResponse) VisitUpdateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUnit500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateUnit500JSONResponse) VisitUpdateUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// ListCategories Listar categorías
@@ -2194,6 +2693,18 @@ type StrictServerInterface interface {
 	// UpdateProductVariant Editar una variante
 	// (PUT /api/v1/products/{productId}/variants/{variantId})
 	UpdateProductVariant(ctx context.Context, request UpdateProductVariantRequestObject) (UpdateProductVariantResponseObject, error)
+	// ListUnits Listar unidades de medida
+	// (GET /api/v1/units)
+	ListUnits(ctx context.Context, request ListUnitsRequestObject) (ListUnitsResponseObject, error)
+	// CreateUnit Crear una unidad de medida
+	// (POST /api/v1/units)
+	CreateUnit(ctx context.Context, request CreateUnitRequestObject) (CreateUnitResponseObject, error)
+	// DeleteUnit Borrar una unidad de medida
+	// (DELETE /api/v1/units/{unitId})
+	DeleteUnit(ctx context.Context, request DeleteUnitRequestObject) (DeleteUnitResponseObject, error)
+	// UpdateUnit Editar una unidad de medida
+	// (PUT /api/v1/units/{unitId})
+	UpdateUnit(ctx context.Context, request UpdateUnitRequestObject) (UpdateUnitResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -2577,6 +3088,120 @@ func (sh *strictHandler) UpdateProductVariant(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateProductVariantResponseObject); ok {
 		if err := validResponse.VisitUpdateProductVariantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListUnits operation middleware
+func (sh *strictHandler) ListUnits(w http.ResponseWriter, r *http.Request) {
+	var request ListUnitsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListUnits(ctx, request.(ListUnitsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListUnits")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListUnitsResponseObject); ok {
+		if err := validResponse.VisitListUnitsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateUnit operation middleware
+func (sh *strictHandler) CreateUnit(w http.ResponseWriter, r *http.Request) {
+	var request CreateUnitRequestObject
+
+	var body CreateUnitJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateUnit(ctx, request.(CreateUnitRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateUnit")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateUnitResponseObject); ok {
+		if err := validResponse.VisitCreateUnitResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteUnit operation middleware
+func (sh *strictHandler) DeleteUnit(w http.ResponseWriter, r *http.Request, unitId UnitId) {
+	var request DeleteUnitRequestObject
+
+	request.UnitId = unitId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteUnit(ctx, request.(DeleteUnitRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteUnit")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteUnitResponseObject); ok {
+		if err := validResponse.VisitDeleteUnitResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateUnit operation middleware
+func (sh *strictHandler) UpdateUnit(w http.ResponseWriter, r *http.Request, unitId UnitId) {
+	var request UpdateUnitRequestObject
+
+	request.UnitId = unitId
+
+	var body UpdateUnitJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateUnit(ctx, request.(UpdateUnitRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateUnit")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateUnitResponseObject); ok {
+		if err := validResponse.VisitUpdateUnitResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

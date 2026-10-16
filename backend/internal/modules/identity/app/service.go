@@ -35,6 +35,13 @@ type RateLimiter interface {
 	Allow(key string) (allowed bool, retryAfter time.Duration)
 }
 
+// TenantSetup prepares a new tenant's initial data in the other modules
+// (the catalog's units of measure). cmd/api satisfies it; SignUp calls it
+// inside the sign-up transaction.
+type TenantSetup interface {
+	SetUpTenant(ctx context.Context, tenantID uuid.UUID) error
+}
+
 // Deps are the Service's dependencies. Now defaults to time.Now, the
 // providers to no-ops and Logger to a discarding logger.
 type Deps struct {
@@ -44,6 +51,7 @@ type Deps struct {
 	Directory domain.LoginDirectory
 	Hasher    domain.PasswordHasher
 	Issuer    AccessTokenIssuer
+	Setup     TenantSetup
 	// IPLimiter is keyed by client IP and EmailLimiter by normalized email;
 	// both count every login attempt.
 	IPLimiter      RateLimiter
@@ -71,7 +79,7 @@ type Service struct {
 // or a metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
 	if d.Tenants == nil || d.Users == nil || d.Tokens == nil || d.Directory == nil ||
-		d.Hasher == nil || d.Issuer == nil || d.IPLimiter == nil || d.EmailLimiter == nil {
+		d.Hasher == nil || d.Issuer == nil || d.Setup == nil || d.IPLimiter == nil || d.EmailLimiter == nil {
 		return nil, errors.New("identity: missing service dependency")
 	}
 	if d.Now == nil {

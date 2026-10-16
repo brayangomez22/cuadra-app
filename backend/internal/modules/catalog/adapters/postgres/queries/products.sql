@@ -1,25 +1,31 @@
 -- name: CreateProduct :exec
-INSERT INTO products (id, tenant_id, name, description, category_id, base_unit, tax_rate, active, created_at)
+INSERT INTO products (id, tenant_id, name, description, category_id, base_unit_id, tax_rate, active, created_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
+-- The reads join the product's base unit, so its code and name come with it.
+
 -- name: GetProduct :one
-SELECT id, tenant_id, name, description, category_id, base_unit, tax_rate, active, created_at
-FROM products
-WHERE id = $1;
+SELECT p.id, p.tenant_id, p.name, p.description, p.category_id, p.base_unit_id, u.code AS unit_code, u.name AS unit_name,
+       p.tax_rate, p.active, p.created_at
+FROM products p
+JOIN units_of_measure u ON u.tenant_id = p.tenant_id AND u.id = p.base_unit_id
+WHERE p.id = $1;
 
 -- name: UpdateProduct :execrows
 UPDATE products
-SET name = $2, description = $3, category_id = $4, base_unit = $5, tax_rate = $6, active = $7
+SET name = $2, description = $3, category_id = $4, base_unit_id = $5, tax_rate = $6, active = $7
 WHERE id = $1;
 
 -- ListProducts pages the products without a search text, by name.
 -- name: ListProducts :many
-SELECT id, tenant_id, name, description, category_id, base_unit, tax_rate, active, created_at
-FROM products
-WHERE (sqlc.narg(active)::boolean IS NULL OR active = sqlc.narg(active))
-  AND (sqlc.narg(category_id)::uuid IS NULL OR category_id = sqlc.narg(category_id))
-  AND (sqlc.narg(ids)::uuid[] IS NULL OR id = ANY(sqlc.narg(ids)::uuid[]))
-ORDER BY name, id
+SELECT p.id, p.tenant_id, p.name, p.description, p.category_id, p.base_unit_id, u.code AS unit_code, u.name AS unit_name,
+       p.tax_rate, p.active, p.created_at
+FROM products p
+JOIN units_of_measure u ON u.tenant_id = p.tenant_id AND u.id = p.base_unit_id
+WHERE (sqlc.narg(active)::boolean IS NULL OR p.active = sqlc.narg(active))
+  AND (sqlc.narg(category_id)::uuid IS NULL OR p.category_id = sqlc.narg(category_id))
+  AND (sqlc.narg(ids)::uuid[] IS NULL OR p.id = ANY(sqlc.narg(ids)::uuid[]))
+ORDER BY p.name, p.id
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: CountProducts :one
@@ -34,8 +40,10 @@ WHERE (sqlc.narg(active)::boolean IS NULL OR active = sqlc.narg(active))
 -- Terms arrive with LIKE wildcards escaped. Exact codes come first, then the
 -- names most similar (pg_trgm) to the whole text.
 -- name: SearchProducts :many
-SELECT p.id, p.tenant_id, p.name, p.description, p.category_id, p.base_unit, p.tax_rate, p.active, p.created_at
+SELECT p.id, p.tenant_id, p.name, p.description, p.category_id, p.base_unit_id, u.code AS unit_code, u.name AS unit_name,
+       p.tax_rate, p.active, p.created_at
 FROM products p
+JOIN units_of_measure u ON u.tenant_id = p.tenant_id AND u.id = p.base_unit_id
 CROSS JOIN LATERAL (
     SELECT EXISTS (
         SELECT 1 FROM product_variants v

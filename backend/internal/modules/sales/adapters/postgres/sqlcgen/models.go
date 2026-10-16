@@ -143,10 +143,10 @@ type Product struct {
 	SearchName  string
 	Description string
 	CategoryID  *uuid.UUID
-	BaseUnit    string
 	TaxRate     decimal.Decimal
 	Active      bool
 	CreatedAt   time.Time
+	BaseUnitID  uuid.UUID
 }
 
 type ProductVariant struct {
@@ -332,6 +332,14 @@ type Tenant struct {
 	Name      string
 	Nit       string
 	Status    string
+	CreatedAt time.Time
+}
+
+type UnitsOfMeasure struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	Code      string
+	Name      string
 	CreatedAt time.Time
 }
 
