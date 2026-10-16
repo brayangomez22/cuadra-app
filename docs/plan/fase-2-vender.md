@@ -36,7 +36,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Alcance:** dominio, API y UI. Apertura con base inicial; toda venta en efectivo queda asociada a la caja abierta del usuario; ingresos y egresos de caja con motivo; cierre con **arqueo** (conteo por denominación), cálculo de faltante o sobrante y reporte de cierre imprimible. No se puede vender sin caja abierta (configurable).
 **Tests primero:** el esperado en caja = base + ventas en efectivo + ingresos − egresos − cambio entregado; no se pueden registrar ventas en una caja cerrada; el cierre queda inmutable.
 
-### [ ] T24 · Dashboards como código y alertas
+### [x] T24 · Dashboards como código y alertas
 **Depende de:** T02, T11.
 **Alcance:** dashboards de Grafana versionados en `deploy/observability/dashboards/` y provisionados automáticamente:
 - **Servicio (RED):** requests por segundo, tasa de errores y latencia p50/p95/p99 por endpoint.

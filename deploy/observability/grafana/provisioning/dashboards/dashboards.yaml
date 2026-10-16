@@ -1,0 +1,17 @@
+# Grafana dashboards (local). The JSON files in deploy/observability/dashboards/
+# are the source of truth: Grafana loads them at startup and reloads them when
+# they change. Edits made in the UI cannot be saved; to change a dashboard,
+# export its JSON (Share → Export) and replace the file.
+# The folder goes by title, without folderUid: the alert rules (alerting/)
+# can only name it by title, and a uid here would create a second "Cuadra".
+apiVersion: 1
+
+providers:
+  - name: cuadra
+    folder: Cuadra
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

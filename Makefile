@@ -10,7 +10,7 @@ OPENAPI_SPEC := $(CURDIR)/api/openapi.yaml
 export
 
 .DEFAULT_GOAL := help
-.PHONY: help up down run test test-int lint check migrate sqlc openapi obs-up obs-down jobs-ui
+.PHONY: help up down run test test-int lint check migrate sqlc openapi obs-up obs-down obs-alert-test jobs-ui
 
 help: ## List available commands
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -57,3 +57,6 @@ obs-up: ## Start the observability stack (Grafana on :3000)
 
 obs-down: ## Stop the observability stack
 	docker compose --profile observability stop otel-collector prometheus loki tempo grafana
+
+obs-alert-test: ## Force the failed-logins alert (needs make run + make obs-up)
+	./deploy/observability/scripts/force-failed-logins.sh

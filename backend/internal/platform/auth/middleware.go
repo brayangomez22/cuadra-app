@@ -61,7 +61,8 @@ func Enforce(policy Policy, v Verifier, can Authorizer, log *slog.Logger) func(h
 
 // RequireAuth rejects requests without a valid Bearer access token (401) and
 // puts the principal in the context of the rest. The tenant, user and role
-// are also set on the request's span. The token itself is never logged.
+// are also set on the request's span, and the tenant and user on the request's
+// log line (httpx.Logging). The token itself is never logged.
 func RequireAuth(v Verifier, log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +83,9 @@ func RequireAuth(v Verifier, log *slog.Logger) func(http.Handler) http.Handler {
 				attribute.String("user.id", p.UserID.String()),
 				attribute.String("user.role", p.Role),
 			)
-			next.ServeHTTP(w, r.WithContext(WithPrincipal(r.Context(), p)))
+			ctx := WithPrincipal(r.Context(), p)
+			httpx.AddRequestLogAttrs(ctx, PrincipalAttrs(ctx)...)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

@@ -89,16 +89,35 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+			reqLog := &requestLog{}
 
-			next.ServeHTTP(rec, r)
+			next.ServeHTTP(rec, r.WithContext(context.WithValue(r.Context(), requestLogKey{}, reqLog)))
 
-			logger.InfoContext(r.Context(), "http request",
+			attrs := append([]slog.Attr{
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),
 				slog.Int("status", rec.status),
 				slog.Int64("duration_ms", time.Since(start).Milliseconds()),
-			)
+			}, reqLog.attrs...)
+			logger.LogAttrs(r.Context(), slog.LevelInfo, "http request", attrs...)
 		})
+	}
+}
+
+// requestLogKey is the context key of the request's *requestLog.
+type requestLogKey struct{}
+
+// requestLog holds the attributes that inner middleware add to the request's
+// log line. Logging owns it; the handlers run on the same goroutine.
+type requestLog struct{ attrs []slog.Attr }
+
+// AddRequestLogAttrs adds attrs to the "http request" line that Logging writes
+// when the request finishes. Logging wraps the middleware that learn who the
+// caller is (auth), so their context never reaches it: this is how the tenant
+// and the user get to that line. Outside Logging it does nothing.
+func AddRequestLogAttrs(ctx context.Context, attrs ...slog.Attr) {
+	if l, ok := ctx.Value(requestLogKey{}).(*requestLog); ok {
+		l.attrs = append(l.attrs, attrs...)
 	}
 }
 

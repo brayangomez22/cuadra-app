@@ -1,0 +1,154 @@
+# Grafana-managed alert rules (local), provisioned as code. Each rule queries
+# Prometheus and fires when its threshold expression (C) holds for `for`.
+# Without traffic the queries return no data, which counts as OK.
+#
+# Metrics arrive by OTLP push every 60 s, so the windows are 5 min or more:
+# shorter rate() windows would often hold a single sample.
+#
+# There is no contact point yet: firing alerts show in Alerting → Alert rules.
+# What to do with each one: docs/runbooks/alertas.md.
+# Unlike datasources, alert rules are not expanded with environment variables:
+# `$values` reaches the template as is.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: cuadra-api
+    folder: Cuadra
+    interval: 1m
+    rules:
+      - uid: cuadra-http-5xx-rate
+        title: Tasa de errores 5xx alta
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: critical
+        annotations:
+          summary: Más del 2% de las requests de la API responden 5xx.
+          description: "Tasa de 5xx de los últimos 5 min: {{ humanizePercentage $values.A.Value }}."
+          runbook_url: https://github.com/brayangomez22/cuadra-app/blob/main/docs/runbooks/alertas.md#tasa-de-errores-5xx-alta
+          __dashboardUid__: cuadra-service
+          __panelId__: "9"
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(rate(http_server_request_duration_seconds_count{service_name="cuadra-api", http_route!~"/healthz|/readyz", http_response_status_code=~"5.."}[5m]))
+                /
+                sum(rate(http_server_request_duration_seconds_count{service_name="cuadra-api", http_route!~"/healthz|/readyz"}[5m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.02] }
+
+      - uid: cuadra-http-p95-latency
+        title: Latencia p95 alta
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: El p95 de las requests de la API pasa de 500 ms.
+          description: "p95 de los últimos 5 min: {{ humanizeDuration $values.A.Value }}."
+          runbook_url: https://github.com/brayangomez22/cuadra-app/blob/main/docs/runbooks/alertas.md#latencia-p95-alta
+          __dashboardUid__: cuadra-service
+          __panelId__: "12"
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{service_name="cuadra-api", http_route!~"/healthz|/readyz"}[5m])))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.5] }
+
+      - uid: cuadra-failed-logins-spike
+        title: Pico de logins fallidos
+        condition: C
+        # A spike: fire on the first evaluation over the threshold.
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: Más de 30 logins fallidos en 5 min. Puede ser un ataque de fuerza bruta o de credential stuffing.
+          description: "Logins fallidos en los últimos 5 min: {{ printf \"%.0f\" $values.A.Value }}."
+          runbook_url: https://github.com/brayangomez22/cuadra-app/blob/main/docs/runbooks/alertas.md#pico-de-logins-fallidos
+          __dashboardUid__: cuadra-business
+          __panelId__: "20"
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(increase(cuadra_identity_logins_total{service_name="cuadra-api", result="failure"}[5m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [30] }
+
+  - orgId: 1
+    name: cuadra-business
+    folder: Cuadra
+    interval: 5m
+    rules:
+      - uid: cuadra-cash-shortages
+        title: Faltantes de caja repetidos
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: 3 o más cierres de caja con faltante en 24 h.
+          description: "Cierres con faltante en las últimas 24 h: {{ printf \"%.0f\" $values.A.Value }}. La métrica no dice de qué empresa son; búsquelos en los logs."
+          runbook_url: https://github.com/brayangomez22/cuadra-app/blob/main/docs/runbooks/alertas.md#faltantes-de-caja-repetidos
+          __dashboardUid__: cuadra-business
+          __panelId__: "16"
+        data:
+          - refId: A
+            relativeTimeRange: { from: 86400, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(increase(cuadra_sales_cash_sessions_closed_total{service_name="cuadra-api", cash_result="shortage"}[24h]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gte, params: [3] }

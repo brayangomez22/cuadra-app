@@ -238,3 +238,65 @@ func TestHandlerAuth(t *testing.T) {
 		require.Equal(t, http.StatusUnauthorized, rec.Code)
 	})
 }
+
+func TestHandlerRequestLog(t *testing.T) {
+	tenantID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
+
+	// setup logs with the extractors of main.go and mounts a protected stub
+	// route, GET /api/v1/me.
+	setup := func(t *testing.T) (http.Handler, *bytes.Buffer) {
+		t.Helper()
+		var buf bytes.Buffer
+		cfg := testConfig(t)
+		cfg.Log = slog.New(logger.NewContextHandler(slog.NewJSONHandler(&buf, nil), httpx.RequestIDAttrs, auth.PrincipalAttrs))
+		cfg.Routes = []func(*http.ServeMux){func(mux *http.ServeMux) {
+			mux.HandleFunc("GET /api/v1/me", func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNoContent)
+			})
+		}}
+		handler, err := newHandler(cfg)
+		require.NoError(t, err)
+		return handler, &buf
+	}
+	// requestLine returns the "http request" line among the logs in buf.
+	requestLine := func(t *testing.T, buf *bytes.Buffer) map[string]any {
+		t.Helper()
+		for line := range strings.Lines(buf.String()) {
+			var entry map[string]any
+			require.NoError(t, json.Unmarshal([]byte(line), &entry))
+			if entry["msg"] == "http request" {
+				return entry
+			}
+		}
+		require.FailNow(t, "no hay línea http request", "logs: %s", buf.String())
+		return nil
+	}
+
+	t.Run("la línea http request de una request autenticada lleva tenant_id y user_id", func(t *testing.T) {
+		handler, buf := setup(t)
+		j, err := auth.NewJWT(testSecret, 15*time.Minute)
+		require.NoError(t, err)
+		tok, _, err := j.Issue(tenantID, userID, "cashier")
+		require.NoError(t, err)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+		req.Header.Set("Authorization", "Bearer "+tok)
+
+		handler.ServeHTTP(httptest.NewRecorder(), req)
+
+		entry := requestLine(t, buf)
+		require.Equal(t, tenantID.String(), entry["tenant_id"])
+		require.Equal(t, userID.String(), entry["user_id"])
+	})
+
+	t.Run("la línea http request de una request anónima no lleva tenant_id", func(t *testing.T) {
+		handler, buf := setup(t)
+
+		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/v1/me", nil))
+
+		entry := requestLine(t, buf)
+		require.EqualValues(t, http.StatusUnauthorized, entry["status"])
+		require.NotContains(t, entry, "tenant_id")
+		require.NotContains(t, entry, "user_id")
+	})
+}
