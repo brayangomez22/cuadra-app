@@ -36,7 +36,7 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 
-P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31) y P20 en `chore/P20-pos-critique`.
+P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31), P20 en `chore/P20-pos-critique` y P23 en `chore/P23-pending-ids-and-tarea-check`.
 
 | | ID | Pendiente | Origen |
 |---|---|---|---|
@@ -46,11 +46,11 @@ P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31) y P20 en `chor
 | [x] | P18 | En tema oscuro, los botones `danger` y `primary` se parecen en tono | PR #19 (T14) |
 | [x] | P19 | Bundle del frontend sobre 500 kB: cargar las pantallas por ruta (`lazy`) | PR #20 (T15) |
 | [x] | P20 | P2 del critique del POS: resaltar la línea recién agregada y rediseñar el final del cobro. Va en su propia rama `chore/` (trabajo de diseño con `/impeccable`), la siguiente | PR #28 (T21) |
-| [ ] | P23 | Los IDs P21 y P22 están repetidos: los de "Para validar con los pilotos" se deben renumerar (los nuevos van después del último ID usado) para que `/tarea` no los confunda con los asignados a T47 | T24a |
+| [x] | P23 | Los IDs P21 y P22 están repetidos: los de "Para validar con los pilotos" se deben renumerar (los nuevos van después del último ID usado) para que `/tarea` no los confunda con los asignados a T47 (pasaron a P27 y P28) | T24a |
 
 ## Para validar con los pilotos
 
 | | ID | Pendiente | Origen |
 |---|---|---|---|
-| [ ] | P21 | Redondeo del efectivo a múltiplos de 50 (no hay monedas menores): hoy queda dentro de la diferencia del arqueo | Decisión 113 (T17), T23 |
-| [ ] | P22 | Cronometrar la meta de una venta de 5 productos en 20 s con un cajero real | PR #28 (T21) |
+| [ ] | P27 | Redondeo del efectivo a múltiplos de 50 (no hay monedas menores): hoy queda dentro de la diferencia del arqueo | Decisión 113 (T17), T23 |
+| [ ] | P28 | Cronometrar la meta de una venta de 5 productos en 20 s con un cajero real | PR #28 (T21) |
