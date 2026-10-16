@@ -28,7 +28,7 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
 **Hitos**
 - **Al terminar la fase 2:** ya puedes mostrar una venta real de punta a punta.
 - **Al terminar la fase 3:** la demo (T34) está lista para visitas de venta y para el portafolio.
-- **Al terminar la fase 5:** arranca el piloto con 3 a 5 ferreterías.
+- **Al terminar la fase 5:** arranca el piloto con 3 a 5 negocios (empezando por ferreterías).
 
 **Excepciones al orden**
 - **T35** (selección del proveedor DIAN) es investigación, no código. Conviene adelantarla durante las fases 2 o 3, porque el costo por documento afecta el precio de Cuadra.
