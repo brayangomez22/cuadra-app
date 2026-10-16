@@ -11,6 +11,7 @@ Sigue este flujo sin saltarte pasos:
    - Revisa la rama actual con `git branch --show-current` y el estado con `git status --porcelain`.
    - **Si ya estás en una rama `feat/$ARGUMENTS-...`**: estamos retomando la tarea. Continúa en ella y salta al paso 1.
    - **Si hay cambios sin commit** en otra rama: detente y avísame. No los muevas, no hagas stash ni los descartes.
+   - Lee la sección "Para trabajar ahora" de `docs/plan/pendientes.md`. Si hay alguno en `[ ]`, **detente**: lístalos y propón resolverlos primero en una rama `chore/`. Solo sigue con la tarea si Brayan lo decide explícitamente (y en ese caso, anótalo en el plan).
    - **Si no:** cambia a `main`, actualízala con `git pull --ff-only` y crea la rama `feat/$ARGUMENTS-<nombre-corto-en-inglés-kebab-case>` a partir del título de la tarea (por ejemplo, `feat/T02-observability`). Si `git pull` falla, detente y avísame.
 1. **Contexto:**
    - Lee `docs/plan/README.md` (fase activa y alcance) y busca la tarea $ARGUMENTS en los archivos de `docs/plan/`.
