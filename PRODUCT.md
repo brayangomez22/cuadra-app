@@ -1,16 +1,18 @@
 # PRODUCT.md — contexto de producto para el diseño de UI
 
-> Borrador escrito a mano en T13 (no generado con `/impeccable init`). Fuentes: `docs/negocio.md`, `docs/estilos.md` ("Particularidades de este producto") y `CLAUDE.md`. Las afirmaciones marcadas con **[validar]** salen de suposiciones y se confirman en las visitas a ferreterías.
+> Borrador escrito a mano en T13 (no generado con `/impeccable init`). Fuentes: `docs/negocio.md`, `docs/estilos.md` ("Particularidades de este producto") y `CLAUDE.md`. Las afirmaciones marcadas con **[validar]** salen de suposiciones y se confirman en las visitas a negocios (primero, ferreterías).
 
 ## Qué es
 
-Cuadra es el sistema del mostrador de una ferretería colombiana pequeña o mediana: vender (POS), saber qué hay en la bodega (inventario y kardex), fiar a los clientes de confianza y facturar electrónicamente ante la DIAN. El nombre viene de "cuadrar la caja": al cierre del día, las cuentas tienen que dar.
+Cuadra es el sistema del mostrador de las pymes colombianas de comercio: ferreterías, tiendas y minimercados, droguerías, papelerías, almacenes de ropa y calzado, y negocios similares. Sirve para vender (POS), saber qué hay en la bodega (inventario y kardex), fiar a los clientes de confianza y facturar electrónicamente ante la DIAN. El nombre viene de "cuadrar la caja": al cierre del día, las cuentas tienen que dar.
+
+El núcleo es el mismo para todos los negocios, y cada tipo de negocio se adapta con su plantilla y sus módulos: unidades, atributos de producto, variantes (talla y color en ropa), lotes y vencimientos (droguerías), etc. Las **ferreterías son el primer mercado del piloto**, no el modelo del diseño: una pantalla debe funcionar igual de bien para una ferretería que para un almacén de ropa o una droguería.
 
 ## Quién lo usa
 
 | Rol | Quién es | Dónde y cómo lo usa | Lo que más le importa |
 |---|---|---|---|
-| **Cajero** (`cashier`) | Empleado de mostrador, a menudo el hijo o sobrino del dueño, o un trabajador de años | De pie, con fila de maestros de obra esperando. PC de mostrador o tablet, lector de código de barras, a veces una sola mano libre | Vender rápido sin equivocarse en el precio ni en el cambio |
+| **Cajero** (`cashier`) | Empleado de mostrador, a menudo el hijo o sobrino del dueño, o un trabajador de años | De pie, con fila de clientes esperando. PC de mostrador o tablet, lector de código de barras, a veces una sola mano libre | Vender rápido sin equivocarse en el precio ni en el cambio |
 | **Dueño** (`owner`) | 35 a 60 años, conoce el negocio de memoria, no necesariamente cómodo con software | En el mostrador en horas pico y en la oficina o el celular al cierre | Que la caja cuadre, cuánto vendió, qué se está acabando, quién le debe |
 | **Administrador** (`admin`) | Persona de confianza que maneja precios, compras y usuarios | Escritorio, en ratos de menos movimiento | Cargar productos y precios sin errores, corregir inventario |
 | **Bodeguero** (`warehouse`) | Recibe mercancía y despacha | En la bodega, con celular o tablet, manos sucias o con guantes **[validar]** | Registrar entradas rápido y encontrar un producto por código |
@@ -27,12 +29,12 @@ Cuadra es el sistema del mostrador de una ferretería colombiana pequeña o medi
 
 - Una venta de 5 productos en 20 segundos o menos (meta del piloto).
 - Las cifras se leen sin esfuerzo: precios y cantidades alineados a la derecha, números tabulares, separador de miles colombiano (`$ 12.500`), total grande.
-- Cero sorpresas: un error dice qué pasó y qué hacer, en español llano ("No hay stock suficiente de Cemento gris 50kg: quedan 3").
+- Cero sorpresas: un error dice qué pasó y qué hacer, en español llano ("No hay stock suficiente de Camiseta básica talla M: quedan 3").
 - Se aprende en una tarde de capacitación.
 
 ## Tono de la marca
 
-- **Confiable y sobrio**, como una buena herramienta: no juguete, no banco. Habla como un colega del gremio, de "usted" o neutro, sin tecnicismos ni anglicismos ("Cobrar", no "Checkout").
+- **Confiable y sobrio**, como una buena herramienta: no juguete, no banco. Habla como un colega del comercio, de "usted" o neutro, sin tecnicismos ni anglicismos ("Cobrar", no "Checkout").
 - **Directo:** verbos de acción en los botones ("Cobrar", "Registrar entrada", "Guardar precio").
 - **Sin decoración gratuita:** ilustraciones, degradados y animaciones solo si ayudan a entender algo. La personalidad sale de la tipografía, la jerarquía y un color de marca bien usado.
 - **Colombiano sin folclor:** formatos locales (COP, fechas `dd/mm/aaaa`, hora de Bogotá) sin caer en clichés visuales.
@@ -48,4 +50,4 @@ Cuadra es el sistema del mostrador de una ferretería colombiana pequeña o medi
 ## Fuera de alcance del diseño (por ahora)
 
 - Marketing, landing page y branding completo (logo definitivo).
-- Personalización visual por tenant (colores propios de cada ferretería).
+- Personalización visual por tenant (colores propios de cada negocio).

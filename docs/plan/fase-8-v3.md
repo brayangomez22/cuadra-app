@@ -22,7 +22,7 @@ Exportación de ventas, compras, cartera y cierres en los formatos de importaci�
 Empleados, liquidación mensual o quincenal con prestaciones, y emisión del documento de nómina electrónica a través del proveedor tecnológico.
 
 ### Épica V3-6 · Segundo vertical: talleres
-Reutiliza el núcleo (≈70%). Nuevo módulo: órdenes de trabajo (diagnóstico, repuestos + mano de obra, estado), vehículos e historial por placa, técnicos y comisiones, y agenda (se conecta con el producto de agenda por WhatsApp). Requiere el mecanismo de **verticales por tenant**: activar módulos y menús según el tipo de negocio. Se implementa como la plantilla `taller` más el módulo `work_orders`, sobre el mecanismo de T24e.
+Reutiliza el núcleo (≈70%). Nuevo módulo: órdenes de trabajo (diagnóstico, repuestos + mano de obra, estado), vehículos e historial por placa, técnicos y comisiones, y agenda (se conecta con el producto de agenda por WhatsApp). Requiere el mecanismo de **verticales por tenant**: activar módulos y menús según el tipo de negocio. Se implementa como la plantilla `taller` más el módulo `work_orders`, sobre el mecanismo de T24f (módulos) y T24g (plantillas).
 
 ### Épica V3-7 · Multi-país
 Abstraer la facturación electrónica, los impuestos y los documentos de identidad por país (México, Perú, Ecuador), con moneda y zona horaria por tenant.

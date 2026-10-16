@@ -80,7 +80,7 @@ PRODUCT.md                   # contexto de producto y usuarios para el diseño d
 Cuadra sirve a muchos tipos de comercio. El **core** (identidad, catálogo, inventario, ventas, facturación, clientes, compras, caja y reportes) es genérico. Lo específico de cada tipo de negocio vive en **configuración del tenant**, **módulos activables** o **plantillas de tipo de negocio**, nunca en el core.
 
 1. **Cero lógica de nicho en el core.** Prohibido `if tenant.BusinessType == ...` (o equivalentes) en cualquier capa. Prohibidos los campos, enums, columnas o nombres de un nicho dentro del core (`maestro_de_obra`, `bulto`, `talla`...). Si algo solo aplica a algunos negocios, es configuración o un módulo.
-2. **Producto con variantes.** `Product` agrupa una o más `ProductVariant`. Un producto simple tiene una variante por defecto que la UI no muestra. SKU, código de barras, costo y precio viven en la **variante**. Stock, movimientos, líneas de venta y de compra referencian `variant_id`. Los ejes de variante (talla, color, presentación...) los define cada tenant.
+2. **Producto con variantes.** `Product` agrupa una o más `ProductVariant`. Un producto simple tiene una variante por defecto que la UI no muestra. SKU, código de barras, costo y precio viven en la **variante**. Stock, movimientos, líneas de venta y de compra referencian `variant_id`. Los ejes de variante (talla, color, presentación...) los define cada tenant. Nunca asumas que `variant.id == product.id`.
 3. **Atributos de producto definidos por el tenant** (texto, número, lista, sí/no; por ejemplo marca, material, principio activo), guardados en `JSONB` y validados contra su definición. Nunca se agregan columnas para un nicho.
 4. **Unidades de medida por tenant**, sembradas desde la plantilla de su tipo de negocio, nunca como enum fijo. La conversión entre unidades es el módulo `unit_conversions`.
 5. **Inventario preparado para lotes:** los movimientos y niveles de stock llevan `lot_id` opcional (NULL). La lógica de lotes y vencimientos (FEFO, alertas, bloqueo de vencidos) es el módulo `lots_expiry`.
@@ -92,7 +92,7 @@ Cuadra sirve a muchos tipos de comercio. El **core** (identidad, catálogo, inve
    - El core **nunca** importa un módulo. Los módulos se conectan al core por puertos y eventos de dominio.
 9. **Plantillas de tipo de negocio como datos, no código** (`backend/templates/business/*.yaml`): módulos activos, unidades, categorías iniciales, atributos de producto, segmentos de cliente, impuestos por defecto y etiquetas de la UI. El tenant elige una plantilla al registrarse y después puede cambiar todo. Plantillas iniciales: `generica`, `ferreteria`, `tienda`, `drogueria`, `papeleria` y `ropa_calzado`.
 10. **Módulos ≠ feature flags.** Un módulo es una capacidad del producto que el tenant tiene activada (y luego, contratada según su plan). Un feature flag (T39) sirve para lanzamientos graduales y para apagar algo en una emergencia.
-11. **Neutralidad verificable:** los nombres, textos y ejemplos del core son neutros (producto, cliente, unidad). Los tests table-driven del core incluyen casos de **al menos dos tipos de negocio** (por ejemplo, ferretería y almacén de ropa). `make lint-neutral` (en CI) falla si aparecen términos de un nicho en el core.
+11. **Neutralidad verificable:** los nombres, textos y ejemplos del core son neutros (producto, cliente, unidad). Los tests table-driven del core incluyen casos de **al menos dos tipos de negocio** (por ejemplo, ferretería y almacén de ropa). `make lint-neutral` (en CI) falla si aparecen términos de un nicho en el core (excluye `*_test.go`, `*.test.ts(x)`, `testdata/` y fixtures).
 
 ## Multi-tenant (crítico)
 
@@ -101,6 +101,7 @@ Cuadra sirve a muchos tipos de comercio. El **core** (identidad, catálogo, inve
 - La app se conecta con un rol **sin** `BYPASSRLS` y que no es dueño de las tablas. Las migraciones usan otro rol.
 - El `tenant_id` sale **solo** del token autenticado (contexto), nunca del body o de la URL.
 - Cada repositorio nuevo lleva un **test de aislamiento**: los datos del tenant A no se ven ni se modifican desde el tenant B.
+- Toda migración que mueva o transforme datos verifica los conteos antes y después y falla con `RAISE EXCEPTION` si no cuadran, y se prueba con un dueño no superusuario.
 
 ## Dinero, cantidades y tiempo
 

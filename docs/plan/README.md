@@ -13,7 +13,7 @@ Este directorio es lo único que cambia de fase en fase. `CLAUDE.md` contiene la
 | # | Fase | Tareas | Archivo | Estado | Qué se logra |
 |---|---|---|---|---|---|
 | 1 | Núcleo | T01–T17 | `fase-1-nucleo.md` | ✅ completa | Cimientos técnicos (CI, observabilidad, BD multi-tenant, OpenAPI), identidad, catálogo, inventario, UI base y dominio de ventas |
-| 2 | Vender | T18–T25 (+ T24a–T24g) | `fase-2-vender.md` | 🟡 activa | River, Sentry, API y pantalla del POS, tirilla, caja, dashboards y E2E |
+| 2 | Vender | T18–T25 (+ T24a–T24k) | `fase-2-vender.md` | 🟡 activa | River, Sentry, API y pantalla del POS, tirilla, caja, dashboards y E2E |
 | 3 | Inventario, clientes y compras | T26–T34 | `fase-3-inventario-clientes.md` | ⚪ | Fraccionamiento, escáner con cámara, stock mínimo, importación de Excel, toma física, clientes, fiados, compras y demo |
 | 4 | Facturación, control y reportes | T35–T44 | `fase-4-facturacion-control.md` | ⚪ | DIAN, seguridad, feature flags, analítica, usuarios y auditoría, reportes, tablero y primeros pasos |
 | 5 | Producción y piloto | T45–T50 | `fase-5-produccion-piloto.md` | ⚪ | Terraform, CD, monitoreo en producción, backups, exportación de datos y legal → **arranca el piloto** |
@@ -46,7 +46,7 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
 | Escáner de códigos con la cámara | T27 (usado en el POS y en la toma de inventario) |
 | Ventas y POS | T17 (dominio), T20 (API), T21 (pantalla), T22 (tirilla) |
 | Caja | T23 |
-| Core genérico: variantes, unidades y atributos por tenant, módulos y plantillas | T24a–T24g |
+| Core genérico: variantes, unidades y atributos por tenant, módulos, permisos y plantillas | T24a–T24k |
 | Clientes y cartera | T31 (clientes), T32 (crédito, abonos, cartera por edades) |
 | Compras y proveedores | T33 · órdenes de compra y cuentas por pagar: V2-2 |
 | Facturación electrónica DIAN | T35 (selección del proveedor), T36 (emisión), T37 (notas crédito) |

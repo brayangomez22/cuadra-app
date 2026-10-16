@@ -52,7 +52,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Alcance:** `catalog/domain`: `Product` (SKU único por tenant, código de barras opcional, nombre, descripción, `CategoryID`, `BaseUnit`, `Cost`, `Price`, `TaxRate`, activo), `Category` (árbol simple con padre opcional) y `UnitOfMeasure` (catálogo fijo inicial: und, m, kg, l, caja, rollo, bulto, galón; reemplazado por unidades por tenant en T24a–T24g). Precio > 0 y costo ≥ 0, ambos `decimal`. Métodos `ChangePrice`, `Deactivate` y `MarginPercent()`.
 **Tests primero:** precio negativo rechazado; margen calculado sin pérdida de precisión (costo 8.333,33 / precio 10.000); un producto inactivo no puede cambiar de precio (o define la regla y documéntala).
 
-> Modelo actualizado en el bloque T24a–T24g (core genérico): ver docs/propuestas/core-generico.md.
+> Modelo actualizado en el bloque T24a–T24k (core genérico): ver docs/propuestas/core-generico.md.
 
 ### [x] T09 · Persistencia y API del catálogo
 **Alcance:** contrato en OpenAPI primero. Migraciones de `categories` y `products` (RLS, índice trigram en nombre — descartado: RLS impide usarlo, ver `docs/decisiones.md` —, únicos `(tenant_id, sku)` y `(tenant_id, barcode)`). CRUD `/api/v1/products` y `/api/v1/categories`; `GET /api/v1/products?q=` busca por nombre parcial, SKU o código de barras, con paginación.
@@ -65,7 +65,7 @@ Cada tarea cabe en una o dos sesiones de Claude Code: `/tarea T01`.
 **Alcance:** `inventory/domain`: `Location` (sede o bodega), `StockMovement` inmutable (tipo: `purchase_in`, `sale_out`, `adjustment`, `transfer_out`, `transfer_in`; cantidad decimal, costo unitario, referencia al documento, usuario y fecha), `StockLevel` por producto y sede. Regla configurable por tenant: permitir o no stock negativo (por defecto NO). Cálculo de **costo promedio ponderado** en las entradas.
 **Tests primero (los más importantes del núcleo):** una salida mayor al stock falla con `ErrInsufficientStock`; un traslado genera dos movimientos que suman cero; costo promedio: 10 und a 1.000 + 10 und a 1.200 = 1.100; un ajuste exige motivo; cantidades fraccionarias (2,5 m) se suman sin error de precisión.
 
-> Modelo actualizado en el bloque T24a–T24g (core genérico): ver docs/propuestas/core-generico.md.
+> Modelo actualizado en el bloque T24a–T24k (core genérico): ver docs/propuestas/core-generico.md.
 
 ### [x] T11 · Persistencia y API de inventario
 **Alcance:** contrato en OpenAPI primero. Migraciones de `locations`, `stock_movements` (solo INSERT: sin UPDATE ni DELETE) y `stock_levels`. Registrar un movimiento actualiza el nivel en la misma transacción con `SELECT ... FOR UPDATE`. Endpoints: registrar entrada, ajuste y traslado; consultar existencias por sede; consultar kardex de un producto. Métricas: `cuadra.inventory.movements` (atributo `type`) y `cuadra.inventory.insufficient_stock`.
