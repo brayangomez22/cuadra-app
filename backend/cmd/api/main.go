@@ -158,8 +158,8 @@ func run() error {
 	salesModule, err := sales.New(sales.Config{
 		DB:             database,
 		Authorize:      identity.Authorize,
-		Products:       salesCatalog{catalogModule},
-		Stock:          salesStock{inventory: inventoryModule, catalog: catalogModule},
+		Catalog:        salesCatalog{catalogModule},
+		Stock:          salesStock{inventoryModule},
 		Logger:         log,
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),

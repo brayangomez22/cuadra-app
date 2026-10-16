@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"slices"
 
 	"github.com/google/uuid"
 
@@ -83,6 +84,28 @@ func (m *Module) ProductsByID(ctx context.Context, tenantID uuid.UUID, ids []uui
 		return nil, err
 	}
 	return page.Items, nil
+}
+
+// ProductsOfVariants returns the products that the variants among
+// variantIDs (at most MaxProductsByID, distinct) belong to in tenantID, with
+// all their variants; the variants that do not exist in the tenant are left
+// out. It is for other modules that sell variants (sales reads their names,
+// labels, prices and IVA through it).
+func (m *Module) ProductsOfVariants(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) ([]*domain.Product, error) {
+	if len(variantIDs) > MaxProductsByID {
+		return nil, errors.New("catalog: too many variants requested")
+	}
+	productOf, err := m.VariantProducts(ctx, tenantID, variantIDs)
+	if err != nil {
+		return nil, err
+	}
+	productIDs := make([]uuid.UUID, 0, len(productOf))
+	for _, id := range productOf {
+		if !slices.Contains(productIDs, id) {
+			productIDs = append(productIDs, id)
+		}
+	}
+	return m.ProductsByID(ctx, tenantID, productIDs)
 }
 
 // VariantProducts returns the product of each of variantIDs that exists in

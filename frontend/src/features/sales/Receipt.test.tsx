@@ -10,10 +10,12 @@ function aMixedSale(overrides: Partial<Sale> = {}): Sale {
     number: 42,
     lines: [
       {
+        variant_id: '01920000-0000-7000-8000-000000000211',
         product_id: '01920000-0000-7000-8000-000000000111',
         product_name: 'Martillo de uña 16 oz',
         quantity: '1',
         unit_price: '20000.00',
+        price_rule: 'variant_price',
         tax_rate: '0.19',
         discount: '2000.00',
         gross: '20000.00',
@@ -22,10 +24,12 @@ function aMixedSale(overrides: Partial<Sale> = {}): Sale {
         total: '21420.00',
       },
       {
+        variant_id: '01920000-0000-7000-8000-000000000212',
         product_id: '01920000-0000-7000-8000-000000000112',
         product_name: 'Cable eléctrico 12 AWG',
         quantity: '2.5',
         unit_price: '3000.00',
+        price_rule: 'variant_price',
         tax_rate: '0.19',
         discount: '0.00',
         gross: '7500.00',
@@ -34,10 +38,12 @@ function aMixedSale(overrides: Partial<Sale> = {}): Sale {
         total: '8925.00',
       },
       {
+        variant_id: '01920000-0000-7000-8000-000000000213',
         product_id: '01920000-0000-7000-8000-000000000113',
         product_name: 'Abono triple 15 1kg',
         quantity: '2',
         unit_price: '10000.00',
+        price_rule: 'variant_price',
         tax_rate: '0.05',
         discount: '0.00',
         gross: '20000.00',
@@ -46,10 +52,12 @@ function aMixedSale(overrides: Partial<Sale> = {}): Sale {
         total: '21000.00',
       },
       {
+        variant_id: '01920000-0000-7000-8000-000000000214',
         product_id: '01920000-0000-7000-8000-000000000114',
         product_name: 'Arena lavada bulto',
         quantity: '1',
         unit_price: '5000.00',
+        price_rule: 'variant_price',
         tax_rate: '0',
         discount: '0.00',
         gross: '5000.00',
@@ -134,6 +142,33 @@ describe('Receipt', () => {
     const text = (name: string) => plain(receipt.getByRole('listitem', { name }).textContent);
     expect(text('Cable eléctrico 12 AWG')).toBe('Cable eléctrico 12 AWG2,5 × $ 3.000$ 7.500');
     expect(text('Martillo de uña 16 oz')).toBe('Martillo de uña 16 oz1 × $ 20.000$ 20.000Descuento-$ 2.000');
+  });
+
+  it('muestra la etiqueta de la variante junto al nombre del producto', () => {
+    const receipt = renderReceipt(
+      aSale({
+        lines: [
+          {
+            variant_id: '01920000-0000-7000-8000-000000000121',
+            product_id: '01920000-0000-7000-8000-000000000120',
+            product_name: 'Camiseta básica',
+            variant_label: 'Rojo · M',
+            quantity: '1',
+            unit_price: '10000.00',
+            price_rule: 'variant_price',
+            tax_rate: '0.19',
+            discount: '0.00',
+            gross: '10000.00',
+            base: '10000.00',
+            tax: '1900.00',
+            total: '11900.00',
+          },
+        ],
+      }),
+    );
+
+    const item = receipt.getByRole('listitem', { name: 'Camiseta básica (Rojo · M)' });
+    expect(plain(item.textContent)).toBe('Camiseta básica (Rojo · M)1 × $ 10.000$ 10.000');
   });
 
   it('muestra cada medio de pago, lo recibido y el cambio', () => {

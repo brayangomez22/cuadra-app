@@ -296,7 +296,7 @@ type ErrorDetail struct {
 	// Code Código estable, en snake_case, para que el cliente decida qué hacer.
 	Code string `json:"code"`
 
-	// Details Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `product_id` en
+	// Details Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `variant_id` en
 	// `insufficient_stock`). Nunca trae datos personales.
 	Details *map[string]string `json:"details,omitempty"`
 
@@ -373,9 +373,9 @@ type Sale struct {
 	Void   *SaleVoid          `json:"void,omitempty"`
 }
 
-// SaleLine Una línea vendida. `unit_price` es sin IVA, en el momento de la venta. `gross` = cantidad × precio redondeado
-// a 2 decimales; `base` = `gross` − `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales;
-// `total` = `base` + `tax`.
+// SaleLine Una línea vendida: una variante de un producto. `unit_price` es sin IVA, en el momento de la venta, y
+// `price_rule` dice qué regla lo dio. `gross` = cantidad × precio redondeado a 2 decimales; `base` = `gross` −
+// `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales; `total` = `base` + `tax`.
 type SaleLine struct {
 	// Base Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
@@ -390,7 +390,16 @@ type SaleLine struct {
 	// Gross Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
-	Gross     Money              `json:"gross"`
+	Gross Money `json:"gross"`
+
+	// PriceRule ID estable de la regla de precio que dio `unit_price`: `variant_price` (el precio de la variante) o el de
+	// una regla de un módulo (por ejemplo, `price_lists`).
+	//
+	//
+	// Example: variant_price
+	PriceRule string `json:"price_rule"`
+
+	// ProductId El producto de la variante.
 	ProductId openapi_types.UUID `json:"product_id"`
 
 	// ProductName Nombre del producto en el momento de la venta.
@@ -419,21 +428,35 @@ type SaleLine struct {
 	// UnitPrice Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
-	UnitPrice Money `json:"unit_price"`
+	UnitPrice Money              `json:"unit_price"`
+	VariantId openapi_types.UUID `json:"variant_id"`
+
+	// VariantLabel La variante en el momento de la venta: sus valores ordenados por nombre de eje (`Rojo · M`). No viene si
+	// la variante no tiene ejes, como la de un producto simple.
+	//
+	//
+	// Example: Rojo · M
+	VariantLabel *string `json:"variant_label,omitempty"`
 }
 
-// SaleLineInput Una línea del carrito. `discount` es un monto en pesos sobre la línea, antes de IVA (por defecto, 0).
+// SaleLineInput Una línea del carrito: una variante y la cantidad. Lleva `variant_id` o, por compatibilidad, `product_id`;
+// uno de los dos, no ambos (`variant_required`). `discount` es un monto en pesos sobre la línea, antes de IVA
+// (por defecto, 0). El precio lo pone el servidor.
 type SaleLineInput struct {
 	// Discount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
-	Discount  *Money             `json:"discount,omitempty"`
-	ProductId openapi_types.UUID `json:"product_id"`
+	Discount *Money `json:"discount,omitempty"`
+
+	// ProductId Se resuelve a la variante por defecto del producto. Use `variant_id`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 2.5
-	Quantity Quantity `json:"quantity"`
+	Quantity  Quantity            `json:"quantity"`
+	VariantId *openapi_types.UUID `json:"variant_id,omitempty"`
 }
 
 // SalePage defines model for SalePage.

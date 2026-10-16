@@ -298,7 +298,7 @@ func TestConfirmSaleCashErrors(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NoError(t, s.AddLine(domain.LineInput{
-			ProductID: newID(), ProductName: "Puntilla", Quantity: dec("1"), UnitPrice: dec("100"), TaxRate: dec("0"), Discount: dec("0"),
+			ProductID: newID(), VariantID: newID(), PriceRule: domain.VariantPriceRule, ProductName: "Puntilla", Quantity: dec("1"), UnitPrice: dec("100"), TaxRate: dec("0"), Discount: dec("0"),
 		}, domain.NoDiscountLimit))
 		cash, err := domain.NewPayment(domain.PaymentCash, dec("100"))
 		require.NoError(t, err)

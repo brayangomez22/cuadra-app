@@ -134,10 +134,12 @@ export function aSale(overrides: Partial<Sale> = {}): Sale {
     status: 'confirmed',
     lines: [
       {
+        variant_id: ids.pipe,
         product_id: ids.pipe,
         product_name: 'Tubo PVC presión 1/2 pulgada',
         quantity: '1',
         unit_price: '10000.00',
+        price_rule: 'variant_price',
         tax_rate: '0.19',
         discount: '0.00',
         gross: '10000.00',

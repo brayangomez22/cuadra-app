@@ -49,7 +49,7 @@ func TestConfirmSaleNumbering(t *testing.T) {
 	t.Run("si falta stock, el error nombra el producto del catálogo", func(t *testing.T) {
 		e := newEnv(t)
 		p := e.addProduct("Cemento gris 50kg", "30000", "0.19", true)
-		e.store.reserveErr = &domain.InsufficientStockError{ProductID: p}
+		e.store.reserveErr = &domain.InsufficientStockError{VariantID: p}
 
 		_, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
 			LocationID: newID(),
@@ -60,9 +60,30 @@ func TestConfirmSaleNumbering(t *testing.T) {
 		require.ErrorIs(t, err, domain.ErrInsufficientStock)
 		var typed *domain.InsufficientStockError
 		require.True(t, errors.As(err, &typed))
-		require.Equal(t, p, typed.ProductID)
+		require.Equal(t, p, typed.VariantID)
+		require.Equal(t, e.productOf(p), typed.ProductID)
 		require.Equal(t, "Cemento gris 50kg", typed.ProductName)
+		require.Empty(t, typed.VariantLabel)
 		require.Zero(t, e.storedSales())
+	})
+
+	t.Run("si falta stock de una variante, el error la nombra con su etiqueta", func(t *testing.T) {
+		e := newEnv(t)
+		small := e.addProduct("Camiseta básica", "25000", "0.19", true)
+		medium := e.addVariant(small, "Rojo · M", "25000", true)
+		e.store.reserveErr = &domain.InsufficientStockError{VariantID: medium}
+
+		_, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
+			LocationID: newID(),
+			Lines:      []app.LineRequest{lineReq(small, "1", "0"), lineReq(medium, "1", "0")},
+			Payments:   []app.PaymentRequest{cash("59500")},
+		})
+
+		var typed *domain.InsufficientStockError
+		require.True(t, errors.As(err, &typed))
+		require.Equal(t, medium, typed.VariantID)
+		require.Equal(t, e.productOf(small), typed.ProductID)
+		require.Equal(t, "Camiseta básica (Rojo · M)", typed.Description())
 	})
 }
 

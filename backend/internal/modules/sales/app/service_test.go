@@ -19,8 +19,8 @@ func requireDec(t *testing.T, want string, got decimal.Decimal) {
 	require.Truef(t, dec(want).Equal(got), "want %s, got %s", want, got)
 }
 
-func lineReq(productID uuid.UUID, qty, discount string) app.LineRequest {
-	return app.LineRequest{ProductID: productID, Quantity: dec(qty), Discount: dec(discount)}
+func lineReq(variantID uuid.UUID, qty, discount string) app.LineRequest {
+	return app.LineRequest{VariantID: variantID, Quantity: dec(qty), Discount: dec(discount)}
 }
 
 func cash(amount string) app.PaymentRequest {
@@ -69,10 +69,10 @@ func TestConfirmSale(t *testing.T) {
 		require.Equal(t, e.actor.UserID, r.userID)
 		require.Equal(t, location, r.locationID)
 		require.Equal(t, sale.ID(), r.saleID)
-		require.Len(t, r.lines, 2, "una línea de stock por producto")
-		require.Equal(t, cement, r.lines[0].ProductID)
+		require.Len(t, r.lines, 2, "una línea de stock por variante")
+		require.Equal(t, cement, r.lines[0].VariantID)
 		requireDec(t, "3", r.lines[0].Quantity)
-		require.Equal(t, cable, r.lines[1].ProductID)
+		require.Equal(t, cable, r.lines[1].VariantID)
 		requireDec(t, "2.5", r.lines[1].Quantity)
 
 		require.Equal(t, int64(1), e.counter(t, "cuadra.sales.confirmed"))
@@ -91,6 +91,7 @@ func TestConfirmSale(t *testing.T) {
 	t.Run("toma el nombre, el precio y el IVA del catálogo", func(t *testing.T) {
 		e := newEnv(t)
 		id := e.addProduct("Tubo PVC 1/2", "8403.36", "0.19", true)
+		e.addVariant(id, "3/4", "9000", true)
 
 		sale, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
 			LocationID: newID(),
@@ -100,14 +101,18 @@ func TestConfirmSale(t *testing.T) {
 		require.NoError(t, err)
 
 		l := sale.Lines()[0]
+		require.Equal(t, id, l.VariantID())
+		require.Equal(t, e.productOf(id), l.ProductID())
 		require.Equal(t, "Tubo PVC 1/2", l.ProductName())
+		require.Empty(t, l.VariantLabel())
+		require.Equal(t, domain.VariantPriceRule, l.PriceRule())
 		requireDec(t, "8403.36", l.UnitPrice())
 		requireDec(t, "0.19", l.TaxRate())
 		requireDec(t, "10000", sale.Totals().Total)
 		require.Len(t, e.store.catalogCalls, 1)
 	})
 
-	t.Run("pide al catálogo cada producto una sola vez", func(t *testing.T) {
+	t.Run("pide al catálogo cada variante una sola vez", func(t *testing.T) {
 		e := newEnv(t)
 		id := e.addProduct("Puntilla 2\"", "100", "0", true)
 
@@ -196,16 +201,21 @@ func TestConfirmSale(t *testing.T) {
 		require.Zero(t, e.storedSales())
 	})
 
-	t.Run("rechaza producto inactivo", func(t *testing.T) {
+	t.Run("rechaza un producto o una variante inactivos", func(t *testing.T) {
 		e := newEnv(t)
-		id := e.addProduct("Descontinuado", "1000", "0", false)
+		inactiveProduct := e.addProduct("Descontinuado", "1000", "0", false)
+		shirt := e.addProduct("Camiseta básica", "25000", "0.19", true)
+		inactiveVariant := e.addVariant(shirt, "Verde · XL", "25000", false)
 
-		_, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
-			LocationID: newID(),
-			Lines:      []app.LineRequest{lineReq(id, "1", "0")},
-			Payments:   []app.PaymentRequest{cash("1000")},
-		})
-		require.ErrorIs(t, err, domain.ErrProductInactive)
+		for _, id := range []uuid.UUID{inactiveProduct, inactiveVariant} {
+			_, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
+				LocationID: newID(),
+				Lines:      []app.LineRequest{lineReq(id, "1", "0")},
+				Payments:   []app.PaymentRequest{cash("30000")},
+			})
+			require.ErrorIs(t, err, domain.ErrProductInactive)
+		}
+		require.Zero(t, e.storedSales())
 	})
 
 	t.Run("rechaza pago insuficiente sin reservar stock", func(t *testing.T) {
@@ -268,5 +278,114 @@ func TestConfirmSale(t *testing.T) {
 			Payments:   []app.PaymentRequest{cash("23800")},
 		})
 		require.ErrorIs(t, err, boom)
+	})
+
+	t.Run("vender una variante reserva solo esa variante y guarda su etiqueta", func(t *testing.T) {
+		e := newEnv(t)
+		small := e.addProduct("Camiseta básica", "25000", "0.19", true)
+		medium := e.addVariant(small, "Rojo · M", "26000", true)
+
+		sale, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
+			LocationID: newID(),
+			Lines:      []app.LineRequest{lineReq(medium, "1", "0")},
+			Payments:   []app.PaymentRequest{cash("30940")},
+		})
+		require.NoError(t, err)
+
+		l := sale.Lines()[0]
+		require.Equal(t, medium, l.VariantID())
+		require.Equal(t, e.productOf(small), l.ProductID())
+		require.Equal(t, "Rojo · M", l.VariantLabel())
+		requireDec(t, "26000", l.UnitPrice())
+		require.Equal(t, []app.StockLine{{VariantID: medium, Quantity: dec("1")}}, e.store.reserved[0].lines)
+	})
+
+	t.Run("reserva por separado dos variantes del mismo producto y suma una variante repetida", func(t *testing.T) {
+		tests := []struct {
+			name, product, label string
+		}{
+			{"almacén de ropa: tallas de una camiseta", "Camiseta básica", "Rojo · M"},
+			{"ferretería: presentaciones de una pintura", "Pintura blanca", "Cuarto"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				e := newEnv(t)
+				first := e.addProduct(tt.product, "20000", "0", true)
+				second := e.addVariant(first, tt.label, "8000", true)
+
+				_, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
+					LocationID: newID(),
+					Lines: []app.LineRequest{
+						lineReq(first, "1", "0"), lineReq(second, "2.5", "0"), lineReq(first, "1", "0"),
+					},
+					Payments: []app.PaymentRequest{cash("60000")},
+				})
+				require.NoError(t, err)
+
+				lines := e.store.reserved[0].lines
+				require.Len(t, lines, 2)
+				require.Equal(t, first, lines[0].VariantID)
+				requireDec(t, "2", lines[0].Quantity)
+				require.Equal(t, second, lines[1].VariantID)
+				requireDec(t, "2.5", lines[1].Quantity)
+			})
+		}
+	})
+
+	t.Run("product_id (deprecated) vende la variante por defecto del producto", func(t *testing.T) {
+		e := newEnv(t)
+		variant := e.addProduct("Cemento gris 50kg", "30000", "0.19", true)
+		product := e.productOf(variant)
+
+		sale, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
+			LocationID: newID(),
+			Lines:      []app.LineRequest{{ProductID: product, Quantity: dec("1"), Discount: dec("0")}},
+			Payments:   []app.PaymentRequest{cash("35700")},
+		})
+		require.NoError(t, err)
+		require.Equal(t, variant, sale.Lines()[0].VariantID())
+		require.Equal(t, product, sale.Lines()[0].ProductID())
+		require.Equal(t, [][]uuid.UUID{{product}}, e.store.defaultCalls)
+	})
+
+	t.Run("product_id (deprecated) de un producto inexistente es product_not_found", func(t *testing.T) {
+		e := newEnv(t)
+		_, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
+			LocationID: newID(),
+			Lines:      []app.LineRequest{{ProductID: newID(), Quantity: dec("1"), Discount: dec("0")}},
+			Payments:   []app.PaymentRequest{cash("1000")},
+		})
+		require.ErrorIs(t, err, domain.ErrProductNotFound)
+	})
+
+	t.Run("una línea lleva variant_id o product_id, no los dos ni ninguno", func(t *testing.T) {
+		e := newEnv(t)
+		variant := e.addProduct("Cemento gris 50kg", "30000", "0.19", true)
+		for _, l := range []app.LineRequest{
+			{Quantity: dec("1"), Discount: dec("0")},
+			{VariantID: variant, ProductID: e.productOf(variant), Quantity: dec("1"), Discount: dec("0")},
+		} {
+			_, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
+				LocationID: newID(), Lines: []app.LineRequest{l}, Payments: []app.PaymentRequest{cash("35700")},
+			})
+			require.ErrorIs(t, err, domain.ErrVariantRequired)
+		}
+		require.Empty(t, e.store.catalogCalls)
+	})
+
+	t.Run("resuelve los precios antes de abrir la transacción de la venta", func(t *testing.T) {
+		e := newEnv(t)
+		id := e.addProduct("Cemento gris 50kg", "30000", "0.19", true)
+
+		_, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
+			LocationID: newID(),
+			Lines:      []app.LineRequest{lineReq(id, "1", "0"), lineReq(id, "2", "0")},
+			Payments:   []app.PaymentRequest{cash("107100")},
+		})
+		require.NoError(t, err)
+		require.Equal(t, []string{"resolve", "resolve", "save"}, e.store.events)
+		_, attrs := e.span(t, "sales.ResolvePrices")
+		require.Equal(t, int64(2), attrs["sale.lines"].AsInt64())
+		require.Equal(t, int64(2), e.counter(t, "cuadra.sales.price_rule_applied"))
 	})
 }

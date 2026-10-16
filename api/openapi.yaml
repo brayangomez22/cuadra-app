@@ -1101,7 +1101,8 @@ paths:
                 $ref: "#/components/schemas/Error"
         "409":
           description: |
-            No hay stock suficiente de un producto (`insufficient_stock`); `details.product_id` dice cuál. El usuario
+            No hay stock suficiente de una variante (`insufficient_stock`); `details.variant_id` dice cuál y
+            `details.product_id` (deprecated), su producto. El usuario
             no tiene caja abierta y la empresa la exige (`cash_session_required`), o la caja se cerró
             (`cash_session_closed`).
           content:
@@ -1110,7 +1111,8 @@ paths:
                 $ref: "#/components/schemas/Error"
         "422":
           description: |
-            Algún dato no cumple las reglas (`product_not_found`, `product_inactive`, `location_not_found`,
+            Algún dato no cumple las reglas (`variant_required`; `product_not_found` y `product_inactive`, también
+            para una variante; `location_not_found`,
             `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
             `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`).
           content:
@@ -1591,7 +1593,7 @@ components:
         details:
           type: object
           description: |
-            Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `product_id` en
+            Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `variant_id` en
             `insufficient_stock`). Nunca trae datos personales.
           additionalProperties:
             type: string
@@ -2221,13 +2223,21 @@ components:
             $ref: "#/components/schemas/PaymentInput"
     SaleLineInput:
       type: object
-      description: Una línea del carrito. `discount` es un monto en pesos sobre la línea, antes de IVA (por defecto, 0).
-      required: [product_id, quantity]
+      description: |
+        Una línea del carrito: una variante y la cantidad. Lleva `variant_id` o, por compatibilidad, `product_id`;
+        uno de los dos, no ambos (`variant_required`). `discount` es un monto en pesos sobre la línea, antes de IVA
+        (por defecto, 0). El precio lo pone el servidor.
+      required: [quantity]
       additionalProperties: false
       properties:
+        variant_id:
+          type: string
+          format: uuid
         product_id:
           type: string
           format: uuid
+          deprecated: true
+          description: Se resuelve a la variante por defecto del producto. Use `variant_id`.
         quantity:
           $ref: "#/components/schemas/Quantity"
         discount:
@@ -2275,21 +2285,38 @@ components:
     SaleLine:
       type: object
       description: |
-        Una línea vendida. `unit_price` es sin IVA, en el momento de la venta. `gross` = cantidad × precio redondeado
-        a 2 decimales; `base` = `gross` − `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales;
-        `total` = `base` + `tax`.
-      required: [product_id, product_name, quantity, unit_price, tax_rate, discount, gross, base, tax, total]
+        Una línea vendida: una variante de un producto. `unit_price` es sin IVA, en el momento de la venta, y
+        `price_rule` dice qué regla lo dio. `gross` = cantidad × precio redondeado a 2 decimales; `base` = `gross` −
+        `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales; `total` = `base` + `tax`.
+      required: [variant_id, product_id, product_name, quantity, unit_price, price_rule, tax_rate, discount, gross, base, tax, total]
       properties:
+        variant_id:
+          type: string
+          format: uuid
         product_id:
           type: string
           format: uuid
+          description: El producto de la variante.
         product_name:
           type: string
           description: Nombre del producto en el momento de la venta.
+        variant_label:
+          type: string
+          description: |
+            La variante en el momento de la venta: sus valores ordenados por nombre de eje (`Rojo · M`). No viene si
+            la variante no tiene ejes, como la de un producto simple.
+          example: Rojo · M
         quantity:
           $ref: "#/components/schemas/Quantity"
         unit_price:
           $ref: "#/components/schemas/Money"
+        price_rule:
+          type: string
+          description: |
+            ID estable de la regla de precio que dio `unit_price`: `variant_price` (el precio de la variante) o el de
+            una regla de un módulo (por ejemplo, `price_lists`).
+          pattern: '^[a-z][a-z0-9_]{0,63}$'
+          example: variant_price
         tax_rate:
           $ref: "#/components/schemas/TaxRate"
         discount:

@@ -3,18 +3,24 @@ package app
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/domain"
 )
 
-// LineRequest is a line of the cart: a product, how much and the discount
-// (an amount of COP before IVA). The price and the IVA come from the
-// catalog, never from the request.
+// LineRequest is a line of the cart: a variant, how much and the discount
+// (an amount of COP before IVA). The price comes from the PriceResolver and
+// the IVA from the catalog, never from the request. A line sets VariantID
+// or, deprecated, ProductID (which sells the product's default variant),
+// not both.
 type LineRequest struct {
+	VariantID uuid.UUID
 	ProductID uuid.UUID
 	Quantity  decimal.Decimal
 	Discount  decimal.Decimal
@@ -36,10 +42,12 @@ type ConfirmSaleInput struct {
 	Payments   []PaymentRequest
 }
 
-// ConfirmSale builds the sale from the cart with the catalog's prices,
-// checks the discounts against the actor's limit and the payments against
-// the total, and stores it together with its stock exits and its
-// consecutive number. The sale is charged in the actor's open cash session,
+// ConfirmSale builds the sale from the cart with the prices of the
+// PriceResolver, checks the discounts against the actor's limit and the
+// payments against the total, and stores it together with its stock exits
+// (by variant) and its consecutive number. Prices are resolved before the
+// transaction that draws the number, so a slow rule does not hold the
+// location's sequence. The sale is charged in the actor's open cash session,
 // which must be at the sale's location; without one, the sale is rejected
 // unless the tenant lets users sell without it. If any step fails, nothing
 // is stored.
@@ -50,6 +58,11 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	if len(in.Lines) == 0 {
 		return nil, domain.ErrSaleWithoutLines
 	}
+	for _, l := range in.Lines {
+		if (l.VariantID == uuid.Nil) == (l.ProductID == uuid.Nil) {
+			return nil, domain.ErrVariantRequired
+		}
+	}
 	policy, err := s.Policies.Get(ctx, a.TenantID)
 	if err != nil {
 		return nil, err
@@ -58,12 +71,16 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	if err != nil {
 		return nil, err
 	}
-	products, err := s.products(ctx, a.TenantID, in.Lines)
+	lineVariants, variants, err := s.variants(ctx, a.TenantID, in.Lines)
 	if err != nil {
 		return nil, err
 	}
 	limit := discountLimit(a, policy)
 	payments, err := parsePayments(in.Payments)
+	if err != nil {
+		return nil, err
+	}
+	prices, err := s.resolvePrices(ctx, a, in, lineVariants, variants)
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +103,12 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	if err != nil {
 		return nil, err
 	}
-	for _, l := range in.Lines {
-		p := products[l.ProductID]
+	for i, l := range in.Lines {
+		v := variants[lineVariants[i]]
 		err := sale.AddLine(domain.LineInput{
-			ProductID: p.ID, ProductName: p.Name, Quantity: l.Quantity,
-			UnitPrice: p.Price, TaxRate: p.TaxRate, Discount: l.Discount,
+			VariantID: v.ID, ProductID: v.ProductID, ProductName: v.ProductName, VariantLabel: v.Label,
+			Quantity: l.Quantity, UnitPrice: prices[i].UnitPrice, PriceRule: prices[i].Rule,
+			TaxRate: v.TaxRate, Discount: l.Discount,
 		}, limit)
 		if errors.Is(err, domain.ErrDiscountExceedsLimit) {
 			s.discountRejected.Add(ctx, 1)
@@ -115,7 +133,9 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	})
 	var stockErr *domain.InsufficientStockError
 	if errors.As(err, &stockErr) {
-		stockErr.ProductName = products[stockErr.ProductID].Name
+		v := variants[stockErr.VariantID]
+		stockErr.ProductID, stockErr.ProductName, stockErr.VariantLabel = v.ProductID, v.ProductName, v.Label
+		span.SetAttributes(attribute.String("variant.id", stockErr.VariantID.String()))
 	}
 	if err != nil {
 		return nil, err
@@ -123,39 +143,85 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	span.SetAttributes(attribute.Int64("sale.number", sale.Number()))
 	s.confirmed.Add(ctx, 1)
 	s.amount.Record(ctx, sale.Totals().Total.InexactFloat64())
+	for _, p := range prices {
+		s.priceRules.Add(ctx, 1, metric.WithAttributes(attribute.String("price.rule", string(p.Rule))))
+	}
 	return sale, nil
 }
 
-// products returns the cart's products by id, asking the catalog once for
-// each. A product missing from the tenant's catalog is ErrProductNotFound;
-// an inactive one, ErrProductInactive.
-func (s *Service) products(ctx context.Context, tenantID uuid.UUID, lines []LineRequest) (map[uuid.UUID]ProductInfo, error) {
-	var ids []uuid.UUID
-	seen := map[uuid.UUID]bool{}
+// variants returns the variant of each line of the cart and the cart's
+// variants by id, asking the catalog once for each. The lines that name the
+// deprecated product_id sell its default variant. A variant (or product)
+// missing from the tenant's catalog is ErrProductNotFound; one that cannot
+// be sold, because it or its product is inactive, ErrProductInactive.
+func (s *Service) variants(ctx context.Context, tenantID uuid.UUID, lines []LineRequest) ([]uuid.UUID, map[uuid.UUID]VariantInfo, error) {
+	var productIDs []uuid.UUID
 	for _, l := range lines {
-		if !seen[l.ProductID] {
-			seen[l.ProductID] = true
-			ids = append(ids, l.ProductID)
+		if l.ProductID != uuid.Nil && !slices.Contains(productIDs, l.ProductID) {
+			productIDs = append(productIDs, l.ProductID)
 		}
 	}
-	found, err := s.Products.Products(ctx, tenantID, ids)
-	if err != nil {
-		return nil, err
+	var defaults map[uuid.UUID]uuid.UUID
+	if len(productIDs) > 0 {
+		var err error
+		if defaults, err = s.Catalog.DefaultVariants(ctx, tenantID, productIDs); err != nil {
+			return nil, nil, err
+		}
 	}
-	byID := make(map[uuid.UUID]ProductInfo, len(found))
-	for _, p := range found {
-		byID[p.ID] = p
+
+	lineVariants := make([]uuid.UUID, len(lines))
+	var ids []uuid.UUID
+	for i, l := range lines {
+		id := l.VariantID
+		if l.ProductID != uuid.Nil {
+			var ok bool
+			if id, ok = defaults[l.ProductID]; !ok {
+				return nil, nil, domain.ErrProductNotFound
+			}
+		}
+		lineVariants[i] = id
+		if !slices.Contains(ids, id) {
+			ids = append(ids, id)
+		}
+	}
+	found, err := s.Catalog.Variants(ctx, tenantID, ids)
+	if err != nil {
+		return nil, nil, err
+	}
+	byID := make(map[uuid.UUID]VariantInfo, len(found))
+	for _, v := range found {
+		byID[v.ID] = v
 	}
 	for _, id := range ids {
-		p, ok := byID[id]
+		v, ok := byID[id]
 		if !ok {
-			return nil, domain.ErrProductNotFound
+			return nil, nil, domain.ErrProductNotFound
 		}
-		if !p.Active {
-			return nil, domain.ErrProductInactive
+		if !v.Active {
+			return nil, nil, domain.ErrProductInactive
 		}
 	}
-	return byID, nil
+	return lineVariants, byID, nil
+}
+
+// resolvePrices asks the PriceResolver the unit price of each line of the
+// cart, in order.
+func (s *Service) resolvePrices(ctx context.Context, a Actor, in ConfirmSaleInput, lineVariants []uuid.UUID, variants map[uuid.UUID]VariantInfo) (_ []ResolvedPrice, err error) {
+	ctx, span := s.tracer.Start(ctx, "sales.ResolvePrices", trace.WithAttributes(attribute.Int("sale.lines", len(in.Lines))))
+	defer func() { endSpan(span, err) }()
+
+	prices := make([]ResolvedPrice, len(in.Lines))
+	for i, l := range in.Lines {
+		v := variants[lineVariants[i]]
+		prices[i], err = s.Prices.Resolve(ctx, PriceQuery{
+			TenantID: a.TenantID, LocationID: in.LocationID, CustomerID: in.CustomerID,
+			VariantID: v.ID, ProductID: v.ProductID, BasePrice: v.Price, Quantity: l.Quantity,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return prices, nil
 }
 
 // saleCashSession returns the actor's open cash session, which must be at
@@ -194,18 +260,18 @@ func parsePayments(in []PaymentRequest) ([]domain.Payment, error) {
 	return payments, nil
 }
 
-// stockLines adds up the sale's quantities by product, in the order each
-// product first appears.
+// stockLines adds up the sale's quantities by variant, in the order each
+// variant first appears.
 func stockLines(sale *domain.Sale) []StockLine {
 	var out []StockLine
 	index := map[uuid.UUID]int{}
 	for _, l := range sale.Lines() {
-		if i, ok := index[l.ProductID()]; ok {
+		if i, ok := index[l.VariantID()]; ok {
 			out[i].Quantity = out[i].Quantity.Add(l.Quantity())
 			continue
 		}
-		index[l.ProductID()] = len(out)
-		out = append(out, StockLine{ProductID: l.ProductID(), Quantity: l.Quantity()})
+		index[l.VariantID()] = len(out)
+		out = append(out, StockLine{VariantID: l.VariantID(), Quantity: l.Quantity()})
 	}
 	return out
 }

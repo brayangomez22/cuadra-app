@@ -10,14 +10,17 @@ import (
 // LineSnapshot holds a stored line's fields. Gross and Tax are the amounts
 // computed when it was sold.
 type LineSnapshot struct {
-	ProductID   uuid.UUID
-	ProductName string
-	Quantity    decimal.Decimal
-	UnitPrice   decimal.Decimal
-	TaxRate     decimal.Decimal
-	Discount    decimal.Decimal
-	Gross       decimal.Decimal
-	Tax         decimal.Decimal
+	ProductID    uuid.UUID
+	VariantID    uuid.UUID
+	VariantLabel string
+	PriceRule    PriceRuleID
+	ProductName  string
+	Quantity     decimal.Decimal
+	UnitPrice    decimal.Decimal
+	TaxRate      decimal.Decimal
+	Discount     decimal.Decimal
+	Gross        decimal.Decimal
+	Tax          decimal.Decimal
 }
 
 // PaymentSnapshot holds a stored payment's fields.
@@ -68,8 +71,9 @@ func (s *Sale) Snapshot() SaleSnapshot {
 	}
 	for _, l := range s.lines {
 		snap.Lines = append(snap.Lines, LineSnapshot{
-			ProductID: l.productID, ProductName: l.productName, Quantity: l.quantity,
-			UnitPrice: l.unitPrice, TaxRate: l.taxRate, Discount: l.discount, Gross: l.gross, Tax: l.tax,
+			VariantID: l.variantID, ProductID: l.productID, ProductName: l.productName, VariantLabel: l.variantLabel,
+			Quantity: l.quantity, UnitPrice: l.unitPrice, PriceRule: l.priceRule, TaxRate: l.taxRate,
+			Discount: l.discount, Gross: l.gross, Tax: l.tax,
 		})
 	}
 	for _, p := range s.payments {
@@ -104,13 +108,15 @@ func RehydrateSale(snap SaleSnapshot) (*Sale, error) {
 	}
 	for _, ls := range snap.Lines {
 		l, err := newLine(LineInput{
-			ProductID: ls.ProductID, ProductName: ls.ProductName, Quantity: ls.Quantity,
-			UnitPrice: ls.UnitPrice, TaxRate: ls.TaxRate, Discount: ls.Discount,
+			VariantID: ls.VariantID, ProductID: ls.ProductID, ProductName: ls.ProductName, VariantLabel: ls.VariantLabel,
+			Quantity: ls.Quantity, UnitPrice: ls.UnitPrice, PriceRule: ls.PriceRule, TaxRate: ls.TaxRate, Discount: ls.Discount,
 		}, NoDiscountLimit)
 		if err != nil {
 			return nil, err
 		}
-		if !l.gross.Equal(ls.Gross) || !l.tax.Equal(ls.Tax) {
+		// A stored unit price already has four decimals at most: rounding it
+		// again must not change it.
+		if !l.unitPrice.Equal(ls.UnitPrice) || !l.gross.Equal(ls.Gross) || !l.tax.Equal(ls.Tax) {
 			return nil, ErrInconsistentSale
 		}
 		s.lines = append(s.lines, l)

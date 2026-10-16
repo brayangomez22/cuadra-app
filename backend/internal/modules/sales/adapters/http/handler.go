@@ -100,7 +100,9 @@ func (h *Handler) ConfirmSale(ctx context.Context, req salesapi.ConfirmSaleReque
 				return nil, err
 			}
 		}
-		in.Lines = append(in.Lines, app.LineRequest{ProductID: l.ProductId, Quantity: qty, Discount: discount})
+		in.Lines = append(in.Lines, app.LineRequest{
+			VariantID: valueOf(l.VariantId), ProductID: valueOf(l.ProductId), Quantity: qty, Discount: discount,
+		})
 	}
 	for _, p := range req.Body.Payments {
 		amount, err := parseDecimal(p.Amount, domain.ErrInvalidPaymentAmount)
@@ -191,11 +193,16 @@ func saleBody(s *domain.Sale) salesapi.Sale {
 		body.ConfirmedAt = *at
 	}
 	for _, l := range s.Lines() {
-		body.Lines = append(body.Lines, salesapi.SaleLine{
-			ProductId: l.ProductID(), ProductName: l.ProductName(), Quantity: formatDecimal(l.Quantity()),
-			UnitPrice: formatMoney(l.UnitPrice()), TaxRate: formatDecimal(l.TaxRate()), Discount: formatMoney(l.Discount()),
-			Gross: formatMoney(l.Gross()), Base: formatMoney(l.Base()), Tax: formatMoney(l.Tax()), Total: formatMoney(l.Total()),
-		})
+		line := salesapi.SaleLine{
+			VariantId: l.VariantID(), ProductId: l.ProductID(), ProductName: l.ProductName(), Quantity: formatDecimal(l.Quantity()),
+			UnitPrice: formatMoney(l.UnitPrice()), PriceRule: string(l.PriceRule()), TaxRate: formatDecimal(l.TaxRate()),
+			Discount: formatMoney(l.Discount()), Gross: formatMoney(l.Gross()), Base: formatMoney(l.Base()),
+			Tax: formatMoney(l.Tax()), Total: formatMoney(l.Total()),
+		}
+		if label := l.VariantLabel(); label != "" {
+			line.VariantLabel = &label
+		}
+		body.Lines = append(body.Lines, line)
 	}
 	for _, p := range s.Payments() {
 		body.Payments = append(body.Payments, salesapi.SalePayment{Method: salesapi.PaymentMethod(p.Method()), Amount: formatMoney(p.Amount())})
@@ -209,4 +216,12 @@ func saleBody(s *domain.Sale) salesapi.Sale {
 		body.Void = &salesapi.SaleVoid{UserId: v.UserID, Reason: v.Reason, VoidedAt: v.At}
 	}
 	return body
+}
+
+// valueOf is an optional id of the request, or uuid.Nil if absent.
+func valueOf(id *uuid.UUID) uuid.UUID {
+	if id == nil {
+		return uuid.Nil
+	}
+	return *id
 }

@@ -246,17 +246,30 @@ type Sale struct {
 }
 
 type SaleLine struct {
-	TenantID    uuid.UUID
-	SaleID      uuid.UUID
-	Position    int32
-	ProductID   uuid.UUID
-	ProductName string
-	Quantity    decimal.Decimal
-	UnitPrice   decimal.Decimal
-	TaxRate     decimal.Decimal
-	Discount    decimal.Decimal
-	Gross       decimal.Decimal
-	Tax         decimal.Decimal
+	TenantID     uuid.UUID
+	SaleID       uuid.UUID
+	Position     int32
+	ProductID    uuid.UUID
+	ProductName  string
+	Quantity     decimal.Decimal
+	UnitPrice    decimal.Decimal
+	TaxRate      decimal.Decimal
+	Discount     decimal.Decimal
+	Gross        decimal.Decimal
+	Tax          decimal.Decimal
+	VariantID    uuid.UUID
+	VariantLabel *string
+	PriceRule    string
+}
+
+type SaleLinesBefore struct {
+	TenantID  uuid.UUID
+	Lines     int64
+	Quantity  int64
+	UnitPrice int64
+	Gross     int64
+	Discount  int64
+	Tax       int64
 }
 
 type SalePayment struct {

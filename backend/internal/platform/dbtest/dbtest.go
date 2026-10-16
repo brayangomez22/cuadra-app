@@ -132,8 +132,15 @@ func (s *Server) TryMigrateTo(t testing.TB, version int64) error {
 // MigrateDownTo rolls the migrations back down to version as the owner.
 func (s *Server) MigrateDownTo(t testing.TB, version int64) {
 	t.Helper()
+	require.NoError(t, s.TryMigrateDownTo(t, version))
+}
+
+// TryMigrateDownTo is MigrateDownTo returning the error, for tests that
+// expect a Down to fail.
+func (s *Server) TryMigrateDownTo(t testing.TB, version int64) error {
+	t.Helper()
 	_, err := s.provider(t).DownTo(t.Context(), version)
-	require.NoError(t, err)
+	return err
 }
 
 func (s *Server) provider(t testing.TB) *goose.Provider {

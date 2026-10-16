@@ -69,7 +69,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 **Tests primero:** **el stock por producto antes de la migración es igual a la suma por variante después**; el test de concurrencia (dos salidas simultáneas por el total) sigue pasando; dos `EnsureStockLevel` concurrentes con `lot_id` NULL no crean dos niveles; el kardex de una variante reconstruye su stock; aislamiento multi-tenant.
 **Revisa tú:** el orden de las migraciones y los bloqueos `FOR UPDATE` por variante.
 
-### [ ] T24c · Ventas por variante y `PriceResolver`
+### [x] T24c · Ventas por variante y `PriceResolver`
 **Depende de:** T24b.
 **Alcance:** `sale_lines` agrega `variant_id` (backfill desde `product_id`), **conserva `product_id`** (para los reportes por producto de T42) y agrega `variant_label`: el texto de la variante congelado al momento de la venta ("Talla M · Rojo"; NULL para la variante por defecto). Puerto `PriceResolver` en `sales/app`: cadena de reglas ordenadas, con la regla base `variant_price`; cada línea guarda `unit_price` y `price_rule` (texto con el ID estable de la regla, no un enum en la base). El resolver corre **antes** de la transacción que toma el consecutivo y devuelve el precio sin IVA y sin redondear (el redondeo sigue en la línea). Las cantidades se agregan por variante para el stock. Confirmar y anular ventas, la numeración consecutiva y la caja se mantienen igual (verificar que T23 no cambia). La tirilla muestra el nombre del producto más `variant_label`. Contrato: `SaleLineInput` acepta `variant_id` y `product_id` queda `deprecated`; `SaleLine` agrega `variant_id`, `variant_label` y `price_rule`; `insufficient_stock` agrega `details.variant_id` y `details.product_id` queda `deprecated`.
 **Pendientes que entran a esta tarea:** P30 (`docs/plan/pendientes.md`).
@@ -109,7 +109,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 ### [ ] T24j · Frontend: configuración y registro, y fin de lo `deprecated`
 **Depende de:** T24g, T24i.
 **Alcance:** registro con selección de tipo de negocio. Configuración: unidades, atributos y módulos. Menús y campos según los `modules` de `/me`. **Elimina todos los campos `deprecated` del bloque** en `api/openapi.yaml` y el código que los usa, en el backend y en el frontend.
-**Pendientes que entran a esta tarea:** P29 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P29 y P32 (`docs/plan/pendientes.md`).
 **Tests primero:** un menú de un módulo inactivo no aparece; el registro con una plantilla siembra sus unidades y sus módulos (de punta a punta contra la API); `api/openapi.yaml` no tiene campos `deprecated` del bloque.
 **Después:** `/impeccable critique` de la configuración y del registro.
 

@@ -114,23 +114,28 @@ func (q *Queries) InsertSale(ctx context.Context, arg InsertSaleParams) error {
 }
 
 const insertSaleLine = `-- name: InsertSaleLine :exec
-INSERT INTO sale_lines (tenant_id, sale_id, position, product_id, product_name, quantity, unit_price,
-                        tax_rate, discount, gross, tax)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO sale_lines (tenant_id, sale_id, position, variant_id, product_id, product_name, variant_label,
+                        quantity, unit_price, price_rule, tax_rate, discount, gross, tax)
+VALUES ($1, $2, $3, $4, $5,
+        $6, $7, $8, $9,
+        $10, $11, $12, $13, $14)
 `
 
 type InsertSaleLineParams struct {
-	TenantID    uuid.UUID
-	SaleID      uuid.UUID
-	Position    int32
-	ProductID   uuid.UUID
-	ProductName string
-	Quantity    decimal.Decimal
-	UnitPrice   decimal.Decimal
-	TaxRate     decimal.Decimal
-	Discount    decimal.Decimal
-	Gross       decimal.Decimal
-	Tax         decimal.Decimal
+	TenantID     uuid.UUID
+	SaleID       uuid.UUID
+	Position     int32
+	VariantID    uuid.UUID
+	ProductID    uuid.UUID
+	ProductName  string
+	VariantLabel *string
+	Quantity     decimal.Decimal
+	UnitPrice    decimal.Decimal
+	PriceRule    string
+	TaxRate      decimal.Decimal
+	Discount     decimal.Decimal
+	Gross        decimal.Decimal
+	Tax          decimal.Decimal
 }
 
 func (q *Queries) InsertSaleLine(ctx context.Context, arg InsertSaleLineParams) error {
@@ -138,10 +143,13 @@ func (q *Queries) InsertSaleLine(ctx context.Context, arg InsertSaleLineParams) 
 		arg.TenantID,
 		arg.SaleID,
 		arg.Position,
+		arg.VariantID,
 		arg.ProductID,
 		arg.ProductName,
+		arg.VariantLabel,
 		arg.Quantity,
 		arg.UnitPrice,
+		arg.PriceRule,
 		arg.TaxRate,
 		arg.Discount,
 		arg.Gross,
@@ -175,7 +183,7 @@ func (q *Queries) InsertSalePayment(ctx context.Context, arg InsertSalePaymentPa
 }
 
 const listSaleLines = `-- name: ListSaleLines :many
-SELECT tenant_id, sale_id, position, product_id, product_name, quantity, unit_price, tax_rate, discount, gross, tax FROM sale_lines WHERE sale_id = $1 ORDER BY position
+SELECT tenant_id, sale_id, position, product_id, product_name, quantity, unit_price, tax_rate, discount, gross, tax, variant_id, variant_label, price_rule FROM sale_lines WHERE sale_id = $1 ORDER BY position
 `
 
 func (q *Queries) ListSaleLines(ctx context.Context, saleID uuid.UUID) ([]SaleLine, error) {
@@ -199,6 +207,9 @@ func (q *Queries) ListSaleLines(ctx context.Context, saleID uuid.UUID) ([]SaleLi
 			&i.Discount,
 			&i.Gross,
 			&i.Tax,
+			&i.VariantID,
+			&i.VariantLabel,
+			&i.PriceRule,
 		); err != nil {
 			return nil, err
 		}
