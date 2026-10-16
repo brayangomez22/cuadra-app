@@ -26,15 +26,17 @@ Un 4xx no gasta presupuesto: es una respuesta correcta a una request inválida o
 | | |
 |---|---|
 | **Objetivo** | 99,5% de las requests del POS responden en **menos de 300 ms**. |
-| **Requests del POS** | `GET /api/v1/products` (búsqueda y lectura de código de barras) y `POST /api/v1/sales` (cobrar). Son las que el cajero espera con el cliente al frente. |
+| **Requests del POS** | Las marcadas con el atributo `cuadra.operation`: `pos.search` (`GET /api/v1/products` con `q`: búsqueda por texto o lectura de código de barras) y `pos.confirm_sale` (`POST /api/v1/sales`, cobrar). Son las que el cajero espera con el cliente al frente. Los listados sin `q` (catálogo, existencias) no cuentan. |
 | **SLI** | `requests del POS en < 300 ms / requests del POS`, con el bucket `le="0.3"` del histograma. |
 | **Por qué 300 ms** | Por debajo de ese tiempo, escanear y cobrar se siente inmediato; por encima, el cajero nota la espera en cada producto. |
 
 ```promql
-sum(rate(http_server_request_duration_seconds_bucket{service_name="cuadra-api", le="0.3", http_route=~"/api/v1/products|/api/v1/sales", http_request_method=~"GET|POST"}[30d]))
+sum(rate(http_server_request_duration_seconds_bucket{service_name="cuadra-api", le="0.3", cuadra_operation=~"pos.search|pos.confirm_sale"}[30d]))
 /
-sum(rate(http_server_request_duration_seconds_count{service_name="cuadra-api", http_route=~"/api/v1/products|/api/v1/sales", http_request_method=~"GET|POST"}[30d]))
+sum(rate(http_server_request_duration_seconds_count{service_name="cuadra-api", cuadra_operation=~"pos.search|pos.confirm_sale"}[30d]))
 ```
+
+El SLI mide la **operación**, no la ruta: si la búsqueda del POS cambia de ruta, sigue midiéndose mientras el handler la marque. Los handlers la marcan con `httpx.SetOperation`, que agrega `cuadra.operation` al span del servidor y, con el labeler de otelhttp, a `http.server.request.duration` (en Prometheus, la etiqueta `cuadra_operation`). Sus valores son pocos y fijos, así que no suben la cardinalidad.
 
 Un SLI de "requests bajo un umbral" solo se puede calcular en un límite de bucket. Los límites por defecto de otelhttp saltan de 250 a 500 ms, así que `telemetry.Setup` agrega 0,3 s con una View del SDK.
 

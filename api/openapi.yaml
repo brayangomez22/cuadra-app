@@ -257,9 +257,11 @@ paths:
       operationId: listProducts
       summary: Buscar productos
       description: |
-        Lista los productos de la empresa. Con `q` busca por nombre (cada palabra debe aparecer, sin
-        importar tildes ni mayúsculas) o por SKU o código de barras exactos, que salen primero.
-        Sin `q`, ordena por nombre.
+        Lista los productos de la empresa, cada uno con sus variantes. Con `q` busca por nombre (cada palabra
+        debe aparecer, sin importar tildes ni mayúsculas) o por el SKU o el código de barras exactos de
+        cualquiera de sus variantes, que salen primero. Sin `q`, ordena por nombre.
+
+        Es la búsqueda del POS: con `q`, la request se mide con `cuadra.operation=pos.search` (SLO de latencia).
       x-permission: catalog:read
       parameters:
         - name: q
@@ -478,6 +480,106 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/products/{productId}/variants:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    post:
+      tags: [catalog]
+      operationId: addProductVariant
+      summary: Agregar una variante a un producto
+      description: |
+        Agrega una variante activa. Debe usar los mismos ejes que las demás variantes del producto, con valores
+        distintos. A un producto simple primero se le asignan ejes a su variante por defecto (editar la variante).
+      x-permission: catalog:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductVariantInput"
+      responses:
+        "201":
+          description: El producto con la variante nueva.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: El SKU o el código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Algún dato no cumple las reglas (`invalid_sku`, `invalid_barcode`, `invalid_price`, `invalid_cost`,
+            `invalid_axis_values`), los ejes no son los de las demás variantes (`variant_axes_mismatch`) u otra
+            variante ya tiene esos valores (`duplicate_variant`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/products/{productId}/variants/{variantId}:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+      - $ref: "#/components/parameters/VariantId"
+    put:
+      tags: [catalog]
+      operationId: updateProductVariant
+      summary: Editar una variante
+      description: |
+        Reemplaza los datos editables de la variante y su estado. El precio de una variante de un producto
+        inactivo no se puede cambiar. Una variante inactiva no se vende aunque el producto esté activo.
+      x-permission: catalog:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductVariantUpdate"
+      responses:
+        "200":
+          description: El producto con la variante actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: El SKU o el código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Algún dato no cumple las reglas (los mismos códigos de agregar una variante) o se cambió el precio
+            de una variante de un producto inactivo (`product_inactive`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1319,6 +1421,13 @@ components:
       schema:
         type: string
         format: uuid
+    VariantId:
+      name: variantId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     CategoryId:
       name: categoryId
       in: path
@@ -1576,12 +1685,15 @@ components:
       enum: [und, m, kg, l, caja, rollo, bulto, galon]
     ProductInput:
       type: object
+      description: |
+        Los datos del producto y los de su variante por defecto (`sku`, `barcode`, `cost` y `price`). Las demás
+        variantes se editan con `/products/{productId}/variants`.
       required: [sku, name, base_unit, cost, price, tax_rate]
       additionalProperties: false
       properties:
         sku:
           type: string
-          description: Código interno, único en la empresa. Se guarda en mayúsculas.
+          description: Código interno de la variante por defecto, único en la empresa. Se guarda en mayúsculas.
           minLength: 1
           maxLength: 64
           example: TUB-PVC-12
@@ -1610,19 +1722,112 @@ components:
           $ref: "#/components/schemas/Money"
         tax_rate:
           $ref: "#/components/schemas/TaxRate"
-    Product:
+    AxisValues:
       type: object
-      required: [id, sku, name, base_unit, price, price_with_tax, tax_rate, active, created_at]
+      description: |
+        El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`), hasta 5 ejes. Los nombres
+        de los ejes se guardan en minúsculas. Vacío en la variante de un producto simple.
+      maxProperties: 5
+      additionalProperties:
+        type: string
+        minLength: 1
+        maxLength: 100
+      example: {"color": "Azul"}
+    ProductVariantInput:
+      type: object
+      required: [sku, cost, price, axis_values]
+      additionalProperties: false
+      properties:
+        sku:
+          type: string
+          description: Código interno, único en la empresa. Se guarda en mayúsculas.
+          minLength: 1
+          maxLength: 64
+        barcode:
+          type: string
+          description: Código de barras, único en la empresa. Vacío u omitido si no tiene.
+          maxLength: 64
+        cost:
+          $ref: "#/components/schemas/Money"
+        price:
+          $ref: "#/components/schemas/Money"
+        axis_values:
+          $ref: "#/components/schemas/AxisValues"
+    ProductVariantUpdate:
+      type: object
+      required: [sku, cost, price, axis_values, active]
+      additionalProperties: false
+      properties:
+        sku:
+          type: string
+          description: Código interno, único en la empresa. Se guarda en mayúsculas.
+          minLength: 1
+          maxLength: 64
+        barcode:
+          type: string
+          description: Código de barras, único en la empresa. Vacío u omitido si no tiene.
+          maxLength: 64
+        cost:
+          $ref: "#/components/schemas/Money"
+        price:
+          $ref: "#/components/schemas/Money"
+        axis_values:
+          $ref: "#/components/schemas/AxisValues"
+        active:
+          type: boolean
+          description: Una variante inactiva no se vende.
+    ProductVariant:
+      type: object
+      required: [id, sku, price, price_with_tax, axis_values, is_default, active, created_at]
       properties:
         id:
           type: string
           format: uuid
         sku:
           type: string
+        barcode:
+          type: string
+          description: Se omite si la variante no tiene.
+        price:
+          $ref: "#/components/schemas/Money"
+        price_with_tax:
+          $ref: "#/components/schemas/Money"
+        cost:
+          $ref: "#/components/schemas/Money"
+        margin_percent:
+          type: string
+          description: Margen sobre el precio de venta, en porcentaje. Es negativo si el precio está por debajo del costo.
+          example: "16.6667"
+        axis_values:
+          $ref: "#/components/schemas/AxisValues"
+        is_default:
+          type: boolean
+          description: La variante creada con el producto. Un producto simple solo tiene esta.
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      description: |
+        Lo que se vende y se cuenta: el producto en una combinación de sus ejes. El precio no incluye IVA;
+        `price_with_tax` lo incluye con la tasa del producto, redondeado a 2 decimales. `cost` y `margin_percent`
+        solo se envían a quien puede editar el catálogo (`catalog:write`).
+    Product:
+      type: object
+      required: [id, sku, name, base_unit, price, price_with_tax, tax_rate, active, created_at, variants]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          deprecated: true
+          description: El de la variante por defecto. Use `variants`.
           example: TUB-PVC-12
         barcode:
           type: string
-          description: Se omite si el producto no tiene.
+          deprecated: true
+          description: El de la variante por defecto; se omite si no tiene. Use `variants`.
         name:
           type: string
         description:
@@ -1635,25 +1840,44 @@ components:
         base_unit:
           $ref: "#/components/schemas/UnitOfMeasure"
         cost:
-          $ref: "#/components/schemas/Money"
+          allOf:
+            - $ref: "#/components/schemas/Money"
+          deprecated: true
+          description: El de la variante por defecto. Use `variants`.
         price:
-          $ref: "#/components/schemas/Money"
+          allOf:
+            - $ref: "#/components/schemas/Money"
+          deprecated: true
+          description: El de la variante por defecto. Use `variants`.
         price_with_tax:
-          $ref: "#/components/schemas/Money"
+          allOf:
+            - $ref: "#/components/schemas/Money"
+          deprecated: true
+          description: El de la variante por defecto. Use `variants`.
         tax_rate:
           $ref: "#/components/schemas/TaxRate"
         margin_percent:
           type: string
-          description: Margen sobre el precio de venta, en porcentaje. Es negativo si el precio está por debajo del costo.
+          deprecated: true
+          description: El de la variante por defecto. Use `variants`.
           example: "16.6667"
         active:
           type: boolean
+          description: Un producto inactivo no se vende, con ninguna de sus variantes.
         created_at:
           type: string
           format: date-time
+        variants:
+          type: array
+          minItems: 1
+          description: Sus variantes, en el orden en que se agregaron; la variante por defecto va primero.
+          items:
+            $ref: "#/components/schemas/ProductVariant"
       description: |
-        Un producto del catálogo. El precio no incluye IVA; `price_with_tax` lo incluye, redondeado a 2 decimales.
-        `cost` y `margin_percent` solo se envían a quien puede editar el catálogo (`catalog:write`).
+        Un producto del catálogo: lo que comparten sus variantes (nombre, categoría, unidad base y tasa de IVA).
+        `sku`, `barcode`, `cost`, `price`, `price_with_tax` y `margin_percent` son los de la variante por defecto y se
+        mantienen mientras el frontend pasa a `variants`. `cost` y `margin_percent` solo se envían a quien puede
+        editar el catálogo (`catalog:write`).
     ProductPage:
       type: object
       required: [items, total]

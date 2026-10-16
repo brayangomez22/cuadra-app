@@ -18,6 +18,14 @@ var (
 	ErrInvalidCategoryName   = errors.New("catalog: invalid category name")
 	ErrInvalidCategoryParent = errors.New("catalog: invalid category parent")
 	ErrProductInactive       = errors.New("catalog: product is inactive")
+	ErrInvalidVariantID      = errors.New("catalog: invalid variant id")
+	ErrInvalidAxisValues     = errors.New("catalog: invalid variant axis values")
+	// ErrInvalidVariants reports a stored product without exactly one
+	// default variant.
+	ErrInvalidVariants     = errors.New("catalog: a product needs exactly one default variant")
+	ErrVariantAxesMismatch = errors.New("catalog: every variant of a product must name the same axes")
+	ErrDuplicateVariant    = errors.New("catalog: another variant of the product has the same axis values")
+	ErrVariantNotFound     = errors.New("catalog: variant not found")
 
 	// Errors reported by the repositories and the use cases.
 	ErrProductNotFound  = errors.New("catalog: product not found")

@@ -86,6 +86,8 @@ func (h *Handler) actor(ctx context.Context) app.Actor {
 
 // ConfirmSale checks out a cart.
 func (h *Handler) ConfirmSale(ctx context.Context, req salesapi.ConfirmSaleRequestObject) (salesapi.ConfirmSaleResponseObject, error) {
+	// The POS latency SLO measures charging a sale (docs/slo.md).
+	httpx.SetOperation(ctx, "pos.confirm_sale")
 	in := app.ConfirmSaleInput{LocationID: req.Body.LocationId}
 	for _, l := range req.Body.Lines {
 		qty, err := parseDecimal(l.Quantity, domain.ErrInvalidQuantity)

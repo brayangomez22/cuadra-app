@@ -132,18 +132,28 @@ type Location struct {
 type Product struct {
 	ID          uuid.UUID
 	TenantID    uuid.UUID
-	Sku         string
-	Barcode     *string
 	Name        string
 	SearchName  string
 	Description string
 	CategoryID  pgtype.UUID
 	BaseUnit    string
-	Cost        decimal.Decimal
-	Price       decimal.Decimal
 	TaxRate     decimal.Decimal
 	Active      bool
 	CreatedAt   time.Time
+}
+
+type ProductVariant struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	ProductID  uuid.UUID
+	Sku        string
+	Barcode    *string
+	Cost       decimal.Decimal
+	Price      decimal.Decimal
+	AxisValues []byte
+	IsDefault  bool
+	Active     bool
+	CreatedAt  time.Time
 }
 
 type RefreshToken struct {

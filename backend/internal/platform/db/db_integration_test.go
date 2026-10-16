@@ -181,6 +181,13 @@ func TestAppRole(t *testing.T) {
 	})
 
 	t.Run("Open rechaza conectarse como superusuario", func(t *testing.T) {
+		d, err := db.Open(t.Context(), dbtest.Shared(t).SuperuserURL, tracenoop.NewTracerProvider(), metricnoop.NewMeterProvider())
+
+		require.ErrorIs(t, err, db.ErrUnsafeRole)
+		require.Nil(t, d)
+	})
+
+	t.Run("Open rechaza conectarse como el dueño de las tablas", func(t *testing.T) {
 		d, err := db.Open(t.Context(), dbtest.Shared(t).AdminURL, tracenoop.NewTracerProvider(), metricnoop.NewMeterProvider())
 
 		require.ErrorIs(t, err, db.ErrUnsafeRole)
@@ -189,6 +196,19 @@ func TestAppRole(t *testing.T) {
 }
 
 func TestMigrations(t *testing.T) {
+	t.Run("el dueño que aplica las migraciones no es superusuario ni BYPASSRLS, como en Azure", func(t *testing.T) {
+		sqlDB := stdlib.OpenDB(*mustParseConfig(t, dbtest.Shared(t).AdminURL))
+		t.Cleanup(func() { _ = sqlDB.Close() })
+
+		var super, bypass, ownsProducts bool
+		require.NoError(t, sqlDB.QueryRowContext(t.Context(), `
+			SELECT r.rolsuper, r.rolbypassrls, (SELECT tableowner = current_user FROM pg_tables WHERE tablename = 'products')
+			FROM pg_roles r WHERE r.rolname = current_user`).Scan(&super, &bypass, &ownsProducts))
+		require.False(t, super)
+		require.False(t, bypass)
+		require.True(t, ownsProducts)
+	})
+
 	t.Run("las migraciones se revierten y se vuelven a aplicar", func(t *testing.T) {
 		s := dbtest.Start(t)
 		sqlDB := stdlib.OpenDB(*mustParseConfig(t, s.AdminURL))

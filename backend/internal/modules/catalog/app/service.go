@@ -45,6 +45,7 @@ type Service struct {
 	tracer trace.Tracer
 
 	productsCreated metric.Int64Counter
+	variantsCreated metric.Int64Counter
 	priceChanges    metric.Int64Counter
 	searches        metric.Int64Counter
 }
@@ -76,8 +77,13 @@ func NewService(d Deps) (*Service, error) {
 		metric.WithUnit("{product}")); err != nil {
 		return nil, err
 	}
+	if s.variantsCreated, err = meter.Int64Counter("cuadra.catalog.variants_created",
+		metric.WithDescription("Variants added to an existing product (a product's default variant is not counted)."),
+		metric.WithUnit("{variant}")); err != nil {
+		return nil, err
+	}
 	if s.priceChanges, err = meter.Int64Counter("cuadra.catalog.price_changes",
-		metric.WithDescription("Product price changes."),
+		metric.WithDescription("Variant price changes."),
 		metric.WithUnit("{change}")); err != nil {
 		return nil, err
 	}
@@ -109,6 +115,10 @@ func endSpan(span trace.Span, err error) {
 
 func productAttr(id uuid.UUID) attribute.KeyValue {
 	return attribute.String("product.id", id.String())
+}
+
+func variantAttr(id uuid.UUID) attribute.KeyValue {
+	return attribute.String("variant.id", id.String())
 }
 
 func categoryAttr(id uuid.UUID) attribute.KeyValue {

@@ -565,6 +565,9 @@ type ProductId = openapi_types.UUID
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
 
+// VariantId defines model for VariantId.
+type VariantId = openapi_types.UUID
+
 // BadRequest Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
 type BadRequest = Error
 

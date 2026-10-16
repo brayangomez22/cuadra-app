@@ -5,6 +5,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -24,24 +25,24 @@ type ProductRepository struct{ db *db.DB }
 // NewProductRepository returns a ProductRepository on d.
 func NewProductRepository(d *db.DB) *ProductRepository { return &ProductRepository{db: d} }
 
-// Create stores a new product.
+// Create stores a new product and its variants in one transaction.
 func (r *ProductRepository) Create(ctx context.Context, p *domain.Product) error {
 	err := r.db.WithTenantTx(ctx, p.TenantID(), func(tx pgx.Tx) error {
-		return sqlcgen.New(tx).CreateProduct(ctx, sqlcgen.CreateProductParams{
+		q := sqlcgen.New(tx)
+		if err := q.CreateProduct(ctx, sqlcgen.CreateProductParams{
 			ID:          p.ID(),
 			TenantID:    p.TenantID(),
-			Sku:         p.SKU(),
-			Barcode:     nullable(p.Barcode()),
 			Name:        p.Name(),
 			Description: p.Description(),
 			CategoryID:  p.CategoryID(),
 			BaseUnit:    p.BaseUnit().String(),
-			Cost:        p.Cost(),
-			Price:       p.Price(),
 			TaxRate:     p.TaxRate().Rate(),
 			Active:      p.IsActive(),
 			CreatedAt:   p.CreatedAt(),
-		})
+		}); err != nil {
+			return err
+		}
+		return saveVariants(ctx, q, p)
 	})
 	if err := productWriteError(err); err != nil {
 		return fmt.Errorf("catalog: create product: %w", err)
@@ -53,9 +54,14 @@ func (r *ProductRepository) Create(ctx context.Context, p *domain.Product) error
 // in tenantID.
 func (r *ProductRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*domain.Product, error) {
 	var row sqlcgen.GetProductRow
+	var variants []sqlcgen.ListVariantsRow
 	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
+		q := sqlcgen.New(tx)
 		var err error
-		row, err = sqlcgen.New(tx).GetProduct(ctx, id)
+		if row, err = q.GetProduct(ctx, id); err != nil {
+			return err
+		}
+		variants, err = q.ListVariants(ctx, []uuid.UUID{id})
 		return err
 	})
 	switch {
@@ -64,34 +70,69 @@ func (r *ProductRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID)
 	case err != nil:
 		return nil, fmt.Errorf("catalog: get product: %w", err)
 	}
-	return productFromRow(row)
+	return productFromRows(row, variants)
 }
 
-// Update stores every field but the id, tenant and creation time.
+// Update stores every field of the product and of its variants but their
+// ids, tenant and creation time, and inserts the variants it does not have
+// yet. Variants are never deleted: they are deactivated.
 func (r *ProductRepository) Update(ctx context.Context, p *domain.Product) error {
-	var affected int64
 	err := r.db.WithTenantTx(ctx, p.TenantID(), func(tx pgx.Tx) error {
-		var err error
-		affected, err = sqlcgen.New(tx).UpdateProduct(ctx, sqlcgen.UpdateProductParams{
+		q := sqlcgen.New(tx)
+		affected, err := q.UpdateProduct(ctx, sqlcgen.UpdateProductParams{
 			ID:          p.ID(),
-			Sku:         p.SKU(),
-			Barcode:     nullable(p.Barcode()),
 			Name:        p.Name(),
 			Description: p.Description(),
 			CategoryID:  p.CategoryID(),
 			BaseUnit:    p.BaseUnit().String(),
-			Cost:        p.Cost(),
-			Price:       p.Price(),
 			TaxRate:     p.TaxRate().Rate(),
 			Active:      p.IsActive(),
 		})
-		return err
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			return domain.ErrProductNotFound
+		}
+		return saveVariants(ctx, q, p)
 	})
+	if errors.Is(err, domain.ErrProductNotFound) {
+		return err
+	}
 	if err := productWriteError(err); err != nil {
 		return fmt.Errorf("catalog: update product: %w", err)
 	}
-	if affected == 0 {
-		return domain.ErrProductNotFound
+	return nil
+}
+
+// saveVariants inserts or updates each variant of p. Updating one that
+// belongs to another product changes no row and is reported as
+// domain.ErrVariantNotFound.
+func saveVariants(ctx context.Context, q *sqlcgen.Queries, p *domain.Product) error {
+	for _, v := range p.Variants() {
+		axes, err := json.Marshal(v.AxisValues())
+		if err != nil {
+			return err
+		}
+		affected, err := q.SaveVariant(ctx, sqlcgen.SaveVariantParams{
+			ID:         v.ID(),
+			TenantID:   p.TenantID(),
+			ProductID:  p.ID(),
+			Sku:        v.SKU(),
+			Barcode:    nullable(v.Barcode()),
+			Cost:       v.Cost(),
+			Price:      v.Price(),
+			AxisValues: axes,
+			IsDefault:  v.IsDefault(),
+			Active:     v.IsActive(),
+			CreatedAt:  v.CreatedAt(),
+		})
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			return domain.ErrVariantNotFound
+		}
 	}
 	return nil
 }
@@ -99,10 +140,12 @@ func (r *ProductRepository) Update(ctx context.Context, p *domain.Product) error
 // productWriteError translates the constraint violations of a product write.
 func productWriteError(err error) error {
 	switch {
-	case violates(err, uniqueViolation, productsSKUKey):
+	case violates(err, uniqueViolation, variantsSKUKey):
 		return domain.ErrSKUTaken
-	case violates(err, uniqueViolation, productsBarcodeKey):
+	case violates(err, uniqueViolation, variantsBarcodeKey):
 		return domain.ErrBarcodeTaken
+	case violates(err, uniqueViolation, variantsAxisValuesKey):
+		return domain.ErrDuplicateVariant
 	case violates(err, foreignKeyViolation, productsCategoryFKey):
 		return domain.ErrCategoryNotFound
 	}
@@ -113,6 +156,7 @@ func productWriteError(err error) error {
 // match in total, read in the same transaction.
 func (r *ProductRepository) Search(ctx context.Context, tenantID uuid.UUID, f domain.ProductFilter) (domain.ProductPage, error) {
 	var rows []sqlcgen.GetProductRow
+	var variants []sqlcgen.ListVariantsRow
 	var total int64
 	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
@@ -122,14 +166,26 @@ func (r *ProductRepository) Search(ctx context.Context, tenantID uuid.UUID, f do
 		} else {
 			rows, total, err = list(ctx, q, f)
 		}
+		if err != nil || len(rows) == 0 {
+			return err
+		}
+		ids := make([]uuid.UUID, 0, len(rows))
+		for _, row := range rows {
+			ids = append(ids, row.ID)
+		}
+		variants, err = q.ListVariants(ctx, ids)
 		return err
 	})
 	if err != nil {
 		return domain.ProductPage{}, fmt.Errorf("catalog: search products: %w", err)
 	}
+	byProduct := make(map[uuid.UUID][]sqlcgen.ListVariantsRow, len(rows))
+	for _, v := range variants {
+		byProduct[v.ProductID] = append(byProduct[v.ProductID], v)
+	}
 	page := domain.ProductPage{Items: make([]*domain.Product, 0, len(rows)), Total: int(total)}
 	for _, row := range rows {
-		p, err := productFromRow(row)
+		p, err := productFromRows(row, byProduct[row.ID])
 		if err != nil {
 			return domain.ProductPage{}, err
 		}
@@ -210,7 +266,8 @@ func searchTerms(text string) []string {
 	return words
 }
 
-func productFromRow(row sqlcgen.GetProductRow) (*domain.Product, error) {
+// productFromRows rebuilds a product from its row and its variants' rows.
+func productFromRows(row sqlcgen.GetProductRow, variantRows []sqlcgen.ListVariantsRow) (*domain.Product, error) {
 	unit, err := domain.ParseUnit(row.BaseUnit)
 	if err != nil {
 		return nil, fmt.Errorf("catalog: product %s: stored unit: %w", row.ID, err)
@@ -219,24 +276,39 @@ func productFromRow(row sqlcgen.GetProductRow) (*domain.Product, error) {
 	if err != nil {
 		return nil, fmt.Errorf("catalog: product %s: stored tax rate: %w", row.ID, err)
 	}
-	var barcode string
-	if row.Barcode != nil {
-		barcode = *row.Barcode
+	variants := make([]domain.VariantSnapshot, 0, len(variantRows))
+	for _, v := range variantRows {
+		var axes map[string]string
+		if err := json.Unmarshal(v.AxisValues, &axes); err != nil {
+			return nil, fmt.Errorf("catalog: variant %s: stored axis values: %w", v.ID, err)
+		}
+		var barcode string
+		if v.Barcode != nil {
+			barcode = *v.Barcode
+		}
+		variants = append(variants, domain.VariantSnapshot{
+			ID:         v.ID,
+			SKU:        v.Sku,
+			Barcode:    barcode,
+			Cost:       v.Cost,
+			Price:      v.Price,
+			AxisValues: axes,
+			IsDefault:  v.IsDefault,
+			Active:     v.Active,
+			CreatedAt:  v.CreatedAt,
+		})
 	}
 	p, err := domain.RehydrateProduct(domain.ProductSnapshot{
 		ID:          row.ID,
 		TenantID:    row.TenantID,
-		SKU:         row.Sku,
-		Barcode:     barcode,
 		Name:        row.Name,
 		Description: row.Description,
 		CategoryID:  row.CategoryID,
 		BaseUnit:    unit,
-		Cost:        row.Cost,
-		Price:       row.Price,
 		TaxRate:     rate,
 		Active:      row.Active,
 		CreatedAt:   row.CreatedAt,
+		Variants:    variants,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("catalog: product %s: %w", row.ID, err)

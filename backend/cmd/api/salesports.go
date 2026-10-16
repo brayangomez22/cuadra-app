@@ -29,8 +29,11 @@ func (c salesCatalog) Products(ctx context.Context, tenantID uuid.UUID, ids []uu
 	}
 	out := make([]salesapp.ProductInfo, 0, len(products))
 	for _, p := range products {
+		// Sales still sells products (T24c moves it to variants): it sells the
+		// default variant, at its price, while both are active.
+		v := p.DefaultVariant()
 		out = append(out, salesapp.ProductInfo{
-			ID: p.ID(), Name: p.Name(), Price: p.Price(), TaxRate: p.TaxRate().Rate(), Active: p.IsActive(),
+			ID: p.ID(), Name: p.Name(), Price: v.Price(), TaxRate: p.TaxRate().Rate(), Active: p.IsActive() && v.IsActive(),
 		})
 	}
 	return out, nil

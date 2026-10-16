@@ -94,6 +94,9 @@ type ProductId = openapi_types.UUID
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
 
+// VariantId defines model for VariantId.
+type VariantId = openapi_types.UUID
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// GetHealthz Liveness

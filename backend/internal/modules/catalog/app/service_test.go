@@ -62,7 +62,7 @@ func TestCreateProduct(t *testing.T) {
 
 		require.True(t, p.IsActive())
 		require.Equal(t, e.actor.TenantID, p.TenantID())
-		require.Equal(t, "TUB-PVC-12", p.SKU())
+		require.Equal(t, "TUB-PVC-12", p.DefaultVariant().SKU())
 		require.Equal(t, testNow, p.CreatedAt())
 		stored, err := e.svc.GetProduct(t.Context(), e.actor, p.ID())
 		require.NoError(t, err)
@@ -143,10 +143,10 @@ func TestUpdateProduct(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, "Tubo PVC presión 3/4 pulgada", updated.Name())
-		require.True(t, dec("12500.50").Equal(updated.Price()))
+		require.True(t, dec("12500.50").Equal(updated.DefaultVariant().Price()))
 		stored, err := e.svc.GetProduct(t.Context(), e.actor, p.ID())
 		require.NoError(t, err)
-		require.True(t, dec("12500.50").Equal(stored.Price()))
+		require.True(t, dec("12500.50").Equal(stored.DefaultVariant().Price()))
 		require.EqualValues(t, 1, e.counter(t, "cuadra.catalog.price_changes", "", ""))
 	})
 

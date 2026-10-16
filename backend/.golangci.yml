@@ -29,6 +29,8 @@ linters:
         - producto
         - productos
         - secretos
+        - variante
+        - variantes
   exclusions:
     rules:
       - path: _test\.go

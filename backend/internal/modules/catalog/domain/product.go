@@ -1,9 +1,10 @@
 package domain
 
 import (
+	"maps"
+	"slices"
 	"strings"
 	"time"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -11,87 +12,106 @@ import (
 )
 
 const (
-	maxSKULength         = 64
-	maxBarcodeLength     = 64
 	maxProductNameLength = 200
 	maxDescriptionLength = 2000
 )
 
-var hundred = decimal.NewFromInt(100)
-
-// Product is an item a tenant sells. Price is the taxable base, without IVA;
-// PriceWithTax adds it. Its fields are private so it cannot be put in an
-// invalid state.
+// Product groups the variants a tenant sells: it holds what they share
+// (name, category, base unit, IVA rate) and the rules between them. It always
+// has exactly one default variant, the one created with it; a simple product
+// has only that one. Its fields are private so it cannot be put in an invalid
+// state.
 type Product struct {
 	id          uuid.UUID
 	tenantID    uuid.UUID
-	sku         string
-	barcode     string
 	name        string
 	description string
 	categoryID  *uuid.UUID
 	baseUnit    UnitOfMeasure
-	cost        decimal.Decimal
-	price       decimal.Decimal
 	taxRate     TaxRate
 	active      bool
 	createdAt   time.Time
+	variants    []*ProductVariant
 }
 
-// NewProductParams holds the data of a new product. Barcode, Description and
-// CategoryID are optional.
+// NewProductParams holds the data of a new product and of its default
+// variant. Description and CategoryID are optional.
 type NewProductParams struct {
 	TenantID    uuid.UUID
-	SKU         string
-	Barcode     string
 	Name        string
 	Description string
 	CategoryID  *uuid.UUID
 	BaseUnit    UnitOfMeasure
-	Cost        decimal.Decimal
-	Price       decimal.Decimal
 	TaxRate     TaxRate
+	Variant     VariantParams
 }
 
-// NewProduct creates an active product. The SKU is trimmed and uppercased so
-// its uniqueness per tenant does not depend on letter case.
+// NewProduct creates an active product with its default variant. Each one
+// gets its own UUID v7.
 func NewProduct(p NewProductParams, now time.Time) (*Product, error) {
 	id, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+	variantID, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
 	}
 	return newProduct(ProductSnapshot{
 		ID:          id,
 		TenantID:    p.TenantID,
-		SKU:         p.SKU,
-		Barcode:     p.Barcode,
 		Name:        p.Name,
 		Description: p.Description,
 		CategoryID:  p.CategoryID,
 		BaseUnit:    p.BaseUnit,
-		Cost:        p.Cost,
-		Price:       p.Price,
 		TaxRate:     p.TaxRate,
 		Active:      true,
 		CreatedAt:   now,
+		Variants: []VariantSnapshot{{
+			ID:         variantID,
+			SKU:        p.Variant.SKU,
+			Barcode:    p.Variant.Barcode,
+			Cost:       p.Variant.Cost,
+			Price:      p.Variant.Price,
+			AxisValues: p.Variant.AxisValues,
+			IsDefault:  true,
+			Active:     true,
+			CreatedAt:  now,
+		}},
 	})
 }
 
 // newProduct checks the invariants shared by NewProduct and RehydrateProduct.
 func newProduct(s ProductSnapshot) (*Product, error) {
+	p, err := productHeader(s)
+	if err != nil {
+		return nil, err
+	}
+	if len(s.Variants) == 0 {
+		return nil, ErrInvalidVariants
+	}
+	variants := make([]*ProductVariant, 0, len(s.Variants))
+	for _, vs := range s.Variants {
+		v, err := newVariant(p.id, vs)
+		if err != nil {
+			return nil, err
+		}
+		variants = append(variants, v)
+	}
+	if err := checkVariants(variants); err != nil {
+		return nil, err
+	}
+	p.variants = variants
+	return p, nil
+}
+
+// productHeader checks and builds the product's own fields, without variants.
+func productHeader(s ProductSnapshot) (*Product, error) {
 	if s.ID == uuid.Nil {
 		return nil, ErrInvalidProductID
 	}
 	if s.TenantID == uuid.Nil {
 		return nil, ErrInvalidTenantID
-	}
-	sku, err := normalizeSKU(s.SKU)
-	if err != nil {
-		return nil, err
-	}
-	barcode, err := normalizeBarcode(s.Barcode)
-	if err != nil {
-		return nil, err
 	}
 	name, err := normalizeText(s.Name, maxProductNameLength, ErrInvalidProductName)
 	if err != nil {
@@ -107,74 +127,55 @@ func newProduct(s ProductSnapshot) (*Product, error) {
 	if !s.BaseUnit.valid() {
 		return nil, ErrInvalidUnit
 	}
-	if !validPrice(s.Price) {
-		return nil, ErrInvalidPrice
-	}
-	if s.Cost.IsNegative() || !fitsStorage(s.Cost) {
-		return nil, ErrInvalidCost
-	}
 	return &Product{
 		id:          s.ID,
 		tenantID:    s.TenantID,
-		sku:         sku,
-		barcode:     barcode,
 		name:        name,
 		description: description,
 		categoryID:  copyID(s.CategoryID),
 		baseUnit:    s.BaseUnit,
-		cost:        s.Cost,
-		price:       s.Price,
 		taxRate:     s.TaxRate,
 		active:      s.Active,
 		createdAt:   s.CreatedAt.UTC(),
 	}, nil
 }
 
-// normalizeSKU trims and uppercases s; it must have no inner spaces nor
-// control characters.
-func normalizeSKU(s string) (string, error) {
-	s = strings.ToUpper(strings.TrimSpace(s))
-	if s == "" || utf8.RuneCountInString(s) > maxSKULength {
-		return "", ErrInvalidSKU
-	}
-	for _, r := range s {
-		if unicode.IsSpace(r) || unicode.IsControl(r) {
-			return "", ErrInvalidSKU
+// checkVariants checks the rules between a product's variants: exactly one
+// default, every variant with the same axes, no two with the same values,
+// and no SKU or barcode repeated inside the product. The database checks the
+// SKU and the barcode against the rest of the tenant.
+func checkVariants(variants []*ProductVariant) error {
+	defaults := 0
+	for _, v := range variants {
+		if v.isDefault {
+			defaults++
 		}
 	}
-	return s, nil
-}
-
-// normalizeBarcode trims s; empty means no barcode. Otherwise it must be
-// printable ASCII without spaces. The EAN check digit is not verified because
-// stores also print their own internal codes.
-func normalizeBarcode(s string) (string, error) {
-	s = strings.TrimSpace(s)
-	if len(s) > maxBarcodeLength {
-		return "", ErrInvalidBarcode
+	if defaults != 1 {
+		return ErrInvalidVariants
 	}
-	for i := 0; i < len(s); i++ {
-		if s[i] < '!' || s[i] > '~' {
-			return "", ErrInvalidBarcode
+	for i, v := range variants {
+		for _, other := range variants[:i] {
+			switch {
+			case !sameAxes(v.axisValues, other.axisValues):
+				return ErrVariantAxesMismatch
+			case maps.Equal(v.axisValues, other.axisValues):
+				return ErrDuplicateVariant
+			case v.sku == other.sku:
+				return ErrSKUTaken
+			case v.barcode != "" && v.barcode == other.barcode:
+				return ErrBarcodeTaken
+			}
 		}
 	}
-	return s, nil
+	return nil
 }
-
-// validPrice reports whether d is a positive amount that fits storage.
-func validPrice(d decimal.Decimal) bool { return d.IsPositive() && fitsStorage(d) }
 
 // ID returns the product ID (UUID v7).
 func (p *Product) ID() uuid.UUID { return p.id }
 
 // TenantID returns the tenant the product belongs to.
 func (p *Product) TenantID() uuid.UUID { return p.tenantID }
-
-// SKU returns the normalized (uppercase) SKU.
-func (p *Product) SKU() string { return p.sku }
-
-// Barcode returns the barcode, or "" if the product has none.
-func (p *Product) Barcode() string { return p.barcode }
 
 // Name returns the product name.
 func (p *Product) Name() string { return p.name }
@@ -188,13 +189,7 @@ func (p *Product) CategoryID() *uuid.UUID { return copyID(p.categoryID) }
 // BaseUnit returns the unit the product is stocked and sold in.
 func (p *Product) BaseUnit() UnitOfMeasure { return p.baseUnit }
 
-// Cost returns the reference unit cost, without IVA.
-func (p *Product) Cost() decimal.Decimal { return p.cost }
-
-// Price returns the unit sale price, without IVA (taxable base).
-func (p *Product) Price() decimal.Decimal { return p.price }
-
-// TaxRate returns the IVA rate.
+// TaxRate returns the IVA rate of every variant.
 func (p *Product) TaxRate() TaxRate { return p.taxRate }
 
 // IsActive reports whether the product can be sold and repriced.
@@ -203,88 +198,168 @@ func (p *Product) IsActive() bool { return p.active }
 // CreatedAt returns the creation time in UTC.
 func (p *Product) CreatedAt() time.Time { return p.createdAt }
 
-// MarginPercent returns the margin over the sale price,
-// (price − cost) / price × 100, rounded half-up to four decimals. It is
-// negative when the product sells below cost.
-func (p *Product) MarginPercent() decimal.Decimal {
-	return p.price.Sub(p.cost).Mul(hundred).DivRound(p.price, amountScale)
+// Variants returns the product's variants, in the order they were added.
+func (p *Product) Variants() []*ProductVariant { return slices.Clone(p.variants) }
+
+// DefaultVariant returns the variant created with the product.
+func (p *Product) DefaultVariant() *ProductVariant {
+	for _, v := range p.variants {
+		if v.isDefault {
+			return v
+		}
+	}
+	// Unreachable: every constructor checks there is exactly one.
+	panic("catalog: product without a default variant")
 }
 
-// PriceWithTax returns the unit price plus IVA, rounded half-up to two
-// decimals (COP). It is a display reference: sale totals compute IVA per
-// line and per rate.
-func (p *Product) PriceWithTax() decimal.Decimal {
-	return p.price.Mul(decimal.NewFromInt(1).Add(p.taxRate.Rate())).Round(2)
+// Variant returns the variant with id, or ErrVariantNotFound if it is not
+// one of the product's.
+func (p *Product) Variant(id uuid.UUID) (*ProductVariant, error) {
+	i, err := p.variantIndex(id)
+	if err != nil {
+		return nil, err
+	}
+	return p.variants[i], nil
 }
 
-// ChangePrice sets a new price. An inactive product cannot be repriced
-// (ErrProductInactive): reactivate it first. On error the price is unchanged.
-func (p *Product) ChangePrice(price decimal.Decimal) error {
+func (p *Product) variantIndex(id uuid.UUID) (int, error) {
+	i := slices.IndexFunc(p.variants, func(v *ProductVariant) bool { return v.id == id })
+	if i < 0 {
+		return 0, ErrVariantNotFound
+	}
+	return i, nil
+}
+
+// replaceVariant stores v at i if the variants still follow the rules. It
+// copies the slice, so a failed change leaves the product as it was.
+func (p *Product) replaceVariant(i int, v *ProductVariant) error {
+	variants := slices.Clone(p.variants)
+	variants[i] = v
+	if err := checkVariants(variants); err != nil {
+		return err
+	}
+	p.variants = variants
+	return nil
+}
+
+// AddVariant adds an active variant with its own UUID v7. It must name the
+// same axes as the others with different values; a simple product gets axes
+// on its default variant first (UpdateVariant). On error the product is
+// unchanged.
+func (p *Product) AddVariant(params VariantParams, now time.Time) (*ProductVariant, error) {
+	id, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+	v, err := newVariant(p.id, VariantSnapshot{
+		ID: id, SKU: params.SKU, Barcode: params.Barcode, Cost: params.Cost, Price: params.Price,
+		AxisValues: params.AxisValues, Active: true, CreatedAt: now,
+	})
+	if err != nil {
+		return nil, err
+	}
+	variants := append(slices.Clone(p.variants), v)
+	if err := checkVariants(variants); err != nil {
+		return nil, err
+	}
+	p.variants = variants
+	return v, nil
+}
+
+// UpdateVariant replaces a variant's details with the same rules as
+// AddVariant. On error the product is unchanged.
+func (p *Product) UpdateVariant(id uuid.UUID, d VariantDetails) error {
+	i, err := p.variantIndex(id)
+	if err != nil {
+		return err
+	}
+	s := p.variants[i].snapshot()
+	s.SKU, s.Barcode, s.Cost, s.AxisValues = d.SKU, d.Barcode, d.Cost, d.AxisValues
+	v, err := newVariant(p.id, s)
+	if err != nil {
+		return err
+	}
+	return p.replaceVariant(i, v)
+}
+
+// ChangeVariantPrice sets a variant's price. A variant of an inactive
+// product cannot be repriced (ErrProductInactive): reactivate it first. On
+// error the price is unchanged.
+func (p *Product) ChangeVariantPrice(id uuid.UUID, price decimal.Decimal) error {
+	i, err := p.variantIndex(id)
+	if err != nil {
+		return err
+	}
 	if !p.active {
 		return ErrProductInactive
 	}
 	if !validPrice(price) {
 		return ErrInvalidPrice
 	}
-	p.price = price
-	return nil
+	v := *p.variants[i]
+	v.price = price
+	return p.replaceVariant(i, &v)
 }
 
-// Deactivate hides the product from sales without deleting it, so past sales
-// and stock movements keep their reference. Idempotent.
+// SetVariantActive makes a variant sellable or hides it from sales, without
+// changing the product. Idempotent.
+func (p *Product) SetVariantActive(id uuid.UUID, active bool) error {
+	i, err := p.variantIndex(id)
+	if err != nil {
+		return err
+	}
+	v := *p.variants[i]
+	v.active = active
+	return p.replaceVariant(i, &v)
+}
+
+// Deactivate hides the product and all its variants from sales without
+// deleting it, so past sales and stock movements keep their reference.
+// Idempotent.
 func (p *Product) Deactivate() { p.active = false }
 
 // Activate makes an inactive product sellable again. Idempotent.
 func (p *Product) Activate() { p.active = true }
 
-// ProductSnapshot holds a stored product's fields, for RehydrateProduct.
+// ProductSnapshot holds a stored product's fields and its variants, for
+// RehydrateProduct.
 type ProductSnapshot struct {
 	ID          uuid.UUID
 	TenantID    uuid.UUID
-	SKU         string
-	Barcode     string
 	Name        string
 	Description string
 	CategoryID  *uuid.UUID
 	BaseUnit    UnitOfMeasure
-	Cost        decimal.Decimal
-	Price       decimal.Decimal
 	TaxRate     TaxRate
 	Active      bool
 	CreatedAt   time.Time
+	Variants    []VariantSnapshot
 }
 
 // RehydrateProduct rebuilds a stored product, checking the same invariants
 // as NewProduct so corrupt data surfaces as an error instead of an invalid entity.
 func RehydrateProduct(s ProductSnapshot) (*Product, error) { return newProduct(s) }
 
-// ProductDetails are a product's editable data besides its price, which
-// changes through ChangePrice.
+// ProductDetails are the product's own editable data. Each variant's data
+// changes through UpdateVariant and ChangeVariantPrice.
 type ProductDetails struct {
-	SKU         string
-	Barcode     string
 	Name        string
 	Description string
 	CategoryID  *uuid.UUID
 	BaseUnit    UnitOfMeasure
-	Cost        decimal.Decimal
 	TaxRate     TaxRate
 }
 
 // UpdateDetails replaces the product's details with the same rules as
 // NewProduct. On error the product is left unchanged.
 func (p *Product) UpdateDetails(d ProductDetails) error {
-	updated, err := newProduct(ProductSnapshot{
+	updated, err := productHeader(ProductSnapshot{
 		ID:          p.id,
 		TenantID:    p.tenantID,
-		SKU:         d.SKU,
-		Barcode:     d.Barcode,
 		Name:        d.Name,
 		Description: d.Description,
 		CategoryID:  d.CategoryID,
 		BaseUnit:    d.BaseUnit,
-		Cost:        d.Cost,
-		Price:       p.price,
 		TaxRate:     d.TaxRate,
 		Active:      p.active,
 		CreatedAt:   p.createdAt,
@@ -292,6 +367,7 @@ func (p *Product) UpdateDetails(d ProductDetails) error {
 	if err != nil {
 		return err
 	}
+	updated.variants = p.variants
 	*p = *updated
 	return nil
 }

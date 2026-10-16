@@ -36,13 +36,14 @@ func (q *Queries) CountProducts(ctx context.Context, arg CountProductsParams) (i
 
 const countSearchProducts = `-- name: CountSearchProducts :one
 SELECT count(*)
-FROM products
-WHERE ($1::boolean IS NULL OR active = $1)
-  AND ($2::uuid IS NULL OR category_id = $2)
-  AND ($3::uuid[] IS NULL OR id = ANY($3::uuid[]))
-  AND (sku = $4
-       OR barcode = $5
-       OR search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest($6::text[]) AS term))
+FROM products p
+WHERE ($1::boolean IS NULL OR p.active = $1)
+  AND ($2::uuid IS NULL OR p.category_id = $2)
+  AND ($3::uuid[] IS NULL OR p.id = ANY($3::uuid[]))
+  AND (EXISTS (
+           SELECT 1 FROM product_variants v
+           WHERE v.product_id = p.id AND (v.sku = $4 OR v.barcode = $5))
+       OR p.search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest($6::text[]) AS term))
 `
 
 type CountSearchProductsParams struct {
@@ -69,21 +70,17 @@ func (q *Queries) CountSearchProducts(ctx context.Context, arg CountSearchProduc
 }
 
 const createProduct = `-- name: CreateProduct :exec
-INSERT INTO products (id, tenant_id, sku, barcode, name, description, category_id, base_unit, cost, price, tax_rate, active, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+INSERT INTO products (id, tenant_id, name, description, category_id, base_unit, tax_rate, active, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type CreateProductParams struct {
 	ID          uuid.UUID
 	TenantID    uuid.UUID
-	Sku         string
-	Barcode     *string
 	Name        string
 	Description string
 	CategoryID  *uuid.UUID
 	BaseUnit    string
-	Cost        decimal.Decimal
-	Price       decimal.Decimal
 	TaxRate     decimal.Decimal
 	Active      bool
 	CreatedAt   time.Time
@@ -93,14 +90,10 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) er
 	_, err := q.db.Exec(ctx, createProduct,
 		arg.ID,
 		arg.TenantID,
-		arg.Sku,
-		arg.Barcode,
 		arg.Name,
 		arg.Description,
 		arg.CategoryID,
 		arg.BaseUnit,
-		arg.Cost,
-		arg.Price,
 		arg.TaxRate,
 		arg.Active,
 		arg.CreatedAt,
@@ -109,7 +102,7 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) er
 }
 
 const getProduct = `-- name: GetProduct :one
-SELECT id, tenant_id, sku, barcode, name, description, category_id, base_unit, cost, price, tax_rate, active, created_at
+SELECT id, tenant_id, name, description, category_id, base_unit, tax_rate, active, created_at
 FROM products
 WHERE id = $1
 `
@@ -117,14 +110,10 @@ WHERE id = $1
 type GetProductRow struct {
 	ID          uuid.UUID
 	TenantID    uuid.UUID
-	Sku         string
-	Barcode     *string
 	Name        string
 	Description string
 	CategoryID  *uuid.UUID
 	BaseUnit    string
-	Cost        decimal.Decimal
-	Price       decimal.Decimal
 	TaxRate     decimal.Decimal
 	Active      bool
 	CreatedAt   time.Time
@@ -136,14 +125,10 @@ func (q *Queries) GetProduct(ctx context.Context, id uuid.UUID) (GetProductRow, 
 	err := row.Scan(
 		&i.ID,
 		&i.TenantID,
-		&i.Sku,
-		&i.Barcode,
 		&i.Name,
 		&i.Description,
 		&i.CategoryID,
 		&i.BaseUnit,
-		&i.Cost,
-		&i.Price,
 		&i.TaxRate,
 		&i.Active,
 		&i.CreatedAt,
@@ -152,7 +137,7 @@ func (q *Queries) GetProduct(ctx context.Context, id uuid.UUID) (GetProductRow, 
 }
 
 const listProducts = `-- name: ListProducts :many
-SELECT id, tenant_id, sku, barcode, name, description, category_id, base_unit, cost, price, tax_rate, active, created_at
+SELECT id, tenant_id, name, description, category_id, base_unit, tax_rate, active, created_at
 FROM products
 WHERE ($1::boolean IS NULL OR active = $1)
   AND ($2::uuid IS NULL OR category_id = $2)
@@ -172,14 +157,10 @@ type ListProductsParams struct {
 type ListProductsRow struct {
 	ID          uuid.UUID
 	TenantID    uuid.UUID
-	Sku         string
-	Barcode     *string
 	Name        string
 	Description string
 	CategoryID  *uuid.UUID
 	BaseUnit    string
-	Cost        decimal.Decimal
-	Price       decimal.Decimal
 	TaxRate     decimal.Decimal
 	Active      bool
 	CreatedAt   time.Time
@@ -204,14 +185,10 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 		if err := rows.Scan(
 			&i.ID,
 			&i.TenantID,
-			&i.Sku,
-			&i.Barcode,
 			&i.Name,
 			&i.Description,
 			&i.CategoryID,
 			&i.BaseUnit,
-			&i.Cost,
-			&i.Price,
 			&i.TaxRate,
 			&i.Active,
 			&i.CreatedAt,
@@ -227,26 +204,31 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 }
 
 const searchProducts = `-- name: SearchProducts :many
-SELECT id, tenant_id, sku, barcode, name, description, category_id, base_unit, cost, price, tax_rate, active, created_at
-FROM products
-WHERE ($1::boolean IS NULL OR active = $1)
-  AND ($2::uuid IS NULL OR category_id = $2)
-  AND ($3::uuid[] IS NULL OR id = ANY($3::uuid[]))
-  AND (sku = $4
-       OR barcode = $5
-       OR search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest($6::text[]) AS term))
-ORDER BY coalesce(sku = $4 OR barcode = $5, false) DESC,
-         similarity(search_name, f_unaccent(lower($7))) DESC,
-         name, id
+SELECT p.id, p.tenant_id, p.name, p.description, p.category_id, p.base_unit, p.tax_rate, p.active, p.created_at
+FROM products p
+CROSS JOIN LATERAL (
+    SELECT EXISTS (
+        SELECT 1 FROM product_variants v
+        WHERE v.product_id = p.id AND (v.sku = $1 OR v.barcode = $2)
+    ) AS by_code
+) code
+WHERE ($3::boolean IS NULL OR p.active = $3)
+  AND ($4::uuid IS NULL OR p.category_id = $4)
+  AND ($5::uuid[] IS NULL OR p.id = ANY($5::uuid[]))
+  AND (code.by_code
+       OR p.search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest($6::text[]) AS term))
+ORDER BY code.by_code DESC,
+         similarity(p.search_name, f_unaccent(lower($7))) DESC,
+         p.name, p.id
 LIMIT $9 OFFSET $8
 `
 
 type SearchProductsParams struct {
+	Sku        string
+	Barcode    *string
 	Active     *bool
 	CategoryID *uuid.UUID
 	Ids        []uuid.UUID
-	Sku        string
-	Barcode    *string
 	Terms      []string
 	Text       string
 	RowOffset  int32
@@ -256,30 +238,26 @@ type SearchProductsParams struct {
 type SearchProductsRow struct {
 	ID          uuid.UUID
 	TenantID    uuid.UUID
-	Sku         string
-	Barcode     *string
 	Name        string
 	Description string
 	CategoryID  *uuid.UUID
 	BaseUnit    string
-	Cost        decimal.Decimal
-	Price       decimal.Decimal
 	TaxRate     decimal.Decimal
 	Active      bool
 	CreatedAt   time.Time
 }
 
-// SearchProducts matches an exact SKU or barcode, or names containing every
-// term (case- and accent-insensitive). Terms arrive with LIKE wildcards
-// escaped. Exact codes come first, then the names most similar (pg_trgm) to
-// the whole text.
+// SearchProducts matches the exact SKU or barcode of any of a product's
+// variants, or names containing every term (case- and accent-insensitive).
+// Terms arrive with LIKE wildcards escaped. Exact codes come first, then the
+// names most similar (pg_trgm) to the whole text.
 func (q *Queries) SearchProducts(ctx context.Context, arg SearchProductsParams) ([]SearchProductsRow, error) {
 	rows, err := q.db.Query(ctx, searchProducts,
+		arg.Sku,
+		arg.Barcode,
 		arg.Active,
 		arg.CategoryID,
 		arg.Ids,
-		arg.Sku,
-		arg.Barcode,
 		arg.Terms,
 		arg.Text,
 		arg.RowOffset,
@@ -295,14 +273,10 @@ func (q *Queries) SearchProducts(ctx context.Context, arg SearchProductsParams) 
 		if err := rows.Scan(
 			&i.ID,
 			&i.TenantID,
-			&i.Sku,
-			&i.Barcode,
 			&i.Name,
 			&i.Description,
 			&i.CategoryID,
 			&i.BaseUnit,
-			&i.Cost,
-			&i.Price,
 			&i.TaxRate,
 			&i.Active,
 			&i.CreatedAt,
@@ -319,21 +293,16 @@ func (q *Queries) SearchProducts(ctx context.Context, arg SearchProductsParams) 
 
 const updateProduct = `-- name: UpdateProduct :execrows
 UPDATE products
-SET sku = $2, barcode = $3, name = $4, description = $5, category_id = $6,
-    base_unit = $7, cost = $8, price = $9, tax_rate = $10, active = $11
+SET name = $2, description = $3, category_id = $4, base_unit = $5, tax_rate = $6, active = $7
 WHERE id = $1
 `
 
 type UpdateProductParams struct {
 	ID          uuid.UUID
-	Sku         string
-	Barcode     *string
 	Name        string
 	Description string
 	CategoryID  *uuid.UUID
 	BaseUnit    string
-	Cost        decimal.Decimal
-	Price       decimal.Decimal
 	TaxRate     decimal.Decimal
 	Active      bool
 }
@@ -341,14 +310,10 @@ type UpdateProductParams struct {
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (int64, error) {
 	result, err := q.db.Exec(ctx, updateProduct,
 		arg.ID,
-		arg.Sku,
-		arg.Barcode,
 		arg.Name,
 		arg.Description,
 		arg.CategoryID,
 		arg.BaseUnit,
-		arg.Cost,
-		arg.Price,
 		arg.TaxRate,
 		arg.Active,
 	)

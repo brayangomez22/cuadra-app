@@ -21,7 +21,20 @@ $$;
 -- +goose StatementEnd
 
 -- Enforced even if the role already existed with other attributes.
-ALTER ROLE app_user LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION NOINHERIT;
+-- Only a superuser may set SUPERUSER, BYPASSRLS and REPLICATION, even to turn
+-- them off. The migration role on Azure is not one: there they are verified.
+-- +goose StatementBegin
+DO $$
+BEGIN
+    ALTER ROLE app_user LOGIN NOCREATEDB NOCREATEROLE NOINHERIT;
+    IF (SELECT rolsuper FROM pg_roles WHERE rolname = current_user) THEN
+        ALTER ROLE app_user NOSUPERUSER NOBYPASSRLS NOREPLICATION;
+    ELSIF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_user' AND (rolsuper OR rolbypassrls OR rolreplication)) THEN
+        RAISE EXCEPTION 'app_user is a superuser or has BYPASSRLS or REPLICATION: remove them as a superuser';
+    END IF;
+END
+$$;
+-- +goose StatementEnd
 
 -- +goose StatementBegin
 DO $$

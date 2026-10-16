@@ -75,8 +75,11 @@ func (f fixture) createTenant(t *testing.T) uuid.UUID {
 func (f fixture) createProduct(t *testing.T, tenantID uuid.UUID) uuid.UUID {
 	t.Helper()
 	id := newID()
-	f.exec(t, tenantID, `INSERT INTO products (id, tenant_id, sku, name, description, base_unit, cost, price, tax_rate, active, created_at)
-		VALUES ($1, $2, $3, 'Cemento gris 50kg', '', 'bulto', 30000, 35000, 0.19, true, $4)`,
+	f.exec(t, tenantID, `INSERT INTO products (id, tenant_id, name, description, base_unit, tax_rate, active, created_at)
+		VALUES ($1, $2, 'Cemento gris 50kg', '', 'bulto', 0.19, true, $3)`,
+		id, tenantID, now)
+	f.exec(t, tenantID, `INSERT INTO product_variants (id, tenant_id, product_id, sku, cost, price, is_default, active, created_at)
+		VALUES ($1, $2, $1, $3, 30000, 35000, true, true, $4)`,
 		id, tenantID, "SKU-"+strings.ToUpper(id.String()), now)
 	return id
 }
