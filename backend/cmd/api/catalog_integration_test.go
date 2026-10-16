@@ -27,23 +27,25 @@ import (
 // Row-Level Security.
 func TestCatalogFlow(t *testing.T) {
 	database := dbtest.New(t)
+	moduleService, permissions := testModules(t, database)
 	tokens, err := auth.NewJWT(testSecret, 15*time.Minute)
 	require.NoError(t, err)
 	log := slog.New(slog.DiscardHandler)
 	catalogModule, err := catalog.New(catalog.Config{
-		DB: database, Authorize: identity.Authorize, Logger: log,
+		DB: database, Authorize: permissions.Authorize, Logger: log,
 		TracerProvider: noop.NewTracerProvider(), MeterProvider: metricnoop.NewMeterProvider(),
 	})
 	require.NoError(t, err)
 	identityModule, err := identity.New(identity.Config{
-		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule}, Logger: log,
+		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule},
+		Permissions: permissions, Modules: moduleService, Logger: log,
 		TracerProvider: noop.NewTracerProvider(), MeterProvider: metricnoop.NewMeterProvider(),
 	})
 	require.NoError(t, err)
 	handler, err := newHandler(handlerConfig{
 		Log: log, TracerProvider: noop.NewTracerProvider(), DB: readyDB{},
-		Verifier: tokens, Authorize: identity.Authorize,
-		Routes: []func(*http.ServeMux){identityModule.RegisterRoutes, catalogModule.RegisterRoutes},
+		Verifier: tokens, Permissions: permissions, Modules: moduleService,
+		Routes: []func(*http.ServeMux){identityModule.RegisterRoutes, catalogModule.RegisterRoutes, moduleRoutes(moduleService, log)},
 	})
 	require.NoError(t, err)
 
@@ -358,6 +360,9 @@ func TestCatalogFlow(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), `"axis_values":{"color":"Rojo"}`)
 
+		// Adding variants is the variants module's.
+		rec = do(t, http.MethodPut, "/api/v1/modules/variants", `{"active":true}`, ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		rec = do(t, http.MethodPost, variantPath, `{"sku":"tub-pvc-12-v","cost":"1","price":"2","axis_values":{"color":"Verde"}}`, ownerToken)
 		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), "axis_value_not_allowed")

@@ -1,7 +1,7 @@
 package domain
 
 // Role is a user's role within a tenant. Its permissions come from the
-// matrix in permission.go.
+// PermissionMatrix.
 type Role string
 
 // The four roles of a tenant.
@@ -22,8 +22,11 @@ func ParseRole(s string) (Role, error) {
 }
 
 func (r Role) valid() bool {
-	_, ok := rolePermissions[r]
-	return ok
+	switch r {
+	case RoleOwner, RoleAdmin, RoleCashier, RoleWarehouse:
+		return true
+	}
+	return false
 }
 
 func (r Role) String() string { return string(r) }

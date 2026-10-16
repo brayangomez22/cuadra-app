@@ -26,6 +26,7 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/jobs"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/logger"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/telemetry"
 )
 
@@ -122,9 +123,24 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	// The activable modules and the permission matrix are built before the
+	// business modules, which authorize with it.
+	registry, err := modules.NewRegistry(modules.Builtin()...)
+	if err != nil {
+		return err
+	}
+	moduleService, err := newModuleService(registry, database, log, otel.GetTracerProvider(), otel.GetMeterProvider())
+	if err != nil {
+		return err
+	}
+	permissions, err := identity.NewPermissions(identityRegistry{registry})
+	if err != nil {
+		return err
+	}
+
 	catalogModule, err := catalog.New(catalog.Config{
 		DB:             database,
-		Authorize:      identity.Authorize,
+		Authorize:      permissions.Authorize,
 		Logger:         log,
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),
@@ -136,6 +152,8 @@ func run() error {
 		DB:             database,
 		Issuer:         tokens,
 		Setup:          tenantSetup{catalogModule},
+		Permissions:    permissions,
+		Modules:        moduleService,
 		Logger:         log,
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),
@@ -146,7 +164,7 @@ func run() error {
 
 	inventoryModule, err := inventory.New(inventory.Config{
 		DB:             database,
-		Authorize:      identity.Authorize,
+		Authorize:      permissions.Authorize,
 		Variants:       inventoryCatalog{catalogModule},
 		Logger:         log,
 		TracerProvider: otel.GetTracerProvider(),
@@ -158,7 +176,7 @@ func run() error {
 
 	salesModule, err := sales.New(sales.Config{
 		DB:             database,
-		Authorize:      identity.Authorize,
+		Authorize:      permissions.Authorize,
 		Catalog:        salesCatalog{catalogModule},
 		Stock:          salesStock{inventoryModule},
 		Logger:         log,
@@ -174,12 +192,13 @@ func run() error {
 		TracerProvider: otel.GetTracerProvider(),
 		DB:             database,
 		// The API docs are for developers only; other environments do not serve them.
-		Docs:      cfg.Env == "development",
-		Verifier:  tokens,
-		Authorize: identity.Authorize,
+		Docs:        cfg.Env == "development",
+		Verifier:    tokens,
+		Permissions: permissions,
+		Modules:     moduleService,
 		Routes: []func(*http.ServeMux){
 			identityModule.RegisterRoutes, catalogModule.RegisterRoutes, inventoryModule.RegisterRoutes,
-			salesModule.RegisterRoutes,
+			salesModule.RegisterRoutes, moduleRoutes(moduleService, log),
 		},
 	})
 	if err != nil {

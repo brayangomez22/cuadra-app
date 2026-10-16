@@ -513,4 +513,90 @@ func TestMe(t *testing.T) {
 
 		require.ErrorIs(t, err, domain.ErrUserNotFound)
 	})
+
+	t.Run("lista los módulos activos del tenant", func(t *testing.T) {
+		e := newEnv(t)
+		tenant, user := e.seed(t, "bodega@eltornillo.co", validPassword, domain.RoleWarehouse)
+		other, _ := e.seed(t, "bodega@modaurbana.co", validPassword, domain.RoleWarehouse)
+		e.modules.activate(tenant.ID(), "variants", "lots_expiry")
+		e.modules.activate(other.ID(), "work_orders")
+
+		profile, err := e.svc.Me(t.Context(), tenant.ID(), user.ID())
+
+		require.NoError(t, err)
+		require.Equal(t, []string{"variants", "lots_expiry"}, profile.Modules)
+	})
+
+	t.Run("los permisos de un módulo inactivo no aparecen en /me", func(t *testing.T) {
+		e := newEnv(t)
+		tenant, user := e.seed(t, "bodega@eltornillo.co", validPassword, domain.RoleWarehouse)
+
+		profile, err := e.svc.Me(t.Context(), tenant.ID(), user.ID())
+		require.NoError(t, err)
+		require.Equal(t, []domain.Permission{
+			domain.PermCatalogRead, domain.PermInventoryRead, domain.PermInventoryAdjust,
+		}, profile.Permissions)
+
+		e.modules.activate(tenant.ID(), "lots_expiry")
+		profile, err = e.svc.Me(t.Context(), tenant.ID(), user.ID())
+		require.NoError(t, err)
+		require.Equal(t, []domain.Permission{
+			domain.PermCatalogRead, domain.PermInventoryRead, domain.PermInventoryAdjust, "lots:manage",
+		}, profile.Permissions)
+	})
+}
+
+func TestSessionAccess(t *testing.T) {
+	t.Run("el inicio de sesión devuelve los módulos activos y los permisos del rol", func(t *testing.T) {
+		e := newEnv(t)
+		tenant, _ := e.seed(t, "caja@modaurbana.co", validPassword, domain.RoleCashier)
+		e.modules.activate(tenant.ID(), "work_orders")
+
+		session, err := e.svc.Login(t.Context(), app.LoginInput{Email: "caja@modaurbana.co", Password: validPassword, ClientIP: "203.0.113.7"})
+
+		require.NoError(t, err)
+		require.Equal(t, []string{"work_orders"}, session.Profile.Modules)
+		require.Contains(t, session.Profile.Permissions, domain.Permission("work_orders:write"))
+		require.NotContains(t, session.Profile.Permissions, domain.PermCatalogWrite)
+	})
+
+	t.Run("el registro devuelve el owner con todos los permisos del core y sin módulos", func(t *testing.T) {
+		e := newEnv(t)
+
+		session, err := e.svc.SignUp(t.Context(), signUpInput())
+
+		require.NoError(t, err)
+		require.Empty(t, session.Profile.Modules)
+		var core []domain.Permission
+		for _, g := range domain.CoreGrants() {
+			core = append(core, g.Permission)
+		}
+		require.Equal(t, core, session.Profile.Permissions)
+	})
+}
+
+func TestNewPermissionMatrix(t *testing.T) {
+	t.Run("registra los permisos de los módulos junto a los del core", func(t *testing.T) {
+		m, err := app.NewPermissionMatrix(testRegistry)
+
+		require.NoError(t, err)
+		require.True(t, m.Can(domain.RoleWarehouse, "lots:manage"))
+		require.False(t, m.Can(domain.RoleCashier, "lots:manage"))
+		require.True(t, m.Can(domain.RoleCashier, domain.PermSalesCreate))
+	})
+
+	t.Run("un módulo que declara un rol desconocido impide arrancar", func(t *testing.T) {
+		_, err := app.NewPermissionMatrix(fakeRegistry{{Module: "lots_expiry", Permission: "lots:manage", Roles: []string{"root"}}})
+		require.ErrorIs(t, err, domain.ErrInvalidRole)
+	})
+
+	t.Run("un módulo que repite un permiso del core impide arrancar", func(t *testing.T) {
+		_, err := app.NewPermissionMatrix(fakeRegistry{{Module: "variants", Permission: "catalog:write", Roles: []string{"admin"}}})
+		require.ErrorIs(t, err, domain.ErrDuplicatePermission)
+	})
+
+	t.Run("un módulo que declara un permiso mal escrito impide arrancar", func(t *testing.T) {
+		_, err := app.NewPermissionMatrix(fakeRegistry{{Module: "lots_expiry", Permission: "Lots manage", Roles: []string{"admin"}}})
+		require.ErrorIs(t, err, domain.ErrInvalidPermission)
+	})
 }

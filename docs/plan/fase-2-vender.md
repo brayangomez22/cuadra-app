@@ -85,7 +85,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 **Alcance:** `AttributeDefinition` por tenant (clave, etiqueta, tipo: texto, número, lista o booleano; opciones; obligatorio), columna `products.attributes` (`JSONB`) y validación de los atributos contra las definiciones en el dominio. Contrato y CRUD de definiciones; `Product` agrega `attributes`. Ejes de variante definidos por el tenant (nombre y valores permitidos), validando `axis_values` contra ellos (P25).
 **Tests primero:** un atributo de tipo número rechaza texto; un atributo de lista rechaza una opción no definida; un atributo obligatorio faltante falla; aislamiento multi-tenant.
 
-### [ ] T24f · Módulos por tenant y permisos
+### [x] T24f · Módulos por tenant y permisos
 **Depende de:** T24a.
 **Alcance:** `internal/platform/modules`: registro de módulos (ID, dependencias, permisos, menús), tabla `tenant_modules` (RLS), middleware `RequireModule("<id>")` (404 si está inactivo), lista de módulos activos en `GET /api/v1/me` y endpoint para que el owner active o desactive módulos (respetando dependencias). Primer módulo registrado: `variants`; agregar variantes (`POST /products/{productId}/variants`, de T24a) queda detrás de `RequireModule("variants")` (P24). **Permisos:** `Permission` deja de ser un enum cerrado y pasa a ser un ID con espacio de nombres (`catalog:write`, `lots:manage`) validado contra un registro que llenan el core y los módulos al arrancar. Cada módulo declara sus permisos y qué roles los reciben por defecto; `identity` lee el registro a través de un puerto (no importa `platform/modules`). Los permisos del core conservan su matriz de roles actual.
 **Tests primero:** activar un módulo con una dependencia inactiva falla con un error claro; una ruta de un módulo inactivo responde 404; desactivar un módulo no borra datos; registrar dos veces el mismo permiso falla al arrancar; un permiso que no está en el registro se rechaza; un módulo da sus permisos solo a los roles que declara; los permisos de un módulo inactivo no aparecen en `/me`; aislamiento multi-tenant de `tenant_modules`.
@@ -93,7 +93,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 ### [ ] T24g · Plantillas de tipo de negocio y registro
 **Depende de:** T24d, T24e, T24f.
 **Alcance:** plantillas en `backend/templates/business/*.yaml` (`generica`, `ferreteria`, `tienda`, `drogueria`, `papeleria`, `ropa_calzado`) con módulos, unidades, categorías iniciales, atributos de producto, segmentos de cliente y etiquetas de UI (alcance mínimo: los textos de la UI que hoy nombran el negocio). Esquema de validación de las plantillas, con `go.yaml.in/yaml/v3` y `github.com/santhosh-tekuri/jsonschema/v6` como dependencias directas. `SignUp` pide el tipo de negocio y aplica la plantilla en la misma transacción, reemplazando la siembra fija de T24d. `tenants` guarda la plantilla elegida. Migración: los tenants existentes quedan con la plantilla `ferreteria` y sus módulos. Los segmentos de cliente se declaran y se validan, pero se siembran a partir de T31.
-**Pendientes que entran a esta tarea:** P34 y P35 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P34, P35 y P39 (`docs/plan/pendientes.md`).
 **Tests primero:** aplicar una plantilla siembra exactamente sus unidades, categorías, atributos y módulos; un registro con una plantilla inexistente falla sin crear el tenant; cada YAML de plantilla se valida en CI contra su esquema; casos de al menos dos plantillas.
 
 ### [ ] T24h · Neutralidad del core

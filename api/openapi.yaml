@@ -43,6 +43,11 @@ tags:
       Ventas del punto de venta. El precio, el nombre y el IVA de cada línea salen del catálogo en el momento de la
       venta; el cliente solo envía producto, cantidad, descuento y pagos. Los montos viajan como string decimal con
       2 decimales. Cada venta confirmada recibe un consecutivo por sede, sin huecos.
+  - name: modules
+    description: |
+      Módulos que la empresa puede activar según su tipo de negocio (variantes, lotes, listas de precios...). Las
+      operaciones de un módulo inactivo responden 404, y sus permisos no aparecen en `/me`. Desactivar un módulo no
+      borra sus datos.
   - name: cash
     description: |
       Caja del cajero: apertura con base, ingresos y egresos con motivo, y cierre con arqueo por denominación. Cada
@@ -52,7 +57,10 @@ tags:
 # Authorization is declared here and enforced by the API before the request
 # is validated: every operation requires a bearer token unless it says
 # `security: []`, and `x-permission` names the permission the user's role
-# must grant (see the permission matrix of the identity module).
+# must grant (see the permission matrix of the identity module). `x-module`
+# names the activable module an operation belongs to: when the tenant does
+# not have it active, the operation answers 404 (after the token and the
+# permission are checked, before the request is validated).
 
 paths:
   /healthz:
@@ -249,6 +257,75 @@ paths:
                 $ref: "#/components/schemas/Me"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/modules:
+    get:
+      tags: [modules]
+      operationId: listModules
+      summary: Listar los módulos
+      description: Todos los módulos disponibles, con sus dependencias y si la empresa los tiene activos.
+      x-permission: tenant:manage
+      responses:
+        "200":
+          description: Los módulos, en el orden en que se presentan.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModuleList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/modules/{moduleId}:
+    parameters:
+      - $ref: "#/components/parameters/ModuleId"
+    put:
+      tags: [modules]
+      operationId: setModuleActive
+      summary: Activar o desactivar un módulo
+      description: |
+        Activa o desactiva un módulo para la empresa. Es idempotente: activar un módulo activo no cambia nada.
+        Un módulo solo se activa con sus dependencias activas, y no se desactiva mientras otro módulo activo
+        dependa de él. Desactivarlo no borra sus datos: vuelven a estar disponibles al activarlo de nuevo.
+      x-permission: tenant:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModuleUpdate"
+      responses:
+        "200":
+          description: El módulo con su estado nuevo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Module"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: El módulo no existe (`unknown_module`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: |
+            Una dependencia del módulo está inactiva (`module_dependency_inactive`) o un módulo activo depende de
+            él (`module_required_by`). El módulo que bloquea el cambio va en `details.module`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -498,7 +575,9 @@ paths:
       description: |
         Agrega una variante activa. Debe usar los mismos ejes que las demás variantes del producto, con valores
         distintos. A un producto simple primero se le asignan ejes a su variante por defecto (editar la variante).
+        Requiere el módulo `variants` activo; si no lo está, responde 404.
       x-permission: catalog:write
+      x-module: variants
       requestBody:
         required: true
         content:
@@ -1877,6 +1956,14 @@ components:
       schema:
         type: string
         format: uuid
+    ModuleId:
+      name: moduleId
+      in: path
+      required: true
+      schema:
+        type: string
+        maxLength: 64
+      example: variants
     VariantId:
       name: variantId
       in: path
@@ -2100,7 +2187,7 @@ components:
           $ref: "#/components/schemas/Me"
     Me:
       type: object
-      required: [id, tenant_id, tenant_name, tenant_nit, name, email, role, permissions]
+      required: [id, tenant_id, tenant_name, tenant_nit, name, email, role, permissions, modules]
       properties:
         id:
           type: string
@@ -2123,10 +2210,17 @@ components:
           enum: [owner, admin, cashier, warehouse]
         permissions:
           type: array
-          description: Permisos del rol, para mostrar u ocultar acciones en la UI.
+          description: |
+            Permisos del rol, para mostrar u ocultar acciones en la UI. Incluye los de los módulos activos.
           items:
             type: string
           example: [catalog:read, sales:create]
+        modules:
+          type: array
+          description: Módulos activos de la empresa, para mostrar u ocultar menús, columnas y campos.
+          items:
+            type: string
+          example: [variants]
     TenantSelectionRequired:
       type: object
       required: [error, tenants]
@@ -2193,6 +2287,38 @@ components:
           minLength: 1
           maxLength: 50
           example: Par
+    Module:
+      type: object
+      required: [id, name, depends_on, active]
+      properties:
+        id:
+          type: string
+          example: variants
+        name:
+          type: string
+          example: Variantes
+        depends_on:
+          type: array
+          description: Módulos que deben estar activos para activar este.
+          items:
+            type: string
+        active:
+          type: boolean
+    ModuleList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Module"
+    ModuleUpdate:
+      type: object
+      required: [active]
+      additionalProperties: false
+      properties:
+        active:
+          type: boolean
     UnitList:
       type: object
       required: [items]

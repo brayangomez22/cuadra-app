@@ -28,24 +28,26 @@ import (
 // Row-Level Security.
 func TestInventoryFlow(t *testing.T) {
 	database := dbtest.New(t)
+	moduleService, permissions := testModules(t, database)
 	tokens, err := auth.NewJWT(testSecret, 15*time.Minute)
 	require.NoError(t, err)
 	log := slog.New(slog.DiscardHandler)
 	tp, mp := noop.NewTracerProvider(), metricnoop.NewMeterProvider()
-	catalogModule, err := catalog.New(catalog.Config{DB: database, Authorize: identity.Authorize, Logger: log, TracerProvider: tp, MeterProvider: mp})
+	catalogModule, err := catalog.New(catalog.Config{DB: database, Authorize: permissions.Authorize, Logger: log, TracerProvider: tp, MeterProvider: mp})
 	require.NoError(t, err)
 	identityModule, err := identity.New(identity.Config{
-		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule}, Logger: log, TracerProvider: tp, MeterProvider: mp,
+		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule},
+		Permissions: permissions, Modules: moduleService, Logger: log, TracerProvider: tp, MeterProvider: mp,
 	})
 	require.NoError(t, err)
 	inventoryModule, err := inventory.New(inventory.Config{
-		DB: database, Authorize: identity.Authorize, Variants: inventoryCatalog{catalogModule},
+		DB: database, Authorize: permissions.Authorize, Variants: inventoryCatalog{catalogModule},
 		Logger: log, TracerProvider: tp, MeterProvider: mp,
 	})
 	require.NoError(t, err)
 	handler, err := newHandler(handlerConfig{
 		Log: log, TracerProvider: tp, DB: readyDB{},
-		Verifier: tokens, Authorize: identity.Authorize,
+		Verifier: tokens, Permissions: permissions, Modules: moduleService,
 		Routes: []func(*http.ServeMux){identityModule.RegisterRoutes, catalogModule.RegisterRoutes, inventoryModule.RegisterRoutes},
 	})
 	require.NoError(t, err)

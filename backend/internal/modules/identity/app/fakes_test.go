@@ -107,6 +107,37 @@ func (f *fakeUsers) remove(id uuid.UUID) {
 	delete(f.byID, id)
 }
 
+// fakeModules keeps the active modules of each tenant.
+type fakeModules struct {
+	mu     sync.Mutex
+	active map[uuid.UUID][]string
+}
+
+func (f *fakeModules) Active(_ context.Context, tenantID uuid.UUID) ([]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.active[tenantID]), nil
+}
+
+func (f *fakeModules) activate(tenantID uuid.UUID, ids ...string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.active[tenantID] = append(f.active[tenantID], ids...)
+}
+
+// fakeRegistry is the module registry as identity sees it: the permissions
+// each module declares.
+type fakeRegistry []app.ModulePermission
+
+func (f fakeRegistry) Permissions() []app.ModulePermission { return f }
+
+// testRegistry declares the permissions of two modules of different kinds of
+// business: lots (pharmacies) and work orders (repair shops).
+var testRegistry = fakeRegistry{
+	{Module: "lots_expiry", Permission: "lots:manage", Roles: []string{"admin", "warehouse"}},
+	{Module: "work_orders", Permission: "work_orders:write", Roles: []string{"cashier"}},
+}
+
 // fakeSetup records the tenants it prepared and whether it ran inside
 // CreateWithOwner's transaction; err makes it fail.
 type fakeSetup struct {
@@ -354,6 +385,7 @@ type env struct {
 	tokens       *fakeTokens
 	hasher       *fakeHasher
 	setup        *fakeSetup
+	modules      *fakeModules
 	ipLimiter    *fakeLimiter
 	emailLimiter *fakeLimiter
 	spans        *tracetest.SpanRecorder
@@ -371,6 +403,7 @@ func newEnv(t *testing.T) *env {
 		tokens:       &fakeTokens{byID: map[uuid.UUID]*domain.RefreshToken{}},
 		hasher:       &fakeHasher{},
 		setup:        &fakeSetup{},
+		modules:      &fakeModules{active: map[uuid.UUID][]string{}},
 		ipLimiter:    &fakeLimiter{denied: map[string]bool{}},
 		emailLimiter: &fakeLimiter{denied: map[string]bool{}},
 		spans:        tracetest.NewSpanRecorder(),
@@ -383,6 +416,8 @@ func newEnv(t *testing.T) *env {
 		_ = mp.Shutdown(context.Background())
 	})
 
+	permissions, err := app.NewPermissionMatrix(testRegistry)
+	require.NoError(t, err)
 	svc, err := app.NewService(app.Deps{
 		Tenants:        e.tenants,
 		Users:          users,
@@ -391,6 +426,8 @@ func newEnv(t *testing.T) *env {
 		Hasher:         e.hasher,
 		Issuer:         fakeIssuer{clock: clock},
 		Setup:          e.setup,
+		Permissions:    permissions,
+		Modules:        e.modules,
 		IPLimiter:      e.ipLimiter,
 		EmailLimiter:   e.emailLimiter,
 		Now:            clock.Now,

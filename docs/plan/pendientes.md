@@ -30,7 +30,7 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P14 | Idempotencia de `POST /sales` | PR #28 (T21) | V2-5 |
 | [ ] | P21 | Alertas por tasa de consumo del presupuesto de error (burn rate de varias ventanas) para los dos SLOs de `docs/slo.md`, calibradas con tráfico real | T24 | T47 |
 | [ ] | P22 | Paneles para las métricas de trabajos en segundo plano (`cuadra.jobs.*`: encolados, fallidos, descartados, latencia de la cola) y una alerta si se descartan trabajos | T24 | T47 |
-| [ ] | P24 | Poner `POST /api/v1/products/{productId}/variants` (agregar variantes) detrás de `RequireModule("variants")`. Editar una variante (`PUT …/variants/{variantId}`) sigue en el core, porque todo producto tiene al menos su variante por defecto | T24a | T24f |
+| [x] | P24 | Poner `POST /api/v1/products/{productId}/variants` (agregar variantes) detrás de `RequireModule("variants")`. Editar una variante (`PUT …/variants/{variantId}`) sigue en el core, porque todo producto tiene al menos su variante por defecto. Hecho en T24f (`x-module: variants`) | T24a | T24f |
 | [x] | P25 | Ejes de variante definidos por el tenant (nombre y valores permitidos, sembrados por la plantilla). Hoy los ejes son texto libre por producto, y "M" y "m" cuentan como valores distintos. Hecho en T24e (`/variant-axes`); la siembra desde la plantilla pasa a P35 | T24a | T24e |
 | [ ] | P26 | Verificar en el primer despliegue que las migraciones corren con el administrador de Azure (sin superusuario), como lo reproduce `dbtest` desde T24a | T24a | T46 |
 | [ ] | P29 | Quitar el puerto `ProductVariants` del inventario (`DefaultVariant` y `ProductsOf`) junto con los `product_id` deprecated de inventario: hoy cada respuesta de entradas, ajustes, traslados, existencias y kardex hace una consulta extra al catálogo para llenar `product_id` | T24b | T24j |
@@ -43,6 +43,8 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P36 | `ProductInput.attributes` pasa a ser obligatorio. Hoy, omitirlo al editar conserva los valores actuales, para que el formulario que no conoce los atributos no los borre | T24e | T24j |
 | [ ] | P37 | Pantalla de configuración de **ejes de variante** (crear, editar valores y borrar con `/api/v1/variant-axes`), junto a la de unidades y atributos | T24e | T24j |
 | [ ] | P38 | Con el módulo `variants` activo, el formulario de variantes ofrece los ejes y valores del tenant (`GET /api/v1/variant-axes`) en vez de texto libre: un eje o valor no definido responde `unknown_axis` o `axis_value_not_allowed` | T24e | T24i |
+| [ ] | P39 | El registro activa los módulos de la plantilla con el mismo `modules.Store`, dentro de la transacción del registro (`InTenantTx`), con `enabled_by` en NULL. La migración de T24g **no** desactiva `variants` a los tenants existentes aunque la plantilla `ferreteria` no lo incluya: 00017 se lo activó porque ya podían agregar variantes | T24f | T24g |
+| [ ] | P40 | Activar o desactivar un módulo no queda auditado: `tenant_modules.enabled_by` guarda quién lo activó, pero desactivar borra la fila. Registrar ambos cambios en el registro de auditoría | T24f | T38 |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 

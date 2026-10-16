@@ -147,7 +147,7 @@ func (s *Service) authenticate(ctx context.Context, in LoginInput) (Profile, err
 	if !tenant.IsActive() {
 		return Profile{}, domain.ErrTenantSuspended
 	}
-	return Profile{User: user, Tenant: tenant}, nil
+	return s.profile(ctx, user, tenant)
 }
 
 // rejectWithoutUser verifies password against a dummy hash, so a login

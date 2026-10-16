@@ -145,6 +145,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar los módulos
+         * @description Todos los módulos disponibles, con sus dependencias y si la empresa los tiene activos.
+         */
+        get: operations["listModules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/modules/{moduleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example variants */
+                moduleId: components["parameters"]["ModuleId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Activar o desactivar un módulo
+         * @description Activa o desactiva un módulo para la empresa. Es idempotente: activar un módulo activo no cambia nada.
+         *     Un módulo solo se activa con sus dependencias activas, y no se desactiva mientras otro módulo activo
+         *     dependa de él. Desactivarlo no borra sus datos: vuelven a estar disponibles al activarlo de nuevo.
+         */
+        put: operations["setModuleActive"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/products": {
         parameters: {
             query?: never;
@@ -255,6 +300,7 @@ export interface paths {
          * Agregar una variante a un producto
          * @description Agrega una variante activa. Debe usar los mismos ejes que las demás variantes del producto, con valores
          *     distintos. A un producto simple primero se le asignan ejes a su variante por defecto (editar la variante).
+         *     Requiere el módulo `variants` activo; si no lo está, responde 404.
          */
         post: operations["addProductVariant"];
         delete?: never;
@@ -933,13 +979,20 @@ export interface components {
             /** @enum {string} */
             role: "owner" | "admin" | "cashier" | "warehouse";
             /**
-             * @description Permisos del rol, para mostrar u ocultar acciones en la UI.
+             * @description Permisos del rol, para mostrar u ocultar acciones en la UI. Incluye los de los módulos activos.
              * @example [
              *       "catalog:read",
              *       "sales:create"
              *     ]
              */
             permissions: string[];
+            /**
+             * @description Módulos activos de la empresa, para mostrar u ocultar menús, columnas y campos.
+             * @example [
+             *       "variants"
+             *     ]
+             */
+            modules: string[];
         };
         TenantSelectionRequired: {
             error: components["schemas"]["ErrorDetail"];
@@ -985,6 +1038,21 @@ export interface components {
             code: string;
             /** @example Par */
             name: string;
+        };
+        Module: {
+            /** @example variants */
+            id: string;
+            /** @example Variantes */
+            name: string;
+            /** @description Módulos que deben estar activos para activar este. */
+            depends_on: string[];
+            active: boolean;
+        };
+        ModuleList: {
+            items: components["schemas"]["Module"][];
+        };
+        ModuleUpdate: {
+            active: boolean;
         };
         UnitList: {
             items: components["schemas"]["UnitOfMeasure"][];
@@ -1771,6 +1839,8 @@ export interface components {
         /** @description Cantidad de resultados a saltar. */
         Offset: number;
         ProductId: string;
+        /** @example variants */
+        ModuleId: string;
         VariantId: string;
         CategoryId: string;
         UnitId: string;
@@ -2024,6 +2094,81 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listModules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Los módulos, en el orden en que se presentan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    setModuleActive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example variants */
+                moduleId: components["parameters"]["ModuleId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleUpdate"];
+            };
+        };
+        responses: {
+            /** @description El módulo con su estado nuevo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Module"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description El módulo no existe (`unknown_module`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description Una dependencia del módulo está inactiva (`module_dependency_inactive`) o un módulo activo depende de
+             *     él (`module_required_by`). El módulo que bloquea el cambio va en `details.module`.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             500: components["responses"]["InternalError"];
         };
     };

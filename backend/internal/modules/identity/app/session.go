@@ -132,7 +132,7 @@ func (s *Service) activeProfile(ctx context.Context, tenantID, userID uuid.UUID)
 	if !tenant.IsActive() {
 		return Profile{}, domain.ErrTenantSuspended
 	}
-	return Profile{User: user, Tenant: tenant}, nil
+	return s.profile(ctx, user, tenant)
 }
 
 // revokeReusedFamily revokes the family of a reused token. It alerts only

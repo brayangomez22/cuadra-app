@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -22,6 +23,7 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/logger"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
 )
 
 // readyDB is a database that always answers.
@@ -32,7 +34,49 @@ func (readyDB) Ping(context.Context) error { return nil }
 // testSecret signs the access tokens of the tests.
 var testSecret = []byte("0123456789abcdef0123456789abcdef")
 
+// fakeModules is a module gate: the modules of Cuadra are known (except
+// unknown), and the ones in active are active for every tenant.
+type fakeModules struct {
+	registry *modules.Registry
+	unknown  map[string]bool
+	active   map[string]bool
+	err      error
+	checks   int
+}
+
+func newFakeModules(t testing.TB, active ...string) *fakeModules {
+	f := &fakeModules{registry: modulesRegistry(t), unknown: map[string]bool{}, active: map[string]bool{}}
+	for _, id := range active {
+		f.active[id] = true
+	}
+	return f
+}
+
+func (f *fakeModules) Known(id string) bool { return !f.unknown[id] && f.registry.Known(id) }
+
+func (f *fakeModules) IsActive(_ context.Context, _ uuid.UUID, id string) (bool, error) {
+	f.checks++
+	return f.active[id], f.err
+}
+
+// modulesRegistry is the registry of Cuadra's modules.
+func modulesRegistry(t testing.TB) *modules.Registry {
+	t.Helper()
+	r, err := modules.NewRegistry(modules.Builtin()...)
+	require.NoError(t, err)
+	return r
+}
+
+// testPermissions is the permission matrix of the core and Cuadra's modules.
+func testPermissions(t testing.TB) *identity.Permissions {
+	t.Helper()
+	p, err := identity.NewPermissions(identityRegistry{modulesRegistry(t)})
+	require.NoError(t, err)
+	return p
+}
+
 // testConfig builds a handler without modules: tests register stub routes.
+// Every module is active.
 func testConfig(t *testing.T) handlerConfig {
 	t.Helper()
 	verifier, err := auth.NewJWT(testSecret, 15*time.Minute)
@@ -42,7 +86,8 @@ func testConfig(t *testing.T) handlerConfig {
 		TracerProvider: noop.NewTracerProvider(),
 		DB:             readyDB{},
 		Verifier:       verifier,
-		Authorize:      identity.Authorize,
+		Permissions:    testPermissions(t),
+		Modules:        newFakeModules(t, modules.Variants),
 	}
 }
 
@@ -239,6 +284,153 @@ func TestHandlerAuth(t *testing.T) {
 	})
 }
 
+func TestHandlerModules(t *testing.T) {
+	tenantID := uuid.Must(uuid.NewV7())
+	const variantsPath = "/api/v1/products/01920000-0000-7000-8000-000000000001/variants"
+	const validVariant = `{"sku": "CAM-M", "cost": "10000.00", "price": "25000.00", "axis_values": {"talla": "M"}}`
+
+	// setup mounts a stub of addProductVariant, which belongs to the
+	// variants module.
+	setup := func(t *testing.T, gate *fakeModules) (http.Handler, *bool) {
+		t.Helper()
+		reached := false
+		cfg := testConfig(t)
+		cfg.Modules = gate
+		cfg.Routes = []func(*http.ServeMux){func(mux *http.ServeMux) {
+			mux.HandleFunc("POST /api/v1/products/{productId}/variants", func(w http.ResponseWriter, _ *http.Request) {
+				reached = true
+				w.WriteHeader(http.StatusNoContent)
+			})
+		}}
+		handler, err := newHandler(cfg)
+		require.NoError(t, err)
+		return handler, &reached
+	}
+	post := func(t *testing.T, handler http.Handler, role, body string) *httptest.ResponseRecorder {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodPost, variantsPath, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		if role != "" {
+			j, err := auth.NewJWT(testSecret, 15*time.Minute)
+			require.NoError(t, err)
+			tok, _, err := j.Issue(tenantID, uuid.Must(uuid.NewV7()), role)
+			require.NoError(t, err)
+			req.Header.Set("Authorization", "Bearer "+tok)
+		}
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		return rec
+	}
+	errorCode := func(t *testing.T, rec *httptest.ResponseRecorder) string {
+		t.Helper()
+		var body httpx.ErrorBody
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body), "body: %s", rec.Body.String())
+		return body.Error.Code
+	}
+
+	t.Run("una ruta de un módulo inactivo responde 404", func(t *testing.T) {
+		handler, reached := setup(t, newFakeModules(t))
+
+		rec := post(t, handler, "admin", validVariant)
+
+		require.Equal(t, http.StatusNotFound, rec.Code)
+		require.Equal(t, "not_found", errorCode(t, rec))
+		require.False(t, *reached)
+	})
+
+	t.Run("una ruta de un módulo activo llega al handler", func(t *testing.T) {
+		handler, reached := setup(t, newFakeModules(t, modules.Variants))
+
+		rec := post(t, handler, "admin", validVariant)
+
+		require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
+		require.True(t, *reached)
+	})
+
+	t.Run("el 404 del módulo inactivo llega antes de validar el body", func(t *testing.T) {
+		handler, _ := setup(t, newFakeModules(t))
+
+		rec := post(t, handler, "admin", `{"sku": ""}`)
+
+		require.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	t.Run("sin token responde 401 antes de revisar el módulo", func(t *testing.T) {
+		gate := newFakeModules(t)
+		handler, _ := setup(t, gate)
+
+		rec := post(t, handler, "", validVariant)
+
+		require.Equal(t, http.StatusUnauthorized, rec.Code)
+		require.Zero(t, gate.checks)
+	})
+
+	t.Run("sin el permiso responde 403 antes de revisar el módulo", func(t *testing.T) {
+		gate := newFakeModules(t)
+		handler, _ := setup(t, gate)
+
+		rec := post(t, handler, "cashier", validVariant)
+
+		require.Equal(t, http.StatusForbidden, rec.Code)
+		require.Zero(t, gate.checks)
+	})
+
+	t.Run("si no se puede consultar el módulo responde 500", func(t *testing.T) {
+		gate := newFakeModules(t)
+		gate.err = errors.New("db down")
+		handler, reached := setup(t, gate)
+
+		rec := post(t, handler, "admin", validVariant)
+
+		require.Equal(t, http.StatusInternalServerError, rec.Code)
+		require.Equal(t, "internal_error", errorCode(t, rec))
+		require.False(t, *reached)
+	})
+
+	t.Run("las rutas del core no consultan los módulos", func(t *testing.T) {
+		gate := newFakeModules(t)
+		cfg := testConfig(t)
+		cfg.Modules = gate
+		handler, err := newHandler(cfg)
+		require.NoError(t, err)
+
+		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/healthz", nil))
+
+		require.Zero(t, gate.checks)
+	})
+}
+
+func TestHandlerStartup(t *testing.T) {
+	t.Run("un x-module que no está registrado impide arrancar", func(t *testing.T) {
+		cfg := testConfig(t)
+		gate := newFakeModules(t)
+		gate.unknown[modules.Variants] = true
+		cfg.Modules = gate
+
+		_, err := newHandler(cfg)
+
+		require.ErrorContains(t, err, modules.Variants)
+	})
+
+	t.Run("un x-permission que no está en el registro impide arrancar", func(t *testing.T) {
+		cfg := testConfig(t)
+		cfg.Permissions = unknownPermission{Permissions: testPermissions(t), permission: "sales:void"}
+
+		_, err := newHandler(cfg)
+
+		require.ErrorContains(t, err, "sales:void")
+	})
+}
+
+// unknownPermission is a permission matrix that does not register one
+// permission.
+type unknownPermission struct {
+	*identity.Permissions
+	permission string
+}
+
+func (u unknownPermission) Known(p string) bool { return p != u.permission && u.Permissions.Known(p) }
+
 func TestHandlerRequestLog(t *testing.T) {
 	tenantID := uuid.Must(uuid.NewV7())
 	userID := uuid.Must(uuid.NewV7())
@@ -298,5 +490,26 @@ func TestHandlerRequestLog(t *testing.T) {
 		require.EqualValues(t, http.StatusUnauthorized, entry["status"])
 		require.NotContains(t, entry, "tenant_id")
 		require.NotContains(t, entry, "user_id")
+	})
+}
+
+func TestIdentityRegistry(t *testing.T) {
+	t.Run("pasa a identity los permisos de cada módulo con sus roles", func(t *testing.T) {
+		registry, err := modules.NewRegistry(
+			modules.Definition{ID: "variants", Name: "Variantes"},
+			modules.Definition{
+				ID: "lots_expiry", Name: "Lotes y vencimientos", DependsOn: []string{"variants"},
+				Permissions: []modules.Permission{{ID: "lots:manage", Roles: []string{"admin", "warehouse"}}},
+			},
+		)
+		require.NoError(t, err)
+
+		permissions, err := identity.NewPermissions(identityRegistry{registry})
+
+		require.NoError(t, err)
+		require.True(t, permissions.Known("lots:manage"))
+		require.True(t, permissions.Authorize("warehouse", "lots:manage"))
+		require.False(t, permissions.Authorize("cashier", "lots:manage"))
+		require.True(t, permissions.Authorize("cashier", "sales:create"))
 	})
 }

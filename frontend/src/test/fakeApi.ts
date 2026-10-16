@@ -56,6 +56,7 @@ export function aUser(role: Me['role'] = 'owner'): Me {
     email: 'ana@eltornillo.co',
     role,
     permissions: permissionsByRole[role],
+    modules: [],
   };
 }
 

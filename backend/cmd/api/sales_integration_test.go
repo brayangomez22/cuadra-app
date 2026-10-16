@@ -31,32 +31,35 @@ import (
 // permissions of each role.
 func TestSalesFlow(t *testing.T) {
 	database := dbtest.New(t)
+	moduleService, permissions := testModules(t, database)
 	tokens, err := auth.NewJWT(testSecret, 15*time.Minute)
 	require.NoError(t, err)
 	log := slog.New(slog.DiscardHandler)
 	tp, mp := noop.NewTracerProvider(), metricnoop.NewMeterProvider()
-	catalogModule, err := catalog.New(catalog.Config{DB: database, Authorize: identity.Authorize, Logger: log, TracerProvider: tp, MeterProvider: mp})
+	catalogModule, err := catalog.New(catalog.Config{DB: database, Authorize: permissions.Authorize, Logger: log, TracerProvider: tp, MeterProvider: mp})
 	require.NoError(t, err)
 	identityModule, err := identity.New(identity.Config{
-		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule}, Logger: log, TracerProvider: tp, MeterProvider: mp,
+		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule},
+		Permissions: permissions, Modules: moduleService, Logger: log, TracerProvider: tp, MeterProvider: mp,
 	})
 	require.NoError(t, err)
 	inventoryModule, err := inventory.New(inventory.Config{
-		DB: database, Authorize: identity.Authorize, Variants: inventoryCatalog{catalogModule},
+		DB: database, Authorize: permissions.Authorize, Variants: inventoryCatalog{catalogModule},
 		Logger: log, TracerProvider: tp, MeterProvider: mp,
 	})
 	require.NoError(t, err)
 	salesModule, err := sales.New(sales.Config{
-		DB: database, Authorize: identity.Authorize,
+		DB: database, Authorize: permissions.Authorize,
 		Catalog: salesCatalog{catalogModule}, Stock: salesStock{inventoryModule},
 		Logger: log, TracerProvider: tp, MeterProvider: mp,
 	})
 	require.NoError(t, err)
 	handler, err := newHandler(handlerConfig{
 		Log: log, TracerProvider: tp, DB: readyDB{},
-		Verifier: tokens, Authorize: identity.Authorize,
+		Verifier: tokens, Permissions: permissions, Modules: moduleService,
 		Routes: []func(*http.ServeMux){
 			identityModule.RegisterRoutes, catalogModule.RegisterRoutes, inventoryModule.RegisterRoutes, salesModule.RegisterRoutes,
+			moduleRoutes(moduleService, log),
 		},
 	})
 	require.NoError(t, err)
@@ -391,12 +394,15 @@ func TestSalesFlow(t *testing.T) {
 	})
 
 	t.Run("venta por variante: descuenta cada variante por separado y la anulación la devuelve", func(t *testing.T) {
-		// The axes the variants use, as the tenant defines them.
+		// Selling variants needs the variants module, and the axes they use,
+		// as the tenant defines them.
+		rec := do(t, http.MethodPut, "/api/v1/modules/variants", `{"active":true}`, ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		for _, axis := range []string{`{"name":"talla","values":["S","M"]}`, `{"name":"color","values":["Rojo"]}`} {
 			rec := do(t, http.MethodPost, "/api/v1/variant-axes", axis, ownerToken)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		}
-		rec := do(t, http.MethodPost, "/api/v1/products",
+		rec = do(t, http.MethodPost, "/api/v1/products",
 			`{"sku":"cam-s","name":"Camiseta básica","base_unit":"und","cost":"12000","price":"25000","tax_rate":"0.19"}`, ownerToken)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		var product struct {
