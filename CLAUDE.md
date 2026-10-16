@@ -1,6 +1,6 @@
 # Cuadra — SaaS de gestión para pymes
 
-**Cuadra** (de "cuadrar la caja", "cuadrar cuentas") es un SaaS multi-tenant para pymes colombianas. El primer vertical son las ferreterías: POS, inventario, catálogo, clientes con crédito y facturación electrónica DIAN (vía proveedor tecnológico). Un solo desarrollador (Brayan) trabaja con Claude Code. Además de producto, es un proyecto de portafolio: **la calidad de ingeniería es un objetivo explícito**, sin caer en sobreingeniería.
+**Cuadra** (de "cuadrar la caja", "cuadrar cuentas") es un SaaS multi-tenant de gestión para pymes colombianas de comercio: ferreterías, tiendas y minimercados, droguerías, papelerías, almacenes de ropa y calzado, y negocios similares. **Cuadra no es un producto para un nicho: su core es genérico**, y cada tipo de negocio se adapta con configuración y módulos activables por tenant. Las ferreterías son el **primer mercado del piloto**, no el modelo del diseño. Un solo desarrollador (Brayan) trabaja con Claude Code. Además de producto, es un proyecto de portafolio: **la calidad de ingeniería es un objetivo explícito**, sin caer en sobreingeniería.
 
 > **Qué construir ahora:** lo define `docs/plan/README.md` (fase activa y alcance). Este archivo contiene solo reglas permanentes.
 
@@ -31,6 +31,7 @@ make openapi      # regenera código desde api/openapi.yaml
 make test         # tests unitarios (rápidos, sin Docker)
 make test-int     # tests de integración (requiere Docker)
 make lint         # gofmt + go vet + golangci-lint
+make lint-neutral   # falla si hay términos de un nicho en el core
 make check        # lint + test + test-int → DEBE pasar antes de dar una tarea por terminada
 make run          # corre la API en :8080
 cd frontend && npm run dev | npm test | npm run lint | npm run lint:styles | npm run gen:api
@@ -74,6 +75,25 @@ PRODUCT.md                   # contexto de producto y usuarios para el diseño d
 5. Las entidades se crean con constructores (`NewProduct(...)`) que validan invariantes. No existen entidades en estado inválido.
 6. Los errores de dominio son valores tipados (`var ErrInsufficientStock = errors.New(...)` o tipos con código). El adapter HTTP los mapea a status. Nunca `panic` para flujo normal.
 
+## Core genérico y módulos por tipo de negocio (obligatorio)
+
+Cuadra sirve a muchos tipos de comercio. El **core** (identidad, catálogo, inventario, ventas, facturación, clientes, compras, caja y reportes) es genérico. Lo específico de cada tipo de negocio vive en **configuración del tenant**, **módulos activables** o **plantillas de tipo de negocio**, nunca en el core.
+
+1. **Cero lógica de nicho en el core.** Prohibido `if tenant.BusinessType == ...` (o equivalentes) en cualquier capa. Prohibidos los campos, enums, columnas o nombres de un nicho dentro del core (`maestro_de_obra`, `bulto`, `talla`...). Si algo solo aplica a algunos negocios, es configuración o un módulo.
+2. **Producto con variantes.** `Product` agrupa una o más `ProductVariant`. Un producto simple tiene una variante por defecto que la UI no muestra. SKU, código de barras, costo y precio viven en la **variante**. Stock, movimientos, líneas de venta y de compra referencian `variant_id`. Los ejes de variante (talla, color, presentación...) los define cada tenant.
+3. **Atributos de producto definidos por el tenant** (texto, número, lista, sí/no; por ejemplo marca, material, principio activo), guardados en `JSONB` y validados contra su definición. Nunca se agregan columnas para un nicho.
+4. **Unidades de medida por tenant**, sembradas desde la plantilla de su tipo de negocio, nunca como enum fijo. La conversión entre unidades es el módulo `unit_conversions`.
+5. **Inventario preparado para lotes:** los movimientos y niveles de stock llevan `lot_id` opcional (NULL). La lógica de lotes y vencimientos (FEFO, alertas, bloqueo de vencidos) es el módulo `lots_expiry`.
+6. **Precios por reglas:** el core obtiene el precio con el puerto `PriceResolver`, una cadena de reglas cuya base es el precio de la variante. Los módulos agregan reglas (`price_lists` por segmento, `volume_pricing` por cantidad, promociones). Cada línea de venta guarda el precio aplicado y la regla que lo produjo.
+7. **Segmentos de cliente configurables por tenant** (no enum). Por ejemplo, una ferretería crea "maestro de obra" y una droguería "convenio EPS".
+8. **Módulos activables por tenant** (`internal/platform/modules`): cada módulo tiene un ID estable (`variants`, `unit_conversions`, `lots_expiry`, `volume_pricing`, `price_lists`, `quotes`, `work_orders`...) y declara sus dependencias, configuración, permisos, menús y migraciones propias. Se activa por tenant (`tenant_modules`).
+   - Backend: las rutas de un módulo van detrás de `RequireModule("<id>")` y responden 404 si el módulo está inactivo.
+   - Frontend: menús, columnas y campos según los `modules` de `GET /api/v1/me`.
+   - El core **nunca** importa un módulo. Los módulos se conectan al core por puertos y eventos de dominio.
+9. **Plantillas de tipo de negocio como datos, no código** (`backend/templates/business/*.yaml`): módulos activos, unidades, categorías iniciales, atributos de producto, segmentos de cliente, impuestos por defecto y etiquetas de la UI. El tenant elige una plantilla al registrarse y después puede cambiar todo. Plantillas iniciales: `generica`, `ferreteria`, `tienda`, `drogueria`, `papeleria` y `ropa_calzado`.
+10. **Módulos ≠ feature flags.** Un módulo es una capacidad del producto que el tenant tiene activada (y luego, contratada según su plan). Un feature flag (T39) sirve para lanzamientos graduales y para apagar algo en una emergencia.
+11. **Neutralidad verificable:** los nombres, textos y ejemplos del core son neutros (producto, cliente, unidad). Los tests table-driven del core incluyen casos de **al menos dos tipos de negocio** (por ejemplo, ferretería y almacén de ropa). `make lint-neutral` (en CI) falla si aparecen términos de un nicho en el core.
+
 ## Multi-tenant (crítico)
 
 - Toda tabla de datos de negocio tiene `tenant_id UUID NOT NULL` con **Row-Level Security** activada (`ENABLE` + `FORCE ROW LEVEL SECURITY`) y una política `tenant_id = current_setting('app.tenant_id')::uuid`.
@@ -85,13 +105,13 @@ PRODUCT.md                   # contexto de producto y usuarios para el diseño d
 ## Dinero, cantidades y tiempo
 
 - **Prohibido `float32`/`float64`** para dinero o cantidades. Se usa `decimal.Decimal` en Go, `NUMERIC(18,4)` en Postgres y strings en el JSON (`"12500.00"`).
-- Las cantidades pueden ser fraccionarias (2.5 metros de cable). Pesos colombianos (COP): redondeo final a 2 decimales con *half-up*. IVA como tasa decimal (`0.19`).
+- Las cantidades pueden ser fraccionarias (2.5 metros, 0.75 kg). Pesos colombianos (COP): redondeo final a 2 decimales con *half-up*. IVA como tasa decimal (`0.19`).
 - IDs: UUID v7 (`uuid.NewV7()`). Fechas: `timestamptz` en UTC, y se muestran en `America/Bogota`.
 
 ## Contrato de API (contract-first)
 
 - **Primero el spec, después el código.** Todo endpoint nuevo o modificado se define en `api/openapi.yaml`; luego `make openapi` y `npm run gen:api`. El código generado no se edita a mano.
-- REST JSON bajo `/api/v1`. Errores siempre con el esquema `Error`: `{"error": {"code": "insufficient_stock", "message": "No hay stock suficiente de Cemento gris 50kg"}}`.
+- REST JSON bajo `/api/v1`. Errores siempre con el esquema `Error`: `{"error": {"code": "insufficient_stock", "message": "No hay stock suficiente de Producto X"}}`.
 - Paginación con `?limit=&offset=` (máximo 100) o por cursor. Búsquedas de texto con `pg_trgm`.
 - Cambios incompatibles en `/api/v1` están prohibidos una vez exista un cliente en producción.
 
@@ -143,14 +163,19 @@ La UI es una prioridad del producto, no un detalle. **Antes de tocar cualquier `
 
 | Español (UI) | Código | Nota |
 |---|---|---|
-| Empresa / cliente del SaaS | `Tenant` | una ferretería; puede tener varias sedes |
+| Empresa / cliente del SaaS | `Tenant` | un negocio (ferretería, tienda, droguería...); puede tener varias sedes |
+| Tipo de negocio / plantilla | `BusinessTemplate` | datos que siembran módulos, unidades, categorías, atributos y segmentos al registrarse |
+| Módulo | `Module` | capacidad activable por tenant (`variants`, `lots_expiry`, `volume_pricing`...) |
 | Sede / bodega | `Location` | dónde vive el stock |
-| Producto | `Product` | tiene SKU, código de barras opcional, unidad base, costo, precio, tasa de IVA |
-| Unidad de medida | `UnitOfMeasure` | und, m, kg, caja, rollo, bulto... |
+| Producto | `Product` | agrupa variantes; tiene nombre, categoría, unidad base, tasa de IVA y atributos |
+| Variante | `ProductVariant` | lo que se vende y se cuenta: SKU, código de barras, costo, precio, valores de los ejes (talla, color...) |
+| Lote | `Lot` | número de lote y fecha de vencimiento (módulo `lots_expiry`) |
+| Unidad de medida | `UnitOfMeasure` | catálogo por tenant (und, m, kg, caja, docena, par...) |
 | Movimiento de inventario / kardex | `StockMovement` | entrada, salida, ajuste, traslado. Es inmutable |
 | Venta | `Sale` | líneas + pagos; luego genera factura electrónica |
 | Cotización | `Quote` | |
 | Cliente (comprador) | `Customer` | puede tener cupo de crédito |
+| Segmento de cliente | `CustomerSegment` | configurable por tenant (público, mayorista, convenio...) |
 | Cupo / cartera | `CreditLimit` / `Receivable` | |
 | Roles | `owner`, `admin`, `cashier`, `warehouse` | dueño, administrador, cajero, bodeguero |
 
