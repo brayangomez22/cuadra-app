@@ -10,8 +10,8 @@ import (
 // a product of another tenant is reported as ErrProductNotFound.
 type ProductRepository interface {
 	// Create stores a new product; ErrSKUTaken or ErrBarcodeTaken if another
-	// product of the tenant uses them, ErrCategoryNotFound if its category
-	// does not exist in the tenant.
+	// product of the tenant uses them, ErrCategoryNotFound or ErrUnitNotFound
+	// if its category or its base unit does not exist in the tenant.
 	Create(ctx context.Context, p *Product) error
 	// GetByID returns ErrProductNotFound when the product does not exist in tenantID.
 	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*Product, error)
@@ -62,4 +62,28 @@ type CategoryRepository interface {
 	// Ancestors returns id and its ancestors, nearest first; none if id does
 	// not exist in tenantID.
 	Ancestors(ctx context.Context, tenantID, id uuid.UUID) ([]uuid.UUID, error)
+}
+
+// UnitRepository persists units of measure, scoped to a tenant like
+// ProductRepository.
+type UnitRepository interface {
+	// Create stores a new unit; ErrUnitCodeTaken if another unit of the
+	// tenant has its code.
+	Create(ctx context.Context, u *UnitOfMeasure) error
+	// CreateMany stores the units of tenantID in one transaction, with the
+	// errors of Create: either every unit is stored or none is.
+	CreateMany(ctx context.Context, tenantID uuid.UUID, units []*UnitOfMeasure) error
+	// GetByID returns ErrUnitNotFound when the unit does not exist in tenantID.
+	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*UnitOfMeasure, error)
+	// GetByCode returns the unit with exactly code; ErrUnitNotFound if
+	// tenantID has none.
+	GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*UnitOfMeasure, error)
+	// List returns every unit of the tenant, by name.
+	List(ctx context.Context, tenantID uuid.UUID) ([]*UnitOfMeasure, error)
+	// Update stores the code and the name; ErrUnitNotFound if the unit does
+	// not exist, ErrUnitCodeTaken if another unit has the code.
+	Update(ctx context.Context, u *UnitOfMeasure) error
+	// Delete removes the unit; ErrUnitInUse if a product uses it,
+	// ErrUnitNotFound if it does not exist.
+	Delete(ctx context.Context, tenantID, id uuid.UUID) error
 }

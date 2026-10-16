@@ -20,7 +20,7 @@ func productWithVariants(t *testing.T) *domain.Product {
 	rate, err := domain.ParseTaxRate(decimal.RequireFromString("0.19"))
 	require.NoError(t, err)
 	p, err := domain.NewProduct(domain.NewProductParams{
-		TenantID: owner.TenantID, Name: "Camiseta básica", BaseUnit: domain.UnitPiece, TaxRate: rate,
+		TenantID: owner.TenantID, Name: "Camiseta básica", BaseUnit: mustUnit("und", "Unidad").Ref(), TaxRate: rate,
 		Variant: domain.VariantParams{
 			SKU: "CAM-S", Barcode: "7701111111111", Cost: decimal.RequireFromString("15000"),
 			Price: decimal.RequireFromString("25000"), AxisValues: map[string]string{"talla": "S"},

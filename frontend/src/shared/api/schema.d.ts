@@ -334,6 +334,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar unidades de medida
+         * @description Las unidades de medida de la empresa, ordenadas por nombre.
+         */
+        get: operations["listUnits"];
+        put?: never;
+        /** Crear una unidad de medida */
+        post: operations["createUnit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/units/{unitId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unitId: components["parameters"]["UnitId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Editar una unidad de medida
+         * @description Cambia el código y el nombre. Los productos que la usan la siguen usando: la referencian por su id.
+         */
+        put: operations["updateUnit"];
+        post?: never;
+        /**
+         * Borrar una unidad de medida
+         * @description Solo se puede borrar una unidad que ningún producto usa.
+         */
+        delete: operations["deleteUnit"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/locations": {
         parameters: {
             query?: never;
@@ -817,13 +864,38 @@ export interface components {
          */
         TaxRate: string;
         /**
-         * @description Unidad base en la que se cuenta y se vende el producto.
-         * @enum {string}
+         * @description El código de una unidad de medida de la empresa (`und`, `m`).
+         * @example m
          */
-        UnitOfMeasure: "und" | "m" | "kg" | "l" | "caja" | "rollo" | "bulto" | "galon";
+        UnitCode: string;
+        /** @description Una unidad de medida de la empresa, en la que se cuentan y se venden sus productos. */
+        UnitOfMeasure: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description Lo que se muestra junto a una cantidad ("2,5 m"). Único en la empresa, en minúsculas.
+             * @example m
+             */
+            code: string;
+            /** @example Metro */
+            name: string;
+        };
+        UnitInput: {
+            /**
+             * @description Único en la empresa, sin espacios. Se guarda en minúsculas.
+             * @example par
+             */
+            code: string;
+            /** @example Par */
+            name: string;
+        };
+        UnitList: {
+            items: components["schemas"]["UnitOfMeasure"][];
+        };
         /**
          * @description Los datos del producto y los de su variante por defecto (`sku`, `barcode`, `cost` y `price`). Las demás
-         *     variantes se editan con `/products/{productId}/variants`.
+         *     variantes se editan con `/products/{productId}/variants`. La unidad base va en `base_unit_id` o, mientras
+         *     el frontend pasa a `base_unit_id`, por su código en `base_unit` (deprecated): una de las dos.
          */
         ProductInput: {
             /**
@@ -841,7 +913,16 @@ export interface components {
             description?: string;
             /** Format: uuid */
             category_id?: string | null;
-            base_unit: components["schemas"]["UnitOfMeasure"];
+            /**
+             * Format: uuid
+             * @description La unidad de medida en la que se cuenta y se vende el producto.
+             */
+            base_unit_id?: string;
+            /**
+             * @deprecated
+             * @description El código de la unidad base. Use `base_unit_id`.
+             */
+            base_unit?: components["schemas"]["UnitCode"];
             cost: components["schemas"]["Money"];
             price: components["schemas"]["Money"];
             tax_rate: components["schemas"]["TaxRate"];
@@ -930,7 +1011,14 @@ export interface components {
              * @description Se omite si el producto no tiene categoría.
              */
             category_id?: string;
-            base_unit: components["schemas"]["UnitOfMeasure"];
+            /** Format: uuid */
+            base_unit_id: string;
+            unit: components["schemas"]["UnitOfMeasure"];
+            /**
+             * @deprecated
+             * @description El código de `unit`. Use `unit`.
+             */
+            base_unit: components["schemas"]["UnitCode"];
             /**
              * @deprecated
              * @description El de la variante por defecto. Use `variants`.
@@ -1488,6 +1576,7 @@ export interface components {
         ProductId: string;
         VariantId: string;
         CategoryId: string;
+        UnitId: string;
         LocationId: string;
         SaleId: string;
         CashSessionId: string;
@@ -1818,7 +1907,9 @@ export interface operations {
             };
             /**
              * @description Algún dato no cumple las reglas (`invalid_sku`, `invalid_barcode`, `invalid_product_name`,
-             *     `invalid_description`, `invalid_price`, `invalid_cost`, `invalid_tax_rate`, `category_not_found`).
+             *     `invalid_description`, `invalid_price`, `invalid_cost`, `invalid_tax_rate`, `category_not_found`), falta
+             *     la unidad o vienen las dos formas de indicarla (`unit_required`), o la unidad no existe en la empresa
+             *     (`unit_not_found`).
              */
             422: {
                 headers: {
@@ -2196,6 +2287,158 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             /** @description La categoría tiene productos o subcategorías (`category_in_use`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listUnits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las unidades. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitInput"];
+            };
+        };
+        responses: {
+            /** @description Unidad creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOfMeasure"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Ya existe una unidad con ese código en la empresa (`unit_code_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El código o el nombre no son válidos (`invalid_unit_code`, `invalid_unit_name`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unitId: components["parameters"]["UnitId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitInput"];
+            };
+        };
+        responses: {
+            /** @description La unidad actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitOfMeasure"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Ya existe otra unidad con ese código en la empresa (`unit_code_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El código o el nombre no son válidos (`invalid_unit_code`, `invalid_unit_name`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unitId: components["parameters"]["UnitId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unidad borrada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Algún producto usa la unidad (`unit_in_use`). */
             409: {
                 headers: {
                     [name: string]: unknown;

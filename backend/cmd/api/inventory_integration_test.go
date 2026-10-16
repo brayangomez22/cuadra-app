@@ -32,9 +32,11 @@ func TestInventoryFlow(t *testing.T) {
 	require.NoError(t, err)
 	log := slog.New(slog.DiscardHandler)
 	tp, mp := noop.NewTracerProvider(), metricnoop.NewMeterProvider()
-	identityModule, err := identity.New(identity.Config{DB: database, Issuer: tokens, Logger: log, TracerProvider: tp, MeterProvider: mp})
-	require.NoError(t, err)
 	catalogModule, err := catalog.New(catalog.Config{DB: database, Authorize: identity.Authorize, Logger: log, TracerProvider: tp, MeterProvider: mp})
+	require.NoError(t, err)
+	identityModule, err := identity.New(identity.Config{
+		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule}, Logger: log, TracerProvider: tp, MeterProvider: mp,
+	})
 	require.NoError(t, err)
 	inventoryModule, err := inventory.New(inventory.Config{
 		DB: database, Authorize: identity.Authorize, Variants: inventoryCatalog{catalogModule},

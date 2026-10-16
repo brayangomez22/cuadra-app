@@ -38,6 +38,9 @@ type stubUseCases struct {
 	page     domain.ProductPage
 	category *domain.Category
 	list     []*domain.Category
+	unit     *domain.UnitOfMeasure
+	units    []*domain.UnitOfMeasure
+	code     string
 	err      error
 }
 
@@ -101,6 +104,26 @@ func (s *stubUseCases) DeleteCategory(_ context.Context, a app.Actor, id uuid.UU
 	return s.err
 }
 
+func (s *stubUseCases) CreateUnit(_ context.Context, a app.Actor, code, name string) (*domain.UnitOfMeasure, error) {
+	s.actor, s.code, s.name = a, code, name
+	return s.unit, s.err
+}
+
+func (s *stubUseCases) UpdateUnit(_ context.Context, a app.Actor, id uuid.UUID, code, name string) (*domain.UnitOfMeasure, error) {
+	s.actor, s.id, s.code, s.name = a, id, code, name
+	return s.unit, s.err
+}
+
+func (s *stubUseCases) ListUnits(_ context.Context, a app.Actor) ([]*domain.UnitOfMeasure, error) {
+	s.actor = a
+	return s.units, s.err
+}
+
+func (s *stubUseCases) DeleteUnit(_ context.Context, a app.Actor, id uuid.UUID) error {
+	s.actor, s.id = a, id
+	return s.err
+}
+
 // canWrite grants catalog:write only to owners, like a reduced permission matrix.
 func canWrite(role, permission string) bool { return role == "owner" || permission == "catalog:read" }
 
@@ -153,12 +176,23 @@ func decodeMap(t *testing.T, rec *httptest.ResponseRecorder) map[string]any {
 	return m
 }
 
+// meters is the owner's tenant unit the test products use.
+var meters = mustUnit("m", "Metro")
+
+func mustUnit(code, name string) *domain.UnitOfMeasure {
+	u, err := domain.NewUnit(owner.TenantID, code, name, now)
+	if err != nil {
+		panic(err)
+	}
+	return u
+}
+
 func product(t *testing.T, cost, price string) *domain.Product {
 	t.Helper()
 	rate, err := domain.ParseTaxRate(decimal.RequireFromString("0.19"))
 	require.NoError(t, err)
 	p, err := domain.NewProduct(domain.NewProductParams{
-		TenantID: owner.TenantID, Name: "Tubo PVC presión 1/2 pulgada", BaseUnit: domain.UnitMeter, TaxRate: rate,
+		TenantID: owner.TenantID, Name: "Tubo PVC presión 1/2 pulgada", BaseUnit: meters.Ref(), TaxRate: rate,
 		Variant: domain.VariantParams{
 			SKU: "TUB-PVC-12", Barcode: "7701234567890",
 			Cost: decimal.RequireFromString(cost), Price: decimal.RequireFromString(price),
@@ -185,6 +219,8 @@ func TestCreateProduct(t *testing.T) {
 		require.Equal(t, "0.19", body["tax_rate"])
 		require.Equal(t, "16.6667", body["margin_percent"])
 		require.Equal(t, "m", body["base_unit"])
+		require.Equal(t, meters.ID().String(), body["base_unit_id"])
+		require.Equal(t, map[string]any{"id": meters.ID().String(), "code": "m", "name": "Metro"}, body["unit"])
 		require.Equal(t, true, body["active"])
 		require.NotContains(t, body, "category_id")
 		require.NotContains(t, body, "description")
@@ -198,11 +234,40 @@ func TestCreateProduct(t *testing.T) {
 		require.Equal(t, app.Actor{TenantID: owner.TenantID, UserID: owner.UserID}, uc.actor)
 		require.Equal(t, "tub-pvc-12", uc.input.SKU)
 		require.Equal(t, "7701234567890", uc.input.Barcode)
-		require.Equal(t, domain.UnitMeter, uc.input.BaseUnit)
+		require.Equal(t, "m", uc.input.BaseUnitCode)
+		require.Nil(t, uc.input.BaseUnitID)
 		require.True(t, decimal.RequireFromString("8333.33").Equal(uc.input.Cost))
 		require.True(t, decimal.RequireFromString("10000").Equal(uc.input.Price))
 		require.True(t, decimal.RequireFromString("0.19").Equal(uc.input.TaxRate.Rate()))
 		require.Nil(t, uc.input.CategoryID)
+	})
+
+	t.Run("pasa la unidad por su id", func(t *testing.T) {
+		uc := &stubUseCases{product: product(t, "8333.33", "10000")}
+		body := strings.Replace(productBody, `"base_unit":"m"`, `"base_unit_id":"`+meters.ID().String()+`"`, 1)
+
+		rec := serve(t, uc, owner, http.MethodPost, "/api/v1/products", body)
+
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		require.Equal(t, meters.ID(), *uc.input.BaseUnitID)
+		require.Empty(t, uc.input.BaseUnitCode)
+	})
+
+	t.Run("errores de la unidad del producto", func(t *testing.T) {
+		tests := []struct {
+			err  error
+			code string
+		}{
+			{domain.ErrUnitRequired, "unit_required"},
+			{domain.ErrUnitNotFound, "unit_not_found"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.code, func(t *testing.T) {
+				uc := &stubUseCases{err: tt.err}
+				rec := serve(t, uc, owner, http.MethodPost, "/api/v1/products", productBody)
+				requireError(t, rec, http.StatusUnprocessableEntity, tt.code)
+			})
+		}
 	})
 
 	t.Run("muestra hasta 4 decimales cuando el monto los tiene", func(t *testing.T) {
@@ -397,6 +462,74 @@ func TestCategories(t *testing.T) {
 
 		require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 		require.Equal(t, id, uc.id)
+	})
+}
+
+func TestUnits(t *testing.T) {
+	t.Run("lista las unidades", func(t *testing.T) {
+		uc := &stubUseCases{units: []*domain.UnitOfMeasure{meters, mustUnit("und", "Unidad")}}
+
+		rec := serve(t, uc, cashier(), http.MethodGet, "/api/v1/units", "")
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.JSONEq(t, `{"items":[
+			{"id":"`+meters.ID().String()+`","code":"m","name":"Metro"},
+			{"id":"`+uc.units[1].ID().String()+`","code":"und","name":"Unidad"}]}`, rec.Body.String())
+	})
+
+	t.Run("crea una unidad con los datos y el actor del token", func(t *testing.T) {
+		uc := &stubUseCases{unit: mustUnit("par", "Par")}
+
+		rec := serve(t, uc, owner, http.MethodPost, "/api/v1/units", `{"code":"PAR","name":"Par"}`)
+
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		require.Equal(t, app.Actor{TenantID: owner.TenantID, UserID: owner.UserID}, uc.actor)
+		require.Equal(t, "PAR", uc.code)
+		require.Equal(t, "Par", uc.name)
+		require.Equal(t, "par", decodeMap(t, rec)["code"])
+	})
+
+	t.Run("edita una unidad", func(t *testing.T) {
+		uc := &stubUseCases{unit: mustUnit("pares", "Pares")}
+		id := uuid.Must(uuid.NewV7())
+
+		rec := serve(t, uc, owner, http.MethodPut, "/api/v1/units/"+id.String(), `{"code":"pares","name":"Pares"}`)
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Equal(t, id, uc.id)
+		require.Equal(t, "pares", decodeMap(t, rec)["code"])
+	})
+
+	t.Run("borra una unidad", func(t *testing.T) {
+		uc := &stubUseCases{}
+		id := uuid.Must(uuid.NewV7())
+
+		rec := serve(t, uc, owner, http.MethodDelete, "/api/v1/units/"+id.String(), "")
+
+		require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
+		require.Equal(t, id, uc.id)
+	})
+
+	t.Run("mapea los errores de las unidades", func(t *testing.T) {
+		tests := []struct {
+			method, path, body string
+			err                error
+			status             int
+			code               string
+		}{
+			{http.MethodPost, "/api/v1/units", `{"code":"m","name":"Metro"}`, domain.ErrUnitCodeTaken, http.StatusConflict, "unit_code_taken"},
+			{http.MethodPost, "/api/v1/units", `{"code":"caja x12","name":"Caja"}`, domain.ErrInvalidUnitCode, http.StatusUnprocessableEntity, "invalid_unit_code"},
+			{http.MethodPost, "/api/v1/units", `{"code":"m","name":" "}`, domain.ErrInvalidUnitName, http.StatusUnprocessableEntity, "invalid_unit_name"},
+			{http.MethodPut, "/api/v1/units/" + uuid.Must(uuid.NewV7()).String(), `{"code":"m","name":"Metro"}`, domain.ErrUnitNotFound, http.StatusNotFound, "unit_not_found"},
+			{http.MethodDelete, "/api/v1/units/" + uuid.Must(uuid.NewV7()).String(), "", domain.ErrUnitInUse, http.StatusConflict, "unit_in_use"},
+			{http.MethodDelete, "/api/v1/units/" + uuid.Must(uuid.NewV7()).String(), "", domain.ErrUnitNotFound, http.StatusNotFound, "unit_not_found"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.method+" "+tt.code, func(t *testing.T) {
+				rec := serve(t, &stubUseCases{err: tt.err}, owner, tt.method, tt.path, tt.body)
+				requireError(t, rec, tt.status, tt.code)
+			})
+		}
 	})
 }
 

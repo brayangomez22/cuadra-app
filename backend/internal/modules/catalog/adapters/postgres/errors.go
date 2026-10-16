@@ -12,10 +12,12 @@ const (
 	foreignKeyViolation = "23503"
 )
 
-// Constraints of migrations/00004_catalog.sql and 00010_product_variants.sql
-// the adapter maps to domain errors.
+// Constraints of migrations/00004_catalog.sql, 00010_product_variants.sql
+// and 00014_units_of_measure.sql the adapter maps to domain errors.
 const (
 	productsCategoryFKey  = "products_category_fkey"
+	productsBaseUnitFKey  = "products_base_unit_fkey"
+	unitsCodeKey          = "units_of_measure_tenant_id_code_key"
 	categoriesParentFKey  = "categories_parent_fkey"
 	variantsSKUKey        = "product_variants_tenant_id_sku_key"
 	variantsBarcodeKey    = "product_variants_tenant_id_barcode_key"

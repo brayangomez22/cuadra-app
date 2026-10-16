@@ -34,7 +34,9 @@ const (
 type Config struct {
 	DB *db.DB
 	// Issuer issues the access tokens (*auth.JWT).
-	Issuer         app.AccessTokenIssuer
+	Issuer app.AccessTokenIssuer
+	// Setup prepares a new tenant's data in the other modules at sign-up.
+	Setup          app.TenantSetup
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -48,7 +50,7 @@ type Module struct {
 
 // New builds the module on PostgreSQL, Argon2id and in-memory login limits.
 func New(cfg Config) (*Module, error) {
-	if cfg.DB == nil || cfg.Issuer == nil || cfg.Logger == nil {
+	if cfg.DB == nil || cfg.Issuer == nil || cfg.Setup == nil || cfg.Logger == nil {
 		return nil, errors.New("identity: missing module dependency")
 	}
 	users := postgres.NewUserRepository(cfg.DB)
@@ -59,6 +61,7 @@ func New(cfg Config) (*Module, error) {
 		Directory:      postgres.NewLoginDirectory(cfg.DB),
 		Hasher:         argon2id.New(argon2id.DefaultParams),
 		Issuer:         cfg.Issuer,
+		Setup:          cfg.Setup,
 		IPLimiter:      ratelimit.NewFixedWindow(loginsPerIP, loginsPerIPWindow),
 		EmailLimiter:   ratelimit.NewFixedWindow(loginsPerEmail, loginsPerEmailWindow),
 		TracerProvider: cfg.TracerProvider,

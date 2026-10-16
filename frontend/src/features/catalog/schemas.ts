@@ -14,7 +14,9 @@ export const productSchema = z.object({
   description: z.string().trim().max(2000, 'La descripción puede tener máximo 2000 caracteres'),
   // NO_CATEGORY when the product has none (Radix Select has no empty value).
   category_id: z.string(),
-  base_unit: z.enum(['und', 'm', 'kg', 'l', 'caja', 'rollo', 'bulto', 'galon']),
+  // The unit's code (the deprecated base_unit of the API) until T24j moves
+  // the form to base_unit_id and the tenant's units.
+  base_unit: z.string().min(1),
   tax_rate: z.string(),
   cost: decimalField('nonnegative', {
     empty: 'Escriba el costo (0 si aún no lo sabe)',

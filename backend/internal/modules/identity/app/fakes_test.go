@@ -73,11 +73,59 @@ func (f *fakeTenants) Update(_ context.Context, t *domain.Tenant) error {
 	return nil
 }
 
-func (f *fakeTenants) CreateWithOwner(ctx context.Context, t *domain.Tenant, owner *domain.User) error {
+// inTx marks the context CreateWithOwner passes to setUp, as the real
+// repository passes one that carries its transaction.
+type inTx struct{}
+
+// CreateWithOwner stores the tenant and the owner, calls setUp and undoes
+// both if it fails, as a rollback would.
+func (f *fakeTenants) CreateWithOwner(ctx context.Context, t *domain.Tenant, owner *domain.User, setUp func(context.Context) error) error {
 	if err := f.Create(ctx, t); err != nil {
 		return err
 	}
-	return f.users.Create(ctx, owner)
+	if err := f.users.Create(ctx, owner); err != nil {
+		f.remove(t.ID())
+		return err
+	}
+	if err := setUp(context.WithValue(ctx, inTx{}, t.ID())); err != nil {
+		f.remove(t.ID())
+		f.users.remove(owner.ID())
+		return err
+	}
+	return nil
+}
+
+func (f *fakeTenants) remove(id uuid.UUID) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.byID, id)
+}
+
+func (f *fakeUsers) remove(id uuid.UUID) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.byID, id)
+}
+
+// fakeSetup records the tenants it prepared and whether it ran inside
+// CreateWithOwner's transaction; err makes it fail.
+type fakeSetup struct {
+	mu      sync.Mutex
+	tenants []uuid.UUID
+	inTx    []bool
+	err     error
+}
+
+func (f *fakeSetup) SetUpTenant(ctx context.Context, tenantID uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.err != nil {
+		return f.err
+	}
+	txTenant, ok := ctx.Value(inTx{}).(uuid.UUID)
+	f.tenants = append(f.tenants, tenantID)
+	f.inTx = append(f.inTx, ok && txTenant == tenantID)
+	return nil
 }
 
 type fakeUsers struct {
@@ -305,6 +353,7 @@ type env struct {
 	users        *fakeUsers
 	tokens       *fakeTokens
 	hasher       *fakeHasher
+	setup        *fakeSetup
 	ipLimiter    *fakeLimiter
 	emailLimiter *fakeLimiter
 	spans        *tracetest.SpanRecorder
@@ -321,6 +370,7 @@ func newEnv(t *testing.T) *env {
 		tenants:      &fakeTenants{byID: map[uuid.UUID]*domain.Tenant{}, users: users},
 		tokens:       &fakeTokens{byID: map[uuid.UUID]*domain.RefreshToken{}},
 		hasher:       &fakeHasher{},
+		setup:        &fakeSetup{},
 		ipLimiter:    &fakeLimiter{denied: map[string]bool{}},
 		emailLimiter: &fakeLimiter{denied: map[string]bool{}},
 		spans:        tracetest.NewSpanRecorder(),
@@ -340,6 +390,7 @@ func newEnv(t *testing.T) *env {
 		Directory:      users,
 		Hasher:         e.hasher,
 		Issuer:         fakeIssuer{clock: clock},
+		Setup:          e.setup,
 		IPLimiter:      e.ipLimiter,
 		EmailLimiter:   e.emailLimiter,
 		Now:            clock.Now,

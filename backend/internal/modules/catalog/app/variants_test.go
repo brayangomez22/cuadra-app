@@ -20,7 +20,7 @@ func variantInput(sku string, axes map[string]string) app.VariantInput {
 // more variants can be added.
 func (e *env) productWithAxes(t *testing.T, axes map[string]string) *domain.Product {
 	t.Helper()
-	p := e.createProduct(t, productInput(t))
+	p := e.createProduct(t, e.productInput(t))
 	d := p.DefaultVariant()
 	in := app.VariantUpdate{
 		VariantInput: app.VariantInput{SKU: d.SKU(), Cost: d.Cost(), Price: d.Price(), AxisValues: axes},
@@ -34,8 +34,8 @@ func (e *env) productWithAxes(t *testing.T, axes map[string]string) *domain.Prod
 func TestUpdateProductDefaultVariant(t *testing.T) {
 	t.Run("actualiza SKU, código y costo de la variante por defecto", func(t *testing.T) {
 		e := newEnv(t)
-		p := e.createProduct(t, productInput(t))
-		in := productInput(t)
+		p := e.createProduct(t, e.productInput(t))
+		in := e.productInput(t)
 		in.SKU, in.Barcode, in.Cost = "tub-pvc-34", "7709876543210", dec("9000")
 
 		updated, err := e.svc.UpdateProduct(t.Context(), e.actor, p.ID(), in)
@@ -101,7 +101,7 @@ func TestAddVariant(t *testing.T) {
 	t.Run("rechaza un SKU que usa otro producto del tenant", func(t *testing.T) {
 		e := newEnv(t)
 		p := e.productWithAxes(t, map[string]string{"talla": "S"})
-		other := productInput(t)
+		other := e.productInput(t)
 		other.SKU = "OTRO-SKU"
 		e.createProduct(t, other)
 
@@ -165,7 +165,7 @@ func TestUpdateVariant(t *testing.T) {
 
 	t.Run("rechaza cambiar el precio de una variante de un producto inactivo", func(t *testing.T) {
 		e := newEnv(t)
-		p := e.createProduct(t, productInput(t))
+		p := e.createProduct(t, e.productInput(t))
 		_, err := e.svc.DeactivateProduct(t.Context(), e.actor, p.ID())
 		require.NoError(t, err)
 		d := p.DefaultVariant()
@@ -180,8 +180,8 @@ func TestUpdateVariant(t *testing.T) {
 
 	t.Run("una variante de otro producto no se encuentra", func(t *testing.T) {
 		e := newEnv(t)
-		p := e.createProduct(t, productInput(t))
-		otherIn := productInput(t)
+		p := e.createProduct(t, e.productInput(t))
+		otherIn := e.productInput(t)
 		otherIn.SKU = "OTRO"
 		other := e.createProduct(t, otherIn)
 		d := other.DefaultVariant()

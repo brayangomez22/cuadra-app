@@ -27,7 +27,7 @@ type Product struct {
 	name        string
 	description string
 	categoryID  *uuid.UUID
-	baseUnit    UnitOfMeasure
+	baseUnit    UnitRef
 	taxRate     TaxRate
 	active      bool
 	createdAt   time.Time
@@ -41,7 +41,7 @@ type NewProductParams struct {
 	Name        string
 	Description string
 	CategoryID  *uuid.UUID
-	BaseUnit    UnitOfMeasure
+	BaseUnit    UnitRef
 	TaxRate     TaxRate
 	Variant     VariantParams
 }
@@ -124,7 +124,7 @@ func productHeader(s ProductSnapshot) (*Product, error) {
 	if s.CategoryID != nil && *s.CategoryID == uuid.Nil {
 		return nil, ErrInvalidCategoryID
 	}
-	if !s.BaseUnit.valid() {
+	if s.BaseUnit.ID == uuid.Nil {
 		return nil, ErrInvalidUnit
 	}
 	return &Product{
@@ -187,7 +187,7 @@ func (p *Product) Description() string { return p.description }
 func (p *Product) CategoryID() *uuid.UUID { return copyID(p.categoryID) }
 
 // BaseUnit returns the unit the product is stocked and sold in.
-func (p *Product) BaseUnit() UnitOfMeasure { return p.baseUnit }
+func (p *Product) BaseUnit() UnitRef { return p.baseUnit }
 
 // TaxRate returns the IVA rate of every variant.
 func (p *Product) TaxRate() TaxRate { return p.taxRate }
@@ -329,7 +329,7 @@ type ProductSnapshot struct {
 	Name        string
 	Description string
 	CategoryID  *uuid.UUID
-	BaseUnit    UnitOfMeasure
+	BaseUnit    UnitRef
 	TaxRate     TaxRate
 	Active      bool
 	CreatedAt   time.Time
@@ -346,7 +346,7 @@ type ProductDetails struct {
 	Name        string
 	Description string
 	CategoryID  *uuid.UUID
-	BaseUnit    UnitOfMeasure
+	BaseUnit    UnitRef
 	TaxRate     TaxRate
 }
 

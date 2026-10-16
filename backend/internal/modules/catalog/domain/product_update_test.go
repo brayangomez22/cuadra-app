@@ -17,7 +17,7 @@ func validDetails(t *testing.T) domain.ProductDetails {
 		Name:        "  Tubo PVC presión 1/2 pulgada ",
 		Description: " Tramo de 6 m ",
 		CategoryID:  &categoryID,
-		BaseUnit:    domain.UnitMeter,
+		BaseUnit:    meters,
 		TaxRate:     mustTaxRate(t, "0.05"),
 	}
 }
@@ -33,7 +33,7 @@ func TestProductUpdateDetails(t *testing.T) {
 		require.Equal(t, "Tubo PVC presión 1/2 pulgada", product.Name())
 		require.Equal(t, "Tramo de 6 m", product.Description())
 		require.Equal(t, d.CategoryID, product.CategoryID())
-		require.Equal(t, domain.UnitMeter, product.BaseUnit())
+		require.Equal(t, meters, product.BaseUnit())
 		require.True(t, dec("0.05").Equal(product.TaxRate().Rate()))
 		require.Equal(t, variant, *product.DefaultVariant())
 	})
@@ -68,7 +68,7 @@ func TestProductUpdateDetails(t *testing.T) {
 			{"nombre vacío", func(d *domain.ProductDetails) { d.Name = "" }, domain.ErrInvalidProductName},
 			{"descripción muy larga", func(d *domain.ProductDetails) { d.Description = strings.Repeat("a", 2001) }, domain.ErrInvalidDescription},
 			{"categoría nula", func(d *domain.ProductDetails) { d.CategoryID = &nilCategory }, domain.ErrInvalidCategoryID},
-			{"unidad desconocida", func(d *domain.ProductDetails) { d.BaseUnit = "docena" }, domain.ErrInvalidUnit},
+			{"sin unidad base", func(d *domain.ProductDetails) { d.BaseUnit = domain.UnitRef{} }, domain.ErrInvalidUnit},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {

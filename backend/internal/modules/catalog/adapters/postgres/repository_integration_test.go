@@ -24,6 +24,7 @@ var now = time.Date(2026, 10, 10, 20, 30, 15, 123456000, time.UTC)
 var (
 	_ domain.ProductRepository  = (*postgres.ProductRepository)(nil)
 	_ domain.CategoryRepository = (*postgres.CategoryRepository)(nil)
+	_ domain.UnitRepository     = (*postgres.UnitRepository)(nil)
 )
 
 func dec(s string) decimal.Decimal { return decimal.RequireFromString(s) }
@@ -32,16 +33,23 @@ type fixture struct {
 	db         *db.DB
 	products   *postgres.ProductRepository
 	categories *postgres.CategoryRepository
+	units      *postgres.UnitRepository
+	// piece is the "und" unit createTenant gives each tenant.
+	piece map[uuid.UUID]domain.UnitRef
 }
 
 func newFixture(t *testing.T) fixture {
 	t.Helper()
 	d := dbtest.New(t)
-	return fixture{db: d, products: postgres.NewProductRepository(d), categories: postgres.NewCategoryRepository(d)}
+	return fixture{
+		db: d, products: postgres.NewProductRepository(d), categories: postgres.NewCategoryRepository(d),
+		units: postgres.NewUnitRepository(d), piece: map[uuid.UUID]domain.UnitRef{},
+	}
 }
 
-// createTenant stores a tenant row directly: the catalog does not depend on
-// the identity module, but its tables reference tenants.
+// createTenant stores a tenant row directly (the catalog does not depend on
+// the identity module, but its tables reference tenants) and gives it the
+// unit "und".
 func (f fixture) createTenant(t *testing.T) uuid.UUID {
 	t.Helper()
 	id := uuid.Must(uuid.NewV7())
@@ -50,7 +58,16 @@ func (f fixture) createTenant(t *testing.T) uuid.UUID {
 			"INSERT INTO tenants (id, name, nit, status, created_at) VALUES ($1, 'Ferretería', '890903938-8', 'active', $2)", id, now)
 		return err
 	}))
+	f.piece[id] = f.createUnit(t, id, "und", "Unidad").Ref()
 	return id
+}
+
+func (f fixture) createUnit(t *testing.T, tenantID uuid.UUID, code, name string) *domain.UnitOfMeasure {
+	t.Helper()
+	u, err := domain.NewUnit(tenantID, code, name, now)
+	require.NoError(t, err)
+	require.NoError(t, f.units.Create(t.Context(), u))
+	return u
 }
 
 type productOption func(*domain.NewProductParams)
@@ -68,7 +85,7 @@ func (f fixture) newProduct(t *testing.T, tenantID uuid.UUID, sku, name string, 
 	rate, err := domain.ParseTaxRate(dec("0.19"))
 	require.NoError(t, err)
 	params := domain.NewProductParams{
-		TenantID: tenantID, Name: name, Description: "Producto de prueba", BaseUnit: domain.UnitPiece, TaxRate: rate,
+		TenantID: tenantID, Name: name, Description: "Producto de prueba", BaseUnit: f.piece[tenantID], TaxRate: rate,
 		Variant: domain.VariantParams{SKU: sku, Cost: dec("8333.3333"), Price: dec("10000.1234")},
 	}
 	for _, opt := range opts {
@@ -122,7 +139,7 @@ func TestProductRepository(t *testing.T) {
 		require.Equal(t, "Tubo PVC presión 1/2 pulgada", got.Name())
 		require.Equal(t, "Producto de prueba", got.Description())
 		require.Equal(t, p.CategoryID(), got.CategoryID())
-		require.Equal(t, domain.UnitPiece, got.BaseUnit())
+		require.Equal(t, f.piece[tenant], got.BaseUnit())
 		require.True(t, dec("8333.3333").Equal(v.Cost()), v.Cost().String())
 		require.True(t, dec("10000.1234").Equal(v.Price()), v.Price().String())
 		require.True(t, v.IsDefault())
@@ -185,8 +202,9 @@ func TestProductRepository(t *testing.T) {
 		rate, err := domain.ParseTaxRate(dec("0.05"))
 		require.NoError(t, err)
 		categoryID := category.ID()
+		meters := f.createUnit(t, tenant, "m", "Metro").Ref()
 		require.NoError(t, p.UpdateDetails(domain.ProductDetails{
-			Name: "Cable 14 AWG", CategoryID: &categoryID, BaseUnit: domain.UnitMeter, TaxRate: rate,
+			Name: "Cable 14 AWG", CategoryID: &categoryID, BaseUnit: meters, TaxRate: rate,
 		}))
 		id := p.DefaultVariant().ID()
 		require.NoError(t, p.UpdateVariant(id, domain.VariantDetails{SKU: "CAB-14", Cost: dec("1200.5")}))
@@ -206,7 +224,7 @@ func TestProductRepository(t *testing.T) {
 		require.False(t, v.IsActive())
 		require.Equal(t, "Cable 14 AWG", got.Name())
 		require.Equal(t, &categoryID, got.CategoryID())
-		require.Equal(t, domain.UnitMeter, got.BaseUnit())
+		require.Equal(t, meters, got.BaseUnit())
 		require.True(t, dec("0.05").Equal(got.TaxRate().Rate()))
 		require.False(t, got.IsActive())
 	})
@@ -459,7 +477,7 @@ func TestCatalogTenantIsolation(t *testing.T) {
 	t.Run("el tenant B no edita ni borra datos del tenant A", func(t *testing.T) {
 		// The same entities, but claiming to belong to tenant B.
 		forged, err := domain.RehydrateProduct(domain.ProductSnapshot{
-			ID: productA.ID(), TenantID: tenantB, Name: "Cambiado", BaseUnit: domain.UnitPiece,
+			ID: productA.ID(), TenantID: tenantB, Name: "Cambiado", BaseUnit: f.piece[tenantB],
 			TaxRate: productA.TaxRate(), Active: true, CreatedAt: now,
 			Variants: []domain.VariantSnapshot{{
 				ID: productA.DefaultVariant().ID(), SKU: "HACK", Cost: dec("1"), Price: dec("1"),

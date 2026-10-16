@@ -35,7 +35,7 @@ func (r *ProductRepository) Create(ctx context.Context, p *domain.Product) error
 			Name:        p.Name(),
 			Description: p.Description(),
 			CategoryID:  p.CategoryID(),
-			BaseUnit:    p.BaseUnit().String(),
+			BaseUnitID:  p.BaseUnit().ID,
 			TaxRate:     p.TaxRate().Rate(),
 			Active:      p.IsActive(),
 			CreatedAt:   p.CreatedAt(),
@@ -84,7 +84,7 @@ func (r *ProductRepository) Update(ctx context.Context, p *domain.Product) error
 			Name:        p.Name(),
 			Description: p.Description(),
 			CategoryID:  p.CategoryID(),
-			BaseUnit:    p.BaseUnit().String(),
+			BaseUnitID:  p.BaseUnit().ID,
 			TaxRate:     p.TaxRate().Rate(),
 			Active:      p.IsActive(),
 		})
@@ -148,6 +148,8 @@ func productWriteError(err error) error {
 		return domain.ErrDuplicateVariant
 	case violates(err, foreignKeyViolation, productsCategoryFKey):
 		return domain.ErrCategoryNotFound
+	case violates(err, foreignKeyViolation, productsBaseUnitFKey):
+		return domain.ErrUnitNotFound
 	}
 	return err
 }
@@ -268,10 +270,7 @@ func searchTerms(text string) []string {
 
 // productFromRows rebuilds a product from its row and its variants' rows.
 func productFromRows(row sqlcgen.GetProductRow, variantRows []sqlcgen.ListVariantsRow) (*domain.Product, error) {
-	unit, err := domain.ParseUnit(row.BaseUnit)
-	if err != nil {
-		return nil, fmt.Errorf("catalog: product %s: stored unit: %w", row.ID, err)
-	}
+	unit := domain.UnitRef{ID: row.BaseUnitID, Code: row.UnitCode, Name: row.UnitName}
 	rate, err := domain.ParseTaxRate(row.TaxRate)
 	if err != nil {
 		return nil, fmt.Errorf("catalog: product %s: stored tax rate: %w", row.ID, err)

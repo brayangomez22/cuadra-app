@@ -15,6 +15,7 @@ import (
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace/noop"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/dbtest"
@@ -28,8 +29,13 @@ func TestAuthFlow(t *testing.T) {
 	tokens, err := auth.NewJWT(testSecret, 15*time.Minute)
 	require.NoError(t, err)
 	log := slog.New(slog.DiscardHandler)
+	catalogModule, err := catalog.New(catalog.Config{
+		DB: database, Authorize: identity.Authorize, Logger: log,
+		TracerProvider: noop.NewTracerProvider(), MeterProvider: metricnoop.NewMeterProvider(),
+	})
+	require.NoError(t, err)
 	module, err := identity.New(identity.Config{
-		DB: database, Issuer: tokens, Logger: log,
+		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule}, Logger: log,
 		TracerProvider: noop.NewTracerProvider(), MeterProvider: metricnoop.NewMeterProvider(),
 	})
 	require.NoError(t, err)

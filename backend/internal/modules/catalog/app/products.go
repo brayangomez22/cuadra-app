@@ -18,25 +18,28 @@ const (
 )
 
 // ProductInput is the editable data of a product and of its default
-// variant (SKU, barcode, cost and price).
+// variant (SKU, barcode, cost and price). The base unit goes by its id or,
+// until the deprecated base_unit leaves the API (T24j), by its code: exactly
+// one of the two.
 type ProductInput struct {
-	SKU         string
-	Barcode     string
-	Name        string
-	Description string
-	CategoryID  *uuid.UUID
-	BaseUnit    domain.UnitOfMeasure
-	Cost        decimal.Decimal
-	Price       decimal.Decimal
-	TaxRate     domain.TaxRate
+	SKU          string
+	Barcode      string
+	Name         string
+	Description  string
+	CategoryID   *uuid.UUID
+	BaseUnitID   *uuid.UUID
+	BaseUnitCode string
+	Cost         decimal.Decimal
+	Price        decimal.Decimal
+	TaxRate      domain.TaxRate
 }
 
-func (in ProductInput) details() domain.ProductDetails {
+func (in ProductInput) details(unit domain.UnitRef) domain.ProductDetails {
 	return domain.ProductDetails{
 		Name:        in.Name,
 		Description: in.Description,
 		CategoryID:  in.CategoryID,
-		BaseUnit:    in.BaseUnit,
+		BaseUnit:    unit,
 		TaxRate:     in.TaxRate,
 	}
 }
@@ -46,12 +49,16 @@ func (s *Service) CreateProduct(ctx context.Context, a Actor, in ProductInput) (
 	ctx, span := s.startSpan(ctx, "CreateProduct", a)
 	defer func() { endSpan(span, err) }()
 
+	unit, err := s.resolveUnit(ctx, a, in)
+	if err != nil {
+		return nil, err
+	}
 	p, err := domain.NewProduct(domain.NewProductParams{
 		TenantID:    a.TenantID,
 		Name:        in.Name,
 		Description: in.Description,
 		CategoryID:  in.CategoryID,
-		BaseUnit:    in.BaseUnit,
+		BaseUnit:    unit,
 		TaxRate:     in.TaxRate,
 		Variant: domain.VariantParams{
 			SKU:     in.SKU,
@@ -84,7 +91,11 @@ func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in P
 	if err != nil {
 		return nil, err
 	}
-	if err := p.UpdateDetails(in.details()); err != nil {
+	unit, err := s.resolveUnit(ctx, a, in)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.UpdateDetails(in.details(unit)); err != nil {
 		return nil, err
 	}
 	def := p.DefaultVariant()
@@ -110,6 +121,27 @@ func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in P
 		s.priceChanges.Add(ctx, 1)
 	}
 	return p, nil
+}
+
+// resolveUnit returns the tenant's unit that in names, by id or by the
+// deprecated code: exactly one of the two (domain.ErrUnitRequired).
+func (s *Service) resolveUnit(ctx context.Context, a Actor, in ProductInput) (domain.UnitRef, error) {
+	var (
+		u   *domain.UnitOfMeasure
+		err error
+	)
+	switch {
+	case (in.BaseUnitID == nil) == (in.BaseUnitCode == ""):
+		return domain.UnitRef{}, domain.ErrUnitRequired
+	case in.BaseUnitID != nil:
+		u, err = s.Units.GetByID(ctx, a.TenantID, *in.BaseUnitID)
+	default:
+		u, err = s.Units.GetByCode(ctx, a.TenantID, in.BaseUnitCode)
+	}
+	if err != nil {
+		return domain.UnitRef{}, err
+	}
+	return u.Ref(), nil
 }
 
 // requireCategory checks that the category exists in the actor's tenant.

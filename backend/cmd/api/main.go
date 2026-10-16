@@ -122,9 +122,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	identityModule, err := identity.New(identity.Config{
+	catalogModule, err := catalog.New(catalog.Config{
 		DB:             database,
-		Issuer:         tokens,
+		Authorize:      identity.Authorize,
 		Logger:         log,
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),
@@ -132,9 +132,10 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	catalogModule, err := catalog.New(catalog.Config{
+	identityModule, err := identity.New(identity.Config{
 		DB:             database,
-		Authorize:      identity.Authorize,
+		Issuer:         tokens,
+		Setup:          tenantSetup{catalogModule},
 		Logger:         log,
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),

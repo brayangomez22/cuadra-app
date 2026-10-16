@@ -2,6 +2,8 @@ package app_test
 
 import (
 	"context"
+	"errors"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -27,6 +29,7 @@ type store struct {
 	mu         sync.Mutex
 	products   map[uuid.UUID]*domain.Product
 	categories map[uuid.UUID]*domain.Category
+	units      map[uuid.UUID]*domain.UnitOfMeasure
 	// searches records the filters received by Search.
 	searches []domain.ProductFilter
 }
@@ -60,6 +63,16 @@ func cloneCategory(c *domain.Category) *domain.Category {
 	return out
 }
 
+func cloneUnit(u *domain.UnitOfMeasure) *domain.UnitOfMeasure {
+	out, err := domain.RehydrateUnit(domain.UnitSnapshot{
+		ID: u.ID(), TenantID: u.TenantID(), Code: u.Code(), Name: u.Name(), CreatedAt: u.CreatedAt(),
+	})
+	if err != nil {
+		panic(err)
+	}
+	return out
+}
+
 type fakeProducts struct{ *store }
 
 // check enforces the per-tenant uniqueness of the variants' SKU and barcode
@@ -84,6 +97,9 @@ func (f fakeProducts) check(p *domain.Product) error {
 		if c, ok := f.categories[*id]; !ok || c.TenantID() != p.TenantID() {
 			return domain.ErrCategoryNotFound
 		}
+	}
+	if u, ok := f.units[p.BaseUnit().ID]; !ok || u.TenantID() != p.TenantID() {
+		return domain.ErrUnitNotFound
 	}
 	return nil
 }
@@ -228,11 +244,120 @@ func (f fakeCategories) Ancestors(_ context.Context, tenantID, id uuid.UUID) ([]
 	return chain, nil
 }
 
+type fakeUnits struct{ *store }
+
+// checkCode enforces the per-tenant uniqueness of the code.
+func (f fakeUnits) checkCode(u *domain.UnitOfMeasure) error {
+	for _, other := range f.units {
+		if other.TenantID() == u.TenantID() && other.ID() != u.ID() && other.Code() == u.Code() {
+			return domain.ErrUnitCodeTaken
+		}
+	}
+	return nil
+}
+
+func (f fakeUnits) Create(_ context.Context, u *domain.UnitOfMeasure) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.checkCode(u); err != nil {
+		return err
+	}
+	f.units[u.ID()] = cloneUnit(u)
+	return nil
+}
+
+func (f fakeUnits) CreateMany(_ context.Context, tenantID uuid.UUID, units []*domain.UnitOfMeasure) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	stored := map[uuid.UUID]*domain.UnitOfMeasure{}
+	for _, u := range units {
+		if u.TenantID() != tenantID {
+			return errors.New("fake: unit of another tenant")
+		}
+		if err := f.checkCode(u); err != nil {
+			return err
+		}
+		for _, other := range stored {
+			if other.Code() == u.Code() {
+				return domain.ErrUnitCodeTaken
+			}
+		}
+		stored[u.ID()] = cloneUnit(u)
+	}
+	maps.Copy(f.units, stored)
+	return nil
+}
+
+func (f fakeUnits) GetByID(_ context.Context, tenantID, id uuid.UUID) (*domain.UnitOfMeasure, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.units[id]
+	if !ok || u.TenantID() != tenantID {
+		return nil, domain.ErrUnitNotFound
+	}
+	return cloneUnit(u), nil
+}
+
+func (f fakeUnits) GetByCode(_ context.Context, tenantID uuid.UUID, code string) (*domain.UnitOfMeasure, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, u := range f.units {
+		if u.TenantID() == tenantID && u.Code() == code {
+			return cloneUnit(u), nil
+		}
+	}
+	return nil, domain.ErrUnitNotFound
+}
+
+func (f fakeUnits) List(_ context.Context, tenantID uuid.UUID) ([]*domain.UnitOfMeasure, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []*domain.UnitOfMeasure
+	for _, u := range f.units {
+		if u.TenantID() == tenantID {
+			out = append(out, cloneUnit(u))
+		}
+	}
+	slices.SortFunc(out, func(a, b *domain.UnitOfMeasure) int { return strings.Compare(a.Name(), b.Name()) })
+	return out, nil
+}
+
+func (f fakeUnits) Update(_ context.Context, u *domain.UnitOfMeasure) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if old, ok := f.units[u.ID()]; !ok || old.TenantID() != u.TenantID() {
+		return domain.ErrUnitNotFound
+	}
+	if err := f.checkCode(u); err != nil {
+		return err
+	}
+	f.units[u.ID()] = cloneUnit(u)
+	return nil
+}
+
+func (f fakeUnits) Delete(_ context.Context, tenantID, id uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.units[id]
+	if !ok || u.TenantID() != tenantID {
+		return domain.ErrUnitNotFound
+	}
+	for _, p := range f.products {
+		if p.BaseUnit().ID == id {
+			return domain.ErrUnitInUse
+		}
+	}
+	delete(f.units, id)
+	return nil
+}
+
 // env is a Service wired to fakes, with recorders for spans and metrics.
 type env struct {
-	svc     *app.Service
-	store   *store
-	actor   app.Actor
+	svc   *app.Service
+	store *store
+	actor app.Actor
+	// meters is a unit of the actor's tenant.
+	meters  *domain.UnitOfMeasure
 	spans   *tracetest.SpanRecorder
 	metrics *sdkmetric.ManualReader
 }
@@ -242,7 +367,11 @@ var testNow = time.Date(2026, 10, 10, 15, 0, 0, 0, time.UTC)
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	e := &env{
-		store: &store{products: map[uuid.UUID]*domain.Product{}, categories: map[uuid.UUID]*domain.Category{}},
+		store: &store{
+			products:   map[uuid.UUID]*domain.Product{},
+			categories: map[uuid.UUID]*domain.Category{},
+			units:      map[uuid.UUID]*domain.UnitOfMeasure{},
+		},
 		actor: app.Actor{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())},
 		spans: tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
 	}
@@ -255,13 +384,25 @@ func newEnv(t *testing.T) *env {
 	svc, err := app.NewService(app.Deps{
 		Products:       fakeProducts{e.store},
 		Categories:     fakeCategories{e.store},
+		Units:          fakeUnits{e.store},
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,
 	})
 	require.NoError(t, err)
 	e.svc = svc
+	e.meters = e.addUnit(t, e.actor.TenantID, "m", "Metro")
 	return e
+}
+
+// addUnit stores a unit of tenantID directly in the fake, without the
+// service.
+func (e *env) addUnit(t *testing.T, tenantID uuid.UUID, code, name string) *domain.UnitOfMeasure {
+	t.Helper()
+	u, err := domain.NewUnit(tenantID, code, name, testNow)
+	require.NoError(t, err)
+	require.NoError(t, fakeUnits{e.store}.Create(t.Context(), u))
+	return u
 }
 
 // span returns the attributes of the only ended span named name.

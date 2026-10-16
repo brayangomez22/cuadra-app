@@ -295,6 +295,9 @@ type ProductId = openapi_types.UUID
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
 
+// UnitId defines model for UnitId.
+type UnitId = openapi_types.UUID
+
 // VariantId defines model for VariantId.
 type VariantId = openapi_types.UUID
 

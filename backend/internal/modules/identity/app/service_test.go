@@ -68,6 +68,29 @@ func TestSignUp(t *testing.T) {
 		require.Contains(t, span.Attributes(), attribute.String("user.id", user.ID().String()))
 	})
 
+	t.Run("el registro prepara el tenant nuevo dentro de su transacción", func(t *testing.T) {
+		e := newEnv(t)
+
+		session, err := e.svc.SignUp(t.Context(), signUpInput())
+		require.NoError(t, err)
+
+		require.Equal(t, []uuid.UUID{session.Profile.Tenant.ID()}, e.setup.tenants)
+		require.Equal(t, []bool{true}, e.setup.inTx)
+	})
+
+	t.Run("si la preparación del tenant falla, el registro falla y no crea el tenant", func(t *testing.T) {
+		e := newEnv(t)
+		e.setup.err = errors.New("catalog down")
+
+		_, err := e.svc.SignUp(t.Context(), signUpInput())
+
+		require.ErrorIs(t, err, e.setup.err)
+		require.Empty(t, e.tenants.byID)
+		require.Empty(t, e.users.byID)
+		require.Empty(t, e.tokens.byID)
+		require.Zero(t, e.counter(t, "cuadra.identity.signups", "", ""))
+	})
+
 	t.Run("rechaza datos inválidos sin crear el tenant", func(t *testing.T) {
 		tests := []struct {
 			name    string

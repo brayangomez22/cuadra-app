@@ -43,6 +43,10 @@ type UseCases interface {
 	UpdateCategory(ctx context.Context, a app.Actor, id uuid.UUID, name string, parentID *uuid.UUID) (*domain.Category, error)
 	ListCategories(ctx context.Context, a app.Actor) ([]*domain.Category, error)
 	DeleteCategory(ctx context.Context, a app.Actor, id uuid.UUID) error
+	CreateUnit(ctx context.Context, a app.Actor, code, name string) (*domain.UnitOfMeasure, error)
+	UpdateUnit(ctx context.Context, a app.Actor, id uuid.UUID, code, name string) (*domain.UnitOfMeasure, error)
+	ListUnits(ctx context.Context, a app.Actor) ([]*domain.UnitOfMeasure, error)
+	DeleteUnit(ctx context.Context, a app.Actor, id uuid.UUID) error
 }
 
 // Handler implements catalogapi.StrictServerInterface.
@@ -273,15 +277,11 @@ func productInput(body catalogapi.ProductInput) (app.ProductInput, error) {
 	if err != nil {
 		return app.ProductInput{}, err
 	}
-	unit, err := domain.ParseUnit(string(body.BaseUnit))
-	if err != nil {
-		return app.ProductInput{}, err
-	}
 	in := app.ProductInput{
 		SKU:        body.Sku,
 		Name:       body.Name,
 		CategoryID: body.CategoryId,
-		BaseUnit:   unit,
+		BaseUnitID: body.BaseUnitId,
 		Cost:       cost,
 		Price:      price,
 		TaxRate:    rate,
@@ -291,6 +291,9 @@ func productInput(body catalogapi.ProductInput) (app.ProductInput, error) {
 	}
 	if body.Description != nil {
 		in.Description = *body.Description
+	}
+	if body.BaseUnit != nil {
+		in.BaseUnitCode = *body.BaseUnit
 	}
 	return in, nil
 }
@@ -328,7 +331,9 @@ func productBody(p *domain.Product, seesCost bool) catalogapi.Product {
 		Barcode:       def.Barcode,
 		Name:          p.Name(),
 		CategoryId:    p.CategoryID(),
-		BaseUnit:      catalogapi.UnitOfMeasure(p.BaseUnit()),
+		BaseUnitId:    p.BaseUnit().ID,
+		Unit:          unitBody(p.BaseUnit()),
+		BaseUnit:      p.BaseUnit().Code,
 		Cost:          def.Cost,
 		Price:         def.Price,
 		PriceWithTax:  def.PriceWithTax,

@@ -23,13 +23,24 @@ func mustTaxRate(t *testing.T, s string) domain.TaxRate {
 
 var testNow = time.Date(2026, 10, 10, 9, 30, 0, 0, time.FixedZone("COT", -5*3600))
 
+// Units of the tenants in the tests, as a product keeps them.
+var (
+	bulto  = unitRef("bulto", "Bulto")
+	piece  = unitRef("und", "Unidad")
+	meters = unitRef("m", "Metro")
+)
+
+func unitRef(code, name string) domain.UnitRef {
+	return domain.UnitRef{ID: uuid.Must(uuid.NewV7()), Code: code, Name: name}
+}
+
 func validProductParams(t *testing.T) domain.NewProductParams {
 	t.Helper()
 	return domain.NewProductParams{
 		TenantID:    uuid.Must(uuid.NewV7()),
 		Name:        "  Cemento gris 50kg  ",
 		Description: "Cemento de uso general",
-		BaseUnit:    domain.UnitBulto,
+		BaseUnit:    bulto,
 		TaxRate:     mustTaxRate(t, "0.19"),
 		Variant: domain.VariantParams{
 			SKU:     "  cem-gris-50  ",
@@ -62,7 +73,7 @@ func TestNewProduct(t *testing.T) {
 		require.Equal(t, "Cemento gris 50kg", product.Name())
 		require.Equal(t, "Cemento de uso general", product.Description())
 		require.Equal(t, &categoryID, product.CategoryID())
-		require.Equal(t, domain.UnitBulto, product.BaseUnit())
+		require.Equal(t, bulto, product.BaseUnit())
 		require.True(t, dec("0.19").Equal(product.TaxRate().Rate()))
 		require.True(t, product.IsActive())
 		require.Equal(t, testNow.UTC(), product.CreatedAt())
@@ -77,7 +88,7 @@ func TestNewProduct(t *testing.T) {
 			{"ferretería: cemento por bulto", validProductParams, "CEM-GRIS-50"},
 			{"almacén de ropa: camiseta básica", func(t *testing.T) domain.NewProductParams {
 				p := validProductParams(t)
-				p.Name, p.BaseUnit = "Camiseta básica", domain.UnitPiece
+				p.Name, p.BaseUnit = "Camiseta básica", piece
 				p.Variant.SKU, p.Variant.Barcode = "cam-basica", ""
 				return p
 			}, "CAM-BASICA"},
@@ -144,7 +155,7 @@ func TestNewProduct(t *testing.T) {
 			{"nombre demasiado largo", func(p *domain.NewProductParams) { p.Name = strings.Repeat("a", 201) }, domain.ErrInvalidProductName},
 			{"descripción demasiado larga", func(p *domain.NewProductParams) { p.Description = strings.Repeat("a", 2001) }, domain.ErrInvalidDescription},
 			{"categoría vacía", func(p *domain.NewProductParams) { p.CategoryID = &nilCategory }, domain.ErrInvalidCategoryID},
-			{"unidad desconocida", func(p *domain.NewProductParams) { p.BaseUnit = "docena" }, domain.ErrInvalidUnit},
+			{"sin unidad base", func(p *domain.NewProductParams) { p.BaseUnit = domain.UnitRef{} }, domain.ErrInvalidUnit},
 			{"SKU de la variante vacío", func(p *domain.NewProductParams) { p.Variant.SKU = "   " }, domain.ErrInvalidSKU},
 			{"precio de la variante cero", func(p *domain.NewProductParams) { p.Variant.Price = dec("0") }, domain.ErrInvalidPrice},
 			{"ejes de la variante con un valor vacío", func(p *domain.NewProductParams) {
@@ -185,7 +196,7 @@ func validSnapshot(t *testing.T) domain.ProductSnapshot {
 		TenantID:   uuid.Must(uuid.NewV7()),
 		Name:       "Tubo PVC presión 1/2 pulgada",
 		CategoryID: &categoryID,
-		BaseUnit:   domain.UnitMeter,
+		BaseUnit:   meters,
 		TaxRate:    mustTaxRate(t, "0.19"),
 		Active:     false,
 		CreatedAt:  testNow,
@@ -208,7 +219,7 @@ func TestRehydrateProduct(t *testing.T) {
 		product, err := domain.RehydrateProduct(s)
 		require.NoError(t, err)
 		require.Equal(t, s.ID, product.ID())
-		require.Equal(t, domain.UnitMeter, product.BaseUnit())
+		require.Equal(t, meters, product.BaseUnit())
 		require.False(t, product.IsActive())
 		require.Equal(t, testNow.UTC(), product.CreatedAt())
 		require.Equal(t, s.ID, product.DefaultVariant().ID())
@@ -241,7 +252,7 @@ func TestRehydrateProduct(t *testing.T) {
 		}{
 			{"id vacío", func(s *domain.ProductSnapshot) { s.ID = uuid.Nil }, domain.ErrInvalidProductID},
 			{"tenant vacío", func(s *domain.ProductSnapshot) { s.TenantID = uuid.Nil }, domain.ErrInvalidTenantID},
-			{"unidad desconocida", func(s *domain.ProductSnapshot) { s.BaseUnit = "" }, domain.ErrInvalidUnit},
+			{"sin unidad base", func(s *domain.ProductSnapshot) { s.BaseUnit = domain.UnitRef{Code: "m"} }, domain.ErrInvalidUnit},
 			{"id de variante vacío", func(s *domain.ProductSnapshot) { s.Variants[0].ID = uuid.Nil }, domain.ErrInvalidVariantID},
 			{"SKU vacío", func(s *domain.ProductSnapshot) { s.Variants[0].SKU = "" }, domain.ErrInvalidSKU},
 			{"precio cero", func(s *domain.ProductSnapshot) { s.Variants[0].Price = dec("0") }, domain.ErrInvalidPrice},

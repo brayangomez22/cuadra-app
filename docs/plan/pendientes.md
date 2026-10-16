@@ -37,6 +37,8 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [x] | P30 | `salesStock` (cmd/api) resuelve cada producto de la venta a su variante por defecto dentro de la transacción y traduce `VariantStockError` de vuelta al producto. Al vender por variante, la venta debe pasar `variant_id` directo a `IssueSaleStock`, y el error de stock debe nombrar la variante | T24b | T24c |
 | [ ] | P31 | El `PriceQuery` del `PriceResolver` lleva la cantidad de la **línea**, no el total de esa variante en el carrito: si la misma variante va en dos líneas, una escala por cantidad las ve por separado. `volume_pricing` debe decidir si suma por variante (y cómo repartir el precio entre las líneas) | T24c | V2-13 |
 | [ ] | P32 | Quitar `VariantCatalog.DefaultVariants` y `LineRequest.ProductID` de ventas junto con el `product_id` deprecated de `SaleLineInput` y `details.product_id` de `insufficient_stock` | T24c | T24j |
+| [ ] | P33 | El formulario de producto ofrece la lista fija de unidades de `units.ts` y envía el código en `base_unit` (deprecated). Debe elegir entre las unidades del tenant (`GET /api/v1/units`) y enviar `base_unit_id`; las pantallas muestran `unit.code` en vez de `unitShort(base_unit)` | T24d | T24i |
+| [ ] | P34 | Quitar `defaultUnits` de `catalog/app` (la lista fija, con términos de un nicho como `bulto` y `rollo`) cuando el registro siembre las unidades de la plantilla a través del mismo puerto `TenantSetup` | T24d | T24g |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 

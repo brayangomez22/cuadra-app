@@ -1,4 +1,5 @@
-// Package catalog wires the catalog module: products and categories. cmd/api
+// Package catalog wires the catalog module: products, categories and units
+// of measure. cmd/api
 // builds it with New and mounts its routes.
 package catalog
 
@@ -49,6 +50,7 @@ func New(cfg Config) (*Module, error) {
 	svc, err := app.NewService(app.Deps{
 		Products:       products,
 		Categories:     postgres.NewCategoryRepository(cfg.DB),
+		Units:          postgres.NewUnitRepository(cfg.DB),
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Logger:         cfg.Logger,
@@ -62,6 +64,13 @@ func New(cfg Config) (*Module, error) {
 // RegisterRoutes mounts the module's operations (tag "catalog") on mux.
 func (m *Module) RegisterRoutes(mux *http.ServeMux) {
 	httpadapter.Register(mux, m.service, m.authorize, m.log)
+}
+
+// SeedDefaultUnits gives a new tenant its initial units of measure. It is
+// for the sign-up (cmd/api adapts it to identity's TenantSetup); with a ctx
+// from db.InTenantTx it joins the sign-up's transaction.
+func (m *Module) SeedDefaultUnits(ctx context.Context, tenantID uuid.UUID) error {
+	return m.service.SeedDefaultUnits(ctx, tenantID)
 }
 
 // MaxProductsByID is the most products ProductsByID returns in one call.
