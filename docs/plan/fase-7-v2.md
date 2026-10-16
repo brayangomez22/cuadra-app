@@ -28,7 +28,7 @@ Cada punto es un módulo activable (`cross_references`, `kits`, `deliveries`, `w
 - **Kits o combos** que descuentan cada componente del inventario.
 - **Despachos y domicilios:** remisiones, entregas parciales de material de obra y estado de la entrega.
 - **Garantías y devoluciones** de herramientas, con seguimiento.
-- **Pedidos por obra o proyecto:** agrupar las compras de un contratista por obra, con estado de cuenta por obra.
+- **Pedidos por obra o proyecto:** agrupar las compras de un cliente por proyecto u obra (por ejemplo, un contratista o un colegio), con estado de cuenta por proyecto.
 
 ### Épica V2-8 · Impresión directa y periféricos
 Impresión ESC/POS directa a impresoras térmicas, apertura del cajón monedero y lectura de básculas, si los pilotos lo necesitan.
