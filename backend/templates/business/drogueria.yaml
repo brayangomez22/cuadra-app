@@ -3,6 +3,9 @@
 name: Droguería
 description: Medicamentos, cuidado personal, productos para bebé y primeros auxilios.
 modules: []
+# Tasa de IVA que se propone a un producto nuevo: 0 porque los medicamentos
+# están excluidos de IVA (los demás productos se ajustan uno por uno).
+default_tax_rate: "0"
 units:
   - {code: und, name: Unidad}
   - {code: caja, name: Caja}

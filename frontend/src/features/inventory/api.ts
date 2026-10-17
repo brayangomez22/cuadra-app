@@ -14,8 +14,8 @@ export const inventoryKeys = {
   all: ['inventory'] as const,
   locations: ['inventory', 'locations'] as const,
   stock: (locationId: string, offset: number) => ['inventory', 'stock', locationId, offset] as const,
-  kardex: (productId: string, locationId: string | undefined, offset: number) =>
-    ['inventory', 'kardex', productId, locationId ?? 'all', offset] as const,
+  kardex: (variantId: string, locationId: string | undefined, offset: number) =>
+    ['inventory', 'kardex', variantId, locationId ?? 'all', offset] as const,
 };
 
 export function useLocations() {
@@ -39,15 +39,17 @@ export function useStock(locationId: string | undefined, offset: number) {
   });
 }
 
-export function useKardex(productId: string, locationId: string | undefined, offset: number) {
+/** The kardex of a variant; it waits until the variant is known. */
+export function useKardex(variantId: string | undefined, locationId: string | undefined, offset: number) {
   return useQuery({
-    queryKey: inventoryKeys.kardex(productId, locationId, offset),
+    queryKey: inventoryKeys.kardex(variantId ?? '', locationId, offset),
     queryFn: async () =>
       unwrap(
-        await api.GET('/api/v1/products/{productId}/kardex', {
-          params: { path: { productId }, query: { location_id: locationId, limit: PAGE_SIZE, offset } },
+        await api.GET('/api/v1/variants/{variantId}/kardex', {
+          params: { path: { variantId: variantId ?? '' }, query: { location_id: locationId, limit: PAGE_SIZE, offset } },
         }),
       ),
+    enabled: Boolean(variantId),
     placeholderData: keepPreviousData,
   });
 }

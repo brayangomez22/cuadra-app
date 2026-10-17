@@ -1,7 +1,7 @@
 // Package templates reads the business templates: the data a new tenant
 // starts with, by kind of business (backend/templates/business/*.yaml).
 // Templates are data, not code: a template never adds behavior, it only
-// declares the modules, units, categories, product attributes, variant axes
+// declares the modules, default IVA rate, units, categories, product attributes, variant axes
 // and customer segments a tenant gets at sign-up. The tenant can change all
 // of it afterwards.
 //
@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/shopspring/decimal"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -50,10 +51,12 @@ type Template struct {
 	Name        string
 	Description string
 	// Modules are the modules active from the sign-up.
-	Modules    []string
-	Units      []Unit
-	Categories []string
-	Attributes []Attribute
+	Modules []string
+	// DefaultTaxRate is the IVA rate the product form proposes.
+	DefaultTaxRate decimal.Decimal
+	Units          []Unit
+	Categories     []string
+	Attributes     []Attribute
 	// VariantAxes are the axes the tenant's variants vary on (size,
 	// color...).
 	VariantAxes []Axis
@@ -76,6 +79,8 @@ type Attribute struct {
 	Label   string   `yaml:"label"`
 	Type    string   `yaml:"type"`
 	Options []string `yaml:"options"`
+	// Required means every product must have a value.
+	Required bool `yaml:"required"`
 }
 
 // Axis is a variant axis of a template and the values it allows.
@@ -89,6 +94,7 @@ type file struct {
 	Name             string      `yaml:"name"`
 	Description      string      `yaml:"description"`
 	Modules          []string    `yaml:"modules"`
+	DefaultTaxRate   string      `yaml:"default_tax_rate"`
 	Units            []Unit      `yaml:"units"`
 	Categories       []string    `yaml:"categories"`
 	Attributes       []Attribute `yaml:"attributes"`
@@ -175,8 +181,13 @@ func load(fsys fs.FS, name string, schema *jsonschema.Schema) (Template, error) 
 		return Template{}, invalid("%v", err)
 	}
 
+	// The schema checked its format: a fraction below 1 with up to 4 decimals.
+	rate, err := decimal.NewFromString(f.DefaultTaxRate)
+	if err != nil {
+		return Template{}, invalid("default_tax_rate: %v", err)
+	}
 	t := Template{
-		ID: id, Name: f.Name, Description: f.Description, Modules: f.Modules, Units: f.Units,
+		ID: id, Name: f.Name, Description: f.Description, Modules: f.Modules, DefaultTaxRate: rate, Units: f.Units,
 		Categories: f.Categories, Attributes: f.Attributes, VariantAxes: f.VariantAxes, CustomerSegments: f.CustomerSegments,
 	}
 	if err := checkUnique(t); err != nil {

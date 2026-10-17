@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router';
 import { useCan } from '@/features/auth';
-import { unitShort, useProducts, type Product } from '@/features/catalog';
+import { useProducts, variantName, type Product } from '@/features/catalog';
 import { formatMoney, formatQuantity, isNegative } from '@/shared/format';
 import {
   Alert,
@@ -125,8 +125,9 @@ type StockProps = {
 function LocationStock({ location, offset, canSeeCost, canReceive, onOffsetChange }: StockProps) {
   const stock = useStock(location.id, offset);
   const levels = stock.data?.items ?? [];
-  // The stock has only product ids: their names come in one request for the whole page.
-  const productIds = levels.map((level) => level.product_id);
+  // The stock has only ids: the names of its products come in one request for
+  // the whole page, each product once however many of its variants it shows.
+  const productIds = [...new Set(levels.map((level) => level.product_id))];
   const products = useProducts(
     { ids: productIds, status: 'all', limit: PAGE_SIZE },
     { enabled: productIds.length > 0 && !stock.isPlaceholderData },
@@ -179,7 +180,7 @@ function LocationStock({ location, offset, canSeeCost, canReceive, onOffsetChang
         <TableBody>
           {levels.map((level) => (
             <StockRow
-              key={level.product_id}
+              key={level.variant_id}
               level={level}
               product={byId.get(level.product_id)}
               loading={products.isPending}
@@ -202,23 +203,24 @@ function LocationStock({ location, offset, canSeeCost, canReceive, onOffsetChang
 type RowProps = { level: StockLevel; product?: Product; loading: boolean; canSeeCost: boolean };
 
 function StockRow({ level, product, loading, canSeeCost }: RowProps) {
-  const kardex = `/productos/${level.product_id}/kardex?sede=${level.location_id}`;
+  const kardex = `/productos/${level.product_id}/kardex?variante=${level.variant_id}&sede=${level.location_id}`;
+  const variant = product?.variants.find((v) => v.id === level.variant_id);
   return (
     <TableRow>
       <TableCell>
-        {product ? (
-          <TextLink tone="quiet" to={kardex}>{product.name}</TextLink>
+        {product && variant ? (
+          <TextLink tone="quiet" to={kardex}>{variantName(product.name, variant.label)}</TextLink>
         ) : loading ? (
           <Skeleton className={styles.nameSkeleton} />
         ) : (
           <TextLink tone="quiet" to={kardex}>Ver kardex</TextLink>
         )}
-        {product && <span className={styles.sku}>{product.sku}</span>}
+        {variant && <span className={styles.sku}>{variant.sku}</span>}
       </TableCell>
       <TableCell numeric>
         <span className={styles.quantity}>
           {isNegative(level.quantity) && <Badge tone="danger">Negativa</Badge>}
-          {formatQuantity(level.quantity)} {product && unitShort(product.base_unit)}
+          {formatQuantity(level.quantity)} {product?.unit.code}
         </span>
       </TableCell>
       {canSeeCost && <TableCell numeric>{level.average_cost ? formatMoney(level.average_cost) : '—'}</TableCell>}

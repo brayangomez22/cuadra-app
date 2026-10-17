@@ -101,7 +101,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 **Alcance:** barrido de nombres, ejemplos, textos y datos de prueba con términos de un nicho dentro del core (backend `internal/modules/*/domain` y `app`, `internal/platform`, frontend `src/shared` y pantallas del core, ejemplos de `api/openapi.yaml`). Textos visibles: "El catálogo de la ferretería" pasa a "Tu catálogo" y el ejemplo del registro pasa a `ana@minegocio.co`. Script `make lint-neutral` en el CI con una lista de términos prohibidos (`ferreter`, `bulto`, `rollo`, `maestro de obra`, `contratista`, `talla`...) que falla si aparecen en esas rutas. Quedan excluidos las plantillas YAML, los módulos, los datos semilla de la demo y los archivos `*_test.go`, `*.test.ts(x)`, `testdata/` y fixtures. Los tests table-driven de catálogo, inventario y ventas incluyen casos de al menos dos tipos de negocio.
 **Tests primero:** el script detecta un término prohibido en un archivo del core y no marca las rutas excluidas (incluidos un `*_test.go` y un fixture).
 
-### [ ] T24i · Frontend: producto y POS
+### [x] T24i · Frontend: producto y POS
 **Depende de:** T24c, T24e, T24f.
 **Alcance:** formulario de producto con atributos según las definiciones del tenant; **si el módulo `variants` está inactivo, el formulario se ve igual que hoy** (producto simple); si está activo, ejes y matriz de variantes. Lista de productos, selector de productos y pantallas de inventario (stock, kardex, entradas) por variante. POS: búsqueda y carrito por variante (escanear el código de una variante agrega esa variante); el carrito guardado en `sessionStorage` lleva versión y se descarta si es de una versión anterior. La tirilla muestra `variant_label`.
 **Pendientes que entran a esta tarea:** P33, P38, P42, P43 y P47 (`docs/plan/pendientes.md`).
@@ -111,7 +111,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 ### [ ] T24j · Frontend: configuración y registro, y fin de lo `deprecated`
 **Depende de:** T24g, T24i.
 **Alcance:** registro con selección de tipo de negocio. Configuración: unidades, atributos y módulos. Menús y campos según los `modules` de `/me`. **Elimina todos los campos `deprecated` del bloque** en `api/openapi.yaml` y el código que los usa, en el backend y en el frontend.
-**Pendientes que entran a esta tarea:** P29, P32, P36, P37 y P41 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P29, P32, P36, P37, P41 y P50 (`docs/plan/pendientes.md`).
 **Tests primero:** un menú de un módulo inactivo no aparece; el registro con una plantilla siembra sus unidades y sus módulos (de punta a punta contra la API); `api/openapi.yaml` no tiene campos `deprecated` del bloque.
 **Después:** `/impeccable critique` de la configuración y del registro.
 

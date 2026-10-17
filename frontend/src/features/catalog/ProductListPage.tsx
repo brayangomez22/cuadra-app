@@ -26,8 +26,9 @@ import {
   TableRow,
   TextLink,
 } from '@/shared/ui';
-import { PAGE_SIZE, useProducts, type Product, type ProductStatus } from './api';
-import { unitShort } from './units';
+import { toUnits } from '@/shared/money/decimal';
+import { PAGE_SIZE, useProducts, type Product, type ProductStatus, type ProductVariant } from './api';
+import { defaultVariant, hasAxes } from './variants';
 import styles from './ProductListPage.module.scss';
 
 // The filter of status as it shows in the URL, which the user sees.
@@ -167,19 +168,24 @@ function ProductTable({ products, canWrite, canSeeStock }: TableProps) {
                 {product.name}
                 {!product.active && <Badge>Inactivo</Badge>}
               </span>
-              {/* SKU and unit under the name: on a phone the price stays in view. */}
+              {/* SKU (or how many variants) and unit under the name: on a phone the price stays in view. */}
               <span className={styles.meta}>
-                <span className={styles.sku}>{product.sku}</span> · {unitShort(product.base_unit)}
+                {hasAxes(product) ? (
+                  `${product.variants.length} variantes`
+                ) : (
+                  <span className={styles.sku}>{defaultVariant(product).sku}</span>
+                )}{' '}
+                · {product.unit.code}
               </span>
             </TableCell>
             <TableCell numeric>
-              {formatMoney(product.price_with_tax)}
+              {amount(product, (v) => v.price_with_tax, formatMoney)}
               <span className={styles.meta}>IVA {formatPercent(product.tax_rate, 'rate')}</span>
             </TableCell>
-            {canWrite && <TableCell numeric>{product.cost ? formatMoney(product.cost) : '—'}</TableCell>}
+            {canWrite && <TableCell numeric>{amount(product, (v) => v.cost, formatMoney)}</TableCell>}
             {canWrite && (
               <TableCell numeric>
-                {product.margin_percent ? formatPercent(product.margin_percent, 'percent') : '—'}
+                {amount(product, (v) => v.margin_percent, (m) => formatPercent(m, 'percent'))}
               </TableCell>
             )}
             {hasActions && (
@@ -234,4 +240,20 @@ function NoProducts({ q, status, canWrite }: { q: string; status: ProductStatus;
       }
     />
   );
+}
+
+/**
+ * An amount of the product's variants (the ones for sale, or all if none is):
+ * the amount when they share it, "Desde" the smallest when they do not, and
+ * "—" when the API does not send it (costs, to those who cannot see them).
+ */
+function amount(product: Product, of: (v: ProductVariant) => string | undefined, format: (value: string) => string) {
+  const forSale = product.variants.filter((v) => v.active);
+  const values = (forSale.length > 0 ? forSale : product.variants).map(of);
+  const known = values.filter((value): value is string => value !== undefined);
+  if (known.length === 0) return '—';
+  const smallest = known.reduce((min, value) => (toUnits(value) < toUnits(min) ? value : min));
+  return known.every((value) => toUnits(value) === toUnits(smallest))
+    ? format(smallest)
+    : `Desde ${format(smallest)}`;
 }

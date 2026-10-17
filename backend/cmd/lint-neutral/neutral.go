@@ -76,10 +76,6 @@ func DefaultRules() Rules {
 			"frontend/src/features/dev/", // UI catalog: sample data, only in development
 			"backend/cmd/lint-neutral/",  // the term list itself
 		},
-		Allow: []Allowance{
-			{Path: "frontend/src/features/catalog/units.ts", Term: "bulto", Reason: "P33 (T24i): the form uses the tenant's units"},
-			{Path: "frontend/src/features/catalog/units.ts", Term: "rollo", Reason: "P33 (T24i): the form uses the tenant's units"},
-		},
 	}
 }
 

@@ -345,6 +345,7 @@ type Tenant struct {
 	Status           string
 	CreatedAt        time.Time
 	BusinessTemplate string
+	DefaultTaxRate   pgtype.Numeric
 }
 
 type TenantModule struct {

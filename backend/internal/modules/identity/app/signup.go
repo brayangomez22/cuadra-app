@@ -46,12 +46,13 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err er
 	if template == "" {
 		template = DefaultBusinessTemplate
 	}
-	if !s.templateExists(template) {
+	tpl, ok := s.findTemplate(template)
+	if !ok {
 		return Session{}, domain.ErrUnknownBusinessTemplate
 	}
 	span.SetAttributes(attribute.String("business_template", template))
 	now := s.Now()
-	tenant, err := domain.NewTenant(in.TenantName, nit, template, now)
+	tenant, err := domain.NewTenant(in.TenantName, nit, template, tpl.DefaultTaxRate, now)
 	if err != nil {
 		return Session{}, err
 	}
@@ -82,7 +83,12 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err er
 	return s.startSession(ctx, profile)
 }
 
-// templateExists reports whether id is one of the business templates.
-func (s *Service) templateExists(id string) bool {
-	return slices.ContainsFunc(s.Setup.Templates(), func(t BusinessTemplate) bool { return t.ID == id })
+// findTemplate returns the business template id; ok is false when there is none.
+func (s *Service) findTemplate(id string) (_ BusinessTemplate, ok bool) {
+	templates := s.Setup.Templates()
+	i := slices.IndexFunc(templates, func(t BusinessTemplate) bool { return t.ID == id })
+	if i < 0 {
+		return BusinessTemplate{}, false
+	}
+	return templates[i], true
 }

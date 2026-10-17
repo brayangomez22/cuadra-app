@@ -4,43 +4,55 @@
 import { emptyCart, type Cart } from './cart';
 import type { Paper } from './Receipt';
 
-/** The sale in progress survives a reload or a visit to another screen, in this tab only. */
+// CART_VERSION changes whenever the stored cart changes shape: a cart of
+// another version is discarded instead of read wrong (2: lines by variant).
+const CART_VERSION = 2;
+
+/**
+ * The sale in progress survives a reload or a visit to another screen, in
+ * this tab only. A cart of another version or damaged is discarded.
+ */
 export function loadCart(key: string): Cart {
   try {
     const stored = JSON.parse(sessionStorage.getItem(key) ?? 'null') as unknown;
-    return isCart(stored) ? stored : emptyCart;
+    if (stored === null) return emptyCart;
+    if (isStoredCart(stored)) return { lines: stored.lines };
+    sessionStorage.removeItem(key);
   } catch {
-    return emptyCart;
+    // Unreadable: a new sale starts.
   }
+  return emptyCart;
 }
 
 export function saveCart(key: string, cart: Cart) {
   try {
     if (cart.lines.length === 0) sessionStorage.removeItem(key);
-    else sessionStorage.setItem(key, JSON.stringify(cart));
+    else sessionStorage.setItem(key, JSON.stringify({ version: CART_VERSION, lines: cart.lines }));
   } catch {
     // Without storage the sale lives only while the screen is open.
   }
 }
 
-function isCart(value: unknown): value is Cart {
+const itemFields = ['variantId', 'productId', 'name', 'label', 'sku', 'unit', 'price', 'priceWithTax', 'taxRate'];
+
+function isStoredCart(value: unknown): value is Cart & { version: number } {
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    'lines' in value &&
+    isRecord(value) &&
+    value.version === CART_VERSION &&
     Array.isArray(value.lines) &&
     value.lines.every(
       (l: unknown) =>
-        typeof l === 'object' &&
-        l !== null &&
-        'product' in l &&
-        typeof l.product === 'object' &&
-        'quantity' in l &&
+        isRecord(l) &&
+        isRecord(l.item) &&
+        itemFields.every((field) => typeof (l.item as Record<string, unknown>)[field] === 'string') &&
         typeof l.quantity === 'string' &&
-        'discount' in l &&
         typeof l.discount === 'string',
     )
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 /** The location this device sells from: a setting of the counter, not of the sale. */

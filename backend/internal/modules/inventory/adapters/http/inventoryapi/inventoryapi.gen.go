@@ -177,8 +177,7 @@ type StockLevel struct {
 	AverageCost *Money             `json:"average_cost,omitempty"`
 	LocationId  openapi_types.UUID `json:"location_id"`
 
-	// ProductId El producto de la variante. Use `variant_id`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	// ProductId El producto de la variante, para mostrar su nombre.
 	ProductId openapi_types.UUID `json:"product_id"`
 
 	// Quantity Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).
@@ -212,8 +211,7 @@ type StockMovement struct {
 	LocationId   openapi_types.UUID `json:"location_id"`
 	OccurredAt   time.Time          `json:"occurred_at"`
 
-	// ProductId El producto de la variante. Use `variant_id`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	// ProductId El producto de la variante, para mostrar su nombre.
 	ProductId openapi_types.UUID `json:"product_id"`
 
 	// Quantity Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).

@@ -73,7 +73,8 @@ describe('AppLayout', () => {
 
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('link', { name: 'Productos' }));
 
-    expect(router.state.location.pathname).toBe('/productos');
+    // The screen loads lazily: the navigation ends once its module is in.
+    await waitFor(() => expect(router.state.location.pathname).toBe('/productos'));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 

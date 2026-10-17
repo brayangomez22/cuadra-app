@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useSearchParams } from 'react-router';
 import { z } from 'zod';
-import { ProductPicker, unitShort, useProduct, type Product } from '@/features/catalog';
+import { defaultVariant, ProductPicker, useProduct, variantName, type Product, type Sellable } from '@/features/catalog';
 import { api } from '@/shared/api/client';
 import { describeError, unwrap } from '@/shared/api/errors';
 import { decimalField } from '@/shared/forms/decimalField';
@@ -27,7 +27,7 @@ import styles from './ReceiptPage.module.scss';
 
 // Same limits as ReceiptInput in api/openapi.yaml.
 const schema = z.object({
-  product: z.custom<Product | null>().refine((product) => product !== null, 'Elija el producto'),
+  item: z.custom<Sellable | null>().refine((item) => item !== null, 'Elija el producto'),
   location_id: z.string().min(1, 'Elija la sede'),
   quantity: decimalField('positive', {
     empty: 'Escriba la cantidad',
@@ -44,7 +44,7 @@ type FormValues = z.output<typeof schema>;
 
 // Error codes of the API (api/openapi.yaml) that belong to one field.
 const fieldByErrorCode: Record<string, keyof FormInput> = {
-  product_not_found: 'product',
+  product_not_found: 'item',
   location_not_found: 'location_id',
   location_inactive: 'location_id',
   invalid_quantity: 'quantity',
@@ -52,8 +52,9 @@ const fieldByErrorCode: Record<string, keyof FormInput> = {
 };
 
 /**
- * /inventario/entrada: goods that arrive at a location. ?producto= and ?sede=
- * come chosen from the kardex or the stock.
+ * /inventario/entrada: goods that arrive at a location. ?producto= (with
+ * ?variante=, or its default variant) and ?sede= come chosen from the kardex
+ * or the stock.
  */
 export function ReceiptPage() {
   const [params] = useSearchParams();
@@ -102,20 +103,24 @@ export function ReceiptPage() {
     <Page title={title} description={description}>
       <ReceiptForm
         locations={active.map((location) => ({ value: location.id, label: location.name }))}
-        initialProduct={preset.data ?? null}
+        initialItem={preset.data ? presetItem(preset.data, params.get('variante')) : null}
         initialLocation={presetLocation?.id ?? (active.length === 1 ? active[0]?.id : undefined) ?? ''}
       />
     </Page>
   );
 }
 
+function presetItem(product: Product, variantId: string | null): Sellable {
+  return { product, variant: product.variants.find((v) => v.id === variantId) ?? defaultVariant(product) };
+}
+
 type FormProps = {
   locations: { value: string; label: string }[];
-  initialProduct: Product | null;
+  initialItem: Sellable | null;
   initialLocation: string;
 };
 
-function ReceiptForm({ locations, initialProduct, initialLocation }: FormProps) {
+function ReceiptForm({ locations, initialItem, initialLocation }: FormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [formError, setFormError] = useState<string | null>(null);
@@ -131,34 +136,35 @@ function ReceiptForm({ locations, initialProduct, initialLocation }: FormProps) 
   } = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      product: initialProduct,
+      item: initialItem,
       location_id: initialLocation,
       quantity: '',
-      unit_cost: initialProduct?.cost ? toDecimalInput(initialProduct.cost) : '',
+      unit_cost: initialItem?.variant.cost ? toDecimalInput(initialItem.variant.cost) : '',
     },
   });
-  const product = useWatch({ control, name: 'product' });
-  const unit = product ? unitShort(product.base_unit) : undefined;
+  const item = useWatch({ control, name: 'item' });
+  const unit = item?.product.unit.code;
 
   // Coming from the kardex, the product is already there: the quantity is next.
   useEffect(() => {
-    if (initialProduct) setFocus('quantity');
-  }, [initialProduct, setFocus]);
+    if (initialItem) setFocus('quantity');
+  }, [initialItem, setFocus]);
 
-  function choose(next: Product | null) {
-    setValue('product', next, { shouldValidate: Boolean(errors.product) });
+  function choose(next: Sellable | null) {
+    setValue('item', next, { shouldValidate: Boolean(errors.item) });
     // The last cost is a good start; only those who see costs (catalog:write) get it.
-    if (next?.cost) setValue('unit_cost', toDecimalInput(next.cost));
+    if (next?.variant.cost) setValue('unit_cost', toDecimalInput(next.variant.cost));
   }
 
   async function receive(values: FormValues) {
     setFormError(null);
-    if (!values.product) return;
+    if (!values.item) return;
+    const { product, variant } = values.item;
     try {
       const movement = unwrap(
         await api.POST('/api/v1/inventory/receipts', {
           body: {
-            product_id: values.product.id,
+            variant_id: variant.id,
             location_id: values.location_id,
             quantity: values.quantity,
             unit_cost: values.unit_cost,
@@ -166,21 +172,21 @@ function ReceiptForm({ locations, initialProduct, initialLocation }: FormProps) 
         }),
       );
       void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
-      const productUnit = unitShort(values.product.base_unit);
+      const productUnit = product.unit.code;
       const location = locations.find((l) => l.value === values.location_id)?.label ?? 'La sede';
       toast({
         tone: 'success',
         title: 'Entrada registrada',
-        description: `${formatQuantity(movement.quantity)} ${productUnit} de ${values.product.name}. ${location} queda con ${formatQuantity(movement.balance_after)} ${productUnit}.`,
+        description: `${formatQuantity(movement.quantity)} ${productUnit} de ${variantName(product.name, variant.label)}. ${location} queda con ${formatQuantity(movement.balance_after)} ${productUnit}.`,
       });
       // Ready for the next product of the same delivery, in the same location.
-      resetField('product', { defaultValue: null });
+      resetField('item', { defaultValue: null });
       resetField('quantity', { defaultValue: '' });
       resetField('unit_cost', { defaultValue: '' });
     } catch (error) {
       const { code, message } = describeError(error);
       const field = fieldByErrorCode[code ?? ''];
-      if (field) setError(field, { message }, { shouldFocus: field !== 'product' && field !== 'location_id' });
+      if (field) setError(field, { message }, { shouldFocus: field !== 'item' && field !== 'location_id' });
       else setFormError(message);
     }
   }
@@ -190,7 +196,7 @@ function ReceiptForm({ locations, initialProduct, initialLocation }: FormProps) 
       {formError && <Alert tone="danger">{formError}</Alert>}
       <Controller
         control={control}
-        name="product"
+        name="item"
         render={({ field, fieldState }) => (
           <ProductPicker
             label="Producto"

@@ -41,7 +41,9 @@ func (s tenantSetup) Templates() []identityapp.BusinessTemplate {
 	list := s.templates.List()
 	out := make([]identityapp.BusinessTemplate, 0, len(list))
 	for _, t := range list {
-		out = append(out, identityapp.BusinessTemplate{ID: t.ID, Name: t.Name, Description: t.Description})
+		out = append(out, identityapp.BusinessTemplate{
+			ID: t.ID, Name: t.Name, Description: t.Description, DefaultTaxRate: t.DefaultTaxRate,
+		})
 	}
 	return out
 }
@@ -51,22 +53,27 @@ func (s tenantSetup) SetUpTenant(ctx context.Context, tenantID uuid.UUID, id str
 	if !ok {
 		return identitydomain.ErrUnknownBusinessTemplate
 	}
+	if err := s.catalog.SeedTenant(ctx, tenantID, catalogSeed(t)); err != nil {
+		return err
+	}
+	return s.modules.SetUpTenant(ctx, tenantID, t.Modules)
+}
+
+// catalogSeed is the catalog's part of template t: what SeedTenant stores.
+func catalogSeed(t templates.Template) catalogapp.Seed {
 	seed := catalogapp.Seed{Categories: t.Categories}
 	for _, u := range t.Units {
 		seed.Units = append(seed.Units, catalogapp.UnitSeed{Code: u.Code, Name: u.Name})
 	}
 	for _, a := range t.Attributes {
 		seed.Attributes = append(seed.Attributes, catalogdomain.AttributeParams{
-			Key: a.Key, Label: a.Label, Type: catalogdomain.AttributeType(a.Type), Options: a.Options,
+			Key: a.Key, Label: a.Label, Type: catalogdomain.AttributeType(a.Type), Options: a.Options, Required: a.Required,
 		})
 	}
 	for _, a := range t.VariantAxes {
 		seed.VariantAxes = append(seed.VariantAxes, catalogapp.AxisSeed{Name: a.Name, Values: a.Values})
 	}
-	if err := s.catalog.SeedTenant(ctx, tenantID, seed); err != nil {
-		return err
-	}
-	return s.modules.SetUpTenant(ctx, tenantID, t.Modules)
+	return seed
 }
 
 // identityRegistry satisfies identityapp.ModuleRegistry: the permissions

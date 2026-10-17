@@ -119,9 +119,12 @@ type Me struct {
 	// BusinessTemplate Plantilla de tipo de negocio con la que se registró la empresa.
 	//
 	// Example: generica
-	BusinessTemplate string             `json:"business_template"`
-	Email            string             `json:"email"`
-	Id               openapi_types.UUID `json:"id"`
+	BusinessTemplate string `json:"business_template"`
+
+	// DefaultTaxRate La tasa de IVA que se propone a un producto nuevo. La siembra la plantilla de la empresa.
+	DefaultTaxRate TaxRate            `json:"default_tax_rate"`
+	Email          string             `json:"email"`
+	Id             openapi_types.UUID `json:"id"`
 
 	// Modules Módulos activos de la empresa, para mostrar u ocultar menús, columnas y campos.
 	//
@@ -177,6 +180,11 @@ type SignUpRequest struct {
 	// Example: Mi Negocio
 	TenantName string `json:"tenant_name"`
 }
+
+// TaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
+//
+// Example: 0.19
+type TaxRate = string
 
 // TenantOption defines model for TenantOption.
 type TenantOption struct {

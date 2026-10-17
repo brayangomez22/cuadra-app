@@ -22,6 +22,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T29 · Importación inicial desde Excel/CSV
 **Depende de:** T18 (River).
 **Alcance:** asistente para cargar productos, categorías, precios e inventario inicial desde una plantilla descargable. Previsualización, validación fila por fila con errores claros ("fila 154: el precio no es un número"), importación en un trabajo en segundo plano (River) y reporte final. **Crítico para el piloto:** nadie va a digitar 8.000 referencias a mano. La plantilla de Excel se genera según la configuración del tenant: incluye columnas para sus atributos de producto, sus unidades y, si el módulo `variants` está activo, una fila por variante (con columnas de ejes) agrupada por producto.
+**Pendientes que entran a esta tarea:** P49 (`docs/plan/pendientes.md`).
 **Tests primero:** filas inválidas se reportan sin importar las válidas a medias (todo o nada por lote); un SKU duplicado actualiza en vez de duplicar (configurable); 10.000 filas se procesan sin agotar memoria; un archivo con variantes crea un producto con sus N variantes; un atributo obligatorio vacío se reporta como error de la fila.
 
 ### [ ] T30 · Toma física de inventario

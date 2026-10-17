@@ -340,6 +340,13 @@ type ProductVariant struct {
 	// IsDefault La variante creada con el producto. Un producto simple solo tiene esta.
 	IsDefault bool `json:"is_default"`
 
+	// Label El nombre de la variante: sus valores ordenados por nombre de eje (`Rojo · M`), como lo congela una venta en
+	// `variant_label`. Vacío si la variante no tiene ejes.
+	//
+	//
+	// Example: Rojo · M
+	Label string `json:"label"`
+
 	// MarginPercent Margen sobre el precio de venta, en porcentaje. Es negativo si el precio está por debajo del costo.
 	//
 	// Example: 16.6667

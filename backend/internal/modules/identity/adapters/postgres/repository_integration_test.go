@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/adapters/postgres"
@@ -47,7 +48,7 @@ func (f fixture) createTenant(t *testing.T) *domain.Tenant {
 	t.Helper()
 	nit, err := domain.ParseNIT("890903938-8")
 	require.NoError(t, err)
-	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", now)
+	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", decimal.RequireFromString("0.19"), now)
 	require.NoError(t, err)
 	require.NoError(t, f.tenants.Create(t.Context(), tenant))
 	return tenant
@@ -102,7 +103,22 @@ func TestTenantRepository(t *testing.T) {
 		require.Equal(t, "890903938-8", got.NIT().String())
 		require.Equal(t, domain.TenantActive, got.Status())
 		require.Equal(t, "ferreteria", got.BusinessTemplate())
+		require.Equal(t, "0.19", got.DefaultTaxRate().String())
 		require.Equal(t, now, got.CreatedAt())
+	})
+
+	t.Run("guarda el IVA por defecto de cada plantilla", func(t *testing.T) {
+		nit, err := domain.ParseNIT("890903938-8")
+		require.NoError(t, err)
+		for template, rate := range map[string]string{"drogueria": "0", "ropa_calzado": "0.19"} {
+			tenant, err := domain.NewTenant("Mi negocio", nit, template, decimal.RequireFromString(rate), now)
+			require.NoError(t, err)
+			require.NoError(t, f.tenants.Create(t.Context(), tenant))
+
+			got, err := f.tenants.GetByID(t.Context(), tenant.ID())
+			require.NoError(t, err)
+			require.Equal(t, rate, got.DefaultTaxRate().String(), template)
+		}
 	})
 
 	t.Run("actualiza el estado de un tenant", func(t *testing.T) {
@@ -284,8 +300,8 @@ func TestRowLevelSecurityPolicies(t *testing.T) {
 
 		err := f.db.WithTenantTx(t.Context(), tenant.ID(), func(tx pgx.Tx) error {
 			_, err := tx.Exec(t.Context(), `
-				INSERT INTO tenants (id, name, nit, status, business_template, created_at)
-				VALUES ($1, 'Otra', '890903938-8', 'active', 'generica', now())`, uuid.Must(uuid.NewV7()))
+				INSERT INTO tenants (id, name, nit, status, business_template, default_tax_rate, created_at)
+				VALUES ($1, 'Otra', '890903938-8', 'active', 'generica', 0.19, now())`, uuid.Must(uuid.NewV7()))
 			return err
 		})
 		requireRLSViolation(t, err)

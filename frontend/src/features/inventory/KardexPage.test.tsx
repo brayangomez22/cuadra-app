@@ -1,7 +1,19 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { aUser, fakeApi, json, signedIn } from '@/test/fakeApi';
-import { aLocation, aMovement, aProduct, ids, page, plain, query, withoutCost, withoutCosts } from '@/test/fixtures';
+import {
+  aGarment,
+  aLocation,
+  aMovement,
+  aProduct,
+  ids,
+  page,
+  plain,
+  query,
+  variantId,
+  withoutCost,
+  withoutCosts,
+} from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 
 
@@ -23,7 +35,7 @@ function kardexApi(extra: Parameters<typeof fakeApi>[0] = {}) {
     ...signedIn(),
     [`GET /api/v1/products/${ids.pipe}`]: json(200, aProduct()),
     'GET /api/v1/locations': json(200, { items: [aLocation(), aLocation({ id: ids.north, name: 'Sede norte' })] }),
-    [`GET /api/v1/products/${ids.pipe}/kardex`]: json(200, page(movements)),
+    [`GET /api/v1/variants/${ids.pipe}/kardex`]: json(200, page(movements)),
     ...extra,
   });
 }
@@ -60,7 +72,7 @@ describe('KardexPage', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Sede norte' }));
 
     await waitFor(() =>
-      expect(query(api.calls(`GET /api/v1/products/${ids.pipe}/kardex`).at(-1)!).get('location_id')).toBe(ids.north),
+      expect(query(api.calls(`GET /api/v1/variants/${ids.pipe}/kardex`).at(-1)!).get('location_id')).toBe(ids.north),
     );
     expect(router.state.location.search).toBe(`?sede=${ids.north}`);
   });
@@ -70,7 +82,7 @@ describe('KardexPage', () => {
     renderApp(`/productos/${ids.pipe}/kardex?sede=${ids.north}`);
     await kardexTable();
 
-    const [first] = api.calls(`GET /api/v1/products/${ids.pipe}/kardex`);
+    const [first] = api.calls(`GET /api/v1/variants/${ids.pipe}/kardex`);
     expect(query(first!).get('location_id')).toBe(ids.north);
   });
 
@@ -78,7 +90,7 @@ describe('KardexPage', () => {
     kardexApi({
       ...signedIn(aUser('warehouse')),
       [`GET /api/v1/products/${ids.pipe}`]: json(200, withoutCost(aProduct())),
-      [`GET /api/v1/products/${ids.pipe}/kardex`]: json(
+      [`GET /api/v1/variants/${ids.pipe}/kardex`]: json(
         200,
         page(movements.map(withoutCosts)),
       ),
@@ -90,15 +102,78 @@ describe('KardexPage', () => {
     expect(table.queryByRole('columnheader', { name: 'Costo unitario' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Registrar entrada' })).toHaveAttribute(
       'href',
-      `/inventario/entrada?producto=${ids.pipe}`,
+      `/inventario/entrada?producto=${ids.pipe}&variante=${ids.pipe}`,
     );
   });
 
   it('avisa cuando el producto aún no tiene movimientos', async () => {
-    kardexApi({ [`GET /api/v1/products/${ids.pipe}/kardex`]: json(200, page([])) });
+    kardexApi({ [`GET /api/v1/variants/${ids.pipe}/kardex`]: json(200, page([])) });
     renderApp(`/productos/${ids.pipe}/kardex`);
 
     expect(await screen.findByRole('heading', { name: 'Este producto aún no tiene movimientos' })).toBeInTheDocument();
+  });
+
+  it('el kardex de un producto simple consulta el de su variante por defecto', async () => {
+    const api = kardexApi();
+    renderApp(`/productos/${ids.pipe}/kardex`);
+
+    await kardexTable();
+
+    expect(api.calls(`GET /api/v1/variants/${ids.pipe}/kardex`)).toHaveLength(1);
+    expect(screen.queryByRole('combobox', { name: 'Variante' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Registrar entrada' })).toHaveAttribute(
+      'href',
+      `/inventario/entrada?producto=${ids.pipe}&variante=${ids.pipe}`,
+    );
+  });
+
+  describe('variantes', () => {
+    function garmentApi() {
+      return kardexApi({
+        [`GET /api/v1/products/${ids.garment}`]: json(200, aGarment()),
+        [`GET /api/v1/variants/${variantId('M', 'Azul')}/kardex`]: json(200, page([aMovement({ variant_id: variantId('M', 'Azul') })])),
+        [`GET /api/v1/variants/${variantId('L', 'Rojo')}/kardex`]: json(200, page([])),
+      });
+    }
+
+    it('muestra el kardex de la variante de la URL', async () => {
+      const api = garmentApi();
+      renderApp(`/productos/${ids.garment}/kardex?variante=${variantId('M', 'Azul')}&sede=${ids.main}`);
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Camiseta básica (Azul · M)' })).toBeInTheDocument();
+      await screen.findByRole('table', { name: 'Movimientos de Camiseta básica (Azul · M)' });
+      expect(screen.getByRole('combobox', { name: 'Variante' })).toHaveTextContent('Azul · M');
+      expect(query(api.calls(`GET /api/v1/variants/${variantId('M', 'Azul')}/kardex`)[0]!).get('location_id')).toBe(ids.main);
+      expect(screen.getByRole('link', { name: 'Registrar entrada' })).toHaveAttribute(
+        'href',
+        `/inventario/entrada?producto=${ids.garment}&variante=${variantId('M', 'Azul')}&sede=${ids.main}`,
+      );
+    });
+
+    it('sin variante en la URL muestra la variante por defecto', async () => {
+      const api = kardexApi({
+        [`GET /api/v1/products/${ids.garment}`]: json(200, aGarment()),
+        [`GET /api/v1/variants/${variantId('S', 'Rojo')}/kardex`]: json(200, page([])),
+      });
+      renderApp(`/productos/${ids.garment}/kardex`);
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Camiseta básica (Rojo · S)' })).toBeInTheDocument();
+      await waitFor(() => expect(api.calls(`GET /api/v1/variants/${variantId('S', 'Rojo')}/kardex`)).toHaveLength(1));
+      expect(api.calls(`GET /api/v1/products/${ids.garment}/kardex`)).toHaveLength(0);
+    });
+
+    it('cambia de variante y la conserva en la URL', async () => {
+      const api = garmentApi();
+      const { router } = renderApp(`/productos/${ids.garment}/kardex?variante=${variantId('M', 'Azul')}`);
+      await screen.findByRole('table', { name: 'Movimientos de Camiseta básica (Azul · M)' });
+
+      await userEvent.click(screen.getByRole('combobox', { name: 'Variante' }));
+      await userEvent.click(await screen.findByRole('option', { name: 'Rojo · L' }));
+
+      expect(await screen.findByRole('heading', { name: 'Esta variante aún no tiene movimientos' })).toBeInTheDocument();
+      expect(api.calls(`GET /api/v1/variants/${variantId('L', 'Rojo')}/kardex`)).toHaveLength(1);
+      expect(router.state.location.search).toBe(`?variante=${variantId('L', 'Rojo')}`);
+    });
   });
 
   it('el cajero no ve Registrar entrada', async () => {

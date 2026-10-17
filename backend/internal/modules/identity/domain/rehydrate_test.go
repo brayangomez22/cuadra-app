@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/domain"
@@ -19,6 +20,7 @@ func TestRehydrateTenant(t *testing.T) {
 			NIT:              mustNIT(t, "890903938-8"),
 			Status:           domain.TenantSuspended,
 			BusinessTemplate: "ropa_calzado",
+			DefaultTaxRate:   decimal.RequireFromString("0.19"),
 			CreatedAt:        createdAt,
 		}
 	}
@@ -33,6 +35,7 @@ func TestRehydrateTenant(t *testing.T) {
 		require.Equal(t, domain.TenantSuspended, tenant.Status())
 		require.False(t, tenant.IsActive())
 		require.Equal(t, "ropa_calzado", tenant.BusinessTemplate())
+		require.Equal(t, "0.19", tenant.DefaultTaxRate().String())
 		require.Equal(t, createdAt, tenant.CreatedAt())
 	})
 
@@ -47,6 +50,7 @@ func TestRehydrateTenant(t *testing.T) {
 			{name: "sin NIT", mutate: func(s *domain.TenantSnapshot) { s.NIT = domain.NIT{} }, wantErr: domain.ErrInvalidNIT},
 			{name: "con estado desconocido", mutate: func(s *domain.TenantSnapshot) { s.Status = "deleted" }, wantErr: domain.ErrInvalidTenantStatus},
 			{name: "sin plantilla", mutate: func(s *domain.TenantSnapshot) { s.BusinessTemplate = "" }, wantErr: domain.ErrUnknownBusinessTemplate},
+			{name: "con IVA por defecto de 100 %", mutate: func(s *domain.TenantSnapshot) { s.DefaultTaxRate = decimal.NewFromInt(1) }, wantErr: domain.ErrInvalidDefaultTaxRate},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {

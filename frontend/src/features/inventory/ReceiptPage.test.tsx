@@ -1,7 +1,19 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { aUser, apiError, fakeApi, json, signedIn } from '@/test/fakeApi';
-import { aCement, aLocation, aMovement, aProduct, ids, page, query, withoutCost } from '@/test/fixtures';
+import {
+  aCement,
+  aGarment,
+  aLocation,
+  aMovement,
+  aProduct,
+  ids,
+  page,
+  query,
+  variantBarcode,
+  variantId,
+  withoutCost,
+} from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 
 function receiptApi(extra: Parameters<typeof fakeApi>[0] = {}) {
@@ -14,8 +26,12 @@ function receiptApi(extra: Parameters<typeof fakeApi>[0] = {}) {
         aLocation({ id: '01920000-0000-7000-8000-000000000299', name: 'Bodega cerrada', active: false }),
       ],
     }),
-    'GET /api/v1/products': (request) =>
-      json(200, query(request).get('q') === '7701234567890' ? page([aCement()]) : page([aProduct(), aCement()])),
+    'GET /api/v1/products': (request) => {
+      const q = query(request).get('q');
+      if (q === '7701234567890') return json(200, page([aCement()]));
+      if (q === variantBarcode('L', 'Azul') || q === 'camiseta') return json(200, page([aGarment()]));
+      return json(200, page([aProduct(), aCement()]));
+    },
     'POST /api/v1/inventory/receipts': json(201, aMovement({ quantity: '10', balance_after: '130' })),
     ...extra,
   });
@@ -50,7 +66,7 @@ describe('ReceiptPage', () => {
     expect(await screen.findByText('Entrada registrada')).toBeInTheDocument();
     expect(screen.getByText(/Bodega principal queda con 130 und/)).toBeInTheDocument();
     expect(await api.calls('POST /api/v1/inventory/receipts')[0]?.json()).toEqual({
-      product_id: ids.pipe,
+      variant_id: ids.pipe,
       location_id: ids.main,
       quantity: '10',
       unit_cost: '8000',
@@ -117,6 +133,51 @@ describe('ReceiptPage', () => {
     const chosen = await screen.findByRole('group', { name: 'Producto elegido' });
     expect(within(chosen).getByText('Cemento gris 50kg')).toBeInTheDocument();
     expect(screen.getByLabelText('Cantidad')).toHaveFocus();
+  });
+
+  describe('variantes', () => {
+    it('elige una variante, propone su costo y envía su variant_id', async () => {
+      const api = receiptApi();
+      renderApp('/inventario/entrada');
+
+      await userEvent.type(await screen.findByRole('searchbox', { name: 'Producto' }), 'camiseta');
+      expect(await screen.findAllByRole('button', { name: /Camiseta básica \(/ })).toHaveLength(6);
+      await userEvent.click(screen.getByRole('button', { name: /Camiseta básica \(Azul · M\)/ }));
+      await pickLocation('Bodega principal');
+      await userEvent.type(screen.getByLabelText('Cantidad'), '12');
+      expect(screen.getByLabelText('Costo unitario')).toHaveValue('15000,00');
+      await register();
+
+      expect(await screen.findByText('Entrada registrada')).toBeInTheDocument();
+      expect(screen.getByText(/und de Camiseta básica \(Azul · M\)\. Bodega principal queda con/)).toBeInTheDocument();
+      expect(await api.calls('POST /api/v1/inventory/receipts')[0]?.json()).toEqual({
+        variant_id: variantId('M', 'Azul'),
+        location_id: ids.main,
+        quantity: '12',
+        unit_cost: '15000.00',
+      });
+    });
+
+    it('con el lector, Enter elige la variante del código escaneado', async () => {
+      receiptApi();
+      renderApp('/inventario/entrada');
+
+      await userEvent.type(await screen.findByRole('searchbox', { name: 'Producto' }), `${variantBarcode('L', 'Azul')}{Enter}`);
+
+      const chosen = await screen.findByRole('group', { name: 'Producto elegido' });
+      expect(within(chosen).getByText('Camiseta básica (Azul · L)')).toBeInTheDocument();
+      expect(within(chosen).getByText(/CAM-L-AZUL/)).toBeInTheDocument();
+    });
+
+    it('llega con la variante elegida desde el kardex', async () => {
+      receiptApi({ [`GET /api/v1/products/${ids.garment}`]: json(200, aGarment()) });
+      renderApp(`/inventario/entrada?producto=${ids.garment}&variante=${variantId('L', 'Rojo')}&sede=${ids.north}`);
+
+      const chosen = await screen.findByRole('group', { name: 'Producto elegido' });
+
+      expect(within(chosen).getByText('Camiseta básica (Rojo · L)')).toBeInTheDocument();
+      expect(screen.getByLabelText('Costo unitario')).toHaveValue('15000,00');
+    });
   });
 
   it('no ofrece sedes inactivas', async () => {
