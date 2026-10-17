@@ -84,12 +84,15 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
 - Una tarea = una rama (`feat/T05-identity-domain`) = un PR con CI en verde.
 - El ciclo de cada tarea:
   ```
-  /tarea TXX       → crea la rama, plan, apruebas, tests en rojo, implementación, verificación
+  /tarea TXX       → crea la rama, plan, apruebas, tests en rojo, implementación, verificación;
+                     deja el resumen del cierre en .git/cierre-tarea.md
   git diff         → revisas tú
-  /cerrar-tarea    → make check, commit, push, PR, espera el CI y, si pasa completo,
-                     merge con squash, borra la rama y vuelve a main actualizada
+  /clear           → el cierre no necesita el contexto de la implementación
+  /cerrar-tarea    → make check, commit, push, PR (desde .git/cierre-tarea.md), espera el CI y,
+                     si pasa completo, merge con squash, borra la rama y vuelve a main actualizada
   /clear           → contexto limpio para la siguiente tarea
   ```
+- **Contexto y uso:** cada paso de Claude Code vuelve a enviar toda la conversación, así que una tarea cuesta más o menos sus pasos multiplicados por el tamaño del contexto. `/tarea` lee por rangos y nunca `docs/decisiones.md` completo; en una tarea larga, `/compact` después de aprobar el plan o con los tests en verde.
 - Al terminar una tarea se marca `[x]` en el archivo de su fase (lo hace `/tarea`).
 - Lo que una tarea deja fuera de su alcance va a [`pendientes.md`](pendientes.md) con su destino: la tarea posterior que lo cubre o "Para trabajar ahora" (una rama `chore/` antes de seguir). `/tarea` lee y actualiza esa lista; ningún pendiente queda solo en un PR o en `docs/decisiones.md`.
 

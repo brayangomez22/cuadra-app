@@ -5,7 +5,12 @@ argument-hint: ID de la tarea, por ejemplo T05
 
 Vamos a trabajar en la tarea **$ARGUMENTS**.
 
-Sigue este flujo sin saltarte pasos:
+Sigue este flujo sin saltarte pasos.
+
+**Cómo leer (ahorra contexto):** cada paso vuelve a enviar toda la conversación, así que lo que leas se paga en todos los pasos siguientes.
+- Ubica con `grep -n` y lee solo el rango que necesitas (`sed -n 'A,Bp'` o `Read` con `offset`/`limit`). Lee un archivo entero solo si es corto (menos de ~150 líneas) o si lo vas a reescribir.
+- No vuelvas a leer lo que ya está en la conversación ni lo que acabas de escribir.
+- Limita las salidas largas (`| tail -30`, `grep -E 'FAIL|---'`) al correr tests y comandos.
 
 0. **Rama:**
    - Revisa la rama actual con `git branch --show-current` y el estado con `git status --porcelain`.
@@ -14,10 +19,11 @@ Sigue este flujo sin saltarte pasos:
    - Lee la sección "Para trabajar ahora" de `docs/plan/pendientes.md`. Si hay alguno en `[ ]`, **detente**: lístalos y propón resolverlos primero en una rama `chore/`. Solo sigue con la tarea si Brayan lo decide explícitamente (y en ese caso, anótalo en el plan).
    - **Si no:** cambia a `main`, actualízala con `git pull --ff-only` y crea la rama `feat/$ARGUMENTS-<nombre-corto-en-inglés-kebab-case>` a partir del título de la tarea (por ejemplo, `feat/T02-observability`). Si `git pull` falla, detente y avísame.
 1. **Contexto:**
-   - Lee `docs/plan/README.md` (fase activa y alcance) y busca la tarea $ARGUMENTS en los archivos de `docs/plan/`.
+   - De `docs/plan/README.md` lee la fase activa y su alcance. En el archivo de fase, lee solo la sección de $ARGUMENTS (`grep -n '### .* $ARGUMENTS ' docs/plan/fase-*.md`), la introducción del bloque si la tarea es parte de uno y las secciones de sus **Depende de** si necesitas saber qué dejaron.
    - Si la tarea no pertenece a la fase activa, o si tiene un **Depende de** sin completar, avísame antes de seguir.
-   - Lee `docs/plan/pendientes.md`: los pendientes con **Destino** $ARGUMENTS son parte del alcance de esta tarea.
-   - Lee `docs/decisiones.md` y el código existente de los módulos que toca. No leas ni modifiques nada fuera de ese alcance.
+   - De `docs/plan/pendientes.md`, busca los pendientes con **Destino** $ARGUMENTS (`grep -n '| $ARGUMENTS |'`): son parte del alcance de esta tarea.
+   - **No leas `docs/decisiones.md` completo** (es largo y crece). Busca con `grep -n` las entradas de esta tarea, de sus dependencias y de los módulos o conceptos que toca, y lee solo esas líneas.
+   - Lee el código existente de los módulos que toca, con rangos. Del contrato (`api/openapi.yaml`), lee solo los paths y schemas que cambian. No leas ni modifiques nada fuera de ese alcance.
    - Si el texto de la tarea contradice la sección "Core genérico y módulos por tipo de negocio" de `CLAUDE.md` (por ejemplo, usa términos de un nicho, enums fijos o "producto" donde corresponde "variante"), **sigue `CLAUDE.md`** y avísame de la contradicción en el plan.
 2. **Plan:** preséntame un plan corto con:
    - los archivos que vas a crear o modificar,
@@ -36,5 +42,6 @@ Sigue este flujo sin saltarte pasos:
    - si tomaste una decisión de arquitectura, agrégala a `docs/decisiones.md`,
    - en `docs/plan/pendientes.md`, marca con `[x]` los pendientes que esta tarea resolvió y **agrega lo que quedó fuera del alcance**, cada uno con su origen ($ARGUMENTS) y su destino: la tarea posterior que lo cubra (y la referencia en el alcance de esa tarea) o "Para trabajar ahora" si ninguna lo cubre. Un pendiente que solo queda en el resumen o en el PR se pierde,
    - marca la tarea con `[x]` en su archivo de fase,
-   - propón el mensaje de commit (Conventional Commits en inglés).
-   No hagas commit ni push. Termina con: "Revisa el diff (`git diff`) y, cuando estés conforme, ejecuta `/cerrar-tarea`."
+   - propón el mensaje de commit (Conventional Commits en inglés),
+   - guarda todo esto en `.git/cierre-tarea.md` (no se versiona y sobrevive a `/clear`), para que `/cerrar-tarea` arme el PR sin el contexto de esta conversación, con estas secciones: `Tarea` (ID, título y archivo de fase), `Commit` (el mensaje propuesto), `Qué cambia`, `Cómo probarlo`, `Revisar con lupa`, `Pendientes` (resueltos y agregados, con ID, texto y destino) y `Checklist` (OpenAPI, spans y métricas, `docs/decisiones.md`: cuáles aplican). Si después Brayan pide cambios, actualiza ese archivo.
+   No hagas commit ni push. Termina con: "Revisa el diff (`git diff`) y, cuando estés conforme, ejecuta `/clear` y luego `/cerrar-tarea`."
