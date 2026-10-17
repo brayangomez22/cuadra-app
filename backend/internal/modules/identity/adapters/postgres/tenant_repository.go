@@ -66,17 +66,18 @@ func (r *TenantRepository) CreateWithOwner(ctx context.Context, t *domain.Tenant
 
 func createTenant(ctx context.Context, q *sqlcgen.Queries, t *domain.Tenant) error {
 	return q.CreateTenant(ctx, sqlcgen.CreateTenantParams{
-		ID:        t.ID(),
-		Name:      t.Name(),
-		Nit:       t.NIT().String(),
-		Status:    string(t.Status()),
-		CreatedAt: t.CreatedAt(),
+		ID:               t.ID(),
+		Name:             t.Name(),
+		Nit:              t.NIT().String(),
+		Status:           string(t.Status()),
+		BusinessTemplate: t.BusinessTemplate(),
+		CreatedAt:        t.CreatedAt(),
 	})
 }
 
 // GetByID returns domain.ErrTenantNotFound when the tenant does not exist.
 func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Tenant, error) {
-	var row sqlcgen.Tenant
+	var row sqlcgen.GetTenantRow
 	err := r.db.WithTenantTx(ctx, id, func(tx pgx.Tx) error {
 		var err error
 		row, err = sqlcgen.New(tx).GetTenant(ctx, id)
@@ -113,17 +114,18 @@ func (r *TenantRepository) Update(ctx context.Context, t *domain.Tenant) error {
 	return nil
 }
 
-func tenantFromRow(row sqlcgen.Tenant) (*domain.Tenant, error) {
+func tenantFromRow(row sqlcgen.GetTenantRow) (*domain.Tenant, error) {
 	nit, err := domain.ParseNIT(row.Nit)
 	if err != nil {
 		return nil, fmt.Errorf("identity: tenant %s: stored NIT: %w", row.ID, err)
 	}
 	t, err := domain.RehydrateTenant(domain.TenantSnapshot{
-		ID:        row.ID,
-		Name:      row.Name,
-		NIT:       nit,
-		Status:    domain.TenantStatus(row.Status),
-		CreatedAt: row.CreatedAt,
+		ID:               row.ID,
+		Name:             row.Name,
+		NIT:              nit,
+		Status:           domain.TenantStatus(row.Status),
+		BusinessTemplate: row.BusinessTemplate,
+		CreatedAt:        row.CreatedAt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("identity: tenant %s: %w", row.ID, err)

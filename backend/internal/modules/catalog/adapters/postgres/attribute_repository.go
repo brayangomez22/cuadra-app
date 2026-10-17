@@ -23,10 +23,7 @@ func NewAttributeRepository(d *db.DB) *AttributeRepository { return &AttributeRe
 // definition of the tenant has its key.
 func (r *AttributeRepository) Create(ctx context.Context, d *domain.AttributeDefinition) error {
 	err := r.db.WithTenantTx(ctx, d.TenantID(), func(tx pgx.Tx) error {
-		return sqlcgen.New(tx).CreateAttribute(ctx, sqlcgen.CreateAttributeParams{
-			ID: d.ID(), TenantID: d.TenantID(), Key: d.Key(), Label: d.Label(), Type: string(d.Type()),
-			Options: nonNil(d.Options()), Required: d.Required(), CreatedAt: d.CreatedAt(),
-		})
+		return createAttribute(ctx, sqlcgen.New(tx), d)
 	})
 	switch {
 	case violates(err, uniqueViolation, attributesKeyKey):
@@ -35,6 +32,13 @@ func (r *AttributeRepository) Create(ctx context.Context, d *domain.AttributeDef
 		return fmt.Errorf("catalog: create attribute: %w", err)
 	}
 	return nil
+}
+
+func createAttribute(ctx context.Context, q *sqlcgen.Queries, d *domain.AttributeDefinition) error {
+	return q.CreateAttribute(ctx, sqlcgen.CreateAttributeParams{
+		ID: d.ID(), TenantID: d.TenantID(), Key: d.Key(), Label: d.Label(), Type: string(d.Type()),
+		Options: nonNil(d.Options()), Required: d.Required(), CreatedAt: d.CreatedAt(),
+	})
 }
 
 // GetByID returns domain.ErrAttributeNotFound when the definition does not

@@ -126,11 +126,32 @@ paths:
         "422":
           description: |
             Algún dato no cumple las reglas (`invalid_email`, `invalid_nit`, `invalid_nit_check_digit`,
-            `password_too_short`, `password_too_long`, `invalid_tenant_name`, `invalid_user_name`).
+            `password_too_short`, `password_too_long`, `invalid_tenant_name`, `invalid_user_name`,
+            `unknown_business_template`).
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/business-templates:
+    get:
+      tags: [auth]
+      operationId: listBusinessTemplates
+      summary: Listar las plantillas de tipo de negocio
+      description: |
+        Las plantillas que se pueden elegir al registrar una empresa. Cada una siembra unidades,
+        categorías, atributos de producto, ejes de variante y módulos; después la empresa puede
+        cambiarlo todo.
+      security: []
+      responses:
+        "200":
+          description: Las plantillas, en el orden en que se presentan.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessTemplateList"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2151,6 +2172,33 @@ components:
           format: password
           minLength: 8
           maxLength: 72
+        business_template:
+          type: string
+          description: |
+            Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Sin ella, la empresa
+            empieza con la plantilla `generica`.
+          pattern: "^[a-z][a-z0-9_]{0,63}$"
+          example: generica
+    BusinessTemplate:
+      type: object
+      required: [id, name, description]
+      properties:
+        id:
+          type: string
+          example: generica
+        name:
+          type: string
+          example: Negocio general
+        description:
+          type: string
+    BusinessTemplateList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BusinessTemplate"
     LoginRequest:
       type: object
       required: [email, password]
@@ -2187,7 +2235,7 @@ components:
           $ref: "#/components/schemas/Me"
     Me:
       type: object
-      required: [id, tenant_id, tenant_name, tenant_nit, name, email, role, permissions, modules]
+      required: [id, tenant_id, tenant_name, tenant_nit, business_template, name, email, role, permissions, modules]
       properties:
         id:
           type: string
@@ -2201,6 +2249,10 @@ components:
           type: string
           description: NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
           example: 890903938-8
+        business_template:
+          type: string
+          description: Plantilla de tipo de negocio con la que se registró la empresa.
+          example: generica
         name:
           type: string
         email:

@@ -37,7 +37,7 @@ func TestCatalogFlow(t *testing.T) {
 	})
 	require.NoError(t, err)
 	identityModule, err := identity.New(identity.Config{
-		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule},
+		DB: database, Issuer: tokens, Setup: testSetup(t, catalogModule, moduleService),
 		Permissions: permissions, Modules: moduleService, Logger: log,
 		TracerProvider: noop.NewTracerProvider(), MeterProvider: metricnoop.NewMeterProvider(),
 	})
@@ -62,7 +62,7 @@ func TestCatalogFlow(t *testing.T) {
 	}
 
 	signup := do(t, http.MethodPost, "/api/v1/auth/signup",
-		`{"tenant_name":"Ferretería El Tornillo","nit":"890903938-8","name":"Ana Gómez","email":"ana@catalogo.co","password":"clave-segura-123"}`, "")
+		`{"tenant_name":"Ferretería El Tornillo","nit":"890903938-8","name":"Ana Gómez","email":"ana@catalogo.co","password":"clave-segura-123","business_template":"ferreteria"}`, "")
 	require.Equal(t, http.StatusCreated, signup.Code, signup.Body.String())
 	var session struct {
 		AccessToken string `json:"access_token"`
@@ -132,7 +132,7 @@ func TestCatalogFlow(t *testing.T) {
 		return ""
 	}
 
-	t.Run("un tenant nuevo queda con las unidades por defecto", func(t *testing.T) {
+	t.Run("un tenant nuevo de ferretería queda con las unidades de su plantilla", func(t *testing.T) {
 		rec := do(t, http.MethodGet, "/api/v1/units", "", cashierToken)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &units))
@@ -223,7 +223,7 @@ func TestCatalogFlow(t *testing.T) {
 
 	t.Run("el dueño define atributos y el cajero los lista", func(t *testing.T) {
 		rec := do(t, http.MethodPost, "/api/v1/product-attributes",
-			`{"key":"material","label":"Material","type":"list","options":["PVC","Cobre"],"required":false}`, ownerToken)
+			`{"key":"material_tubo","label":"Material del tubo","type":"list","options":["PVC","Cobre"],"required":false}`, ownerToken)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		var d struct {
 			ID      string   `json:"id"`
@@ -232,7 +232,7 @@ func TestCatalogFlow(t *testing.T) {
 			Options []string `json:"options"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &d))
-		require.Equal(t, "material", d.Key)
+		require.Equal(t, "material_tubo", d.Key)
 		require.Equal(t, "list", d.Type)
 		require.Equal(t, []string{"PVC", "Cobre"}, d.Options)
 		attributeID = d.ID
@@ -243,7 +243,7 @@ func TestCatalogFlow(t *testing.T) {
 
 		rec = do(t, http.MethodGet, "/api/v1/product-attributes", "", cashierToken)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		require.Contains(t, rec.Body.String(), `"material"`)
+		require.Contains(t, rec.Body.String(), `"material_tubo"`)
 		require.Contains(t, rec.Body.String(), `"importado"`)
 	})
 
@@ -255,7 +255,7 @@ func TestCatalogFlow(t *testing.T) {
 
 	t.Run("una clave repetida responde 409 attribute_key_taken y un tipo desconocido 400", func(t *testing.T) {
 		rec := do(t, http.MethodPost, "/api/v1/product-attributes",
-			`{"key":"material","label":"Otro","type":"text","required":false}`, ownerToken)
+			`{"key":"material_tubo","label":"Otro","type":"text","required":false}`, ownerToken)
 		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), "attribute_key_taken")
 
@@ -267,14 +267,14 @@ func TestCatalogFlow(t *testing.T) {
 	t.Run("crea un producto con atributos y los devuelve normalizados", func(t *testing.T) {
 		rec := do(t, http.MethodPost, "/api/v1/products",
 			`{"sku":"tub-cobre","name":"Tubo de cobre","base_unit_id":"`+unitID("m")+`","cost":"1000","price":"2000","tax_rate":"0.19",`+
-				`"attributes":{"material":"cobre","importado":true}}`, ownerToken)
+				`"attributes":{"material_tubo":"cobre","importado":true}}`, ownerToken)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		var p struct {
 			ID         string         `json:"id"`
 			Attributes map[string]any `json:"attributes"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &p))
-		require.Equal(t, map[string]any{"material": "Cobre", "importado": true}, p.Attributes)
+		require.Equal(t, map[string]any{"material_tubo": "Cobre", "importado": true}, p.Attributes)
 
 		rec = do(t, http.MethodGet, "/api/v1/products/"+p.ID, "", cashierToken)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -290,7 +290,7 @@ func TestCatalogFlow(t *testing.T) {
 	t.Run("una opción no definida responde 422 invalid_attribute_value con el atributo", func(t *testing.T) {
 		rec := do(t, http.MethodPost, "/api/v1/products",
 			`{"sku":"tub-hierro","name":"Tubo de hierro","base_unit_id":"`+unitID("m")+`","cost":"1000","price":"2000","tax_rate":"0.19",`+
-				`"attributes":{"material":"Hierro"}}`, ownerToken)
+				`"attributes":{"material_tubo":"Hierro"}}`, ownerToken)
 		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
 		var body struct {
 			Error struct {
@@ -301,7 +301,7 @@ func TestCatalogFlow(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 		require.Equal(t, "invalid_attribute_value", body.Error.Code)
-		require.Equal(t, map[string]string{"attribute": "material"}, body.Error.Details)
+		require.Equal(t, map[string]string{"attribute": "material_tubo"}, body.Error.Details)
 		require.Contains(t, body.Error.Message, "Material")
 	})
 
@@ -314,7 +314,7 @@ func TestCatalogFlow(t *testing.T) {
 
 		rec = do(t, http.MethodPost, "/api/v1/products",
 			`{"sku":"tub-x","name":"Tubo","base_unit_id":"`+unitID("m")+`","cost":"1000","price":"2000","tax_rate":"0.19",`+
-				`"attributes":{"material":12}}`, ownerToken)
+				`"attributes":{"material_tubo":12}}`, ownerToken)
 		require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	})
 
@@ -324,7 +324,7 @@ func TestCatalogFlow(t *testing.T) {
 		require.Contains(t, rec.Body.String(), "attribute_in_use")
 
 		rec = do(t, http.MethodPut, "/api/v1/product-attributes/"+attributeID,
-			`{"label":"Material","options":["PVC"],"required":false}`, ownerToken)
+			`{"label":"Material del tubo","options":["PVC"],"required":false}`, ownerToken)
 		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), "attribute_option_in_use")
 

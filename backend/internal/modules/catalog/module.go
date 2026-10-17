@@ -53,6 +53,7 @@ func New(cfg Config) (*Module, error) {
 		Units:          postgres.NewUnitRepository(cfg.DB),
 		Attributes:     postgres.NewAttributeRepository(cfg.DB),
 		VariantAxes:    postgres.NewVariantAxisRepository(cfg.DB),
+		Seeds:          postgres.NewSeedRepository(cfg.DB),
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Logger:         cfg.Logger,
@@ -68,11 +69,11 @@ func (m *Module) RegisterRoutes(mux *http.ServeMux) {
 	httpadapter.Register(mux, m.service, m.authorize, m.log)
 }
 
-// SeedDefaultUnits gives a new tenant its initial units of measure. It is
-// for the sign-up (cmd/api adapts it to identity's TenantSetup); with a ctx
-// from db.InTenantTx it joins the sign-up's transaction.
-func (m *Module) SeedDefaultUnits(ctx context.Context, tenantID uuid.UUID) error {
-	return m.service.SeedDefaultUnits(ctx, tenantID)
+// SeedTenant gives a new tenant its initial catalog. It is for the sign-up
+// (cmd/api adapts it to identity's TenantSetup); with a ctx from
+// db.InTenantTx it joins the sign-up's transaction.
+func (m *Module) SeedTenant(ctx context.Context, tenantID uuid.UUID, seed app.Seed) error {
+	return m.service.SeedTenant(ctx, tenantID, seed)
 }
 
 // MaxProductsByID is the most products ProductsByID returns in one call.

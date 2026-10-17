@@ -25,7 +25,7 @@ func newTenant(t *testing.T) *domain.Tenant {
 	t.Helper()
 	nit, err := domain.ParseNIT("890903938-8")
 	require.NoError(t, err)
-	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, now)
+	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", now)
 	require.NoError(t, err)
 	return tenant
 }

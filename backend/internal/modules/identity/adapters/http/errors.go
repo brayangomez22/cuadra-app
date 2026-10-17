@@ -29,5 +29,6 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrPasswordTooShort, Status: http.StatusUnprocessableEntity, Code: "password_too_short", Message: "La contraseña debe tener al menos 8 caracteres."},
 	{Err: domain.ErrPasswordTooLong, Status: http.StatusUnprocessableEntity, Code: "password_too_long", Message: "La contraseña puede tener máximo 72 caracteres."},
 	{Err: domain.ErrInvalidTenantName, Status: http.StatusUnprocessableEntity, Code: "invalid_tenant_name", Message: "Escriba el nombre de la empresa (máximo 200 caracteres)."},
+	{Err: domain.ErrUnknownBusinessTemplate, Status: http.StatusUnprocessableEntity, Code: "unknown_business_template", Message: "Elija uno de los tipos de negocio disponibles."},
 	{Err: domain.ErrInvalidUserName, Status: http.StatusUnprocessableEntity, Code: "invalid_user_name", Message: "Escriba su nombre (máximo 200 caracteres)."},
 }

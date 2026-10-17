@@ -1,0 +1,23 @@
+# Ropa y calzado: cada prenda se vende por talla y color, con el módulo
+# variants activo desde el registro.
+name: Ropa y calzado
+description: Prendas, calzado y accesorios que se venden por talla y color.
+modules: [variants]
+units:
+  - {code: und, name: Unidad}
+  - {code: par, name: Par}
+categories:
+  - Mujer
+  - Hombre
+  - Niños
+  - Calzado
+  - Accesorios
+attributes:
+  - {key: marca, label: Marca, type: text}
+  - {key: material, label: Material, type: text}
+  - {key: genero, label: Género, type: list, options: [Mujer, Hombre, Unisex, Niña, Niño]}
+variant_axes:
+  - {name: talla, values: [XS, S, M, L, XL, XXL]}
+  - {name: talla calzado, values: ["34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44"]}
+  - {name: color, values: [Negro, Blanco, Gris, Azul, Rojo, Beige]}
+customer_segments: [Público, Mayorista]

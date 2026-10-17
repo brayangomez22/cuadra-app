@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/app"
@@ -216,39 +215,5 @@ func TestUnits(t *testing.T) {
 		e.span(t, "catalog.ListUnits")
 		span, _ := e.span(t, "catalog.DeleteUnit")
 		require.Equal(t, codes.Error, span.Status().Code)
-	})
-}
-
-func TestSeedDefaultUnits(t *testing.T) {
-	t.Run("siembra las unidades por defecto en un tenant nuevo", func(t *testing.T) {
-		e := newEnv(t)
-		tenantID := uuid.Must(uuid.NewV7())
-
-		require.NoError(t, e.svc.SeedDefaultUnits(t.Context(), tenantID))
-
-		units, err := e.svc.ListUnits(t.Context(), app.Actor{TenantID: tenantID})
-		require.NoError(t, err)
-		got := map[string]string{}
-		for _, u := range units {
-			got[u.Code()] = u.Name()
-		}
-		require.Equal(t, map[string]string{
-			"und": "Unidad", "m": "Metro", "kg": "Kilogramo", "l": "Litro",
-			"caja": "Caja", "rollo": "Rollo", "bulto": "Bulto", "galon": "Galón",
-		}, got)
-
-		_, attrs := e.span(t, "catalog.SeedDefaultUnits")
-		require.Equal(t, attribute.StringValue(tenantID.String()), attrs["tenant.id"])
-	})
-
-	t.Run("sembrar dos veces el mismo tenant falla sin guardar nada más", func(t *testing.T) {
-		e := newEnv(t)
-
-		err := e.svc.SeedDefaultUnits(t.Context(), e.actor.TenantID)
-		require.ErrorIs(t, err, domain.ErrUnitCodeTaken)
-
-		units, err := e.svc.ListUnits(t.Context(), e.actor)
-		require.NoError(t, err)
-		require.Len(t, units, 1)
 	})
 }

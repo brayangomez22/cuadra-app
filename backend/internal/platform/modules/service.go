@@ -185,6 +185,35 @@ func (s *Service) SetActive(ctx context.Context, tenantID, userID uuid.UUID, id 
 	return Status{Definition: def.clone(), Active: active}, nil
 }
 
+// SetUpTenant turns on the modules ids for a new tenant, as its business
+// template declares them, with no user behind the change. It checks the
+// whole set first (Registry.CheckSet), so it turns on all of them or none;
+// with a ctx from db.InTenantTx, the store joins the sign-up's transaction.
+// It is not counted in cuadra.modules.changes: no one changed the tenant's
+// modules.
+func (s *Service) SetUpTenant(ctx context.Context, tenantID uuid.UUID, ids []string) (err error) {
+	ctx, span := s.tracer.Start(ctx, "modules.SetUpTenant")
+	defer func() { endSpan(span, err) }()
+	span.SetAttributes(attribute.String("tenant.id", tenantID.String()))
+
+	if err := s.Registry.CheckSet(ids); err != nil {
+		return err
+	}
+	at := s.Now().UTC()
+	for _, id := range s.registered(ids) {
+		err := s.Store.Update(ctx, tenantID, func(active []string) (*Change, error) {
+			if slices.Contains(active, id) {
+				return nil, nil
+			}
+			return &Change{Module: id, Active: true, At: at}, nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // checkDependencies checks that def can be turned on (its dependencies are
 // active) or off (no active module depends on it), given the active ones.
 func (s *Service) checkDependencies(def Definition, active []string, enable bool) error {

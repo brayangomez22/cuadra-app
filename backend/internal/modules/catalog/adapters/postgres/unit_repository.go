@@ -22,29 +22,22 @@ func NewUnitRepository(d *db.DB) *UnitRepository { return &UnitRepository{db: d}
 // Create stores a new unit; domain.ErrUnitCodeTaken if another unit of the
 // tenant has its code.
 func (r *UnitRepository) Create(ctx context.Context, u *domain.UnitOfMeasure) error {
-	return r.CreateMany(ctx, u.TenantID(), []*domain.UnitOfMeasure{u})
-}
-
-// CreateMany stores the units of tenantID in one transaction.
-func (r *UnitRepository) CreateMany(ctx context.Context, tenantID uuid.UUID, units []*domain.UnitOfMeasure) error {
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		q := sqlcgen.New(tx)
-		for _, u := range units {
-			if err := q.CreateUnit(ctx, sqlcgen.CreateUnitParams{
-				ID: u.ID(), TenantID: u.TenantID(), Code: u.Code(), Name: u.Name(), CreatedAt: u.CreatedAt(),
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
+	err := r.db.WithTenantTx(ctx, u.TenantID(), func(tx pgx.Tx) error {
+		return createUnit(ctx, sqlcgen.New(tx), u)
 	})
 	switch {
 	case violates(err, uniqueViolation, unitsCodeKey):
 		return domain.ErrUnitCodeTaken
 	case err != nil:
-		return fmt.Errorf("catalog: create units: %w", err)
+		return fmt.Errorf("catalog: create unit: %w", err)
 	}
 	return nil
+}
+
+func createUnit(ctx context.Context, q *sqlcgen.Queries, u *domain.UnitOfMeasure) error {
+	return q.CreateUnit(ctx, sqlcgen.CreateUnitParams{
+		ID: u.ID(), TenantID: u.TenantID(), Code: u.Code(), Name: u.Name(), CreatedAt: u.CreatedAt(),
+	})
 }
 
 // GetByID returns domain.ErrUnitNotFound when the unit does not exist in

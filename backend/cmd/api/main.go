@@ -148,10 +148,14 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	setup, err := newTenantSetup(registry, catalogModule, moduleService)
+	if err != nil {
+		return err
+	}
 	identityModule, err := identity.New(identity.Config{
 		DB:             database,
 		Issuer:         tokens,
-		Setup:          tenantSetup{catalogModule},
+		Setup:          setup,
 		Permissions:    permissions,
 		Modules:        moduleService,
 		Logger:         log,

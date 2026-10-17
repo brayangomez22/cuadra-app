@@ -340,11 +340,12 @@ type StockMovement struct {
 }
 
 type Tenant struct {
-	ID        uuid.UUID
-	Name      string
-	Nit       string
-	Status    string
-	CreatedAt time.Time
+	ID               uuid.UUID
+	Name             string
+	Nit              string
+	Status           string
+	CreatedAt        time.Time
+	BusinessTemplate string
 }
 
 type TenantModule struct {

@@ -106,3 +106,30 @@ func TestBuiltin(t *testing.T) {
 		require.True(t, r.Known(modules.Variants))
 	})
 }
+
+func TestCheckSet(t *testing.T) {
+	registry, err := modules.NewRegistry(testDefinitions()...)
+	require.NoError(t, err)
+
+	t.Run("acepta un conjunto que incluye las dependencias de sus módulos", func(t *testing.T) {
+		require.NoError(t, registry.CheckSet([]string{"lots_expiry", "variants"}))
+		require.NoError(t, registry.CheckSet([]string{"work_orders"}))
+		require.NoError(t, registry.CheckSet(nil))
+	})
+
+	t.Run("rechaza un módulo no registrado", func(t *testing.T) {
+		require.ErrorIs(t, registry.CheckSet([]string{"variants", "nope"}), modules.ErrUnknownModule)
+	})
+
+	t.Run("rechaza un módulo repetido", func(t *testing.T) {
+		require.ErrorIs(t, registry.CheckSet([]string{"variants", "variants"}), modules.ErrDuplicateModule)
+	})
+
+	t.Run("rechaza un módulo sin su dependencia y la nombra", func(t *testing.T) {
+		err := registry.CheckSet([]string{"lots_expiry"})
+		require.ErrorIs(t, err, modules.ErrDependencyInactive)
+		var depErr *modules.DependencyError
+		require.ErrorAs(t, err, &depErr)
+		require.Equal(t, "variants", depErr.Module)
+	})
+}

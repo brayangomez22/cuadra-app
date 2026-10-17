@@ -23,9 +23,7 @@ func NewVariantAxisRepository(d *db.DB) *VariantAxisRepository { return &Variant
 // tenant has its name.
 func (r *VariantAxisRepository) Create(ctx context.Context, a *domain.VariantAxis) error {
 	err := r.db.WithTenantTx(ctx, a.TenantID(), func(tx pgx.Tx) error {
-		return sqlcgen.New(tx).CreateVariantAxis(ctx, sqlcgen.CreateVariantAxisParams{
-			ID: a.ID(), TenantID: a.TenantID(), Name: a.Name(), AllowedValues: a.Values(), CreatedAt: a.CreatedAt(),
-		})
+		return createVariantAxis(ctx, sqlcgen.New(tx), a)
 	})
 	switch {
 	case violates(err, uniqueViolation, axesNameKey):
@@ -34,6 +32,12 @@ func (r *VariantAxisRepository) Create(ctx context.Context, a *domain.VariantAxi
 		return fmt.Errorf("catalog: create variant axis: %w", err)
 	}
 	return nil
+}
+
+func createVariantAxis(ctx context.Context, q *sqlcgen.Queries, a *domain.VariantAxis) error {
+	return q.CreateVariantAxis(ctx, sqlcgen.CreateVariantAxisParams{
+		ID: a.ID(), TenantID: a.TenantID(), Name: a.Name(), AllowedValues: a.Values(), CreatedAt: a.CreatedAt(),
+	})
 }
 
 // GetByID returns domain.ErrAxisNotFound when the axis does not exist in

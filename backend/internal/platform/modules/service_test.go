@@ -320,3 +320,56 @@ func (f failingStore) Active(context.Context, uuid.UUID) ([]string, error) { ret
 func (f failingStore) Update(context.Context, uuid.UUID, func([]string) (*modules.Change, error)) error {
 	return f.err
 }
+
+func TestSetUpTenant(t *testing.T) {
+	tenantID := uuid.Must(uuid.NewV7())
+
+	t.Run("preparar un tenant activa los módulos de su plantilla sin usuario", func(t *testing.T) {
+		e := newEnv(t)
+
+		require.NoError(t, e.svc.SetUpTenant(t.Context(), tenantID, []string{"lots_expiry", "variants"}))
+
+		active, err := e.svc.Active(t.Context(), tenantID)
+		require.NoError(t, err)
+		require.Equal(t, []string{"variants", "lots_expiry"}, active)
+		require.Len(t, e.store.changes, 2)
+		for _, c := range e.store.changes {
+			require.Equal(t, uuid.Nil, c.By, "no user turned it on")
+			require.Equal(t, e.now, c.At)
+			require.True(t, c.Active)
+		}
+		require.Zero(t, e.changes(t, "variants", "enabled"), "seeding a new tenant is not a change of its modules")
+		span := e.span(t, "modules.SetUpTenant")
+		require.Contains(t, span.Attributes(), attribute.String("tenant.id", tenantID.String()))
+	})
+
+	t.Run("sin módulos no activa ninguno", func(t *testing.T) {
+		e := newEnv(t)
+
+		require.NoError(t, e.svc.SetUpTenant(t.Context(), tenantID, nil))
+
+		require.Empty(t, e.store.changes)
+	})
+
+	t.Run("rechaza un módulo no registrado sin activar ninguno", func(t *testing.T) {
+		e := newEnv(t)
+
+		err := e.svc.SetUpTenant(t.Context(), tenantID, []string{"variants", "nope"})
+
+		require.ErrorIs(t, err, modules.ErrUnknownModule)
+		require.Empty(t, e.store.changes)
+		require.Equal(t, codes.Error, e.span(t, "modules.SetUpTenant").Status().Code)
+	})
+
+	t.Run("rechaza un módulo sin su dependencia sin activar ninguno", func(t *testing.T) {
+		e := newEnv(t)
+
+		err := e.svc.SetUpTenant(t.Context(), tenantID, []string{"work_orders", "lots_expiry"})
+
+		require.ErrorIs(t, err, modules.ErrDependencyInactive)
+		var depErr *modules.DependencyError
+		require.ErrorAs(t, err, &depErr)
+		require.Equal(t, "variants", depErr.Module)
+		require.Empty(t, e.store.changes)
+	})
+}

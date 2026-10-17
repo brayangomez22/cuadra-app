@@ -70,9 +70,6 @@ type UnitRepository interface {
 	// Create stores a new unit; ErrUnitCodeTaken if another unit of the
 	// tenant has its code.
 	Create(ctx context.Context, u *UnitOfMeasure) error
-	// CreateMany stores the units of tenantID in one transaction, with the
-	// errors of Create: either every unit is stored or none is.
-	CreateMany(ctx context.Context, tenantID uuid.UUID, units []*UnitOfMeasure) error
 	// GetByID returns ErrUnitNotFound when the unit does not exist in tenantID.
 	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*UnitOfMeasure, error)
 	// GetByCode returns the unit with exactly code; ErrUnitNotFound if
@@ -125,4 +122,21 @@ type VariantAxisRepository interface {
 	// Delete removes the axis; ErrAxisInUse if a variant has a value on it,
 	// ErrAxisNotFound if it does not exist.
 	Delete(ctx context.Context, tenantID, id uuid.UUID) error
+}
+
+// TenantSeed is a new tenant's initial catalog configuration: what its
+// business template declares, already validated by each constructor.
+type TenantSeed struct {
+	Units       []*UnitOfMeasure
+	Categories  []*Category
+	Attributes  []*AttributeDefinition
+	VariantAxes []*VariantAxis
+}
+
+// SeedRepository stores a new tenant's initial catalog.
+type SeedRepository interface {
+	// Seed stores everything in seed for tenantID in one transaction, with
+	// the errors of each repository's Create: either all of it is stored or
+	// nothing is.
+	Seed(ctx context.Context, tenantID uuid.UUID, seed TenantSeed) error
 }

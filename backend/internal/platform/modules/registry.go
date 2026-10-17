@@ -151,3 +151,29 @@ func (r *Registry) get(id string) (Definition, bool) {
 	}
 	return r.defs[i], true
 }
+
+// CheckSet checks that the modules ids can be turned on together, as a
+// business template does for a new tenant: each one is registered and
+// listed once, and its dependencies are among ids. Otherwise it fails with
+// ErrUnknownModule, ErrDuplicateModule or a *DependencyError
+// (ErrDependencyInactive).
+func (r *Registry) CheckSet(ids []string) error {
+	for i, id := range ids {
+		if !r.Known(id) {
+			return fmt.Errorf("%w: %s", ErrUnknownModule, id)
+		}
+		if slices.Contains(ids[:i], id) {
+			return fmt.Errorf("%w: %s", ErrDuplicateModule, id)
+		}
+	}
+	for _, id := range ids {
+		def, _ := r.get(id)
+		for _, dep := range def.DependsOn {
+			if !slices.Contains(ids, dep) {
+				d, _ := r.get(dep)
+				return &DependencyError{Err: ErrDependencyInactive, Module: dep, Name: d.Name}
+			}
+		}
+	}
+	return nil
+}

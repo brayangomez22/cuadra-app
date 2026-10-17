@@ -36,6 +36,7 @@ type Deps struct {
 	Units          domain.UnitRepository
 	Attributes     domain.AttributeRepository
 	VariantAxes    domain.VariantAxisRepository
+	Seeds          domain.SeedRepository
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -56,7 +57,8 @@ type Service struct {
 // NewService builds a Service. It fails if a repository is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if d.Products == nil || d.Categories == nil || d.Units == nil || d.Attributes == nil || d.VariantAxes == nil {
+	if d.Products == nil || d.Categories == nil || d.Units == nil || d.Attributes == nil || d.VariantAxes == nil ||
+		d.Seeds == nil {
 		return nil, errors.New("catalog: missing service dependency")
 	}
 	if d.Now == nil {

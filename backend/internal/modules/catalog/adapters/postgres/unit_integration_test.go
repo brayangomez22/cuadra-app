@@ -70,26 +70,6 @@ func TestUnitRepository(t *testing.T) {
 		require.ErrorIs(t, f.units.Update(t.Context(), kilo), domain.ErrUnitCodeTaken)
 	})
 
-	t.Run("CreateMany guarda todas las unidades o ninguna", func(t *testing.T) {
-		tenant := f.createTenant(t)
-		var batch []*domain.UnitOfMeasure
-		for _, c := range []struct{ code, name string }{{"m", "Metro"}, {"kg", "Kilogramo"}, {"und", "Repetida"}} {
-			u, err := domain.NewUnit(tenant, c.code, c.name, now)
-			require.NoError(t, err)
-			batch = append(batch, u)
-		}
-
-		require.ErrorIs(t, f.units.CreateMany(t.Context(), tenant, batch), domain.ErrUnitCodeTaken)
-		list, err := f.units.List(t.Context(), tenant)
-		require.NoError(t, err)
-		require.Equal(t, []string{"Unidad"}, unitNames(list))
-
-		require.NoError(t, f.units.CreateMany(t.Context(), tenant, batch[:2]))
-		list, err = f.units.List(t.Context(), tenant)
-		require.NoError(t, err)
-		require.Equal(t, []string{"Kilogramo", "Metro", "Unidad"}, unitNames(list))
-	})
-
 	t.Run("no se puede borrar una unidad en uso", func(t *testing.T) {
 		tenant := f.createTenant(t)
 		f.createProduct(t, tenant, "CAM-S", "Camiseta básica")

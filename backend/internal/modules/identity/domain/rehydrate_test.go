@@ -14,11 +14,12 @@ func TestRehydrateTenant(t *testing.T) {
 	createdAt := time.Date(2026, 10, 9, 20, 0, 0, 0, time.UTC)
 	valid := func(t *testing.T) domain.TenantSnapshot {
 		return domain.TenantSnapshot{
-			ID:        uuid.Must(uuid.NewV7()),
-			Name:      "Ferretería El Tornillo",
-			NIT:       mustNIT(t, "890903938-8"),
-			Status:    domain.TenantSuspended,
-			CreatedAt: createdAt,
+			ID:               uuid.Must(uuid.NewV7()),
+			Name:             "Ferretería El Tornillo",
+			NIT:              mustNIT(t, "890903938-8"),
+			Status:           domain.TenantSuspended,
+			BusinessTemplate: "ropa_calzado",
+			CreatedAt:        createdAt,
 		}
 	}
 
@@ -31,6 +32,7 @@ func TestRehydrateTenant(t *testing.T) {
 		require.Equal(t, "890903938-8", tenant.NIT().String())
 		require.Equal(t, domain.TenantSuspended, tenant.Status())
 		require.False(t, tenant.IsActive())
+		require.Equal(t, "ropa_calzado", tenant.BusinessTemplate())
 		require.Equal(t, createdAt, tenant.CreatedAt())
 	})
 
@@ -44,6 +46,7 @@ func TestRehydrateTenant(t *testing.T) {
 			{name: "sin nombre", mutate: func(s *domain.TenantSnapshot) { s.Name = " " }, wantErr: domain.ErrInvalidTenantName},
 			{name: "sin NIT", mutate: func(s *domain.TenantSnapshot) { s.NIT = domain.NIT{} }, wantErr: domain.ErrInvalidNIT},
 			{name: "con estado desconocido", mutate: func(s *domain.TenantSnapshot) { s.Status = "deleted" }, wantErr: domain.ErrInvalidTenantStatus},
+			{name: "sin plantilla", mutate: func(s *domain.TenantSnapshot) { s.BusinessTemplate = "" }, wantErr: domain.ErrUnknownBusinessTemplate},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {

@@ -71,6 +71,22 @@ type AuthSession struct {
 // AuthSessionTokenType defines model for AuthSession.TokenType.
 type AuthSessionTokenType string
 
+// BusinessTemplate defines model for BusinessTemplate.
+type BusinessTemplate struct {
+	Description string `json:"description"`
+
+	// Id Example: generica
+	Id string `json:"id"`
+
+	// Name Example: Negocio general
+	Name string `json:"name"`
+}
+
+// BusinessTemplateList defines model for BusinessTemplateList.
+type BusinessTemplateList struct {
+	Items []BusinessTemplate `json:"items"`
+}
+
 // Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
 type Error struct {
 	Error ErrorDetail `json:"error"`
@@ -100,8 +116,12 @@ type LoginRequest struct {
 
 // Me defines model for Me.
 type Me struct {
-	Email string             `json:"email"`
-	Id    openapi_types.UUID `json:"id"`
+	// BusinessTemplate Plantilla de tipo de negocio con la que se registró la empresa.
+	//
+	// Example: generica
+	BusinessTemplate string             `json:"business_template"`
+	Email            string             `json:"email"`
+	Id               openapi_types.UUID `json:"id"`
 
 	// Modules Módulos activos de la empresa, para mostrar u ocultar menús, columnas y campos.
 	//
@@ -129,6 +149,13 @@ type MeRole string
 
 // SignUpRequest defines model for SignUpRequest.
 type SignUpRequest struct {
+	// BusinessTemplate Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Sin ella, la empresa
+	// empieza con la plantilla `generica`.
+	//
+	//
+	// Example: generica
+	BusinessTemplate *string `json:"business_template,omitempty"`
+
 	// Email Example: ana@eltornillo.co
 	Email string `json:"email"`
 
@@ -237,6 +264,9 @@ type ServerInterface interface {
 	// SignUp Registrar una empresa
 	// (POST /api/v1/auth/signup)
 	SignUp(w http.ResponseWriter, r *http.Request)
+	// ListBusinessTemplates Listar las plantillas de tipo de negocio
+	// (GET /api/v1/business-templates)
+	ListBusinessTemplates(w http.ResponseWriter, r *http.Request)
 	// GetMe Usuario actual
 	// (GET /api/v1/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
@@ -340,6 +370,20 @@ func (siw *ServerInterfaceWrapper) SignUp(w http.ResponseWriter, r *http.Request
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SignUp(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListBusinessTemplates operation middleware
+func (siw *ServerInterfaceWrapper) ListBusinessTemplates(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBusinessTemplates(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -484,6 +528,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/signup", wrapper.SignUp)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/business-templates", wrapper.ListBusinessTemplates)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/login", wrapper.Login)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/refresh", wrapper.RefreshSession)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/logout", wrapper.Logout)
@@ -806,6 +851,41 @@ func (response SignUp500JSONResponse) VisitSignUpResponse(w http.ResponseWriter)
 	return err
 }
 
+type ListBusinessTemplatesRequestObject struct {
+}
+
+type ListBusinessTemplatesResponseObject interface {
+	VisitListBusinessTemplatesResponse(w http.ResponseWriter) error
+}
+
+type ListBusinessTemplates200JSONResponse BusinessTemplateList
+
+func (response ListBusinessTemplates200JSONResponse) VisitListBusinessTemplatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBusinessTemplates500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListBusinessTemplates500JSONResponse) VisitListBusinessTemplatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetMeRequestObject struct {
 }
 
@@ -869,6 +949,9 @@ type StrictServerInterface interface {
 	// SignUp Registrar una empresa
 	// (POST /api/v1/auth/signup)
 	SignUp(ctx context.Context, request SignUpRequestObject) (SignUpResponseObject, error)
+	// ListBusinessTemplates Listar las plantillas de tipo de negocio
+	// (GET /api/v1/business-templates)
+	ListBusinessTemplates(ctx context.Context, request ListBusinessTemplatesRequestObject) (ListBusinessTemplatesResponseObject, error)
 	// GetMe Usuario actual
 	// (GET /api/v1/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
@@ -1020,6 +1103,30 @@ func (sh *strictHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SignUpResponseObject); ok {
 		if err := validResponse.VisitSignUpResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListBusinessTemplates operation middleware
+func (sh *strictHandler) ListBusinessTemplates(w http.ResponseWriter, r *http.Request) {
+	var request ListBusinessTemplatesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBusinessTemplates(ctx, request.(ListBusinessTemplatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBusinessTemplates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListBusinessTemplatesResponseObject); ok {
+		if err := validResponse.VisitListBusinessTemplatesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

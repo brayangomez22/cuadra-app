@@ -36,7 +36,7 @@ func TestInventoryFlow(t *testing.T) {
 	catalogModule, err := catalog.New(catalog.Config{DB: database, Authorize: permissions.Authorize, Logger: log, TracerProvider: tp, MeterProvider: mp})
 	require.NoError(t, err)
 	identityModule, err := identity.New(identity.Config{
-		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule},
+		DB: database, Issuer: tokens, Setup: testSetup(t, catalogModule, moduleService),
 		Permissions: permissions, Modules: moduleService, Logger: log, TracerProvider: tp, MeterProvider: mp,
 	})
 	require.NoError(t, err)
@@ -71,7 +71,7 @@ func TestInventoryFlow(t *testing.T) {
 	}
 
 	signup := do(t, http.MethodPost, "/api/v1/auth/signup",
-		`{"tenant_name":"Ferretería El Tornillo","nit":"890903938-8","name":"Ana Gómez","email":"ana@inventario.co","password":"clave-segura-123"}`, "")
+		`{"tenant_name":"Ferretería El Tornillo","nit":"890903938-8","name":"Ana Gómez","email":"ana@inventario.co","password":"clave-segura-123","business_template":"ferreteria"}`, "")
 	require.Equal(t, http.StatusCreated, signup.Code, signup.Body.String())
 	var session struct {
 		AccessToken string `json:"access_token"`

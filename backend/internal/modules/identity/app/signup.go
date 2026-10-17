@@ -3,6 +3,10 @@ package app
 import (
 	"context"
 	"log/slog"
+	"slices"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/domain"
 )
@@ -14,11 +18,15 @@ type SignUpInput struct {
 	OwnerName  string
 	Email      string
 	Password   string
+	// BusinessTemplate is the ID of the template the tenant starts from;
+	// empty means DefaultBusinessTemplate.
+	BusinessTemplate string
 }
 
 // SignUp creates the tenant and its owner, and prepares the tenant's initial
-// data in the other modules (Setup), in one transaction; then it starts a
-// session. Every field is validated before anything is stored or hashed.
+// data in the other modules from its business template (Setup), in one
+// transaction; then it starts a session. Every field is validated before
+// anything is stored or hashed.
 func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err error) {
 	ctx, span := s.startSpan(ctx, "SignUp")
 	defer func() { endSpan(span, err) }()
@@ -34,8 +42,16 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err er
 	if err := domain.ValidatePassword(in.Password); err != nil {
 		return Session{}, err
 	}
+	template := in.BusinessTemplate
+	if template == "" {
+		template = DefaultBusinessTemplate
+	}
+	if !s.templateExists(template) {
+		return Session{}, domain.ErrUnknownBusinessTemplate
+	}
+	span.SetAttributes(attribute.String("business_template", template))
 	now := s.Now()
-	tenant, err := domain.NewTenant(in.TenantName, nit, now)
+	tenant, err := domain.NewTenant(in.TenantName, nit, template, now)
 	if err != nil {
 		return Session{}, err
 	}
@@ -48,7 +64,7 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err er
 		return Session{}, err
 	}
 
-	setUp := func(ctx context.Context) error { return s.Setup.SetUpTenant(ctx, tenant.ID()) }
+	setUp := func(ctx context.Context) error { return s.Setup.SetUpTenant(ctx, tenant.ID(), template) }
 	if err := s.Tenants.CreateWithOwner(ctx, tenant, owner, setUp); err != nil {
 		return Session{}, err
 	}
@@ -57,10 +73,16 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err er
 		return Session{}, err
 	}
 	setProfileAttrs(span, profile)
-	s.signups.Add(ctx, 1)
+	s.signups.Add(ctx, 1, metric.WithAttributes(attribute.String("business_template", template)))
 	// The request is not authenticated yet: the ids go explicitly.
 	s.Logger.InfoContext(ctx, "tenant signed up",
-		slog.String("tenant_id", tenant.ID().String()), slog.String("user_id", owner.ID().String()))
+		slog.String("tenant_id", tenant.ID().String()), slog.String("user_id", owner.ID().String()),
+		slog.String("business_template", template))
 
 	return s.startSession(ctx, profile)
+}
+
+// templateExists reports whether id is one of the business templates.
+func (s *Service) templateExists(id string) bool {
+	return slices.ContainsFunc(s.Setup.Templates(), func(t BusinessTemplate) bool { return t.ID == id })
 }

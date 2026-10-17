@@ -1,9 +1,9 @@
 -- name: CreateTenant :exec
-INSERT INTO tenants (id, name, nit, status, created_at)
-VALUES ($1, $2, $3, $4, $5);
+INSERT INTO tenants (id, name, nit, status, business_template, created_at)
+VALUES ($1, $2, $3, $4, $5, $6);
 
 -- name: GetTenant :one
-SELECT id, name, nit, status, created_at
+SELECT id, name, nit, status, business_template, created_at
 FROM tenants
 WHERE id = $1;
 

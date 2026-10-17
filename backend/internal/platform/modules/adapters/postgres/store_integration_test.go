@@ -25,7 +25,7 @@ func createTenant(t *testing.T, d *db.DB) uuid.UUID {
 	id := uuid.Must(uuid.NewV7())
 	require.NoError(t, d.WithTenantTx(t.Context(), id, func(tx pgx.Tx) error {
 		_, err := tx.Exec(t.Context(),
-			"INSERT INTO tenants (id, name, nit, status, created_at) VALUES ($1, 'Negocio', '890903938-8', 'active', $2)", id, now)
+			"INSERT INTO tenants (id, name, nit, status, business_template, created_at) VALUES ($1, 'Negocio', '890903938-8', 'active', 'generica', $2)", id, now)
 		return err
 	}))
 	return id

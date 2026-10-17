@@ -43,7 +43,7 @@ Generar desde el POS un QR de cobro por el valor exacto de la venta y **concilia
 El modelo ya tiene variantes (T24a) y la UI básica (T24i). Esta épica agrega: importación de Excel con variantes, etiquetas con código de barras por variante, reportes por eje (ventas por talla o color) y traslados de variantes entre sedes desde una matriz.
 
 ### Épica V2-12 · Lotes y vencimientos (droguerías, alimentos)
-Módulo `lots_expiry`: lote y fecha de vencimiento en compras y entradas, salida **FEFO** (primero lo que vence primero), alertas de próximos a vencer, bloqueo de venta de vencidos y reporte de vencimientos. Los requisitos regulatorios del sector farmacéutico (INVIMA, control de medicamentos) quedan fuera hasta validarlos con droguerías reales.
+Módulo `lots_expiry`: lote y fecha de vencimiento en compras y entradas, salida **FEFO** (primero lo que vence primero), alertas de próximos a vencer, bloqueo de venta de vencidos y reporte de vencimientos. Los requisitos regulatorios del sector farmacéutico (INVIMA, control de medicamentos) quedan fuera hasta validarlos con droguerías reales. **Pendientes:** P45 (`docs/plan/pendientes.md`).
 
 ### Épica V2-13 · Precios por volumen
 Módulo `volume_pricing`: escalas por variante ("1–11 und a $X, 12+ a $Y"), aplicadas en el POS como regla del `PriceResolver` y visibles en la línea de venta. Pendiente que entra aquí: P31 (`docs/plan/pendientes.md`).

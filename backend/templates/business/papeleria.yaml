@@ -1,0 +1,23 @@
+# Papelería: útiles, oficina y servicios de impresión.
+name: Papelería
+description: Útiles escolares, artículos de oficina, arte, impresiones y fotocopias.
+modules: []
+units:
+  - {code: und, name: Unidad}
+  - {code: paquete, name: Paquete}
+  - {code: caja, name: Caja}
+  - {code: resma, name: Resma}
+  - {code: docena, name: Docena}
+  - {code: pliego, name: Pliego}
+  - {code: m, name: Metro}
+categories:
+  - Útiles escolares
+  - Oficina
+  - Arte y manualidades
+  - Impresión y fotocopias
+  - Tecnología
+attributes:
+  - {key: marca, label: Marca, type: text}
+  - {key: color, label: Color, type: text}
+variant_axes: []
+customer_segments: [Público, Colegio, Empresa]

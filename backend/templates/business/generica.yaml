@@ -1,0 +1,17 @@
+# Negocio general: para cualquier comercio que no encaje en otra plantilla.
+name: Negocio general
+description: Para cualquier comercio. Empieza con lo básico y se ajusta después.
+modules: []
+units:
+  - {code: und, name: Unidad}
+  - {code: kg, name: Kilogramo}
+  - {code: g, name: Gramo}
+  - {code: l, name: Litro}
+  - {code: m, name: Metro}
+  - {code: caja, name: Caja}
+  - {code: paquete, name: Paquete}
+categories: [General]
+attributes:
+  - {key: marca, label: Marca, type: text}
+variant_axes: []
+customer_segments: [Público, Mayorista]

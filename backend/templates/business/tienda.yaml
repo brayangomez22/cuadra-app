@@ -1,0 +1,24 @@
+# Tienda o minimercado: víveres, bebidas y aseo, muchos por peso.
+name: Tienda o minimercado
+description: Víveres, bebidas, lácteos, aseo y productos de consumo diario.
+modules: []
+units:
+  - {code: und, name: Unidad}
+  - {code: kg, name: Kilogramo}
+  - {code: lb, name: Libra}
+  - {code: g, name: Gramo}
+  - {code: l, name: Litro}
+  - {code: paquete, name: Paquete}
+  - {code: caja, name: Caja}
+  - {code: docena, name: Docena}
+categories:
+  - Víveres
+  - Bebidas
+  - Lácteos
+  - Aseo
+  - Mecato
+  - Licores
+attributes:
+  - {key: marca, label: Marca, type: text}
+variant_axes: []
+customer_segments: [Público, Mayorista]

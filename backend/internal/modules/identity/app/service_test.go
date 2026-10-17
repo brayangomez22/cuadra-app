@@ -21,6 +21,8 @@ func signUpInput() app.SignUpInput {
 		OwnerName:  "Ana Gómez",
 		Email:      "Ana@ElTornillo.co",
 		Password:   validPassword,
+
+		BusinessTemplate: "ferreteria",
 	}
 }
 
@@ -68,14 +70,63 @@ func TestSignUp(t *testing.T) {
 		require.Contains(t, span.Attributes(), attribute.String("user.id", user.ID().String()))
 	})
 
-	t.Run("el registro prepara el tenant nuevo dentro de su transacción", func(t *testing.T) {
-		e := newEnv(t)
+	t.Run("el registro aplica la plantilla elegida dentro de su transacción", func(t *testing.T) {
+		for _, template := range []string{"ferreteria", "ropa_calzado"} {
+			t.Run(template, func(t *testing.T) {
+				e := newEnv(t)
+				in := signUpInput()
+				in.BusinessTemplate = template
 
-		session, err := e.svc.SignUp(t.Context(), signUpInput())
+				session, err := e.svc.SignUp(t.Context(), in)
+				require.NoError(t, err)
+
+				require.Equal(t, template, session.Profile.Tenant.BusinessTemplate())
+				stored, err := e.tenants.GetByID(t.Context(), session.Profile.Tenant.ID())
+				require.NoError(t, err)
+				require.Equal(t, template, stored.BusinessTemplate())
+				require.Equal(t, []uuid.UUID{session.Profile.Tenant.ID()}, e.setup.tenants)
+				require.Equal(t, []string{template}, e.setup.templates)
+				require.Equal(t, []bool{true}, e.setup.inTx)
+				require.EqualValues(t, 1, e.counter(t, "cuadra.identity.signups", "business_template", template))
+				require.Contains(t, e.span(t, "identity.SignUp").Attributes(), attribute.String("business_template", template))
+			})
+		}
+	})
+
+	t.Run("sin plantilla, el registro usa la genérica", func(t *testing.T) {
+		e := newEnv(t)
+		in := signUpInput()
+		in.BusinessTemplate = ""
+
+		session, err := e.svc.SignUp(t.Context(), in)
 		require.NoError(t, err)
 
-		require.Equal(t, []uuid.UUID{session.Profile.Tenant.ID()}, e.setup.tenants)
-		require.Equal(t, []bool{true}, e.setup.inTx)
+		require.Equal(t, app.DefaultBusinessTemplate, session.Profile.Tenant.BusinessTemplate())
+		require.Equal(t, []string{"generica"}, e.setup.templates)
+	})
+
+	t.Run("un registro con una plantilla inexistente falla sin crear el tenant", func(t *testing.T) {
+		for _, template := range []string{"panaderia", "Ferreteria", "../generica"} {
+			t.Run(template, func(t *testing.T) {
+				e := newEnv(t)
+				in := signUpInput()
+				in.BusinessTemplate = template
+				hashes := e.hasher.Hashes()
+
+				_, err := e.svc.SignUp(t.Context(), in)
+
+				require.ErrorIs(t, err, domain.ErrUnknownBusinessTemplate)
+				require.Empty(t, e.tenants.byID)
+				require.Empty(t, e.users.byID)
+				require.Empty(t, e.setup.tenants)
+				require.Equal(t, hashes, e.hasher.Hashes(), "the password is not hashed")
+			})
+		}
+	})
+
+	t.Run("lista las plantillas disponibles", func(t *testing.T) {
+		e := newEnv(t)
+		require.Equal(t, testTemplates, e.svc.BusinessTemplates())
 	})
 
 	t.Run("si la preparación del tenant falla, el registro falla y no crea el tenant", func(t *testing.T) {

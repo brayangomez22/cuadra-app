@@ -23,13 +23,7 @@ func NewCategoryRepository(d *db.DB) *CategoryRepository { return &CategoryRepos
 // not exist in the tenant.
 func (r *CategoryRepository) Create(ctx context.Context, c *domain.Category) error {
 	err := r.db.WithTenantTx(ctx, c.TenantID(), func(tx pgx.Tx) error {
-		return sqlcgen.New(tx).CreateCategory(ctx, sqlcgen.CreateCategoryParams{
-			ID:        c.ID(),
-			TenantID:  c.TenantID(),
-			Name:      c.Name(),
-			ParentID:  c.ParentID(),
-			CreatedAt: c.CreatedAt(),
-		})
+		return createCategory(ctx, sqlcgen.New(tx), c)
 	})
 	switch {
 	case violates(err, foreignKeyViolation, categoriesParentFKey):
@@ -38,6 +32,16 @@ func (r *CategoryRepository) Create(ctx context.Context, c *domain.Category) err
 		return fmt.Errorf("catalog: create category: %w", err)
 	}
 	return nil
+}
+
+func createCategory(ctx context.Context, q *sqlcgen.Queries, c *domain.Category) error {
+	return q.CreateCategory(ctx, sqlcgen.CreateCategoryParams{
+		ID:        c.ID(),
+		TenantID:  c.TenantID(),
+		Name:      c.Name(),
+		ParentID:  c.ParentID(),
+		CreatedAt: c.CreatedAt(),
+	})
 }
 
 // GetByID returns domain.ErrCategoryNotFound when the category does not

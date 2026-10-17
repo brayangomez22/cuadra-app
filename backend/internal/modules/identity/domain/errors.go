@@ -21,6 +21,9 @@ var (
 	ErrTenantNotFound       = errors.New("identity: tenant not found")
 	ErrUserNotFound         = errors.New("identity: user not found")
 	ErrEmailTaken           = errors.New("identity: email already registered in the tenant")
+	// ErrUnknownBusinessTemplate reports a business template that does not
+	// exist or is not a well-formed ID.
+	ErrUnknownBusinessTemplate = errors.New("identity: unknown business template")
 
 	ErrInvalidCredentials      = errors.New("identity: invalid credentials")
 	ErrTenantSuspended         = errors.New("identity: tenant suspended")
