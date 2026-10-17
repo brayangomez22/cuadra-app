@@ -3,10 +3,13 @@ import { useId, useState, type KeyboardEvent, type Ref } from 'react';
 import {
   catalogKeys,
   fetchProducts,
-  unitShort,
+  findByCode,
+  sellables,
   useProducts,
+  variantName,
   type Product,
   type ProductQuery,
+  type Sellable,
 } from '@/features/catalog';
 import { formatMoney, isNegative, isZero, parseDecimalInput } from '@/shared/format';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
@@ -14,8 +17,8 @@ import { Field, Input, Spinner } from '@/shared/ui';
 import styles from './ProductSearch.module.scss';
 
 type Props = {
-  /** Adds the product to the sale; quantity is a decimal of the API ("1", "2.5"). */
-  onAdd: (product: Product, quantity: string) => void;
+  /** Adds the variant to the sale; quantity is a decimal of the API ("1", "2.5"). */
+  onAdd: (sellable: Sellable, quantity: string) => void;
   ref?: Ref<HTMLInputElement>;
 };
 
@@ -37,17 +40,19 @@ function readSearch(text: string): { quantity: string; term: string } {
   return { quantity: '1', term: text.trim() };
 }
 
-// exactMatch is the product whose barcode or SKU is the term, as a reader types it.
-function exactMatch(products: Product[], term: string) {
+// isInactiveCode reports whether term is the code of a variant that cannot be
+// sold: the search finds its product by it, but that variant is not offered.
+function isInactiveCode(products: Product[], term: string) {
   const lower = term.toLowerCase();
-  return products.find((p) => p.barcode === term || p.sku.toLowerCase() === lower);
+  return products.some((p) => p.variants.some((v) => v.barcode === term || v.sku.toLowerCase() === lower));
 }
 
 /**
  * The point of sale's search, a combobox that keeps the focus: a barcode
- * reader types the code and Enter, and an exact SKU or barcode (or a single
- * result) goes straight to the sale. With several results, the arrows choose
- * and Enter adds. Escape clears the text.
+ * reader types the code and Enter, and the variant with that exact SKU or
+ * barcode (or a single result) goes straight to the sale. The results are
+ * variants: a product with variants shows one option for each. With several,
+ * the arrows choose and Enter adds. Escape clears the text.
  */
 export function ProductSearch({ onAdd, ref }: Props) {
   const queryClient = useQueryClient();
@@ -61,7 +66,8 @@ export function ProductSearch({ onAdd, ref }: Props) {
   const debounced = useDebouncedValue(typed);
   const term = submitted ?? debounced;
   const products = useProducts(searchQuery(term), { enabled: term !== '' });
-  const results = term && !products.isPlaceholderData ? products.data?.items : undefined;
+  const page = term && !products.isPlaceholderData ? products.data?.items : undefined;
+  const results = page && sellables(page);
   const open = Boolean(term) && (results === undefined || results.length > 0 || products.isError);
 
   function reset() {
@@ -70,8 +76,8 @@ export function ProductSearch({ onAdd, ref }: Props) {
     setActive(-1);
   }
 
-  function add(product: Product) {
-    onAdd(product, quantity);
+  function add(sellable: Sellable) {
+    onAdd(sellable, quantity);
     setNotFound(null);
     reset();
   }
@@ -85,11 +91,13 @@ export function ProductSearch({ onAdd, ref }: Props) {
         queryKey: catalogKeys.products(query),
         queryFn: () => fetchProducts(query),
       });
-      const [only] = page.items;
-      const pick = exactMatch(page.items, typed) ?? (page.items.length === 1 ? only : undefined);
+      const options = sellables(page.items);
+      const [only] = options;
+      const exact = findByCode(page.items, typed);
+      const pick = exact ?? (options.length === 1 ? only : undefined);
       if (pick) {
         add(pick);
-      } else if (page.items.length === 0) {
+      } else if (options.length === 0 || isInactiveCode(page.items, typed)) {
         // Clear the text so the next scan does not append to this code.
         setNotFound(typed);
         reset();
@@ -179,22 +187,22 @@ export function ProductSearch({ onAdd, ref }: Props) {
         ) : null}
         {/* The listbox stays in the DOM: aria-controls points to it. */}
         <ul id={listId} role="listbox" aria-label="Productos encontrados" className={styles.list} hidden={!results?.length}>
-          {results?.map((product, index) => (
+          {results?.map(({ product, variant }, index) => (
             <li
-              key={product.id}
+              key={variant.id}
               id={`${listId}-${index}`}
               role="option"
               aria-selected={index === active}
               className={styles.option}
               // Keep the focus in the search: the next scan goes there.
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => add(product)}
+              onClick={() => add({ product, variant })}
             >
-              <span className={styles.name}>{product.name}</span>
+              <span className={styles.name}>{variantName(product.name, variant.label)}</span>
               <span className={styles.meta}>
-                {product.sku} · {unitShort(product.base_unit)}
+                {variant.sku} · {product.unit.code}
               </span>
-              <span className={styles.price}>{formatMoney(product.price_with_tax)}</span>
+              <span className={styles.price}>{formatMoney(variant.price_with_tax)}</span>
             </li>
           ))}
         </ul>

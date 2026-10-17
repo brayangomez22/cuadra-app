@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 const maxNameLength = 200
@@ -23,12 +24,14 @@ const (
 // Tenant is a business using Cuadra (a shop, a pharmacy, a hardware
 // store...). Its fields are private so it cannot be put in an invalid state.
 type Tenant struct {
-	id        uuid.UUID
-	name      string
-	nit       NIT
-	status    TenantStatus
-	template  string
-	createdAt time.Time
+	id       uuid.UUID
+	name     string
+	nit      NIT
+	status   TenantStatus
+	template string
+	// defaultTaxRate is the IVA rate a new product starts with.
+	defaultTaxRate decimal.Decimal
+	createdAt      time.Time
 }
 
 // businessTemplateFormat is the format of a business template ID (the name
@@ -36,14 +39,17 @@ type Tenant struct {
 var businessTemplateFormat = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 
 // NewTenant creates an active tenant. The name is trimmed; the NIT and the
-// business template it signs up with are required.
-func NewTenant(name string, nit NIT, businessTemplate string, now time.Time) (*Tenant, error) {
+// business template it signs up with are required. defaultTaxRate is the
+// IVA rate its template proposes to new products: a fraction from 0 to
+// below 1 with up to 4 decimals, as a product's rate.
+func NewTenant(name string, nit NIT, businessTemplate string, defaultTaxRate decimal.Decimal, now time.Time) (*Tenant, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
 	}
 	return newTenant(TenantSnapshot{
-		ID: id, Name: name, NIT: nit, Status: TenantActive, BusinessTemplate: businessTemplate, CreatedAt: now,
+		ID: id, Name: name, NIT: nit, Status: TenantActive, BusinessTemplate: businessTemplate,
+		DefaultTaxRate: defaultTaxRate, CreatedAt: now,
 	})
 }
 
@@ -65,8 +71,13 @@ func newTenant(s TenantSnapshot) (*Tenant, error) {
 	if !businessTemplateFormat.MatchString(s.BusinessTemplate) {
 		return nil, ErrUnknownBusinessTemplate
 	}
+	if s.DefaultTaxRate.IsNegative() || s.DefaultTaxRate.GreaterThanOrEqual(decimal.NewFromInt(1)) ||
+		!s.DefaultTaxRate.Equal(s.DefaultTaxRate.Truncate(4)) {
+		return nil, ErrInvalidDefaultTaxRate
+	}
 	return &Tenant{
-		id: s.ID, name: name, nit: s.NIT, status: s.Status, template: s.BusinessTemplate, createdAt: s.CreatedAt.UTC(),
+		id: s.ID, name: name, nit: s.NIT, status: s.Status, template: s.BusinessTemplate,
+		defaultTaxRate: s.DefaultTaxRate, createdAt: s.CreatedAt.UTC(),
 	}, nil
 }
 
@@ -97,6 +108,9 @@ func (t *Tenant) CreatedAt() time.Time { return t.createdAt }
 // BusinessTemplate returns the ID of the template the tenant signed up with.
 func (t *Tenant) BusinessTemplate() string { return t.template }
 
+// DefaultTaxRate returns the IVA rate proposed to a new product.
+func (t *Tenant) DefaultTaxRate() decimal.Decimal { return t.defaultTaxRate }
+
 // IsActive reports whether the tenant can operate.
 func (t *Tenant) IsActive() bool { return t.status == TenantActive }
 
@@ -113,6 +127,7 @@ type TenantSnapshot struct {
 	NIT              NIT
 	Status           TenantStatus
 	BusinessTemplate string
+	DefaultTaxRate   decimal.Decimal
 	CreatedAt        time.Time
 }
 

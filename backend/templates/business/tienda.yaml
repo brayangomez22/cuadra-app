@@ -2,6 +2,8 @@
 name: Tienda o minimercado
 description: Víveres, bebidas, lácteos, aseo y productos de consumo diario.
 modules: []
+# Tasa de IVA que se propone a un producto nuevo.
+default_tax_rate: "0.19"
 units:
   - {code: und, name: Unidad}
   - {code: kg, name: Kilogramo}

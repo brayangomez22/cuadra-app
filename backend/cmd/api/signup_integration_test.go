@@ -109,10 +109,12 @@ func TestSignUpTemplates(t *testing.T) {
 
 			var me struct {
 				BusinessTemplate string   `json:"business_template"`
+				DefaultTaxRate   string   `json:"default_tax_rate"`
 				Modules          []string `json:"modules"`
 			}
 			get(t, "/api/v1/me", token, &me)
 			require.Equal(t, tpl.ID, me.BusinessTemplate)
+			require.Equal(t, tpl.DefaultTaxRate.String(), me.DefaultTaxRate)
 			require.ElementsMatch(t, tpl.Modules, me.Modules)
 
 			var units struct {
@@ -159,7 +161,7 @@ func TestSignUpTemplates(t *testing.T) {
 						require.Equal(t, want.Label, got.Label)
 						require.Equal(t, want.Type, got.Type)
 						require.Equal(t, len(want.Options), len(got.Options))
-						require.False(t, got.Required, "P35: template attributes are not required")
+						require.Equal(t, want.Required, got.Required)
 					}
 				}
 				require.True(t, found, "attribute %s", want.Key)

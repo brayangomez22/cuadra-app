@@ -346,6 +346,7 @@ type Tenant struct {
 	Status           string
 	CreatedAt        time.Time
 	BusinessTemplate string
+	DefaultTaxRate   decimal.Decimal
 }
 
 type TenantModule struct {

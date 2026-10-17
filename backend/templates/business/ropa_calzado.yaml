@@ -3,6 +3,8 @@
 name: Ropa y calzado
 description: Prendas, calzado y accesorios que se venden por talla y color.
 modules: [variants]
+# Tasa de IVA que se propone a un producto nuevo.
+default_tax_rate: "0.19"
 units:
   - {code: und, name: Unidad}
   - {code: par, name: Par}

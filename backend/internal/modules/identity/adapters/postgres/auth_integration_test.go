@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/adapters/postgres"
@@ -25,7 +26,7 @@ func newTenant(t *testing.T) *domain.Tenant {
 	t.Helper()
 	nit, err := domain.ParseNIT("890903938-8")
 	require.NoError(t, err)
-	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", now)
+	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", decimal.RequireFromString("0.19"), now)
 	require.NoError(t, err)
 	return tenant
 }

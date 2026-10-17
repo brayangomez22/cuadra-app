@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { aUser, fakeApi, json, signedIn } from '@/test/fakeApi';
-import { aCement, aProduct, page, plain, query, withoutCost } from '@/test/fixtures';
+import { aCement, aGarment, aProduct, page, plain, query, withoutCost } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 
 
@@ -101,6 +101,22 @@ describe('ProductListPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Aún no hay productos' })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'Nuevo producto' })).not.toHaveLength(0);
+  });
+
+  it('un producto con variantes muestra cuántas tiene y el precio desde el menor', async () => {
+    const garment = aGarment();
+    garment.variants[5]!.active = false; // L, Azul
+    fakeApi({ ...signedIn(), 'GET /api/v1/products': json(200, page([garment, aProduct()])) });
+    renderApp('/productos');
+
+    const row = (await productsTable()).getByRole('row', { name: /Camiseta básica/ });
+
+    expect(plain(row.textContent)).toContain('6 variantes · und');
+    expect(plain(row.textContent)).toContain('Desde $ 29.750');
+    // All its variants cost the same and have the same margin.
+    expect(plain(row.textContent)).toContain('$ 15.000');
+    expect(plain(row.textContent)).toContain('40 %');
+    expect(within(row).queryByText('CAM-S-ROJO')).not.toBeInTheDocument();
   });
 
   it('muestra costo y margen a quien edita el catálogo', async () => {

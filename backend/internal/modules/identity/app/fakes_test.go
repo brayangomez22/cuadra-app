@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -40,7 +41,8 @@ type fakeTenants struct {
 
 func cloneTenant(t *domain.Tenant) *domain.Tenant {
 	c, err := domain.RehydrateTenant(domain.TenantSnapshot{
-		ID: t.ID(), Name: t.Name(), NIT: t.NIT(), Status: t.Status(), BusinessTemplate: t.BusinessTemplate(), CreatedAt: t.CreatedAt(),
+		ID: t.ID(), Name: t.Name(), NIT: t.NIT(), Status: t.Status(), BusinessTemplate: t.BusinessTemplate(),
+		DefaultTaxRate: t.DefaultTaxRate(), CreatedAt: t.CreatedAt(),
 	})
 	if err != nil {
 		panic(err)
@@ -142,9 +144,10 @@ var testRegistry = fakeRegistry{
 
 // testTemplates are the business templates fakeSetup offers.
 var testTemplates = []app.BusinessTemplate{
-	{ID: "generica", Name: "Negocio general", Description: "Cualquier comercio."},
-	{ID: "ferreteria", Name: "Ferretería", Description: "Herramientas y construcción."},
-	{ID: "ropa_calzado", Name: "Ropa y calzado", Description: "Prendas por talla y color."},
+	{ID: "generica", Name: "Negocio general", Description: "Cualquier comercio.", DefaultTaxRate: decimal.RequireFromString("0.19")},
+	{ID: "ferreteria", Name: "Ferretería", Description: "Herramientas y construcción.", DefaultTaxRate: decimal.RequireFromString("0.19")},
+	{ID: "ropa_calzado", Name: "Ropa y calzado", Description: "Prendas por talla y color.", DefaultTaxRate: decimal.RequireFromString("0.19")},
+	{ID: "drogueria", Name: "Droguería", Description: "Medicamentos y cuidado personal.", DefaultTaxRate: decimal.Zero},
 }
 
 // fakeSetup offers testTemplates and records the tenants it prepared, with
@@ -475,7 +478,7 @@ func (e *env) seed(t *testing.T, email, password string, role domain.Role) (*dom
 	t.Helper()
 	nit, err := domain.ParseNIT(validNIT)
 	require.NoError(t, err)
-	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", e.clock.Now())
+	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", decimal.RequireFromString("0.19"), e.clock.Now())
 	require.NoError(t, err)
 	require.NoError(t, e.tenants.Create(t.Context(), tenant))
 	return tenant, e.seedUser(t, tenant.ID(), email, password, role)

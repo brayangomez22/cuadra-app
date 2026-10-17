@@ -2,6 +2,8 @@
 name: Negocio general
 description: Para cualquier comercio. Empieza con lo básico y se ajusta después.
 modules: []
+# Tasa de IVA que se propone a un producto nuevo.
+default_tax_rate: "0.19"
 units:
   - {code: und, name: Unidad}
   - {code: kg, name: Kilogramo}

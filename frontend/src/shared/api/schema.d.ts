@@ -1017,6 +1017,8 @@ export interface components {
              * @example generica
              */
             business_template: string;
+            /** @description La tasa de IVA que se propone a un producto nuevo. La siembra la plantilla de la empresa. */
+            default_tax_rate: components["schemas"]["TaxRate"];
             name: string;
             email: string;
             /** @enum {string} */
@@ -1284,6 +1286,12 @@ export interface components {
              */
             margin_percent?: string;
             axis_values: components["schemas"]["AxisValues"];
+            /**
+             * @description El nombre de la variante: sus valores ordenados por nombre de eje (`Rojo · M`), como lo congela una venta en
+             *     `variant_label`. Vacío si la variante no tiene ejes.
+             * @example Rojo · M
+             */
+            label: string;
             /** @description La variante creada con el producto. Un producto simple solo tiene esta. */
             is_default: boolean;
             active: boolean;
@@ -1419,8 +1427,7 @@ export interface components {
             variant_id: string;
             /**
              * Format: uuid
-             * @deprecated
-             * @description El producto de la variante. Use `variant_id`.
+             * @description El producto de la variante, para mostrar su nombre.
              */
             product_id: string;
             /** Format: uuid */
@@ -1450,8 +1457,7 @@ export interface components {
             variant_id: string;
             /**
              * Format: uuid
-             * @deprecated
-             * @description El producto de la variante. Use `variant_id`.
+             * @description El producto de la variante, para mostrar su nombre.
              */
             product_id: string;
             /** Format: uuid */

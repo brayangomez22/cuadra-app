@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth';
-import { unitShort } from '@/features/catalog';
+import { variantName } from '@/features/catalog';
 import { inventoryKeys, useLocations } from '@/features/inventory';
 import { ApiError, describeError } from '@/shared/api/errors';
 import { formatMoney, formatPercent, formatQuantity, isZero } from '@/shared/format';
@@ -22,7 +22,7 @@ import {
 } from '@/shared/ui';
 import { salesKeys, useConfirmSale, useCurrentCashSession, useDiscountLimit, type Sale } from './api';
 import { CartLines } from './CartLines';
-import { cartReducer, cartTotals, type CartAction, type DiscountLimit, type PaymentInput } from './cart';
+import { cartItem, cartReducer, cartTotals, type CartAction, type DiscountLimit, type PaymentInput } from './cart';
 import { CheckoutDialog } from './CheckoutDialog';
 import { PrintableReceipt } from './PrintableReceipt';
 import type { Paper } from './Receipt';
@@ -69,7 +69,7 @@ export function PosPage() {
   const [cashLost, setCashLost] = useState(false);
   // The product just added (or added again), to mark its line and bring it
   // into view; seq changes on every add.
-  const [added, setAdded] = useState<{ productId: string; seq: number }>();
+  const [added, setAdded] = useState<{ variantId: string; seq: number }>();
   const [announcement, setAnnouncement] = useState('');
   const search = useRef<HTMLInputElement>(null);
 
@@ -128,13 +128,13 @@ export function PosPage() {
     setOutOfStock(undefined);
   }
 
-  // A product from the search or the reader: its line is marked and a screen
-  // reader hears the product, its quantity in the sale and the new total
+  // A variant from the search or the reader: its line is marked and a screen
+  // reader hears the variant, its quantity in the sale and the new total
   // (only on adds, not on every edit of the cart).
   function add(action: Extract<CartAction, { type: 'add' }>) {
     change(action);
-    const mark = { productId: action.product.id, seq: (added?.seq ?? 0) + 1 };
-    if (added?.productId === mark.productId) {
+    const mark = { variantId: action.item.variantId, seq: (added?.seq ?? 0) + 1 };
+    if (added?.variantId === mark.variantId) {
       // Scanned again while marked: take the mark off for a frame so it starts over.
       setAdded(undefined);
       requestAnimationFrame(() => setAdded(mark));
@@ -142,10 +142,11 @@ export function PosPage() {
       setAdded(mark);
     }
     const next = cartTotals(cartReducer(cart, action), discountLimit);
-    const line = next.lines.find((l) => l.line.product.id === action.product.id)?.line;
+    const line = next.lines.find((l) => l.line.item.variantId === action.item.variantId)?.line;
     if (line) {
+      const { item } = line;
       setAnnouncement(
-        `${line.product.name}: ${formatQuantity(line.quantity)} ${unitShort(line.product.base_unit)}. Total ${formatMoney(next.total)}`,
+        `${variantName(item.name, item.label)}: ${formatQuantity(line.quantity)} ${item.unit}. Total ${formatMoney(next.total)}`,
       );
     }
   }
@@ -183,7 +184,7 @@ export function PosPage() {
         },
         onError: (error) => {
           if (error instanceof ApiError && error.code === 'insufficient_stock') {
-            setOutOfStock(error.details.product_id);
+            setOutOfStock(error.details.variant_id);
           }
           if (error instanceof ApiError && cashSessionErrors.has(error.code ?? '')) setCashLost(true);
         },
@@ -264,7 +265,7 @@ export function PosPage() {
         <div className={styles.sale}>
           <ProductSearch
             ref={search}
-            onAdd={(product, quantity) => add({ type: 'add', product, quantity })}
+            onAdd={({ product, variant }, quantity) => add({ type: 'add', item: cartItem(product, variant), quantity })}
           />
           <p className="srOnly" role="status" aria-label="Último producto agregado">
             {announcement}

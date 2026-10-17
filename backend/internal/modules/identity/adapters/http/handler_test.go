@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
 	httpadapter "github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/adapters/http"
@@ -56,7 +57,7 @@ func profile(t *testing.T, role domain.Role) app.Profile {
 	t.Helper()
 	nit, err := domain.ParseNIT("890903938-8")
 	require.NoError(t, err)
-	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", now)
+	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", decimal.RequireFromString("0.19"), now)
 	require.NoError(t, err)
 	email, err := domain.ParseEmail("ana@eltornillo.co")
 	require.NoError(t, err)
@@ -398,6 +399,7 @@ func TestGetMe(t *testing.T) {
 			"tenant_name": "Ferretería El Tornillo",
 			"tenant_nit": "890903938-8",
 			"business_template": "ferreteria",
+			"default_tax_rate": "0.19",
 			"name": "Ana Gómez",
 			"email": "ana@eltornillo.co",
 			"role": "cashier",

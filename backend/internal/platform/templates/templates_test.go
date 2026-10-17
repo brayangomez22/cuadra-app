@@ -6,6 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
@@ -63,6 +64,16 @@ func TestBusinessTemplates(t *testing.T) {
 		require.Subset(t, axes, []string{"talla", "color"})
 	})
 
+	t.Run("cada plantilla propone su IVA por defecto: droguería 0 y las demás 19 %", func(t *testing.T) {
+		want := map[string]string{
+			"generica": "0.19", "ferreteria": "0.19", "tienda": "0.19",
+			"drogueria": "0", "papeleria": "0.19", "ropa_calzado": "0.19",
+		}
+		for _, tpl := range catalog.List() {
+			require.True(t, decimal.RequireFromString(want[tpl.ID]).Equal(tpl.DefaultTaxRate), "%s: %s", tpl.ID, tpl.DefaultTaxRate)
+		}
+	})
+
 	t.Run("una plantilla inexistente no se encuentra", func(t *testing.T) {
 		_, ok := catalog.Get("panaderia")
 		require.False(t, ok)
@@ -74,12 +85,13 @@ const valid = `
 name: Negocio de prueba
 description: Una plantilla para los tests.
 modules: [variants]
+default_tax_rate: "0.19"
 units:
   - {code: und, name: Unidad}
   - {code: par, name: Par}
 categories: [General]
 attributes:
-  - {key: marca, label: Marca, type: text}
+  - {key: marca, label: Marca, type: text, required: true}
   - {key: genero, label: Género, type: list, options: [Mujer, Hombre]}
 variant_axes:
   - {name: talla, values: [S, M]}
@@ -104,17 +116,25 @@ func TestLoad(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, templates.Template{
 			ID: "prueba", Name: "Negocio de prueba", Description: "Una plantilla para los tests.",
-			Modules:    []string{"variants"},
-			Units:      []templates.Unit{{Code: "und", Name: "Unidad"}, {Code: "par", Name: "Par"}},
-			Categories: []string{"General"},
+			Modules:        []string{"variants"},
+			DefaultTaxRate: decimal.RequireFromString("0.19"),
+			Units:          []templates.Unit{{Code: "und", Name: "Unidad"}, {Code: "par", Name: "Par"}},
+			Categories:     []string{"General"},
 			Attributes: []templates.Attribute{
-				{Key: "marca", Label: "Marca", Type: "text"},
+				{Key: "marca", Label: "Marca", Type: "text", Required: true},
 				{Key: "genero", Label: "Género", Type: "list", Options: []string{"Mujer", "Hombre"}},
 			},
 			VariantAxes:      []templates.Axis{{Name: "talla", Values: []string{"S", "M"}}},
 			CustomerSegments: []string{"Público", "Mayorista"},
 		}, tpl)
 		require.Equal(t, []templates.Template{tpl}, catalog.List())
+	})
+
+	t.Run("un atributo sin required no es obligatorio", func(t *testing.T) {
+		catalog, err := templates.Load(fstest.MapFS{"prueba.yaml": {Data: []byte(replace(valid, "type: text, required: true}", "type: text}"))}}, allModules)
+		require.NoError(t, err)
+		tpl, _ := catalog.Get("prueba")
+		require.False(t, tpl.Attributes[0].Required)
 	})
 
 	t.Run("rechaza plantillas que no cumplen el esquema o sus reglas", func(t *testing.T) {
@@ -130,10 +150,14 @@ func TestLoad(t *testing.T) {
 			{name: "unidad repetida", files: map[string]string{"prueba.yaml": replace(valid, "{code: par, name: Par}", "{code: und, name: Otra}")}},
 			{name: "categoría repetida", files: map[string]string{"prueba.yaml": replace(valid, "[General]", "[General, General]")}},
 			{name: "atributo de lista sin opciones", files: map[string]string{"prueba.yaml": replace(valid, ", options: [Mujer, Hombre]", "")}},
-			{name: "atributo de texto con opciones", files: map[string]string{"prueba.yaml": replace(valid, "type: text}", "type: text, options: [A]}")}},
-			{name: "atributo de tipo desconocido", files: map[string]string{"prueba.yaml": replace(valid, "type: text}", "type: date}")}},
+			{name: "atributo de texto con opciones", files: map[string]string{"prueba.yaml": replace(valid, "type: text,", "type: text, options: [A],")}},
+			{name: "atributo de tipo desconocido", files: map[string]string{"prueba.yaml": replace(valid, "type: text,", "type: date,")}},
+			{name: "atributo con required que no es sí/no", files: map[string]string{"prueba.yaml": replace(valid, "required: true", "required: si")}},
 			{name: "atributo con clave repetida", files: map[string]string{"prueba.yaml": replace(valid, "key: genero", "key: marca")}},
-			{name: "atributo obligatorio, que el formulario de producto aún no puede llenar", files: map[string]string{"prueba.yaml": replace(valid, "type: text}", "type: text, required: true}")}},
+			{name: "sin IVA por defecto", files: map[string]string{"prueba.yaml": replace(valid, "default_tax_rate: \"0.19\"\n", "")}},
+			{name: "IVA por defecto de 100 %", files: map[string]string{"prueba.yaml": replace(valid, `"0.19"`, `"1"`)}},
+			{name: "IVA por defecto con más de 4 decimales", files: map[string]string{"prueba.yaml": replace(valid, `"0.19"`, `"0.12345"`)}},
+			{name: "IVA por defecto como número y no como texto", files: map[string]string{"prueba.yaml": replace(valid, `"0.19"`, `0.19`)}},
 			{name: "eje sin valores", files: map[string]string{"prueba.yaml": replace(valid, "values: [S, M]", "values: []")}},
 			{name: "eje repetido", files: map[string]string{"prueba.yaml": replace(valid, "  - {name: talla, values: [S, M]}\n", "  - {name: talla, values: [S, M]}\n  - {name: Talla, values: [L]}\n")}},
 			{name: "segmento repetido", files: map[string]string{"prueba.yaml": replace(valid, "[Público, Mayorista]", "[Público, Público]")}},

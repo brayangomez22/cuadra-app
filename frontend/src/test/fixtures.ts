@@ -4,6 +4,8 @@ type Schemas = components['schemas'];
 export type Product = Schemas['Product'];
 export type ProductVariant = Schemas['ProductVariant'];
 type UnitOfMeasure = Schemas['UnitOfMeasure'];
+type AttributeDefinition = Schemas['AttributeDefinition'];
+type VariantAxis = Schemas['VariantAxis'];
 export type Location = Schemas['Location'];
 export type StockLevel = Schemas['StockLevel'];
 export type StockMovement = Schemas['StockMovement'];
@@ -16,6 +18,7 @@ export const ids = {
   cement: '01920000-0000-7000-8000-000000000102',
   main: '01920000-0000-7000-8000-000000000201',
   north: '01920000-0000-7000-8000-000000000202',
+  garment: '01920000-0000-7000-8000-000000000103',
   plumbing: '01920000-0000-7000-8000-000000000301',
   cashSession: '01920000-0000-7000-8000-000000000401',
 };
@@ -23,7 +26,10 @@ export const ids = {
 // unitOf is the tenant's unit with a code, as the API embeds it in a product.
 const unitNames: Record<string, string> = { und: 'Unidad', m: 'Metro', bulto: 'Bulto' };
 
-function unitOf(code: string): UnitOfMeasure {
+/** The tenant's units, as GET /units answers them. */
+export const units = Object.keys(unitNames).map((code) => unitOf(code));
+
+export function unitOf(code: string): UnitOfMeasure {
   const index = Object.keys(unitNames).indexOf(code) + 1;
   return {
     id: `01920000-0000-7000-8000-00000000050${index}`,
@@ -64,6 +70,7 @@ function defaultVariantOf(product: Omit<Product, 'variants'>): ProductVariant {
     price: product.price,
     price_with_tax: product.price_with_tax,
     axis_values: {},
+    label: '',
     is_default: true,
     active: true,
     created_at: product.created_at,
@@ -86,6 +93,92 @@ export function aCement(overrides: Partial<Product> = {}): Product {
     margin_percent: '12.5',
     ...overrides,
   });
+}
+
+// The garment's axes, as GET /variant-axes answers them.
+export const axes: VariantAxis[] = [
+  { id: '01920000-0000-7000-8000-000000000701', name: 'talla', values: ['S', 'M', 'L'] },
+  { id: '01920000-0000-7000-8000-000000000702', name: 'color', values: ['Rojo', 'Azul'] },
+];
+
+// The tenant's product attributes, as GET /product-attributes answers them.
+export const attributes: AttributeDefinition[] = [
+  { id: '01920000-0000-7000-8000-000000000801', key: 'marca', label: 'Marca', type: 'text', options: [], required: true },
+  {
+    id: '01920000-0000-7000-8000-000000000802',
+    key: 'material',
+    label: 'Material',
+    type: 'list',
+    options: ['Algodón', 'PVC'],
+    required: false,
+  },
+  { id: '01920000-0000-7000-8000-000000000803', key: 'peso', label: 'Peso', type: 'number', options: [], required: false },
+  {
+    id: '01920000-0000-7000-8000-000000000804',
+    key: 'importado',
+    label: 'Importado',
+    type: 'boolean',
+    options: [],
+    required: false,
+  },
+];
+
+/** The id of the garment's variant in a size and color: variantId('M', 'Azul'). */
+export function variantId(size: string, color: string) {
+  const index = ['S', 'M', 'L'].indexOf(size) * 2 + ['Rojo', 'Azul'].indexOf(color) + 1;
+  return `01920000-0000-7000-8000-00000000060${index}`;
+}
+
+/** The barcode of the garment's variant in a size and color. */
+export function variantBarcode(size: string, color: string) {
+  return `770999${variantId(size, color).slice(-6)}`;
+}
+
+/**
+ * aGarment is a product with 6 variants (3 sizes × 2 colors) created after
+ * variants existed: its default variant (S, Rojo) has its own id.
+ */
+export function aGarment(overrides: Partial<Product> = {}): Product {
+  const variants: ProductVariant[] = [];
+  for (const size of ['S', 'M', 'L']) {
+    for (const color of ['Rojo', 'Azul']) {
+      variants.push({
+        id: variantId(size, color),
+        sku: `CAM-${size}-${color.toUpperCase()}`,
+        barcode: variantBarcode(size, color),
+        cost: '15000.00',
+        price: size === 'L' ? '27000.00' : '25000.00',
+        price_with_tax: size === 'L' ? '32130.00' : '29750.00',
+        margin_percent: '40',
+        axis_values: { talla: size, color },
+        // Sorted by axis name, as ProductVariant.Label(): color before talla.
+        label: `${color} · ${size}`,
+        is_default: variants.length === 0,
+        active: true,
+        created_at: '2026-10-16T15:00:00Z',
+      });
+    }
+  }
+  const unit = unitOf('und');
+  return {
+    id: ids.garment,
+    sku: 'CAM-S-ROJO',
+    barcode: variantBarcode('S', 'Rojo'),
+    name: 'Camiseta básica',
+    base_unit: 'und',
+    base_unit_id: unit.id,
+    unit,
+    cost: '15000.00',
+    price: '25000.00',
+    price_with_tax: '29750.00',
+    margin_percent: '40',
+    tax_rate: '0.19',
+    attributes: { marca: 'Acme', material: 'Algodón' },
+    active: true,
+    created_at: '2026-10-16T15:00:00Z',
+    variants,
+    ...overrides,
+  };
 }
 
 // withoutCost is a product as the API sends it to a role without catalog:write.

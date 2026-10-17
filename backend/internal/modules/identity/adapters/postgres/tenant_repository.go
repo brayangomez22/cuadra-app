@@ -71,6 +71,7 @@ func createTenant(ctx context.Context, q *sqlcgen.Queries, t *domain.Tenant) err
 		Nit:              t.NIT().String(),
 		Status:           string(t.Status()),
 		BusinessTemplate: t.BusinessTemplate(),
+		DefaultTaxRate:   t.DefaultTaxRate(),
 		CreatedAt:        t.CreatedAt(),
 	})
 }
@@ -125,6 +126,7 @@ func tenantFromRow(row sqlcgen.GetTenantRow) (*domain.Tenant, error) {
 		NIT:              nit,
 		Status:           domain.TenantStatus(row.Status),
 		BusinessTemplate: row.BusinessTemplate,
+		DefaultTaxRate:   row.DefaultTaxRate,
 		CreatedAt:        row.CreatedAt,
 	})
 	if err != nil {

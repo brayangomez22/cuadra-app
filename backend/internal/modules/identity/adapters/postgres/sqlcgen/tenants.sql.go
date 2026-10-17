@@ -10,11 +10,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 const createTenant = `-- name: CreateTenant :exec
-INSERT INTO tenants (id, name, nit, status, business_template, created_at)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO tenants (id, name, nit, status, business_template, default_tax_rate, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type CreateTenantParams struct {
@@ -23,6 +24,7 @@ type CreateTenantParams struct {
 	Nit              string
 	Status           string
 	BusinessTemplate string
+	DefaultTaxRate   decimal.Decimal
 	CreatedAt        time.Time
 }
 
@@ -33,13 +35,14 @@ func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) erro
 		arg.Nit,
 		arg.Status,
 		arg.BusinessTemplate,
+		arg.DefaultTaxRate,
 		arg.CreatedAt,
 	)
 	return err
 }
 
 const getTenant = `-- name: GetTenant :one
-SELECT id, name, nit, status, business_template, created_at
+SELECT id, name, nit, status, business_template, default_tax_rate, created_at
 FROM tenants
 WHERE id = $1
 `
@@ -50,6 +53,7 @@ type GetTenantRow struct {
 	Nit              string
 	Status           string
 	BusinessTemplate string
+	DefaultTaxRate   decimal.Decimal
 	CreatedAt        time.Time
 }
 
@@ -62,6 +66,7 @@ func (q *Queries) GetTenant(ctx context.Context, id uuid.UUID) (GetTenantRow, er
 		&i.Nit,
 		&i.Status,
 		&i.BusinessTemplate,
+		&i.DefaultTaxRate,
 		&i.CreatedAt,
 	)
 	return i, err

@@ -202,6 +202,7 @@ func me(p app.Profile) identityapi.Me {
 		TenantName:       p.Tenant.Name(),
 		TenantNit:        p.Tenant.NIT().String(),
 		BusinessTemplate: p.Tenant.BusinessTemplate(),
+		DefaultTaxRate:   p.Tenant.DefaultTaxRate().String(),
 		Name:             p.User.Name(),
 		Email:            p.User.Email().String(),
 		Role:             identityapi.MeRole(p.User.Role()),

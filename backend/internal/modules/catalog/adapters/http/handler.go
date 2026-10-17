@@ -372,6 +372,7 @@ func variantBody(v *domain.ProductVariant, rate domain.TaxRate, seesCost bool) c
 		Price:        formatMoney(v.Price()),
 		PriceWithTax: formatMoney(v.PriceWithTax(rate)),
 		AxisValues:   v.AxisValues(),
+		Label:        v.Label(),
 		IsDefault:    v.IsDefault(),
 		Active:       v.IsActive(),
 		CreatedAt:    v.CreatedAt(),

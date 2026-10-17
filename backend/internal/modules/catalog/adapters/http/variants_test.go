@@ -44,6 +44,7 @@ type variantJSON struct {
 	Cost          *string           `json:"cost"`
 	MarginPercent *string           `json:"margin_percent"`
 	AxisValues    map[string]string `json:"axis_values"`
+	Label         string            `json:"label"`
 	IsDefault     bool              `json:"is_default"`
 	Active        bool              `json:"active"`
 	CreatedAt     string            `json:"created_at"`
@@ -97,6 +98,30 @@ func TestProductVariantsBody(t *testing.T) {
 		require.Equal(t, "38.4627", *m.MarginPercent)
 		require.Equal(t, map[string]string{"talla": "M"}, m.AxisValues)
 		require.NotEmpty(t, m.CreatedAt)
+	})
+
+	t.Run("cada variante responde su label: los valores ordenados por nombre de eje, vacío sin ejes", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			product *domain.Product
+			want    []string
+		}{
+			{name: "ropa: un eje", product: productWithVariants(t), want: []string{"S", "M"}},
+			{name: "ropa: dos ejes, ordenados por nombre", product: twoAxesProduct(t), want: []string{"Rojo · M", "Azul · L"}},
+			{name: "ferretería: producto simple", product: product(t, "8000", "10000"), want: []string{""}},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				rec := serve(t, &stubUseCases{product: tt.product}, owner, http.MethodGet, "/api/v1/products/"+tt.product.ID().String(), "")
+
+				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+				var labels []string
+				for _, v := range decodeProduct(t, rec.Body.Bytes()).Variants {
+					labels = append(labels, v.Label)
+				}
+				require.Equal(t, tt.want, labels)
+			})
+		}
 	})
 
 	t.Run("el costo de las variantes solo se envía con catalog:write", func(t *testing.T) {
@@ -191,4 +216,26 @@ func TestPOSOperation(t *testing.T) {
 		_, labeler := serveLabeled(t, &stubUseCases{}, owner, http.MethodGet, "/api/v1/products?status=all", "")
 		require.Empty(t, labeler.Get())
 	})
+}
+
+// twoAxesProduct returns a garment that varies on talla and color, with its
+// axes named out of alphabetical order.
+func twoAxesProduct(t *testing.T) *domain.Product {
+	t.Helper()
+	rate, err := domain.ParseTaxRate(decimal.RequireFromString("0.19"))
+	require.NoError(t, err)
+	p, err := domain.NewProduct(domain.NewProductParams{
+		TenantID: owner.TenantID, Name: "Camisa", BaseUnit: mustUnit("und", "Unidad").Ref(), TaxRate: rate,
+		Variant: domain.VariantParams{
+			SKU: "CAMISA-M-ROJO", Cost: decimal.RequireFromString("1"), Price: decimal.RequireFromString("2"),
+			AxisValues: map[string]string{"talla": "M", "color": "Rojo"},
+		},
+	}, now)
+	require.NoError(t, err)
+	_, err = p.AddVariant(domain.VariantParams{
+		SKU: "CAMISA-L-AZUL", Cost: decimal.RequireFromString("1"), Price: decimal.RequireFromString("2"),
+		AxisValues: map[string]string{"talla": "L", "color": "Azul"},
+	}, now)
+	require.NoError(t, err)
+	return p
 }

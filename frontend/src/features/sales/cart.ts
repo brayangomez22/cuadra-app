@@ -5,6 +5,7 @@
 import { parseDecimalInput, toDecimalInput } from '@/shared/format';
 import { fromUnits, fromUnitsTrimmed, mulRound2, mulTrunc2, toUnits } from '@/shared/money/decimal';
 import type { components } from '@/shared/api/schema';
+import { defaultVariant, type Product, type ProductVariant } from '@/features/catalog';
 
 type Schemas = components['schemas'];
 export type DiscountLimit = Schemas['DiscountLimit'];
@@ -20,56 +21,82 @@ export const methodLabels: Record<PaymentMethod, string> = {
   transfer: 'Transferencia',
 };
 
-export type CartProduct = Pick<
-  Schemas['Product'],
-  'id' | 'name' | 'sku' | 'base_unit' | 'price' | 'price_with_tax' | 'tax_rate'
->;
+/**
+ * What the cart sells: a variant, with what the screen shows of its product.
+ * Only that: the stored cart survives a reload without the product's costs.
+ */
+export type CartItem = {
+  variantId: string;
+  productId: string;
+  name: string;
+  /** The variant's label ("Rojo · M"); empty for a variant without axes. */
+  label: string;
+  sku: string;
+  /** The code of the product's unit ("m"). */
+  unit: string;
+  price: string;
+  priceWithTax: string;
+  taxRate: string;
+};
+
+/** The cart's item for a variant of product; by default, its default variant. */
+export function cartItem(product: Product, variant: ProductVariant = defaultVariant(product)): CartItem {
+  return {
+    variantId: variant.id,
+    productId: product.id,
+    name: product.name,
+    label: variant.label,
+    sku: variant.sku,
+    unit: product.unit.code,
+    price: variant.price,
+    priceWithTax: variant.price_with_tax,
+    taxRate: product.tax_rate,
+  };
+}
 
 /** A line as the cashier typed it: quantity and discount (a percent) are the fields' text. */
-export type CartLine = { product: CartProduct; quantity: string; discount: string };
+export type CartLine = { item: CartItem; quantity: string; discount: string };
 export type Cart = { lines: CartLine[] };
 
 export type CartAction =
   /** quantity is a decimal of the API ("2.5"). */
-  | { type: 'add'; product: CartProduct; quantity: string }
-  | { type: 'setQuantity'; productId: string; text: string }
-  | { type: 'setDiscount'; productId: string; text: string }
-  | { type: 'remove'; productId: string }
+  | { type: 'add'; item: CartItem; quantity: string }
+  | { type: 'setQuantity'; variantId: string; text: string }
+  | { type: 'setDiscount'; variantId: string; text: string }
+  | { type: 'remove'; variantId: string }
   | { type: 'clear' };
 
 export const emptyCart: Cart = { lines: [] };
 
-/** Adding a product already in the cart adds to its line, so scanning twice sells two. */
+/**
+ * Adding a variant already in the cart adds to its line, so scanning twice
+ * sells two. Two variants of a product are two lines.
+ */
 export function cartReducer(cart: Cart, action: CartAction): Cart {
   switch (action.type) {
     case 'add': {
-      const existing = cart.lines.find((l) => l.product.id === action.product.id);
+      const existing = cart.lines.find((l) => l.item.variantId === action.item.variantId);
       if (!existing) {
-        const line = { product: pickProduct(action.product), quantity: toDecimalInput(action.quantity), discount: '' };
+        const line = { item: action.item, quantity: toDecimalInput(action.quantity), discount: '' };
         return { lines: [...cart.lines, line] };
       }
       const current = readQuantity(existing.quantity);
       const sum = current.value ? toUnits(current.value) + toUnits(action.quantity) : toUnits(action.quantity);
-      return update(cart, action.product.id, { quantity: toDecimalInput(fromUnitsTrimmed(sum)) });
+      return update(cart, action.item.variantId, { quantity: toDecimalInput(fromUnitsTrimmed(sum)) });
     }
     case 'setQuantity':
-      return update(cart, action.productId, { quantity: action.text });
+      return update(cart, action.variantId, { quantity: action.text });
     case 'setDiscount':
-      return update(cart, action.productId, { discount: action.text });
+      return update(cart, action.variantId, { discount: action.text });
     case 'remove':
-      return { lines: cart.lines.filter((l) => l.product.id !== action.productId) };
+      return { lines: cart.lines.filter((l) => l.item.variantId !== action.variantId) };
     case 'clear':
       return emptyCart;
   }
 }
 
-function update(cart: Cart, productId: string, changes: Partial<CartLine>): Cart {
-  return { lines: cart.lines.map((l) => (l.product.id === productId ? { ...l, ...changes } : l)) };
-}
-
-// Only what the cart needs: the stored cart survives a reload without the product's costs.
-function pickProduct({ id, name, sku, base_unit, price, price_with_tax, tax_rate }: CartProduct): CartProduct {
-  return { id, name, sku, base_unit, price, price_with_tax, tax_rate };
+function update(cart: Cart, variantId: string, changes: Partial<CartLine>): Cart {
+  return { lines: cart.lines.map((l) => (l.item.variantId === variantId ? { ...l, ...changes } : l)) };
 }
 
 export type LineAmounts = { gross: string; discount: string; base: string; tax: string; total: string };
@@ -151,10 +178,10 @@ export function cartTotals(cart: Cart, limit: DiscountLimit): CartTotals {
     const result: LineTotals = { line, quantityError: quantity.error, discountError: discount.error };
     if (quantity.value === undefined || discount.fraction === undefined) return result;
 
-    const gross = mulRound2(toUnits(quantity.value), toUnits(line.product.price));
+    const gross = mulRound2(toUnits(quantity.value), toUnits(line.item.price));
     const discountAmount = mulTrunc2(gross, discount.fraction);
     const base = gross - discountAmount;
-    const lineTax = mulRound2(base, toUnits(line.product.tax_rate));
+    const lineTax = mulRound2(base, toUnits(line.item.taxRate));
     subtotal += gross;
     discounts += discountAmount;
     tax += lineTax;
@@ -165,7 +192,7 @@ export function cartTotals(cart: Cart, limit: DiscountLimit): CartTotals {
       tax: fromUnits(lineTax),
       total: fromUnits(base + lineTax),
     };
-    result.input = { product_id: line.product.id, quantity: quantity.value };
+    result.input = { variant_id: line.item.variantId, quantity: quantity.value };
     if (discountAmount > 0n) result.input.discount = fromUnits(discountAmount);
     return result;
   });

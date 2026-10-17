@@ -93,6 +93,28 @@ func TestSignUp(t *testing.T) {
 		}
 	})
 
+	t.Run("el registro guarda el IVA por defecto de la plantilla", func(t *testing.T) {
+		tests := []struct{ template, rate string }{
+			{template: "ferreteria", rate: "0.19"},
+			{template: "drogueria", rate: "0"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.template, func(t *testing.T) {
+				e := newEnv(t)
+				in := signUpInput()
+				in.BusinessTemplate = tt.template
+
+				session, err := e.svc.SignUp(t.Context(), in)
+				require.NoError(t, err)
+
+				require.Equal(t, tt.rate, session.Profile.Tenant.DefaultTaxRate().String())
+				stored, err := e.tenants.GetByID(t.Context(), session.Profile.Tenant.ID())
+				require.NoError(t, err)
+				require.Equal(t, tt.rate, stored.DefaultTaxRate().String())
+			})
+		}
+	})
+
 	t.Run("sin plantilla, el registro usa la genérica", func(t *testing.T) {
 		e := newEnv(t)
 		in := signUpInput()

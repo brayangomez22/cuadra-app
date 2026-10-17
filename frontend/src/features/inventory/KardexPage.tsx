@@ -1,6 +1,6 @@
 import { useParams, useSearchParams } from 'react-router';
 import { useCan } from '@/features/auth';
-import { unitShort, useProduct } from '@/features/catalog';
+import { defaultVariant, hasAxes, useProduct, variantName } from '@/features/catalog';
 import { formatDateTime, formatMoney, formatQuantity } from '@/shared/format';
 import {
   Alert,
@@ -28,18 +28,37 @@ import styles from './KardexPage.module.scss';
 
 const ALL_LOCATIONS = 'all';
 
-/** /productos/:productId/kardex: the movements of a product, newest first, optionally of one location (?sede=). */
+/**
+ * /productos/:productId/kardex: the movements of a variant of the product
+ * (?variante=, by default its default variant), newest first, optionally of
+ * one location (?sede=).
+ */
 export function KardexPage() {
   const { productId = '' } = useParams();
   const can = useCan();
   const [params, setParams] = useSearchParams();
+  const variantParam = params.get('variante') ?? undefined;
   const locationId = params.get('sede') ?? undefined;
   const pageNumber = Math.max(Number(params.get('pagina')) || 1, 1);
   const offset = (pageNumber - 1) * PAGE_SIZE;
 
   const product = useProduct(productId);
   const locations = useLocations();
-  const kardex = useKardex(productId, locationId, offset);
+  const variant = product.data
+    ? (product.data.variants.find((v) => v.id === variantParam) ?? defaultVariant(product.data))
+    : undefined;
+  const kardex = useKardex(variant?.id, locationId, offset);
+
+  // Changing a filter keeps the others and goes back to the first page.
+  function show(next: { variante?: string; sede?: string; pagina?: number }) {
+    const variante = 'variante' in next ? next.variante : variantParam;
+    const sede = 'sede' in next ? next.sede : locationId;
+    setParams({
+      ...(variante && { variante }),
+      ...(sede && { sede }),
+      ...(next.pagina && next.pagina > 1 && { pagina: String(next.pagina) }),
+    });
+  }
 
   if (product.isPending) {
     return (
@@ -58,10 +77,12 @@ export function KardexPage() {
     );
   }
 
-  const unit = unitShort(product.data.base_unit);
+  const shown = variant ?? defaultVariant(product.data);
+  const withAxes = hasAxes(product.data);
+  const name = variantName(product.data.name, shown.label);
   const canSeeCost = can('catalog:write');
   const locationName = new Map((locations.data ?? []).map((l) => [l.id, l.name]));
-  const receiptLink = `/inventario/entrada?producto=${productId}${locationId ? `&sede=${locationId}` : ''}`;
+  const receiptLink = `/inventario/entrada?producto=${productId}&variante=${shown.id}${locationId ? `&sede=${locationId}` : ''}`;
   const locationOptions = [
     { value: ALL_LOCATIONS, label: 'Todas las sedes' },
     ...(locations.data ?? []).map((l) => ({ value: l.id, label: l.name })),
@@ -69,11 +90,12 @@ export function KardexPage() {
 
   return (
     <Page
-      title={product.data.name}
+      title={name}
       description={
         <span className={styles.subtitle}>
-          Kardex · {product.data.sku} · en {unit}
+          Kardex · {shown.sku} · en {product.data.unit.code}
           {!product.data.active && <Badge tone="warning">Inactivo</Badge>}
+          {product.data.active && !shown.active && <Badge tone="warning">Variante inactiva</Badge>}
         </span>
       }
       actions={
@@ -84,14 +106,25 @@ export function KardexPage() {
         )
       }
     >
-      <Field label="Sede" className={styles.location}>
-        <Select
-          options={locationOptions}
-          value={locationId ?? ALL_LOCATIONS}
-          onValueChange={(value) => setParams(value === ALL_LOCATIONS ? {} : { sede: value })}
-          disabled={locations.isPending}
-        />
-      </Field>
+      <div className={styles.filters}>
+        {withAxes && (
+          <Field label="Variante" className={styles.filter}>
+            <Select
+              options={product.data.variants.map((v) => ({ value: v.id, label: v.label || v.sku }))}
+              value={shown.id}
+              onValueChange={(value) => show({ variante: value })}
+            />
+          </Field>
+        )}
+        <Field label="Sede" className={styles.filter}>
+          <Select
+            options={locationOptions}
+            value={locationId ?? ALL_LOCATIONS}
+            onValueChange={(value) => show({ sede: value === ALL_LOCATIONS ? undefined : value })}
+            disabled={locations.isPending}
+          />
+        </Field>
+      </div>
 
       {kardex.isPending ? (
         <Spinner label="Cargando movimientos…" className={styles.loading} />
@@ -107,7 +140,7 @@ export function KardexPage() {
       ) : kardex.data.items.length === 0 ? (
         <EmptyState
           icon={<IconBox />}
-          title="Este producto aún no tiene movimientos"
+          title={withAxes ? 'Esta variante aún no tiene movimientos' : 'Este producto aún no tiene movimientos'}
           description={
             locationId
               ? 'No hay entradas, ventas ni ajustes en esta sede.'
@@ -116,7 +149,7 @@ export function KardexPage() {
         />
       ) : (
         <div className={styles.results} aria-busy={kardex.isPlaceholderData || undefined}>
-          <Table caption={`Movimientos de ${product.data.name}`}>
+          <Table caption={`Movimientos de ${name}`}>
             <TableHead>
               <TableRow>
                 <TableHeaderCell>Fecha</TableHeaderCell>
@@ -154,12 +187,7 @@ export function KardexPage() {
             total={kardex.data.total}
             limit={PAGE_SIZE}
             offset={offset}
-            onOffsetChange={(next) =>
-              setParams({
-                ...(locationId && { sede: locationId }),
-                ...(next > 0 && { pagina: String(next / PAGE_SIZE + 1) }),
-              })
-            }
+            onOffsetChange={(next) => show({ pagina: next / PAGE_SIZE + 1 })}
           />
         </div>
       )}

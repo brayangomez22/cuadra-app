@@ -2235,7 +2235,7 @@ components:
           $ref: "#/components/schemas/Me"
     Me:
       type: object
-      required: [id, tenant_id, tenant_name, tenant_nit, business_template, name, email, role, permissions, modules]
+      required: [id, tenant_id, tenant_name, tenant_nit, business_template, default_tax_rate, name, email, role, permissions, modules]
       properties:
         id:
           type: string
@@ -2253,6 +2253,10 @@ components:
           type: string
           description: Plantilla de tipo de negocio con la que se registró la empresa.
           example: generica
+        default_tax_rate:
+          allOf:
+            - $ref: "#/components/schemas/TaxRate"
+          description: La tasa de IVA que se propone a un producto nuevo. La siembra la plantilla de la empresa.
         name:
           type: string
         email:
@@ -2644,7 +2648,7 @@ components:
           description: Una variante inactiva no se vende.
     ProductVariant:
       type: object
-      required: [id, sku, price, price_with_tax, axis_values, is_default, active, created_at]
+      required: [id, sku, price, price_with_tax, axis_values, label, is_default, active, created_at]
       properties:
         id:
           type: string
@@ -2666,6 +2670,12 @@ components:
           example: "16.6667"
         axis_values:
           $ref: "#/components/schemas/AxisValues"
+        label:
+          type: string
+          description: |
+            El nombre de la variante: sus valores ordenados por nombre de eje (`Rojo · M`), como lo congela una venta en
+            `variant_label`. Vacío si la variante no tiene ejes.
+          example: Rojo · M
         is_default:
           type: boolean
           description: La variante creada con el producto. Un producto simple solo tiene esta.
@@ -2856,8 +2866,7 @@ components:
         product_id:
           type: string
           format: uuid
-          deprecated: true
-          description: El producto de la variante. Use `variant_id`.
+          description: El producto de la variante, para mostrar su nombre.
         location_id:
           type: string
           format: uuid
@@ -2902,8 +2911,7 @@ components:
         product_id:
           type: string
           format: uuid
-          deprecated: true
-          description: El producto de la variante. Use `variant_id`.
+          description: El producto de la variante, para mostrar su nombre.
         location_id:
           type: string
           format: uuid

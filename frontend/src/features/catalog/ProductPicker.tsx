@@ -3,17 +3,17 @@ import { useRef, useState, type KeyboardEvent } from 'react';
 import { formatMoney } from '@/shared/format';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { Button, Field, Input, Spinner } from '@/shared/ui';
-import { catalogKeys, fetchProducts, useProducts, type Product, type ProductQuery } from './api';
-import { unitShort } from './units';
+import { catalogKeys, fetchProducts, useProducts, type ProductQuery } from './api';
+import { findByCode, sellables, variantName, type Sellable } from './variants';
 import styles from './ProductPicker.module.scss';
 
 type Props = {
   label: string;
-  value: Product | null;
-  onChange: (product: Product | null) => void;
+  value: Sellable | null;
+  onChange: (item: Sellable | null) => void;
   error?: string;
-  /** Called after the user picks a product, e.g. to move the focus on. */
-  onPicked?: (product: Product) => void;
+  /** Called after the user picks a variant, e.g. to move the focus on. */
+  onPicked?: (item: Sellable) => void;
 };
 
 const RESULTS = 8;
@@ -21,8 +21,10 @@ const RESULTS = 8;
 const searchQuery = (q: string): ProductQuery => ({ q, status: 'active', limit: RESULTS });
 
 /**
- * Finds an active product by name, SKU or barcode and picks it. A barcode
- * reader types the code and Enter: with a single match, Enter picks it.
+ * Finds an active product by name, SKU or barcode and picks one of its
+ * variants: a product with variants offers one option for each. A barcode
+ * reader types the code and Enter: Enter picks the variant with that exact
+ * code, or the only option.
  */
 export function ProductPicker({ label, value, onChange, error, onPicked }: Props) {
   const queryClient = useQueryClient();
@@ -33,13 +35,14 @@ export function ProductPicker({ label, value, onChange, error, onPicked }: Props
   const term = submitted ?? typed;
   const search = useRef<HTMLInputElement>(null);
   const products = useProducts(searchQuery(term), { enabled: term !== '' && !value });
-  const results = term && !products.isPlaceholderData ? products.data?.items : undefined;
+  const page = term && !products.isPlaceholderData ? products.data?.items : undefined;
+  const results = page && sellables(page);
 
-  function pick(product: Product) {
-    onChange(product);
+  function pick(item: Sellable) {
+    onChange(item);
     setText('');
     setSubmitted(null);
-    onPicked?.(product);
+    onPicked?.(item);
   }
 
   async function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -54,8 +57,10 @@ export function ProductPicker({ label, value, onChange, error, onPicked }: Props
         queryKey: catalogKeys.products(query),
         queryFn: () => fetchProducts(query),
       });
-      const [only] = page.items;
-      if (page.items.length === 1 && only) pick(only);
+      const options = sellables(page.items);
+      const [only] = options;
+      const chosen = findByCode(page.items, q) ?? (options.length === 1 ? only : undefined);
+      if (chosen) pick(chosen);
     } catch {
       // The results area shows the failure of the same query.
     }
@@ -67,9 +72,9 @@ export function ProductPicker({ label, value, onChange, error, onPicked }: Props
         <span className={styles.label}>{label}</span>
         <div className={styles.chosen} role="group" aria-label={`${label} elegido`}>
           <div className={styles.chosenText}>
-            <span className={styles.name}>{value.name}</span>
+            <span className={styles.name}>{variantName(value.product.name, value.variant.label)}</span>
             <span className={styles.meta}>
-              {value.sku} · {unitShort(value.base_unit)}
+              {value.variant.sku} · {value.product.unit.code}
             </span>
           </div>
           <Button
@@ -113,12 +118,12 @@ export function ProductPicker({ label, value, onChange, error, onPicked }: Props
             <p className={styles.empty}>No encontramos «{term}» entre los productos activos.</p>
           ) : (
             <ul className={styles.list} aria-label="Resultados">
-              {results.map((product) => (
-                <li key={product.id} className={styles.item}>
-                  <button type="button" className={styles.option} onClick={() => pick(product)}>
-                    <span className={styles.name}>{product.name}</span>
+              {results.map((item) => (
+                <li key={item.variant.id} className={styles.item}>
+                  <button type="button" className={styles.option} onClick={() => pick(item)}>
+                    <span className={styles.name}>{variantName(item.product.name, item.variant.label)}</span>
                     <span className={styles.meta}>
-                      {product.sku} · {unitShort(product.base_unit)} · {formatMoney(product.price_with_tax)}
+                      {item.variant.sku} · {item.product.unit.code} · {formatMoney(item.variant.price_with_tax)}
                     </span>
                   </button>
                 </li>

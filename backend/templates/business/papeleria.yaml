@@ -2,6 +2,8 @@
 name: Papelería
 description: Útiles escolares, artículos de oficina, arte, impresiones y fotocopias.
 modules: []
+# Tasa de IVA que se propone a un producto nuevo.
+default_tax_rate: "0.19"
 units:
   - {code: und, name: Unidad}
   - {code: paquete, name: Paquete}

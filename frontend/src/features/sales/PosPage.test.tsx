@@ -2,7 +2,21 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { onTestFinished } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { aUser, apiError, fakeApi, json, signedIn, type Me } from '@/test/fakeApi';
-import { aCement, aLocation, anOpenCashSession, aProduct, aSale, ids, page, plain, query, type Product } from '@/test/fixtures';
+import {
+  aCement,
+  aGarment,
+  aLocation,
+  anOpenCashSession,
+  aProduct,
+  aSale,
+  ids,
+  page,
+  plain,
+  query,
+  variantBarcode,
+  variantId,
+  type Product,
+} from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 
 const CEMENT_BARCODE = '7701234567890';
@@ -16,11 +30,13 @@ type Options = {
   extra?: Parameters<typeof fakeApi>[0];
 };
 
-// The products answer like the API: an exact SKU or barcode, or every word in the name.
+// The products answer like the API: the exact SKU or barcode of any of their
+// variants, or every word in the name.
 function search(products: Product[], q: string) {
   const term = q.toLowerCase();
   return products.filter(
-    (p) => p.barcode === q || p.sku.toLowerCase() === term || p.name.toLowerCase().includes(term),
+    (p) =>
+      p.variants.some((v) => v.barcode === q || v.sku.toLowerCase() === term) || p.name.toLowerCase().includes(term),
   );
 }
 
@@ -31,7 +47,7 @@ function posApi({
   cash = { required: false },
   extra = {},
 }: Options = {}) {
-  const products = [aProduct(), aCement({ barcode: CEMENT_BARCODE })];
+  const products = [aProduct(), aCement({ barcode: CEMENT_BARCODE }), aGarment()];
   return fakeApi({
     ...signedIn(user),
     'GET /api/v1/locations': json(200, { items: locations }),
@@ -123,6 +139,97 @@ describe('PosPage', () => {
 
     await findCartLine(/Cemento gris 50kg/);
     expect(screen.queryByRole('listitem', { name: /Tubo PVC/ })).not.toBeInTheDocument();
+  });
+
+  describe('variantes', () => {
+    it('escanear el código de una variante agrega esa variante', async () => {
+      const api = posApi();
+      renderApp('/vender');
+
+      await scan(variantBarcode('M', 'Azul'));
+
+      const line = await findCartLine('Camiseta básica (Azul · M)');
+      expect(line.getByText(/CAM-M-AZUL/)).toBeInTheDocument();
+      expect(summaryValue('Total')).toBe('$ 29.750');
+      await user().keyboard('{F4}');
+      await checkout();
+      await user().keyboard('{Enter}');
+      expect((await posted(api)).lines).toEqual([{ variant_id: variantId('M', 'Azul'), quantity: '1' }]);
+    });
+
+    it('escanear el SKU de otra variante del mismo producto la agrega en su propia línea', async () => {
+      posApi();
+      renderApp('/vender');
+
+      await scan(variantBarcode('M', 'Azul'));
+      await findCartLine('Camiseta básica (Azul · M)');
+      await scan('cam-l-rojo');
+      await scan(variantBarcode('M', 'Azul'));
+
+      expect((await findCartLine('Camiseta básica (Rojo · L)')).getByLabelText(/^Cantidad/)).toHaveValue('1');
+      await waitFor(() =>
+        expect(cartLine('Camiseta básica (Azul · M)').getByLabelText(/^Cantidad/)).toHaveValue('2'),
+      );
+      // 2 × 29.750 + 32.130
+      expect(summaryValue('Total')).toBe('$ 91.630');
+    });
+
+    it('buscar por nombre muestra cada variante con su etiqueta y precio', async () => {
+      posApi();
+      renderApp('/vender');
+
+      await user().type(await searchBox(), 'camiseta');
+
+      const options = await screen.findAllByRole('option');
+      expect(options.map((o) => within(o).getByText(/^Camiseta/).textContent)).toEqual([
+        'Camiseta básica (Rojo · S)',
+        'Camiseta básica (Azul · S)',
+        'Camiseta básica (Rojo · M)',
+        'Camiseta básica (Azul · M)',
+        'Camiseta básica (Rojo · L)',
+        'Camiseta básica (Azul · L)',
+      ]);
+      expect(plain(options[4]?.textContent)).toContain('$ 32.130');
+      await user().keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}{Enter}');
+      await findCartLine('Camiseta básica (Azul · M)');
+    });
+
+    it('una variante inactiva no se ofrece', async () => {
+      const garment = aGarment();
+      garment.variants[3]!.active = false; // M, Azul
+      posApi({ extra: { 'GET /api/v1/products': json(200, page([garment])) } });
+      renderApp('/vender');
+
+      await scan(variantBarcode('M', 'Azul'));
+
+      expect(await screen.findByText(new RegExp(`No encontramos «${variantBarcode('M', 'Azul')}»`))).toBeInTheDocument();
+      expect(screen.queryByRole('listitem', { name: /Camiseta/ })).not.toBeInTheDocument();
+    });
+
+    it('insufficient_stock marca la línea de la variante, no las demás del producto', async () => {
+      posApi({
+        extra: {
+          'POST /api/v1/sales': apiError(409, 'insufficient_stock', 'No hay stock suficiente de Camiseta básica (Azul · M).', {
+            variant_id: variantId('M', 'Azul'),
+            product_id: ids.garment,
+          }),
+        },
+      });
+      renderApp('/vender');
+      await scan(variantBarcode('M', 'Azul'));
+      await findCartLine('Camiseta básica (Azul · M)');
+      await scan('CAM-M-ROJO');
+      await findCartLine('Camiseta básica (Rojo · M)');
+      await user().keyboard('{F4}');
+      await checkout();
+      await user().keyboard('{Enter}');
+      await within(await checkout()).findByRole('alert');
+      await user().keyboard('{Escape}');
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(cartLine('Camiseta básica (Azul · M)').getByText('Sin stock suficiente')).toBeInTheDocument();
+      expect(cartLine('Camiseta básica (Rojo · M)').queryByText('Sin stock suficiente')).not.toBeInTheDocument();
+    });
   });
 
   it('avisa cuando no encuentra el código', async () => {
@@ -220,8 +327,8 @@ describe('PosPage', () => {
       expect(await posted(api)).toEqual({
         location_id: ids.main,
         lines: [
-          { product_id: ids.cement, quantity: '2' },
-          { product_id: ids.pipe, quantity: '1' },
+          { variant_id: ids.cement, quantity: '2' },
+          { variant_id: ids.pipe, quantity: '1' },
         ],
         payments: [{ method: 'cash', amount: '100000' }],
       });
@@ -327,6 +434,7 @@ describe('PosPage', () => {
       posApi({
         extra: {
           'POST /api/v1/sales': apiError(409, 'insufficient_stock', 'No hay stock suficiente de Cemento gris 50kg.', {
+            variant_id: ids.cement,
             product_id: ids.cement,
           }),
         },
@@ -540,7 +648,7 @@ describe('PosPage', () => {
       await user().keyboard('{Enter}');
       await screen.findByRole('dialog', { name: 'Venta N.º 15' });
       expect((await posted(api)).lines).toEqual([
-        { product_id: ids.pipe, quantity: '1', discount: '5000.00' },
+        { variant_id: ids.pipe, quantity: '1', discount: '5000.00' },
       ]);
     });
   });
@@ -569,6 +677,21 @@ describe('PosPage', () => {
 
       expect(await screen.findByText('No hay sedes activas para vender')).toBeInTheDocument();
     });
+  });
+
+  it('un carrito guardado con la versión anterior se descarta sin error', async () => {
+    // The cart before variants, by product and without a version.
+    sessionStorage.setItem(
+      `cuadra.pos.cart.${aUser('cashier').id}`,
+      JSON.stringify({ lines: [{ product: { id: ids.pipe, name: 'Tubo PVC' }, quantity: '1', discount: '' }] }),
+    );
+    posApi();
+    renderApp('/vender');
+
+    await scan('CEM-50');
+
+    expect(await findCartLine(/Cemento/)).toBeDefined();
+    expect(screen.getAllByRole('listitem', { name: /./ })).toHaveLength(1);
   });
 
   it('conserva la venta en curso al salir y volver a la pantalla', async () => {

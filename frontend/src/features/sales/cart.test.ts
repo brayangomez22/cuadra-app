@@ -1,5 +1,5 @@
-import { aCement, aProduct, ids } from '@/test/fixtures';
-import { cartReducer, cartTotals, emptyCart, settle, type Cart, type DiscountLimit } from './cart';
+import { aCement, aGarment, aProduct, ids, variantId } from '@/test/fixtures';
+import { cartItem, cartReducer, cartTotals, emptyCart, settle, type Cart, type DiscountLimit } from './cart';
 
 const noDiscount: DiscountLimit = { unlimited: false, max: '0' };
 const tenPercent: DiscountLimit = { unlimited: false, max: '0.1' };
@@ -12,39 +12,77 @@ function cartWith(...steps: Parameters<typeof cartReducer>[1][]): Cart {
 describe('cartReducer', () => {
   it('agregar el mismo producto dos veces suma la cantidad', () => {
     const cart = cartWith(
-      { type: 'add', product: aCement(), quantity: '1' },
-      { type: 'add', product: aProduct(), quantity: '1' },
-      { type: 'add', product: aCement(), quantity: '2.5' },
+      { type: 'add', item: cartItem(aCement()), quantity: '1' },
+      { type: 'add', item: cartItem(aProduct()), quantity: '1' },
+      { type: 'add', item: cartItem(aCement()), quantity: '2.5' },
     );
-    expect(cart.lines.map((l) => [l.product.id, l.quantity])).toEqual([
+    expect(cart.lines.map((l) => [l.item.variantId, l.quantity])).toEqual([
       [ids.cement, '3,5'],
       [ids.pipe, '1'],
     ]);
   });
 
   it('cambia la cantidad y el descuento como se escriben, y quita líneas', () => {
-    let cart = cartWith({ type: 'add', product: aProduct(), quantity: '1' });
-    cart = cartReducer(cart, { type: 'setQuantity', productId: ids.pipe, text: '2,5' });
-    cart = cartReducer(cart, { type: 'setDiscount', productId: ids.pipe, text: '5' });
+    let cart = cartWith({ type: 'add', item: cartItem(aProduct()), quantity: '1' });
+    cart = cartReducer(cart, { type: 'setQuantity', variantId: ids.pipe, text: '2,5' });
+    cart = cartReducer(cart, { type: 'setDiscount', variantId: ids.pipe, text: '5' });
     expect(cart.lines[0]).toMatchObject({ quantity: '2,5', discount: '5' });
-    expect(cartReducer(cart, { type: 'remove', productId: ids.pipe }).lines).toEqual([]);
+    expect(cartReducer(cart, { type: 'remove', variantId: ids.pipe }).lines).toEqual([]);
     expect(cartReducer(cart, { type: 'clear' })).toEqual(emptyCart);
   });
 
+  it('agregar dos variantes del mismo producto crea dos líneas', () => {
+    const garment = aGarment();
+    const variant = (size: string, color: string) => garment.variants.find((v) => v.id === variantId(size, color))!;
+    const cart = cartWith(
+      { type: 'add', item: cartItem(garment, variant('M', 'Rojo')), quantity: '1' },
+      { type: 'add', item: cartItem(garment, variant('M', 'Azul')), quantity: '1' },
+      { type: 'add', item: cartItem(garment, variant('M', 'Rojo')), quantity: '1' },
+    );
+    expect(cart.lines.map((l) => [l.item.variantId, l.item.label, l.quantity])).toEqual([
+      [variantId('M', 'Rojo'), 'Rojo · M', '2'],
+      [variantId('M', 'Azul'), 'Azul · M', '1'],
+    ]);
+    expect(cart.lines[0]?.item).toMatchObject({ productId: ids.garment, name: 'Camiseta básica', sku: 'CAM-M-ROJO' });
+  });
+
+  it('un producto simple se agrega con su variante por defecto, sin etiqueta', () => {
+    const cart = cartWith({ type: 'add', item: cartItem(aProduct()), quantity: '1' });
+    expect(cart.lines[0]?.item).toEqual({
+      variantId: ids.pipe,
+      productId: ids.pipe,
+      name: 'Tubo PVC presión 1/2 pulgada',
+      label: '',
+      sku: 'TUB-PVC-12',
+      unit: 'und',
+      price: '10000.00',
+      priceWithTax: '11900.00',
+      taxRate: '0.19',
+    });
+  });
+
   it('una cantidad escrita inválida no impide sumar al escanear de nuevo', () => {
-    let cart = cartWith({ type: 'add', product: aProduct(), quantity: '1' });
-    cart = cartReducer(cart, { type: 'setQuantity', productId: ids.pipe, text: '' });
-    cart = cartReducer(cart, { type: 'add', product: aProduct(), quantity: '1' });
+    let cart = cartWith({ type: 'add', item: cartItem(aProduct()), quantity: '1' });
+    cart = cartReducer(cart, { type: 'setQuantity', variantId: ids.pipe, text: '' });
+    cart = cartReducer(cart, { type: 'add', item: cartItem(aProduct()), quantity: '1' });
     expect(cart.lines[0]?.quantity).toBe('1');
   });
 });
 
 describe('cartTotals', () => {
+  it('la línea envía variant_id con el precio de su variante', () => {
+    const garment = aGarment();
+    const large = garment.variants.find((v) => v.id === variantId('L', 'Azul'))!;
+    const totals = cartTotals(cartWith({ type: 'add', item: cartItem(garment, large), quantity: '2' }), noDiscount);
+    expect(totals.lines[0]?.input).toEqual({ variant_id: variantId('L', 'Azul'), quantity: '2' });
+    expect(totals.total).toBe('64260.00');
+  });
+
   it('calcula el IVA por línea como el backend', () => {
     // 2.5 × 8403.3613 = 21008.40, con IVA de 3991.60; más 4500 sin IVA.
     const cart = cartWith(
-      { type: 'add', product: aProduct({ price: '8403.3613', tax_rate: '0.19' }), quantity: '2.5' },
-      { type: 'add', product: aCement({ price: '4500', tax_rate: '0' }), quantity: '1' },
+      { type: 'add', item: cartItem(aProduct({ price: '8403.3613', tax_rate: '0.19' })), quantity: '2.5' },
+      { type: 'add', item: cartItem(aCement({ price: '4500', tax_rate: '0' })), quantity: '1' },
     );
     const totals = cartTotals(cart, noDiscount);
     expect(totals.lines[0]?.amounts).toEqual({
@@ -65,8 +103,8 @@ describe('cartTotals', () => {
 
   it('convierte el descuento en porcentaje a un monto truncado a centavos', () => {
     const cart = cartWith(
-      { type: 'add', product: aProduct({ price: '99.99' }), quantity: '1' },
-      { type: 'setDiscount', productId: ids.pipe, text: '10' },
+      { type: 'add', item: cartItem(aProduct({ price: '99.99' })), quantity: '1' },
+      { type: 'setDiscount', variantId: ids.pipe, text: '10' },
     );
     // 10 % de 99.99 = 9.999 → 9.99 (truncado: nunca pasa del tope).
     expect(cartTotals(cart, tenPercent).lines[0]?.amounts).toMatchObject({ discount: '9.99', base: '90.00', tax: '17.10' });
@@ -80,8 +118,8 @@ describe('cartTotals', () => {
     ['abc', unlimited, 'Escriba un porcentaje, por ejemplo 5 o 2,5'],
   ])('rechaza el descuento %s con el tope dado', (text, limit, message) => {
     const cart = cartWith(
-      { type: 'add', product: aProduct(), quantity: '1' },
-      { type: 'setDiscount', productId: ids.pipe, text },
+      { type: 'add', item: cartItem(aProduct()), quantity: '1' },
+      { type: 'setDiscount', variantId: ids.pipe, text },
     );
     const totals = cartTotals(cart, limit);
     expect(totals.lines[0]?.discountError).toBe(message);
@@ -94,8 +132,8 @@ describe('cartTotals', () => {
     ['1,23456', 'Use máximo 4 decimales'],
   ])('rechaza la cantidad «%s»', (text, message) => {
     const cart = cartWith(
-      { type: 'add', product: aProduct(), quantity: '1' },
-      { type: 'setQuantity', productId: ids.pipe, text },
+      { type: 'add', item: cartItem(aProduct()), quantity: '1' },
+      { type: 'setQuantity', variantId: ids.pipe, text },
     );
     const totals = cartTotals(cart, noDiscount);
     expect(totals.lines[0]?.quantityError).toBe(message);

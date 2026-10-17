@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
@@ -51,6 +52,8 @@ type BusinessTemplate struct {
 	ID          string
 	Name        string
 	Description string
+	// DefaultTaxRate is the IVA rate the tenant proposes to new products.
+	DefaultTaxRate decimal.Decimal
 }
 
 // DefaultBusinessTemplate is the template of a sign-up that names none.

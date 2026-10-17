@@ -31,6 +31,10 @@
   font-size: var(--font-size-lg);
 }
 
+.sectionHint {
+  color: var(--color-text-muted);
+}
+
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
