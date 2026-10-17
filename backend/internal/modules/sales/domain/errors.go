@@ -80,7 +80,7 @@ type InsufficientStockError struct {
 }
 
 // Description names the variant for the cashier: the product's name and,
-// if the variant has one, its label ("Camiseta básica (Rojo · M)").
+// if the variant has one, its label ("Producto A (Rojo · M)").
 func (e *InsufficientStockError) Description() string {
 	if e.VariantLabel == "" {
 		return e.ProductName

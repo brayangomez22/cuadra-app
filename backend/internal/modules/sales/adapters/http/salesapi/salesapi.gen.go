@@ -286,7 +286,7 @@ type DiscountLimit struct {
 	Unlimited bool   `json:"unlimited"`
 }
 
-// Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Error struct {
 	Error ErrorDetail `json:"error"`
 }
@@ -603,16 +603,16 @@ type UnitId = openapi_types.UUID
 // VariantId defines model for VariantId.
 type VariantId = openapi_types.UUID
 
-// BadRequest Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// BadRequest Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type BadRequest = Error
 
-// Forbidden Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// Forbidden Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Forbidden = Error
 
-// InternalError Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// InternalError Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type InternalError = Error
 
-// Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Unauthorized = Error
 
 // ListSalesParams defines parameters for ListSales.

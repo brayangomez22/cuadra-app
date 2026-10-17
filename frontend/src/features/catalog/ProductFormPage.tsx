@@ -261,7 +261,7 @@ function toInput(values: ProductFormValues, price: string): ProductInput {
   };
 }
 
-// A subcategory shows its path: "Plomería › Tubería".
+// A subcategory shows its path: "Categoría › Subcategoría".
 function categoryOptions(categories: Category[]): SelectOption[] {
   const byId = new Map(categories.map((category) => [category.id, category]));
   const path = (category: Category, depth = 0): string => {

@@ -8,7 +8,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 
 ### [ ] T26 · Unidades de medida y fraccionamiento
 **Alcance:** Se implementa como el módulo `unit_conversions` (activado por defecto en las plantillas `ferreteria`, `tienda` y `generica`). Las conversiones son por **variante**. Por producto, unidades alternativas con factor de conversión respecto a la unidad base (rollo de 100 m → metro; caja ×12 → unidad; paca de 6 → unidad; kg → gramos), cada una con su precio y código de barras opcional. El inventario siempre se guarda en la unidad base. Se puede comprar en una unidad y vender en otra.
-**Pendientes que entran a esta tarea:** P46 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P46 y P48 (`docs/plan/pendientes.md`).
 **Tests primero:** vender 2,5 m de una variante cuyo stock es 1 rollo (100 m) deja 97,5 m; vender 3 unidades de una caja ×12 deja 9 unidades de esa caja; el precio por unidad alternativa se respeta; la conversión no pierde precisión con factores no enteros.
 
 ### [ ] T27 · Escáner de códigos con la cámara

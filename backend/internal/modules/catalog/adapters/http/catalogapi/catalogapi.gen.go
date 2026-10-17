@@ -149,7 +149,7 @@ type Category struct {
 
 // CategoryInput defines model for CategoryInput.
 type CategoryInput struct {
-	// Name Example: Plomería
+	// Name Example: Aseo
 	Name string `json:"name"`
 
 	// ParentId Categoría padre. Omitido o `null`, la categoría queda en la raíz.
@@ -161,7 +161,7 @@ type CategoryList struct {
 	Items []Category `json:"items"`
 }
 
-// Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Error struct {
 	Error ErrorDetail `json:"error"`
 }
@@ -237,7 +237,7 @@ type Product struct {
 
 	// Sku El de la variante por defecto. Use `variants`.
 	//
-	// Example: TUB-PVC-12
+	// Example: CIN-18
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Sku string `json:"sku"`
 
@@ -286,7 +286,7 @@ type ProductInput struct {
 	Cost        Money   `json:"cost"`
 	Description *string `json:"description,omitempty"`
 
-	// Name Example: Tubo PVC presión 1/2 pulgada
+	// Name Example: Cinta adhesiva transparente 18 mm
 	Name string `json:"name"`
 
 	// Price Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
@@ -296,7 +296,7 @@ type ProductInput struct {
 
 	// Sku Código interno de la variante por defecto, único en la empresa. Se guarda en mayúsculas.
 	//
-	// Example: TUB-PVC-12
+	// Example: CIN-18
 	Sku string `json:"sku"`
 
 	// TaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
@@ -528,19 +528,19 @@ type UnitId = openapi_types.UUID
 // VariantId defines model for VariantId.
 type VariantId = openapi_types.UUID
 
-// BadRequest Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// BadRequest Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type BadRequest = Error
 
-// Forbidden Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// Forbidden Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Forbidden = Error
 
-// InternalError Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// InternalError Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type InternalError = Error
 
-// NotFound Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// NotFound Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type NotFound = Error
 
-// Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Unauthorized = Error
 
 // ListProductsParams defines parameters for ListProducts.

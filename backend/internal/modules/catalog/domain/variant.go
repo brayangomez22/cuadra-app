@@ -143,8 +143,8 @@ func normalizeBarcode(s string) (string, error) {
 	return s, nil
 }
 
-// normalizeAxes trims names and values and lowercases names, so "Talla" and
-// "talla" are one axis. Values keep their case: they are what the receipt
+// normalizeAxes trims names and values and lowercases names, so "Color" and
+// "color" are one axis. Values keep their case: they are what the receipt
 // shows. Neither may be empty, and two names may not collide once normalized.
 func normalizeAxes(in map[string]string) (map[string]string, error) {
 	if len(in) > maxAxes {
@@ -206,7 +206,7 @@ func (v *ProductVariant) Price() decimal.Decimal { return v.price }
 func (v *ProductVariant) AxisValues() map[string]string { return maps.Clone(v.axisValues) }
 
 // Label names the variant by its axis values, ordered by axis name and
-// joined by " · " ({"talla": "M", "color": "Rojo"} is "Rojo · M"), so it
+// joined by " · " ({"tamaño": "Grande", "color": "Rojo"} is "Rojo · Grande"), so it
 // is the same every time; "" for a variant without axes. A sale keeps the
 // label of the variant it sold.
 func (v *ProductVariant) Label() string {

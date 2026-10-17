@@ -130,14 +130,26 @@ func TestStockLevelReceive(t *testing.T) {
 		requireDec(t, "1000", level.AverageCost())
 	})
 
-	t.Run("cantidades fraccionarias (2,5 m) se suman sin error de precisión", func(t *testing.T) {
-		level := emptyLevel(t)
-		for _, q := range []string{"2.5", "0.1", "0.2"} {
-			_, err := level.Receive(dec(q), dec("3200"), testInfo())
-			require.NoError(t, err)
+	t.Run("cantidades fraccionarias se suman sin error de precisión", func(t *testing.T) {
+		tests := []struct {
+			business   string
+			quantities []string
+			want       string
+		}{
+			{"ferretería: 2,5 m + 0,1 m + 0,2 m", []string{"2.5", "0.1", "0.2"}, "2.8"},
+			{"tienda: 0,75 kg + 1,25 kg + 0,125 kg", []string{"0.75", "1.25", "0.125"}, "2.125"},
 		}
-		requireDec(t, "2.8", level.Quantity())
-		require.Equal(t, "2.8", level.Quantity().String())
+		for _, tt := range tests {
+			t.Run(tt.business, func(t *testing.T) {
+				level := emptyLevel(t)
+				for _, q := range tt.quantities {
+					_, err := level.Receive(dec(q), dec("3200"), testInfo())
+					require.NoError(t, err)
+				}
+				requireDec(t, tt.want, level.Quantity())
+				require.Equal(t, tt.want, level.Quantity().String())
+			})
+		}
 	})
 
 	t.Run("rechaza cantidad cero, negativa o fuera de NUMERIC(18,4)", func(t *testing.T) {
@@ -263,13 +275,21 @@ func TestStockLevelAdjust(t *testing.T) {
 	})
 
 	t.Run("registra adjustment con el delta y el motivo recortado", func(t *testing.T) {
-		level := levelWith(t, "10", "1000")
-		m, err := level.Adjust(dec("-1.5"), "  Bulto roto en bodega  ", strict, testInfo())
-		require.NoError(t, err)
-		require.Equal(t, domain.MovementAdjustment, m.Type())
-		requireDec(t, "-1.5", m.Quantity())
-		require.Equal(t, "Bulto roto en bodega", m.Reason())
-		requireDec(t, "8.5", level.Quantity())
+		tests := []struct{ business, delta, reason, want, left string }{
+			{"ferretería", "-1.5", "  Bulto roto en bodega  ", "Bulto roto en bodega", "8.5"},
+			{"almacén de ropa", "-1", " Prenda manchada en el probador", "Prenda manchada en el probador", "9"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.business, func(t *testing.T) {
+				level := levelWith(t, "10", "1000")
+				m, err := level.Adjust(dec(tt.delta), tt.reason, strict, testInfo())
+				require.NoError(t, err)
+				require.Equal(t, domain.MovementAdjustment, m.Type())
+				requireDec(t, tt.delta, m.Quantity())
+				require.Equal(t, tt.want, m.Reason())
+				requireDec(t, tt.left, level.Quantity())
+			})
+		}
 	})
 
 	t.Run("un ajuste negativo mayor al stock falla si la política no admite negativos", func(t *testing.T) {

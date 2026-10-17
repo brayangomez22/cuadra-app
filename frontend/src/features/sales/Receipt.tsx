@@ -105,7 +105,7 @@ export function Receipt({ sale, business, location, cashier, paper, className }:
 }
 
 // lineName is the product of a line and, for a variant with axes, its label
-// at the time of the sale: "Camiseta básica (Rojo · M)".
+// at the time of the sale: "Producto A (Rojo · M)".
 function lineName(line: Sale['lines'][number]) {
   return line.variant_label ? `${line.product_name} (${line.variant_label})` : line.product_name;
 }

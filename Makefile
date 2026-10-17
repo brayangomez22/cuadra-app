@@ -10,7 +10,7 @@ OPENAPI_SPEC := $(CURDIR)/api/openapi.yaml
 export
 
 .DEFAULT_GOAL := help
-.PHONY: help up down run test test-int lint check migrate sqlc openapi obs-up obs-down obs-alert-test jobs-ui
+.PHONY: help up down run test test-int lint lint-neutral check migrate sqlc openapi obs-up obs-down obs-alert-test jobs-ui
 
 help: ## List available commands
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -35,7 +35,10 @@ lint: ## gofmt + go vet + golangci-lint
 	cd $(BACKEND) && go vet ./...
 	cd $(BACKEND) && golangci-lint run ./...
 
-check: lint test test-int ## Must pass before a task is done
+lint-neutral: ## Fail if a term of one business type appears in the core
+	cd $(BACKEND) && go run ./cmd/lint-neutral -root $(CURDIR)
+
+check: lint lint-neutral test test-int ## Must pass before a task is done
 
 migrate: ## Apply migrations (goose up) as MIGRATION_DATABASE_URL and set app_user's password
 	cd $(BACKEND) && go run ./cmd/migrate

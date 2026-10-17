@@ -23,7 +23,7 @@ const RESULTS = 8;
 
 const searchQuery = (q: string): ProductQuery => ({ q, status: 'active', limit: RESULTS });
 
-// "3*7701234567890" or "2,5*cable": the quantity goes before the code.
+// "3*7701234567890" or "2,5*cinta": the quantity goes before the code.
 const withQuantity = /^\s*(\d+(?:[.,]\d{1,4})?)\s*\*\s*(.*)$/;
 
 function readSearch(text: string): { quantity: string; term: string } {

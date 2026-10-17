@@ -8,7 +8,7 @@ const email = z
   .trim()
   .min(1, 'Escriba su correo')
   .max(254, 'El correo puede tener máximo 254 caracteres')
-  .pipe(z.email('Escriba un correo válido, como ana@eltornillo.co'));
+  .pipe(z.email('Escriba un correo válido, como ana@minegocio.co'));
 
 export const loginSchema = z.object({
   email,
