@@ -911,7 +911,7 @@ export interface components {
          * @example {
          *       "error": {
          *         "code": "insufficient_stock",
-         *         "message": "No hay stock suficiente de Cemento gris 50kg"
+         *         "message": "No hay stock suficiente de Producto X"
          *       }
          *     }
          */
@@ -942,7 +942,7 @@ export interface components {
         SignUpRequest: {
             /**
              * @description Nombre de la empresa.
-             * @example Ferretería El Tornillo
+             * @example Mi Negocio
              */
             tenant_name: string;
             /**
@@ -955,7 +955,7 @@ export interface components {
              * @example Ana Gómez
              */
             name: string;
-            /** @example ana@eltornillo.co */
+            /** @example ana@minegocio.co */
             email: string;
             /**
              * Format: password
@@ -1204,7 +1204,7 @@ export interface components {
         ProductInput: {
             /**
              * @description Código interno de la variante por defecto, único en la empresa. Se guarda en mayúsculas.
-             * @example TUB-PVC-12
+             * @example CIN-18
              */
             sku: string;
             /**
@@ -1212,7 +1212,7 @@ export interface components {
              * @example 7701234567890
              */
             barcode?: string;
-            /** @example Tubo PVC presión 1/2 pulgada */
+            /** @example Cinta adhesiva transparente 18 mm */
             name: string;
             description?: string;
             /** Format: uuid */
@@ -1302,7 +1302,7 @@ export interface components {
             /**
              * @deprecated
              * @description El de la variante por defecto. Use `variants`.
-             * @example TUB-PVC-12
+             * @example CIN-18
              */
             sku: string;
             /**
@@ -1362,7 +1362,7 @@ export interface components {
             total: number;
         };
         CategoryInput: {
-            /** @example Plomería */
+            /** @example Aseo */
             name: string;
             /**
              * Format: uuid
@@ -2242,7 +2242,7 @@ export interface operations {
             query?: {
                 /**
                  * @description Texto a buscar.
-                 * @example tubo pvc
+                 * @example cinta
                  */
                 q?: string;
                 /** @description Solo los productos de esta categoría. */

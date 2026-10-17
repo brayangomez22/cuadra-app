@@ -24,13 +24,22 @@ func TestNewCategory(t *testing.T) {
 	})
 
 	t.Run("crea subcategoría con padre", func(t *testing.T) {
-		parent, err := domain.NewCategory(tenantID, "Plomería", nil, testNow)
-		require.NoError(t, err)
-		parentID := parent.ID()
+		tests := []struct{ business, parent, child string }{
+			{"ferretería", "Plomería", "Tubería PVC"},
+			{"almacén de ropa", "Hombre", "Camisetas"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.business, func(t *testing.T) {
+				parent, err := domain.NewCategory(tenantID, tt.parent, nil, testNow)
+				require.NoError(t, err)
+				parentID := parent.ID()
 
-		child, err := domain.NewCategory(tenantID, "Tubería PVC", &parentID, testNow)
-		require.NoError(t, err)
-		require.Equal(t, &parentID, child.ParentID())
+				child, err := domain.NewCategory(tenantID, tt.child, &parentID, testNow)
+				require.NoError(t, err)
+				require.Equal(t, tt.child, child.Name())
+				require.Equal(t, &parentID, child.ParentID())
+			})
+		}
 	})
 
 	t.Run("rechaza categoría con datos inválidos", func(t *testing.T) {

@@ -243,11 +243,19 @@ func TestSaleAddLine(t *testing.T) {
 	})
 
 	t.Run("recorta el nombre del producto", func(t *testing.T) {
-		s := newSale(t)
-		in := line("1", "100", "0", "")
-		in.ProductName = "  Cemento gris 50kg "
-		addLine(t, s, in)
-		require.Equal(t, "Cemento gris 50kg", firstLine(t, s).ProductName())
+		tests := []struct{ business, name, want string }{
+			{"ferretería", "  Cemento gris 50kg ", "Cemento gris 50kg"},
+			{"almacén de ropa", " Camiseta básica cuello redondo  ", "Camiseta básica cuello redondo"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.business, func(t *testing.T) {
+				s := newSale(t)
+				in := line("1", "100", "0", "")
+				in.ProductName = tt.name
+				addLine(t, s, in)
+				require.Equal(t, tt.want, firstLine(t, s).ProductName())
+			})
+		}
 	})
 
 	t.Run("guarda la variante, su etiqueta y la regla de precio", func(t *testing.T) {

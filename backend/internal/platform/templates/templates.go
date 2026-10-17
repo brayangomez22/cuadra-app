@@ -44,7 +44,7 @@ var idFormat = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 
 // Template is a business template.
 type Template struct {
-	// ID is the file name without ".yaml" ("ropa_calzado").
+	// ID is the file name without ".yaml" ("generica").
 	ID string
 	// Name and Description are shown to whoever signs up.
 	Name        string

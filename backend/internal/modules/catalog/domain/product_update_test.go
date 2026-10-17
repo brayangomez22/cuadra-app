@@ -24,18 +24,32 @@ func validDetails(t *testing.T) domain.ProductDetails {
 
 func TestProductUpdateDetails(t *testing.T) {
 	t.Run("actualiza los datos de un producto sin tocar sus variantes", func(t *testing.T) {
-		product := mustProduct(t, "28000", "32500")
-		variant := *product.DefaultVariant()
-		d := validDetails(t)
+		tests := []struct {
+			business          string
+			name, description string
+			unit              domain.UnitRef
+			rate              string
+		}{
+			{"ferretería", "  Tubo PVC presión 1/2 pulgada ", " Tramo de 6 m ", meters, "0.05"},
+			{"almacén de ropa", " Camiseta básica cuello redondo", "100 % algodón  ", piece, "0.19"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.business, func(t *testing.T) {
+				product := mustProduct(t, "28000", "32500")
+				variant := *product.DefaultVariant()
+				d := validDetails(t)
+				d.Name, d.Description, d.BaseUnit, d.TaxRate = tt.name, tt.description, tt.unit, mustTaxRate(t, tt.rate)
 
-		require.NoError(t, product.UpdateDetails(d))
+				require.NoError(t, product.UpdateDetails(d))
 
-		require.Equal(t, "Tubo PVC presión 1/2 pulgada", product.Name())
-		require.Equal(t, "Tramo de 6 m", product.Description())
-		require.Equal(t, d.CategoryID, product.CategoryID())
-		require.Equal(t, meters, product.BaseUnit())
-		require.True(t, dec("0.05").Equal(product.TaxRate().Rate()))
-		require.Equal(t, variant, *product.DefaultVariant())
+				require.Equal(t, strings.TrimSpace(tt.name), product.Name())
+				require.Equal(t, strings.TrimSpace(tt.description), product.Description())
+				require.Equal(t, d.CategoryID, product.CategoryID())
+				require.Equal(t, tt.unit, product.BaseUnit())
+				require.True(t, dec(tt.rate).Equal(product.TaxRate().Rate()))
+				require.Equal(t, variant, *product.DefaultVariant())
+			})
+		}
 	})
 
 	t.Run("quita la descripción y la categoría", func(t *testing.T) {

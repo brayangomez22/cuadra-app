@@ -80,7 +80,7 @@ export function ProductListPage() {
   return (
     <Page
       title="Productos"
-      description="El catálogo de la ferretería: precios, IVA y unidades."
+      description="Su catálogo: precios, IVA y unidades."
       actions={
         canWrite && (
           <ButtonLink to="/productos/nuevo" icon={<IconPlus />}>

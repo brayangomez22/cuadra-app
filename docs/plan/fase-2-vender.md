@@ -96,7 +96,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 **Pendientes que entran a esta tarea:** P34, P35 y P39 (`docs/plan/pendientes.md`).
 **Tests primero:** aplicar una plantilla siembra exactamente sus unidades, categorías, atributos y módulos; un registro con una plantilla inexistente falla sin crear el tenant; cada YAML de plantilla se valida en CI contra su esquema; casos de al menos dos plantillas.
 
-### [ ] T24h · Neutralidad del core
+### [x] T24h · Neutralidad del core
 **Depende de:** T24d.
 **Alcance:** barrido de nombres, ejemplos, textos y datos de prueba con términos de un nicho dentro del core (backend `internal/modules/*/domain` y `app`, `internal/platform`, frontend `src/shared` y pantallas del core, ejemplos de `api/openapi.yaml`). Textos visibles: "El catálogo de la ferretería" pasa a "Tu catálogo" y el ejemplo del registro pasa a `ana@minegocio.co`. Script `make lint-neutral` en el CI con una lista de términos prohibidos (`ferreter`, `bulto`, `rollo`, `maestro de obra`, `contratista`, `talla`...) que falla si aparecen en esas rutas. Quedan excluidos las plantillas YAML, los módulos, los datos semilla de la demo y los archivos `*_test.go`, `*.test.ts(x)`, `testdata/` y fixtures. Los tests table-driven de catálogo, inventario y ventas incluyen casos de al menos dos tipos de negocio.
 **Tests primero:** el script detecta un término prohibido en un archivo del core y no marca las rutas excluidas (incluidos un `*_test.go` y un fixture).
@@ -104,7 +104,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 ### [ ] T24i · Frontend: producto y POS
 **Depende de:** T24c, T24e, T24f.
 **Alcance:** formulario de producto con atributos según las definiciones del tenant; **si el módulo `variants` está inactivo, el formulario se ve igual que hoy** (producto simple); si está activo, ejes y matriz de variantes. Lista de productos, selector de productos y pantallas de inventario (stock, kardex, entradas) por variante. POS: búsqueda y carrito por variante (escanear el código de una variante agrega esa variante); el carrito guardado en `sessionStorage` lleva versión y se descarta si es de una versión anterior. La tirilla muestra `variant_label`.
-**Pendientes que entran a esta tarea:** P33, P38, P42 y P43 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P33, P38, P42, P43 y P47 (`docs/plan/pendientes.md`).
 **Tests primero:** un producto simple se crea y se vende igual que antes; con `variants` activo, se crean 6 variantes (3 tallas × 2 colores) y el POS agrega la correcta al escanear; un carrito guardado con la versión anterior se descarta sin error.
 **Después:** `/impeccable critique` del formulario de producto y del POS.
 

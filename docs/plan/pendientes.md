@@ -51,6 +51,8 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P44 | Sembrar los segmentos de cliente de la plantilla (`customer_segments`, que T24g ya declara y valida) con el mismo puerto `TenantSetup`, y a los tenants existentes los de `ferreteria` | T24g | T31 |
 | [ ] | P45 | Agregar el módulo `lots_expiry` a la plantilla `drogueria` cuando exista (hoy `Load` rechaza un módulo no registrado) | T24g | V2-12 |
 | [ ] | P46 | Decidir en la migración de T26 si se activa `unit_conversions` a los tenants existentes según su plantilla (`tenants.business_template`): la plantilla solo aplica sus módulos al registrarse | T24g | T26 |
+| [ ] | P47 | Quitar de `DefaultRules().Allow` (`backend/cmd/lint-neutral/neutral.go`) las excepciones de `bulto` y `rollo` en `frontend/src/features/catalog/units.ts` cuando el formulario use las unidades del tenant (P33). Si `units.ts` sigue existiendo sin esos términos, `lint-neutral` falla por la excepción sin usar | T24h | T24i |
+| [ ] | P48 | Los módulos activables no son core: el primero que tenga carpeta propia (por ejemplo, `internal/modules/<id>/` o su pantalla en `frontend/src/features/<id>/`) agrega su ruta a `ExcludePaths` de `lint-neutral`, porque sus ejemplos sí pueden ser de un nicho ("rollo de 100 m") | T24h | T26 |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 

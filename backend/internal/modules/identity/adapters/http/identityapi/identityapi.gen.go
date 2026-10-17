@@ -87,7 +87,7 @@ type BusinessTemplateList struct {
 	Items []BusinessTemplate `json:"items"`
 }
 
-// Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Error struct {
 	Error ErrorDetail `json:"error"`
 }
@@ -156,7 +156,7 @@ type SignUpRequest struct {
 	// Example: generica
 	BusinessTemplate *string `json:"business_template,omitempty"`
 
-	// Email Example: ana@eltornillo.co
+	// Email Example: ana@minegocio.co
 	Email string `json:"email"`
 
 	// Name Nombre del dueño.
@@ -174,7 +174,7 @@ type SignUpRequest struct {
 
 	// TenantName Nombre de la empresa.
 	//
-	// Example: Ferretería El Tornillo
+	// Example: Mi Negocio
 	TenantName string `json:"tenant_name"`
 }
 
@@ -223,13 +223,13 @@ type UnitId = openapi_types.UUID
 // VariantId defines model for VariantId.
 type VariantId = openapi_types.UUID
 
-// BadRequest Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// BadRequest Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type BadRequest = Error
 
-// InternalError Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// InternalError Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type InternalError = Error
 
-// Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Unauthorized = Error
 
 // LogoutParams defines parameters for Logout.

@@ -45,7 +45,7 @@ func (e ReadyStatusStatus) Valid() bool {
 	}
 }
 
-// Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Cemento gris 50kg"}}
+// Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Error struct {
 	Error ErrorDetail `json:"error"`
 }

@@ -29,7 +29,7 @@ describe('LoginPage', () => {
     await fillLogin('ana-eltornillo.co');
 
     expect(screen.getByLabelText('Correo')).toHaveAccessibleDescription(
-      'Escriba un correo válido, como ana@eltornillo.co',
+      'Escriba un correo válido, como ana@minegocio.co',
     );
     expect(api.calls('POST /api/v1/auth/login')).toHaveLength(0);
   });

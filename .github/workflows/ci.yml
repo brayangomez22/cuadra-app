@@ -34,6 +34,7 @@ jobs:
           untracked="$(git status --porcelain --untracked-files=all)"
           if [ -n "$untracked" ]; then echo "Generated files not committed:"; echo "$untracked"; exit 1; fi
       - run: make lint
+      - run: make lint-neutral
       - run: make test
       - run: make test-int
 

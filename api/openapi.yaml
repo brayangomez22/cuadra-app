@@ -370,7 +370,7 @@ paths:
           schema:
             type: string
             maxLength: 100
-          example: tubo pvc
+          example: cinta
         - name: category_id
           in: query
           description: Solo los productos de esta categoría.
@@ -2106,7 +2106,7 @@ components:
       example:
         error:
           code: insufficient_stock
-          message: No hay stock suficiente de Cemento gris 50kg
+          message: No hay stock suficiente de Producto X
     ErrorDetail:
       type: object
       required: [code, message]
@@ -2148,7 +2148,7 @@ components:
           description: Nombre de la empresa.
           minLength: 1
           maxLength: 200
-          example: Ferretería El Tornillo
+          example: Mi Negocio
         nit:
           type: string
           description: NIT con dígito de verificación (`890903938-8`).
@@ -2165,7 +2165,7 @@ components:
           type: string
           minLength: 3
           maxLength: 254
-          example: ana@eltornillo.co
+          example: ana@minegocio.co
         password:
           type: string
           description: Entre 8 y 72 caracteres.
@@ -2549,7 +2549,7 @@ components:
           description: Código interno de la variante por defecto, único en la empresa. Se guarda en mayúsculas.
           minLength: 1
           maxLength: 64
-          example: TUB-PVC-12
+          example: CIN-18
         barcode:
           type: string
           description: Código de barras, único en la empresa. Vacío u omitido si no tiene.
@@ -2559,7 +2559,7 @@ components:
           type: string
           minLength: 1
           maxLength: 200
-          example: Tubo PVC presión 1/2 pulgada
+          example: Cinta adhesiva transparente 18 mm
         description:
           type: string
           maxLength: 2000
@@ -2689,7 +2689,7 @@ components:
           type: string
           deprecated: true
           description: El de la variante por defecto. Use `variants`.
-          example: TUB-PVC-12
+          example: CIN-18
         barcode:
           type: string
           deprecated: true
@@ -2774,7 +2774,7 @@ components:
           type: string
           minLength: 1
           maxLength: 100
-          example: Plomería
+          example: Aseo
         parent_id:
           type: string
           format: uuid
