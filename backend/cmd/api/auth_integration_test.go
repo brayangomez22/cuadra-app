@@ -36,7 +36,7 @@ func TestAuthFlow(t *testing.T) {
 	})
 	require.NoError(t, err)
 	module, err := identity.New(identity.Config{
-		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule},
+		DB: database, Issuer: tokens, Setup: testSetup(t, catalogModule, moduleService),
 		Permissions: permissions, Modules: moduleService, Logger: log,
 		TracerProvider: noop.NewTracerProvider(), MeterProvider: metricnoop.NewMeterProvider(),
 	})

@@ -27,7 +27,11 @@ type stubUseCases struct {
 	refresh func(string) (app.Session, error)
 	logout  func(string) error
 	me      func(tenantID, userID uuid.UUID) (app.Profile, error)
+	// templates is what BusinessTemplates answers.
+	templates []app.BusinessTemplate
 }
+
+func (s *stubUseCases) BusinessTemplates() []app.BusinessTemplate { return s.templates }
 
 func (s *stubUseCases) SignUp(_ context.Context, in app.SignUpInput) (app.Session, error) {
 	return s.signUp(in)
@@ -52,7 +56,7 @@ func profile(t *testing.T, role domain.Role) app.Profile {
 	t.Helper()
 	nit, err := domain.ParseNIT("890903938-8")
 	require.NoError(t, err)
-	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, now)
+	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", now)
 	require.NoError(t, err)
 	email, err := domain.ParseEmail("ana@eltornillo.co")
 	require.NoError(t, err)
@@ -164,7 +168,18 @@ func TestSignUp(t *testing.T) {
 		require.Equal(t, app.SignUpInput{
 			TenantName: "Ferretería El Tornillo", NIT: "890903938-8", OwnerName: "Ana Gómez",
 			Email: "ana@eltornillo.co", Password: "clave-segura-123",
-		}, got)
+		}, got, "without business_template the use case picks the default")
+	})
+
+	t.Run("pasa la plantilla de tipo de negocio elegida", func(t *testing.T) {
+		var got app.SignUpInput
+		uc := &stubUseCases{signUp: func(in app.SignUpInput) (app.Session, error) { got = in; return session(t), nil }}
+		withTemplate := strings.Replace(body, `{`, `{"business_template":"ropa_calzado",`, 1)
+
+		rec := serve(t, uc, post("/api/v1/auth/signup", withTemplate))
+
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		require.Equal(t, "ropa_calzado", got.BusinessTemplate)
 	})
 
 	t.Run("traduce los errores de validación del dominio a 422 con su código", func(t *testing.T) {
@@ -179,6 +194,7 @@ func TestSignUp(t *testing.T) {
 			{err: domain.ErrPasswordTooLong, code: "password_too_long"},
 			{err: domain.ErrInvalidTenantName, code: "invalid_tenant_name"},
 			{err: domain.ErrInvalidUserName, code: "invalid_user_name"},
+			{err: domain.ErrUnknownBusinessTemplate, code: "unknown_business_template"},
 		}
 		for _, tt := range tests {
 			t.Run(tt.code, func(t *testing.T) {
@@ -340,6 +356,23 @@ func TestLogout(t *testing.T) {
 	})
 }
 
+func TestListBusinessTemplates(t *testing.T) {
+	t.Run("lista las plantillas con su nombre y descripción, sin autenticación", func(t *testing.T) {
+		uc := &stubUseCases{templates: []app.BusinessTemplate{
+			{ID: "ferreteria", Name: "Ferretería", Description: "Herramientas y construcción."},
+			{ID: "ropa_calzado", Name: "Ropa y calzado", Description: "Prendas por talla y color."},
+		}}
+
+		rec := serve(t, uc, httptest.NewRequest(http.MethodGet, "/api/v1/business-templates", nil))
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.JSONEq(t, `{"items": [
+			{"id": "ferreteria", "name": "Ferretería", "description": "Herramientas y construcción."},
+			{"id": "ropa_calzado", "name": "Ropa y calzado", "description": "Prendas por talla y color."}
+		]}`, rec.Body.String())
+	})
+}
+
 func TestGetMe(t *testing.T) {
 	t.Run("devuelve el usuario del token con su empresa, su NIT, sus permisos y los módulos activos", func(t *testing.T) {
 		p := profile(t, domain.RoleCashier)
@@ -364,6 +397,7 @@ func TestGetMe(t *testing.T) {
 			"tenant_id": "`+p.Tenant.ID().String()+`",
 			"tenant_name": "Ferretería El Tornillo",
 			"tenant_nit": "890903938-8",
+			"business_template": "ferreteria",
 			"name": "Ana Gómez",
 			"email": "ana@eltornillo.co",
 			"role": "cashier",

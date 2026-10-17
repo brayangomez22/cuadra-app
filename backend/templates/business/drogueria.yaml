@@ -1,0 +1,28 @@
+# Droguería: los lotes y vencimientos llegan con el módulo lots_expiry,
+# que se agrega aquí cuando exista.
+name: Droguería
+description: Medicamentos, cuidado personal, productos para bebé y primeros auxilios.
+modules: []
+units:
+  - {code: und, name: Unidad}
+  - {code: caja, name: Caja}
+  - {code: blíster, name: Blíster}
+  - {code: tableta, name: Tableta}
+  - {code: frasco, name: Frasco}
+  - {code: sobre, name: Sobre}
+  - {code: ml, name: Mililitro}
+  - {code: g, name: Gramo}
+categories:
+  - Medicamentos
+  - Cuidado personal
+  - Bebé
+  - Primeros auxilios
+  - Dermocosmética
+attributes:
+  - {key: marca, label: Marca, type: text}
+  - {key: laboratorio, label: Laboratorio, type: text}
+  - {key: principio_activo, label: Principio activo, type: text}
+  - {key: concentracion, label: Concentración, type: text}
+  - {key: requiere_formula, label: Requiere fórmula médica, type: boolean}
+variant_axes: []
+customer_segments: [Público, Convenio EPS, Empresa]

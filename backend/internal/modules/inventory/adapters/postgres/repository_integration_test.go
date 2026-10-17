@@ -68,7 +68,7 @@ func (f fixture) exec(t *testing.T, tenantID uuid.UUID, sql string, args ...any)
 func (f fixture) createTenant(t *testing.T) uuid.UUID {
 	t.Helper()
 	id := newID()
-	f.exec(t, id, "INSERT INTO tenants (id, name, nit, status, created_at) VALUES ($1, 'Ferretería', '890903938-8', 'active', $2)", id, now)
+	f.exec(t, id, "INSERT INTO tenants (id, name, nit, status, business_template, created_at) VALUES ($1, 'Ferretería', '890903938-8', 'active', 'ferreteria', $2)", id, now)
 	return id
 }
 

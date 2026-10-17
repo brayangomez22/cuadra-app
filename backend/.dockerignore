@@ -4,4 +4,5 @@
 !cmd/
 !internal/
 !migrations/
+!templates/
 **/*_test.go

@@ -64,6 +64,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/business-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar las plantillas de tipo de negocio
+         * @description Las plantillas que se pueden elegir al registrar una empresa. Cada una siembra unidades,
+         *     categorías, atributos de producto, ejes de variante y módulos; después la empresa puede
+         *     cambiarlo todo.
+         */
+        get: operations["listBusinessTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -940,6 +962,22 @@ export interface components {
              * @description Entre 8 y 72 caracteres.
              */
             password: string;
+            /**
+             * @description Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Sin ella, la empresa
+             *     empieza con la plantilla `generica`.
+             * @example generica
+             */
+            business_template?: string;
+        };
+        BusinessTemplate: {
+            /** @example generica */
+            id: string;
+            /** @example Negocio general */
+            name: string;
+            description: string;
+        };
+        BusinessTemplateList: {
+            items: components["schemas"]["BusinessTemplate"][];
         };
         LoginRequest: {
             email: string;
@@ -974,6 +1012,11 @@ export interface components {
              * @example 890903938-8
              */
             tenant_nit: string;
+            /**
+             * @description Plantilla de tipo de negocio con la que se registró la empresa.
+             * @example generica
+             */
+            business_template: string;
             name: string;
             email: string;
             /** @enum {string} */
@@ -1939,7 +1982,8 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             /**
              * @description Algún dato no cumple las reglas (`invalid_email`, `invalid_nit`, `invalid_nit_check_digit`,
-             *     `password_too_short`, `password_too_long`, `invalid_tenant_name`, `invalid_user_name`).
+             *     `password_too_short`, `password_too_long`, `invalid_tenant_name`, `invalid_user_name`,
+             *     `unknown_business_template`).
              */
             422: {
                 headers: {
@@ -1947,6 +1991,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listBusinessTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las plantillas, en el orden en que se presentan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusinessTemplateList"];
                 };
             };
             500: components["responses"]["InternalError"];

@@ -269,28 +269,6 @@ func (f fakeUnits) Create(_ context.Context, u *domain.UnitOfMeasure) error {
 	return nil
 }
 
-func (f fakeUnits) CreateMany(_ context.Context, tenantID uuid.UUID, units []*domain.UnitOfMeasure) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	stored := map[uuid.UUID]*domain.UnitOfMeasure{}
-	for _, u := range units {
-		if u.TenantID() != tenantID {
-			return errors.New("fake: unit of another tenant")
-		}
-		if err := f.checkCode(u); err != nil {
-			return err
-		}
-		for _, other := range stored {
-			if other.Code() == u.Code() {
-				return domain.ErrUnitCodeTaken
-			}
-		}
-		stored[u.ID()] = cloneUnit(u)
-	}
-	maps.Copy(f.units, stored)
-	return nil
-}
-
 func (f fakeUnits) GetByID(_ context.Context, tenantID, id uuid.UUID) (*domain.UnitOfMeasure, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -392,6 +370,7 @@ func newEnv(t *testing.T) *env {
 		Units:          fakeUnits{e.store},
 		Attributes:     fakeAttributes{e.store},
 		VariantAxes:    fakeAxes{e.store},
+		Seeds:          fakeSeeds{e.store},
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,
@@ -652,5 +631,47 @@ func (f fakeAxes) Delete(_ context.Context, tenantID, id uuid.UUID) error {
 		return domain.ErrAxisInUse
 	}
 	delete(f.axes, id)
+	return nil
+}
+
+// fakeSeeds stores a seed with the other fakes, all or nothing.
+type fakeSeeds struct{ *store }
+
+func (f fakeSeeds) Seed(ctx context.Context, tenantID uuid.UUID, seed domain.TenantSeed) (err error) {
+	f.mu.Lock()
+	units, categories := maps.Clone(f.units), maps.Clone(f.categories)
+	attributes, axes := maps.Clone(f.attributes), maps.Clone(f.axes)
+	f.mu.Unlock()
+	defer func() {
+		if err != nil {
+			f.mu.Lock()
+			f.units, f.categories, f.attributes, f.axes = units, categories, attributes, axes
+			f.mu.Unlock()
+		}
+	}()
+
+	for _, u := range seed.Units {
+		if u.TenantID() != tenantID {
+			return errors.New("fake: unit of another tenant")
+		}
+		if err := fakeUnits(f).Create(ctx, u); err != nil {
+			return err
+		}
+	}
+	for _, c := range seed.Categories {
+		if err := fakeCategories(f).Create(ctx, c); err != nil {
+			return err
+		}
+	}
+	for _, d := range seed.Attributes {
+		if err := fakeAttributes(f).Create(ctx, d); err != nil {
+			return err
+		}
+	}
+	for _, a := range seed.VariantAxes {
+		if err := fakeAxes(f).Create(ctx, a); err != nil {
+			return err
+		}
+	}
 	return nil
 }

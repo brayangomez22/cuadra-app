@@ -52,6 +52,7 @@ export function aUser(role: Me['role'] = 'owner'): Me {
     tenant_id: '01920000-0000-7000-8000-0000000000aa',
     tenant_name: 'Ferretería El Tornillo',
     tenant_nit: '890903938-8',
+    business_template: 'ferreteria',
     name: 'Ana Gómez',
     email: 'ana@eltornillo.co',
     role,

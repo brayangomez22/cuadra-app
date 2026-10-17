@@ -35,12 +35,30 @@ type RateLimiter interface {
 	Allow(key string) (allowed bool, retryAfter time.Duration)
 }
 
-// TenantSetup prepares a new tenant's initial data in the other modules
-// (the catalog's units of measure). cmd/api satisfies it; SignUp calls it
-// inside the sign-up transaction.
+// TenantSetup knows the business templates and prepares a new tenant's
+// initial data in the other modules from one of them (units, categories,
+// attributes, variant axes and active modules). cmd/api satisfies it;
+// SignUp calls SetUpTenant inside the sign-up transaction.
 type TenantSetup interface {
-	SetUpTenant(ctx context.Context, tenantID uuid.UUID) error
+	// Templates lists the templates, in the order they are presented.
+	Templates() []BusinessTemplate
+	// SetUpTenant applies the template to the new tenant.
+	SetUpTenant(ctx context.Context, tenantID uuid.UUID, template string) error
 }
+
+// BusinessTemplate is a template a business can sign up with.
+type BusinessTemplate struct {
+	ID          string
+	Name        string
+	Description string
+}
+
+// DefaultBusinessTemplate is the template of a sign-up that names none.
+const DefaultBusinessTemplate = "generica"
+
+// BusinessTemplates lists the templates a business can sign up with. They
+// are static data, so it opens no span.
+func (s *Service) BusinessTemplates() []BusinessTemplate { return s.Setup.Templates() }
 
 // Deps are the Service's dependencies. Now defaults to time.Now, the
 // providers to no-ops and Logger to a discarding logger.
@@ -109,7 +127,7 @@ func NewService(d Deps) (*Service, error) {
 		return nil, err
 	}
 	if s.signups, err = meter.Int64Counter("cuadra.identity.signups",
-		metric.WithDescription("Businesses (tenants) registered."),
+		metric.WithDescription("Businesses (tenants) registered, by business template."),
 		metric.WithUnit("{tenant}")); err != nil {
 		return nil, err
 	}

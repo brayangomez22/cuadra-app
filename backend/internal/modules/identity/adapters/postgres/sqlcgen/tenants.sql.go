@@ -13,16 +13,17 @@ import (
 )
 
 const createTenant = `-- name: CreateTenant :exec
-INSERT INTO tenants (id, name, nit, status, created_at)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO tenants (id, name, nit, status, business_template, created_at)
+VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type CreateTenantParams struct {
-	ID        uuid.UUID
-	Name      string
-	Nit       string
-	Status    string
-	CreatedAt time.Time
+	ID               uuid.UUID
+	Name             string
+	Nit              string
+	Status           string
+	BusinessTemplate string
+	CreatedAt        time.Time
 }
 
 func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) error {
@@ -31,25 +32,36 @@ func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) erro
 		arg.Name,
 		arg.Nit,
 		arg.Status,
+		arg.BusinessTemplate,
 		arg.CreatedAt,
 	)
 	return err
 }
 
 const getTenant = `-- name: GetTenant :one
-SELECT id, name, nit, status, created_at
+SELECT id, name, nit, status, business_template, created_at
 FROM tenants
 WHERE id = $1
 `
 
-func (q *Queries) GetTenant(ctx context.Context, id uuid.UUID) (Tenant, error) {
+type GetTenantRow struct {
+	ID               uuid.UUID
+	Name             string
+	Nit              string
+	Status           string
+	BusinessTemplate string
+	CreatedAt        time.Time
+}
+
+func (q *Queries) GetTenant(ctx context.Context, id uuid.UUID) (GetTenantRow, error) {
 	row := q.db.QueryRow(ctx, getTenant, id)
-	var i Tenant
+	var i GetTenantRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Nit,
 		&i.Status,
+		&i.BusinessTemplate,
 		&i.CreatedAt,
 	)
 	return i, err

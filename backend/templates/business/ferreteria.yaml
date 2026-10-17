@@ -1,0 +1,25 @@
+# Ferretería: las unidades son las que tenía el catálogo fijo antes de T24d.
+name: Ferretería
+description: Herramientas, materiales de construcción, eléctricos, plomería y pinturas.
+modules: []
+units:
+  - {code: und, name: Unidad}
+  - {code: m, name: Metro}
+  - {code: kg, name: Kilogramo}
+  - {code: l, name: Litro}
+  - {code: caja, name: Caja}
+  - {code: rollo, name: Rollo}
+  - {code: bulto, name: Bulto}
+  - {code: galon, name: Galón}
+categories:
+  - Herramientas
+  - Construcción
+  - Eléctricos
+  - Plomería
+  - Pinturas
+  - Tornillería
+attributes:
+  - {key: marca, label: Marca, type: text}
+  - {key: material, label: Material, type: text}
+variant_axes: []
+customer_segments: [Público, Maestro de obra, Contratista, Empresa]

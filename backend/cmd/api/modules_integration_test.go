@@ -36,6 +36,15 @@ func testModules(t *testing.T, database *db.DB) (*modules.Service, *identity.Per
 	return svc, permissions
 }
 
+// testSetup wires the sign-up's tenant setup with the embedded business
+// templates, as main does.
+func testSetup(t *testing.T, catalogModule *catalog.Module, moduleService *modules.Service) tenantSetup {
+	t.Helper()
+	setup, err := newTenantSetup(modulesRegistry(t), catalogModule, moduleService)
+	require.NoError(t, err)
+	return setup
+}
+
 // TestModulesFlow runs the modules through the whole stack: the owner turns
 // variants on and off, the contract's x-module hides the operation, and the
 // tenant's data stays.
@@ -51,7 +60,7 @@ func TestModulesFlow(t *testing.T) {
 	})
 	require.NoError(t, err)
 	identityModule, err := identity.New(identity.Config{
-		DB: database, Issuer: tokens, Setup: tenantSetup{catalogModule},
+		DB: database, Issuer: tokens, Setup: testSetup(t, catalogModule, moduleService),
 		Permissions: permissions, Modules: moduleService, Logger: log,
 		TracerProvider: noop.NewTracerProvider(), MeterProvider: metricnoop.NewMeterProvider(),
 	})

@@ -69,7 +69,7 @@ type tenant struct {
 func (f fixture) createTenant(t *testing.T) tenant {
 	t.Helper()
 	tn := tenant{id: newID(), product: newID(), variant: newID()}
-	f.exec(t, tn.id, "INSERT INTO tenants (id, name, nit, status, created_at) VALUES ($1, 'Ferretería', '890903938-8', 'active', $2)", tn.id, now)
+	f.exec(t, tn.id, "INSERT INTO tenants (id, name, nit, status, business_template, created_at) VALUES ($1, 'Ferretería', '890903938-8', 'active', 'ferreteria', $2)", tn.id, now)
 	f.exec(t, tn.id, "INSERT INTO units_of_measure (id, tenant_id, code, name, created_at) VALUES ($1, $2, 'und', 'Unidad', $3)",
 		newID(), tn.id, now)
 	f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit_id, tax_rate, active, created_at)

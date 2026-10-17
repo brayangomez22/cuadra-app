@@ -28,6 +28,7 @@ type UseCases interface {
 	Refresh(ctx context.Context, raw string) (app.Session, error)
 	Logout(ctx context.Context, raw string) error
 	Me(ctx context.Context, tenantID, userID uuid.UUID) (app.Profile, error)
+	BusinessTemplates() []app.BusinessTemplate
 }
 
 // Handler implements identityapi.StrictServerInterface.
@@ -67,18 +68,32 @@ func Register(mux *http.ServeMux, uc UseCases, log *slog.Logger, opts ...Option)
 
 // SignUp registers a business and its owner, and starts a session.
 func (h *Handler) SignUp(ctx context.Context, req identityapi.SignUpRequestObject) (identityapi.SignUpResponseObject, error) {
-	session, err := h.uc.SignUp(ctx, app.SignUpInput{
+	in := app.SignUpInput{
 		TenantName: req.Body.TenantName,
 		NIT:        req.Body.Nit,
 		OwnerName:  req.Body.Name,
 		Email:      req.Body.Email,
 		Password:   req.Body.Password,
-	})
+	}
+	if req.Body.BusinessTemplate != nil {
+		in.BusinessTemplate = *req.Body.BusinessTemplate
+	}
+	session, err := h.uc.SignUp(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 	body, cookie := h.authSession(session)
 	return identityapi.SignUp201JSONResponse{Body: body, Headers: identityapi.SignUp201ResponseHeaders{SetCookie: &cookie}}, nil
+}
+
+// ListBusinessTemplates lists the templates a business can sign up with.
+func (h *Handler) ListBusinessTemplates(context.Context, identityapi.ListBusinessTemplatesRequestObject) (identityapi.ListBusinessTemplatesResponseObject, error) {
+	templates := h.uc.BusinessTemplates()
+	items := make([]identityapi.BusinessTemplate, 0, len(templates))
+	for _, t := range templates {
+		items = append(items, identityapi.BusinessTemplate{Id: t.ID, Name: t.Name, Description: t.Description})
+	}
+	return identityapi.ListBusinessTemplates200JSONResponse{Items: items}, nil
 }
 
 // Login checks the credentials and starts a session.
@@ -182,15 +197,16 @@ func me(p app.Profile) identityapi.Me {
 		modules = []string{}
 	}
 	return identityapi.Me{
-		Id:          p.User.ID(),
-		TenantId:    p.Tenant.ID(),
-		TenantName:  p.Tenant.Name(),
-		TenantNit:   p.Tenant.NIT().String(),
-		Name:        p.User.Name(),
-		Email:       p.User.Email().String(),
-		Role:        identityapi.MeRole(p.User.Role()),
-		Permissions: names,
-		Modules:     modules,
+		Id:               p.User.ID(),
+		TenantId:         p.Tenant.ID(),
+		TenantName:       p.Tenant.Name(),
+		TenantNit:        p.Tenant.NIT().String(),
+		BusinessTemplate: p.Tenant.BusinessTemplate(),
+		Name:             p.User.Name(),
+		Email:            p.User.Email().String(),
+		Role:             identityapi.MeRole(p.User.Role()),
+		Permissions:      names,
+		Modules:          modules,
 	}
 }
 

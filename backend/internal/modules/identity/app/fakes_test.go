@@ -39,7 +39,9 @@ type fakeTenants struct {
 }
 
 func cloneTenant(t *domain.Tenant) *domain.Tenant {
-	c, err := domain.RehydrateTenant(domain.TenantSnapshot{ID: t.ID(), Name: t.Name(), NIT: t.NIT(), Status: t.Status(), CreatedAt: t.CreatedAt()})
+	c, err := domain.RehydrateTenant(domain.TenantSnapshot{
+		ID: t.ID(), Name: t.Name(), NIT: t.NIT(), Status: t.Status(), BusinessTemplate: t.BusinessTemplate(), CreatedAt: t.CreatedAt(),
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -138,16 +140,27 @@ var testRegistry = fakeRegistry{
 	{Module: "work_orders", Permission: "work_orders:write", Roles: []string{"cashier"}},
 }
 
-// fakeSetup records the tenants it prepared and whether it ran inside
-// CreateWithOwner's transaction; err makes it fail.
-type fakeSetup struct {
-	mu      sync.Mutex
-	tenants []uuid.UUID
-	inTx    []bool
-	err     error
+// testTemplates are the business templates fakeSetup offers.
+var testTemplates = []app.BusinessTemplate{
+	{ID: "generica", Name: "Negocio general", Description: "Cualquier comercio."},
+	{ID: "ferreteria", Name: "Ferretería", Description: "Herramientas y construcción."},
+	{ID: "ropa_calzado", Name: "Ropa y calzado", Description: "Prendas por talla y color."},
 }
 
-func (f *fakeSetup) SetUpTenant(ctx context.Context, tenantID uuid.UUID) error {
+// fakeSetup offers testTemplates and records the tenants it prepared, with
+// their template and whether it ran inside CreateWithOwner's transaction;
+// err makes it fail.
+type fakeSetup struct {
+	mu        sync.Mutex
+	tenants   []uuid.UUID
+	templates []string
+	inTx      []bool
+	err       error
+}
+
+func (f *fakeSetup) Templates() []app.BusinessTemplate { return slices.Clone(testTemplates) }
+
+func (f *fakeSetup) SetUpTenant(ctx context.Context, tenantID uuid.UUID, template string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.err != nil {
@@ -155,6 +168,7 @@ func (f *fakeSetup) SetUpTenant(ctx context.Context, tenantID uuid.UUID) error {
 	}
 	txTenant, ok := ctx.Value(inTx{}).(uuid.UUID)
 	f.tenants = append(f.tenants, tenantID)
+	f.templates = append(f.templates, template)
 	f.inTx = append(f.inTx, ok && txTenant == tenantID)
 	return nil
 }
@@ -330,10 +344,22 @@ func (f *fakeTokens) family(familyID uuid.UUID) []*domain.RefreshToken {
 // a login with an unknown email still pays for one.
 type fakeHasher struct {
 	mu       sync.Mutex
+	hashes   int
 	verifies int
 }
 
-func (h *fakeHasher) Hash(plain string) (string, error) { return "hash:" + plain, nil }
+func (h *fakeHasher) Hash(plain string) (string, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.hashes++
+	return "hash:" + plain, nil
+}
+
+func (h *fakeHasher) Hashes() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.hashes
+}
 
 func (h *fakeHasher) Verify(plain, hash string) (bool, error) {
 	h.mu.Lock()
@@ -449,7 +475,7 @@ func (e *env) seed(t *testing.T, email, password string, role domain.Role) (*dom
 	t.Helper()
 	nit, err := domain.ParseNIT(validNIT)
 	require.NoError(t, err)
-	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, e.clock.Now())
+	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", e.clock.Now())
 	require.NoError(t, err)
 	require.NoError(t, e.tenants.Create(t.Context(), tenant))
 	return tenant, e.seedUser(t, tenant.ID(), email, password, role)
