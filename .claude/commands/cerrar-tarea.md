@@ -1,7 +1,6 @@
 ---
 description: Cierra la tarea actual — verifica, hace commit, push, abre el PR, espera el CI y, si pasa completo, hace merge y vuelve a main
 argument-hint: (opcional) mensaje de commit si quieres reemplazar el propuesto
-model: sonnet
 allowed-tools: Read(.git/cierre-tarea.md), Bash(git status:*), Bash(git diff:*), Bash(git branch:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Bash(git push -u origin:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh run view:*), Bash(gh pr merge --squash --delete-branch), Bash(git switch main), Bash(git pull), Bash(make check), Bash(npm run lint:*), Bash(npm test:*), Bash(rm .git/cierre-tarea.md)
 ---
 
