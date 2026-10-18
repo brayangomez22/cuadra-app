@@ -55,7 +55,7 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P49 | Alta atómica de un producto con sus N variantes (un caso de uso del catálogo y su endpoint, o `ProductInput` con `variants`). Hoy el formulario lo hace en varias requests y reconcilia si algo falla (decisión de T24i); la importación lo necesita en una sola transacción y el formulario puede pasar a usarlo | T24i | T29 |
 | [x] | P50 | Editar el IVA por defecto de la empresa (`tenants.default_tax_rate`, que hoy solo siembra la plantilla al registrarse) en la configuración, junto a unidades, atributos y módulos. Hecho en T24j | T24i | T24j |
 | [ ] | P48 | Los módulos activables no son core: el primero que tenga carpeta propia (por ejemplo, `internal/modules/<id>/` o su pantalla en `frontend/src/features/<id>/`) agrega su ruta a `ExcludePaths` de `lint-neutral`, porque sus ejemplos sí pueden ser de un nicho ("rollo de 100 m") | T24h | T26 |
-| [ ] | P52 | `/impeccable critique` de la configuración (`/configuracion`) y del registro con tipo de negocio, que T24j deja para la sesión de diseño: revisarlos en los anchos de referencia y en los dos temas junto con la dirección visual | T24j | T24k |
+| [x] | P52 | `/impeccable critique` de la configuración (`/configuracion`) y del registro con tipo de negocio, que T24j deja para la sesión de diseño: revisarlos en los anchos de referencia y en los dos temas junto con la dirección visual Hecho en T24k: los hallazgos pasaron a P54–P56 | T24j | T24k |
 | [ ] | P53 | Cambiar el IVA por defecto de la empresa (`PATCH /api/v1/tenant`) no queda auditado: solo hay un log `tenant settings updated`. Registrarlo en el registro de auditoría, como los módulos (P40) | T24j | T38 |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
@@ -71,6 +71,10 @@ P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31), P20 en `chore
 | [x] | P19 | Bundle del frontend sobre 500 kB: cargar las pantallas por ruta (`lazy`) | PR #20 (T15) |
 | [x] | P20 | P2 del critique del POS: resaltar la línea recién agregada y rediseñar el final del cobro. Va en su propia rama `chore/` (trabajo de diseño con `/impeccable`), la siguiente | PR #28 (T21) |
 | [x] | P23 | Los IDs P21 y P22 están repetidos: los de "Para validar con los pilotos" se deben renumerar (los nuevos van después del último ID usado) para que `/tarea` no los confunda con los asignados a T47 (pasaron a P27 y P28) | T24a |
+| [ ] | P54 | En 360px las pestañas de `/configuracion` se parten en dos filas ("Ejes de variante" y "Módulos" quedan abajo): deben caber en una fila con desplazamiento horizontal propio o pasar a otro control | T24k (critique, P52) |
+| [ ] | P55 | Registro: "Negocio general" (la opción para quien no se ve en la lista) queda en medio del orden alfabético de los tipos de negocio; debe ir primero o aparte. Y la ayuda del NIT usa de ejemplo `890903938-8`, un NIT real de una empresa conocida: cambiarlo por uno ficticio con dígito válido | T24k (critique, P52) |
+| [ ] | P56 | POS en 1366px: la etiqueta "Descuento %" de la línea se parte en dos líneas según la fuente del sistema (pasa en Chromium de Linux); la columna no debe depender del ancho exacto del texto | T24k (critique) |
+| [ ] | P57 | `features/dev/UiCatalogPage.tsx` usa datos de ejemplo de un solo nicho ("Cemento gris 50kg", unidad "bulto"): mezclar ejemplos de al menos dos tipos de negocio, como pide la regla de neutralidad de `docs/estilos.md` | T24k |
 
 ## Para validar con los pilotos
 

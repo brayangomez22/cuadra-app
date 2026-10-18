@@ -66,9 +66,11 @@ src/shared/ui/Button/
 
 ## 3. Tokens: dos capas
 
-### Dirección visual: "Señal de obra"
+### Dirección visual: "Mostrador"
 
-Elegida en T13 entre tres propuestas (ver `docs/decisiones.md`). El naranja de seguridad de la obra es el **único** color de marca, sobre grises cálidos de cemento, con texto casi negro. Las cifras son grandes y el total de la venta usa `--font-size-display` (56px). Densidad cómoda: filas de 48px con mouse y de 56px en pantallas táctiles. Solo fuentes del sistema.
+Elegida en T13 entre tres propuestas y neutralizada en T24k (ver `docs/decisiones.md`). El mostrador es lo que comparten todos los comercios que usan Cuadra, y la dirección no evoca ningún gremio. El naranja es el **único** color de marca, sobre grises casi neutros, con texto casi negro. Se queda porque es el que mejor se encuentra de lejos y con mala luz, y porque no se confunde con los colores de estado (rojo, verde, ámbar y azul). Las cifras son grandes y el total de la venta usa `--font-size-display` (56px). Densidad cómoda: filas de 48px con mouse y de 56px en pantallas táctiles. Solo fuentes del sistema.
+
+**Neutralidad:** la identidad sale de la tipografía, la jerarquía y el naranja bien usado, nunca de motivos de un tipo de negocio (texturas, íconos o metáforas de obra, farmacia, moda...). Una pantalla se revisa con datos de al menos dos tipos de negocio.
 
 **Reglas del naranja:**
 - El naranja es **fondo** (la acción principal) o **acento** (`--color-border-accent`: subrayado de enlaces, fila seleccionada, marca). **Nunca es color de texto:** sobre blanco da 3.6:1.
@@ -105,16 +107,16 @@ La tabla siguiente la genera ese mismo test; si cambias un color, el test falla 
 
 | Tema | Primer plano | Fondo | Contraste | Mínimo |
 |---|---|---|---|---|
-| claro | `--color-text-default` | `--color-bg-canvas` | 14.45:1 | 4.5:1 |
-| claro | `--color-text-default` | `--color-bg-surface` | 17.56:1 | 4.5:1 |
-| claro | `--color-text-default` | `--color-bg-subtle` | 13.17:1 | 4.5:1 |
-| claro | `--color-text-default` | `--color-feedback-success-subtle` | 15.11:1 | 4.5:1 |
-| claro | `--color-text-muted` | `--color-bg-canvas` | 6.40:1 | 4.5:1 |
-| claro | `--color-text-muted` | `--color-bg-surface` | 7.78:1 | 4.5:1 |
-| claro | `--color-text-muted` | `--color-bg-subtle` | 5.83:1 | 4.5:1 |
-| claro | `--color-text-on-action` | `--color-action-primary` | 5.67:1 | 4.5:1 |
+| claro | `--color-text-default` | `--color-bg-canvas` | 14.57:1 | 4.5:1 |
+| claro | `--color-text-default` | `--color-bg-surface` | 17.55:1 | 4.5:1 |
+| claro | `--color-text-default` | `--color-bg-subtle` | 13.28:1 | 4.5:1 |
+| claro | `--color-text-default` | `--color-feedback-success-subtle` | 15.10:1 | 4.5:1 |
+| claro | `--color-text-muted` | `--color-bg-canvas` | 6.28:1 | 4.5:1 |
+| claro | `--color-text-muted` | `--color-bg-surface` | 7.57:1 | 4.5:1 |
+| claro | `--color-text-muted` | `--color-bg-subtle` | 5.72:1 | 4.5:1 |
+| claro | `--color-text-on-action` | `--color-action-primary` | 5.66:1 | 4.5:1 |
 | claro | `--color-text-on-action` | `--color-action-primary-hover` | 6.75:1 | 4.5:1 |
-| claro | `--color-text-on-action` | `--color-action-primary-active` | 4.88:1 | 4.5:1 |
+| claro | `--color-text-on-action` | `--color-action-primary-active` | 4.87:1 | 4.5:1 |
 | claro | `--color-text-on-danger` | `--color-action-danger` | 6.53:1 | 4.5:1 |
 | claro | `--color-text-on-danger` | `--color-action-danger-hover` | 8.12:1 | 4.5:1 |
 | claro | `--color-feedback-danger` | `--color-bg-surface` | 6.53:1 | 4.5:1 |
@@ -125,36 +127,36 @@ La tabla siguiente la genera ese mismo test; si cambias un color, el test falla 
 | claro | `--color-feedback-warning` | `--color-feedback-warning-subtle` | 5.56:1 | 4.5:1 |
 | claro | `--color-feedback-info` | `--color-bg-surface` | 7.09:1 | 4.5:1 |
 | claro | `--color-feedback-info` | `--color-feedback-info-subtle` | 5.98:1 | 4.5:1 |
-| claro | `--color-focus-ring` | `--color-bg-canvas` | 14.45:1 | 3:1 |
-| claro | `--color-focus-ring` | `--color-bg-surface` | 17.56:1 | 3:1 |
-| claro | `--color-border-strong` | `--color-bg-canvas` | 3.67:1 | 3:1 |
-| claro | `--color-border-strong` | `--color-bg-surface` | 4.47:1 | 3:1 |
+| claro | `--color-focus-ring` | `--color-bg-canvas` | 14.57:1 | 3:1 |
+| claro | `--color-focus-ring` | `--color-bg-surface` | 17.55:1 | 3:1 |
+| claro | `--color-border-strong` | `--color-bg-canvas` | 3.66:1 | 3:1 |
+| claro | `--color-border-strong` | `--color-bg-surface` | 4.41:1 | 3:1 |
 | claro | `--color-border-accent` | `--color-bg-surface` | 3.59:1 | 3:1 |
-| oscuro | `--color-text-default` | `--color-bg-canvas` | 15.87:1 | 4.5:1 |
-| oscuro | `--color-text-default` | `--color-bg-surface` | 14.33:1 | 4.5:1 |
-| oscuro | `--color-text-default` | `--color-bg-subtle` | 12.48:1 | 4.5:1 |
-| oscuro | `--color-text-default` | `--color-feedback-success-subtle` | 12.50:1 | 4.5:1 |
-| oscuro | `--color-text-muted` | `--color-bg-canvas` | 8.52:1 | 4.5:1 |
-| oscuro | `--color-text-muted` | `--color-bg-surface` | 7.70:1 | 4.5:1 |
-| oscuro | `--color-text-muted` | `--color-bg-subtle` | 6.71:1 | 4.5:1 |
+| oscuro | `--color-text-default` | `--color-bg-canvas` | 16.01:1 | 4.5:1 |
+| oscuro | `--color-text-default` | `--color-bg-surface` | 14.55:1 | 4.5:1 |
+| oscuro | `--color-text-default` | `--color-bg-subtle` | 12.66:1 | 4.5:1 |
+| oscuro | `--color-text-default` | `--color-feedback-success-subtle` | 12.70:1 | 4.5:1 |
+| oscuro | `--color-text-muted` | `--color-bg-canvas` | 8.72:1 | 4.5:1 |
+| oscuro | `--color-text-muted` | `--color-bg-surface` | 7.93:1 | 4.5:1 |
+| oscuro | `--color-text-muted` | `--color-bg-subtle` | 6.90:1 | 4.5:1 |
 | oscuro | `--color-text-on-action` | `--color-action-primary` | 6.75:1 | 4.5:1 |
-| oscuro | `--color-text-on-action` | `--color-action-primary-hover` | 7.88:1 | 4.5:1 |
+| oscuro | `--color-text-on-action` | `--color-action-primary-hover` | 7.87:1 | 4.5:1 |
 | oscuro | `--color-text-on-action` | `--color-action-primary-active` | 5.44:1 | 4.5:1 |
 | oscuro | `--color-text-on-danger` | `--color-action-danger` | 6.53:1 | 4.5:1 |
 | oscuro | `--color-text-on-danger` | `--color-action-danger-hover` | 5.62:1 | 4.5:1 |
-| oscuro | `--color-feedback-danger` | `--color-bg-surface` | 7.21:1 | 4.5:1 |
+| oscuro | `--color-feedback-danger` | `--color-bg-surface` | 7.20:1 | 4.5:1 |
 | oscuro | `--color-feedback-danger` | `--color-feedback-danger-subtle` | 6.60:1 | 4.5:1 |
 | oscuro | `--color-feedback-success` | `--color-bg-surface` | 7.88:1 | 4.5:1 |
 | oscuro | `--color-feedback-success` | `--color-feedback-success-subtle` | 6.88:1 | 4.5:1 |
-| oscuro | `--color-feedback-warning` | `--color-bg-surface` | 9.20:1 | 4.5:1 |
+| oscuro | `--color-feedback-warning` | `--color-bg-surface` | 9.19:1 | 4.5:1 |
 | oscuro | `--color-feedback-warning` | `--color-feedback-warning-subtle` | 8.01:1 | 4.5:1 |
 | oscuro | `--color-feedback-info` | `--color-bg-surface` | 7.95:1 | 4.5:1 |
 | oscuro | `--color-feedback-info` | `--color-feedback-info-subtle` | 7.24:1 | 4.5:1 |
-| oscuro | `--color-focus-ring` | `--color-bg-canvas` | 10.33:1 | 3:1 |
-| oscuro | `--color-focus-ring` | `--color-bg-surface` | 9.33:1 | 3:1 |
-| oscuro | `--color-border-strong` | `--color-bg-canvas` | 3.86:1 | 3:1 |
-| oscuro | `--color-border-strong` | `--color-bg-surface` | 3.48:1 | 3:1 |
-| oscuro | `--color-border-accent` | `--color-bg-surface` | 6.33:1 | 3:1 |
+| oscuro | `--color-focus-ring` | `--color-bg-canvas` | 10.26:1 | 3:1 |
+| oscuro | `--color-focus-ring` | `--color-bg-surface` | 9.32:1 | 3:1 |
+| oscuro | `--color-border-strong` | `--color-bg-canvas` | 4.03:1 | 3:1 |
+| oscuro | `--color-border-strong` | `--color-bg-surface` | 3.67:1 | 3:1 |
+| oscuro | `--color-border-accent` | `--color-bg-surface` | 6.32:1 | 3:1 |
 
 ## 4. Cómo se escribe un componente
 

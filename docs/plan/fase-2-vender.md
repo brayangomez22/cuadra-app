@@ -115,7 +115,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 **Tests primero:** un menú de un módulo inactivo no aparece; el registro con una plantilla siembra sus unidades y sus módulos (de punta a punta contra la API); `api/openapi.yaml` no tiene campos `deprecated` del bloque.
 **Después:** `/impeccable critique` de la configuración y del registro.
 
-### [ ] T24k · Sesión de diseño: dirección visual neutral
+### [x] T24k · Sesión de diseño: dirección visual neutral
 **Depende de:** T24j.
 **Alcance:** revisar con `/impeccable` si la dirección visual actual ("Señal de obra": naranja de seguridad sobre gris cemento, en `src/styles/tokens/_primitives.scss` y `docs/estilos.md`) debe ser más neutral para servir a todos los tipos de negocio. Resultado: la decisión registrada en `docs/decisiones.md` y, si cambia, los tokens primitivos, `docs/estilos.md` y `PRODUCT.md` actualizados, sin tocar los tokens semánticos ni los componentes.
 **Pendientes que entran a esta tarea:** P52 (`docs/plan/pendientes.md`).
