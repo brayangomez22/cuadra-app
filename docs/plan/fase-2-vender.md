@@ -121,6 +121,6 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 **Pendientes que entran a esta tarea:** P52 (`docs/plan/pendientes.md`).
 **Aceptación:** capturas del POS y del catálogo antes y después en los anchos de referencia, en tema claro y oscuro, con el contraste verificado.
 
-### [ ] T25 · Tests end-to-end (Playwright)
+### [x] T25 · Tests end-to-end (Playwright)
 **Alcance:** `e2e/` con Playwright contra el stack levantado en docker-compose con datos semilla. Flujos críticos: registro → login → crear producto → registrar entrada de inventario → venta con pago mixto → verificar el stock. Corre en el CI en cada PR a `main` (con capturas y traces de Playwright como artefactos si falla). Los flujos críticos se ejecutan con dos plantillas (`ferreteria` y `ropa_calzado`); en la segunda, la venta es de una variante (talla y color).
 **Aceptación:** el flujo completo pasa en el CI en menos de 5 minutos.

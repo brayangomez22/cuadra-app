@@ -89,6 +89,52 @@ services:
       postgres:
         condition: service_healthy
 
+  # End-to-end stack (`make e2e-up`, e2e/README.md): its own Postgres in memory,
+  # the migrations and the API on :18080, apart from the development database
+  # and from `make run`. Every run starts from an empty database.
+  postgres-e2e:
+    image: postgres:16-alpine
+    profiles: [e2e]
+    environment:
+      POSTGRES_USER: cuadra
+      POSTGRES_PASSWORD: cuadra
+      POSTGRES_DB: cuadra
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cuadra -d cuadra"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate-e2e:
+    build:
+      context: backend
+      target: migrate
+    profiles: [e2e]
+    environment:
+      MIGRATION_DATABASE_URL: postgres://cuadra:cuadra@postgres-e2e:5432/cuadra?sslmode=disable
+      APP_DB_PASSWORD: app_user
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+
+  api-e2e:
+    build:
+      context: backend
+    profiles: [e2e]
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgres://app_user:app_user@postgres-e2e:5432/cuadra?sslmode=disable
+      JWT_SECRET: e2e-only-secret-not-for-real-use-0123456789
+      OTEL_SDK_DISABLED: "true"
+      LOG_LEVEL: warn
+    ports:
+      - "127.0.0.1:18080:8080"
+    depends_on:
+      migrate-e2e:
+        condition: service_completed_successfully
+
 volumes:
   postgres-data:
   prometheus-data:
