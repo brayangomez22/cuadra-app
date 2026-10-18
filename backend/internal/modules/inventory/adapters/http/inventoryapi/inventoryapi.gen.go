@@ -69,13 +69,9 @@ func (e StockMovementType) Valid() bool {
 	}
 }
 
-// AdjustmentInput Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`).
+// AdjustmentInput defines model for AdjustmentInput.
 type AdjustmentInput struct {
 	LocationId openapi_types.UUID `json:"location_id"`
-
-	// ProductId Se resuelve a la variante por defecto del producto. Use `variant_id`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).
 	//
@@ -83,8 +79,8 @@ type AdjustmentInput struct {
 	Quantity SignedQuantity `json:"quantity"`
 
 	// Reason Example: Unidad dañada en la bodega
-	Reason    string              `json:"reason"`
-	VariantId *openapi_types.UUID `json:"variant_id,omitempty"`
+	Reason    string             `json:"reason"`
+	VariantId openapi_types.UUID `json:"variant_id"`
 }
 
 // DocumentRef defines model for DocumentRef.
@@ -143,13 +139,9 @@ type Money = string
 // Example: 2.5
 type Quantity = string
 
-// ReceiptInput Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`).
+// ReceiptInput defines model for ReceiptInput.
 type ReceiptInput struct {
 	LocationId openapi_types.UUID `json:"location_id"`
-
-	// ProductId Se resuelve a la variante por defecto del producto. Use `variant_id`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
 	//
@@ -159,8 +151,8 @@ type ReceiptInput struct {
 	// UnitCost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
-	UnitCost  Money               `json:"unit_cost"`
-	VariantId *openapi_types.UUID `json:"variant_id,omitempty"`
+	UnitCost  Money              `json:"unit_cost"`
+	VariantId openapi_types.UUID `json:"variant_id"`
 }
 
 // SignedQuantity Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).
@@ -245,20 +237,16 @@ type StockMovementPage struct {
 	Total int `json:"total"`
 }
 
-// TransferInput Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`).
+// TransferInput defines model for TransferInput.
 type TransferInput struct {
 	FromLocationId openapi_types.UUID `json:"from_location_id"`
-
-	// ProductId Se resuelve a la variante por defecto del producto. Use `variant_id`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 2.5
-	Quantity     Quantity            `json:"quantity"`
-	ToLocationId openapi_types.UUID  `json:"to_location_id"`
-	VariantId    *openapi_types.UUID `json:"variant_id,omitempty"`
+	Quantity     Quantity           `json:"quantity"`
+	ToLocationId openapi_types.UUID `json:"to_location_id"`
+	VariantId    openapi_types.UUID `json:"variant_id"`
 }
 
 // TransferResult defines model for TransferResult.
@@ -328,23 +316,6 @@ type ListStockParams struct {
 	// VariantId Solo la existencia de esta variante.
 	VariantId *openapi_types.UUID `form:"variant_id,omitempty" json:"variant_id,omitempty"`
 
-	// ProductId Solo la existencia de la variante por defecto de este producto. Use `variant_id`; no se envían los dos
-	// (`variant_required`).
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	ProductId *openapi_types.UUID `form:"product_id,omitempty" json:"product_id,omitempty"`
-
-	// Limit Cantidad máxima de resultados.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Offset Cantidad de resultados a saltar.
-	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
-}
-
-// GetKardexParams defines parameters for GetKardex.
-type GetKardexParams struct {
-	// LocationId Solo los movimientos de esta sede.
-	LocationId *openapi_types.UUID `form:"location_id,omitempty" json:"location_id,omitempty"`
-
 	// Limit Cantidad máxima de resultados.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
@@ -396,11 +367,6 @@ type ServerInterface interface {
 	// ListStock Existencias de una sede
 	// (GET /api/v1/locations/{locationId}/stock)
 	ListStock(w http.ResponseWriter, r *http.Request, locationId LocationId, params ListStockParams)
-	// GetKardex Kardex de la variante por defecto de un producto
-	// (GET /api/v1/products/{productId}/kardex)
-	//
-	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	GetKardex(w http.ResponseWriter, r *http.Request, productId ProductId, params GetKardexParams)
 	// GetVariantKardex Kardex de una variante
 	// (GET /api/v1/variants/{variantId}/kardex)
 	GetVariantKardex(w http.ResponseWriter, r *http.Request, variantId VariantId, params GetVariantKardexParams)
@@ -516,19 +482,6 @@ func (siw *ServerInterfaceWrapper) ListStock(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// ------------- Optional query parameter "product_id" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "product_id", r.URL.Query(), &params.ProductId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "product_id"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "product_id", Err: err})
-		}
-		return
-	}
-
 	// ------------- Optional query parameter "limit" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
@@ -557,74 +510,6 @@ func (siw *ServerInterfaceWrapper) ListStock(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListStock(w, r, locationId, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetKardex operation middleware
-func (siw *ServerInterfaceWrapper) GetKardex(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "productId" -------------
-	var productId ProductId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "productId", r.PathValue("productId"), &productId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "productId", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetKardexParams
-
-	// ------------- Optional query parameter "location_id" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "location_id", r.URL.Query(), &params.LocationId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "location_id"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "location_id", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "offset" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetKardex(w, r, productId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -826,7 +711,6 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/locations", wrapper.CreateLocation)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/locations/{locationId}/stock", wrapper.ListStock)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/variants/{variantId}/kardex", wrapper.GetVariantKardex)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/products/{productId}/kardex", wrapper.GetKardex)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/inventory/receipts", wrapper.ReceiveStock)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/inventory/adjustments", wrapper.AdjustStock)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/inventory/transfers", wrapper.TransferStock)
@@ -1396,102 +1280,9 @@ func (response ListStock404JSONResponse) VisitListStockResponse(w http.ResponseW
 	return err
 }
 
-type ListStock422JSONResponse Error
-
-func (response ListStock422JSONResponse) VisitListStockResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type ListStock500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ListStock500JSONResponse) VisitListStockResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetKardexRequestObject struct {
-	ProductId ProductId `json:"productId"`
-	Params    GetKardexParams
-}
-
-type GetKardexResponseObject interface {
-	VisitGetKardexResponse(w http.ResponseWriter) error
-}
-
-type GetKardex200JSONResponse StockMovementPage
-
-func (response GetKardex200JSONResponse) VisitGetKardexResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetKardex400JSONResponse struct{ BadRequestJSONResponse }
-
-func (response GetKardex400JSONResponse) VisitGetKardexResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetKardex401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response GetKardex401JSONResponse) VisitGetKardexResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetKardex403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response GetKardex403JSONResponse) VisitGetKardexResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetKardex500JSONResponse struct{ InternalErrorJSONResponse }
-
-func (response GetKardex500JSONResponse) VisitGetKardexResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -1602,11 +1393,6 @@ type StrictServerInterface interface {
 	// ListStock Existencias de una sede
 	// (GET /api/v1/locations/{locationId}/stock)
 	ListStock(ctx context.Context, request ListStockRequestObject) (ListStockResponseObject, error)
-	// GetKardex Kardex de la variante por defecto de un producto
-	// (GET /api/v1/products/{productId}/kardex)
-	//
-	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	GetKardex(ctx context.Context, request GetKardexRequestObject) (GetKardexResponseObject, error)
 	// GetVariantKardex Kardex de una variante
 	// (GET /api/v1/variants/{variantId}/kardex)
 	GetVariantKardex(ctx context.Context, request GetVariantKardexRequestObject) (GetVariantKardexResponseObject, error)
@@ -1819,33 +1605,6 @@ func (sh *strictHandler) ListStock(w http.ResponseWriter, r *http.Request, locat
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListStockResponseObject); ok {
 		if err := validResponse.VisitListStockResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetKardex operation middleware
-func (sh *strictHandler) GetKardex(w http.ResponseWriter, r *http.Request, productId ProductId, params GetKardexParams) {
-	var request GetKardexRequestObject
-
-	request.ProductId = productId
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetKardex(ctx, request.(GetKardexRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetKardex")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetKardexResponseObject); ok {
-		if err := validResponse.VisitGetKardexResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

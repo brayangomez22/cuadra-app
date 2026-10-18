@@ -123,6 +123,8 @@ describe('ProductFormPage', () => {
       price: '10000',
       tax_rate: '0.19',
       category_id: null,
+      // Without attribute definitions, the product has no values.
+      attributes: {},
     });
     expect(await screen.findByText('Producto guardado')).toBeInTheDocument();
   });
@@ -189,6 +191,7 @@ describe('ProductFormPage', () => {
       price: '10500',
       tax_rate: '0.19',
       category_id: null,
+      attributes: {},
     });
   });
 

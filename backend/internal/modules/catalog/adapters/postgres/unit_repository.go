@@ -46,12 +46,6 @@ func (r *UnitRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*
 	return r.get(ctx, tenantID, func(q *sqlcgen.Queries) (sqlcgen.UnitsOfMeasure, error) { return q.GetUnit(ctx, id) })
 }
 
-// GetByCode returns the unit with exactly code; domain.ErrUnitNotFound if
-// tenantID has none.
-func (r *UnitRepository) GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*domain.UnitOfMeasure, error) {
-	return r.get(ctx, tenantID, func(q *sqlcgen.Queries) (sqlcgen.UnitsOfMeasure, error) { return q.GetUnitByCode(ctx, code) })
-}
-
 func (r *UnitRepository) get(ctx context.Context, tenantID uuid.UUID, query func(*sqlcgen.Queries) (sqlcgen.UnitsOfMeasure, error)) (*domain.UnitOfMeasure, error) {
 	var row sqlcgen.UnitsOfMeasure
 	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {

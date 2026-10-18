@@ -1,0 +1,68 @@
+@use '@/styles/abstracts' as *;
+
+// The sections go above the content on a phone and tablet, as a row that
+// wraps; from lg up they are a column at the start.
+.root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+
+  @include respond-to(lg) {
+    grid-template-columns: var(--size-sidebar) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.nav {
+  min-inline-size: 0;
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: 0;
+  list-style: none;
+
+  @include respond-to(lg) {
+    flex-direction: column;
+  }
+}
+
+// The current section: subtle background and the accent bar, as the main menu.
+.link {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--size-control);
+  padding-inline: var(--space-3);
+  border-block-end: 0.25rem solid transparent;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-default);
+  text-decoration: none;
+
+  @include focus-ring;
+
+  @include reduced-motion-safe {
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  @include hover {
+    background: var(--color-bg-subtle);
+  }
+
+  @include respond-to(lg) {
+    border-block-end: 0;
+    border-inline-start: 0.25rem solid transparent;
+  }
+
+  &[aria-current='page'] {
+    border-color: var(--color-border-accent);
+    font-weight: var(--font-weight-bold);
+    background: var(--color-bg-subtle);
+  }
+}
+
+.content {
+  min-inline-size: 0;
+}

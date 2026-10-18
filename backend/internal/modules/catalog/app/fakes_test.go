@@ -279,17 +279,6 @@ func (f fakeUnits) GetByID(_ context.Context, tenantID, id uuid.UUID) (*domain.U
 	return cloneUnit(u), nil
 }
 
-func (f fakeUnits) GetByCode(_ context.Context, tenantID uuid.UUID, code string) (*domain.UnitOfMeasure, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	for _, u := range f.units {
-		if u.TenantID() == tenantID && u.Code() == code {
-			return cloneUnit(u), nil
-		}
-	}
-	return nil, domain.ErrUnitNotFound
-}
-
 func (f fakeUnits) List(_ context.Context, tenantID uuid.UUID) ([]*domain.UnitOfMeasure, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

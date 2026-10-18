@@ -59,9 +59,6 @@ var (
 	ErrUnitNotFound     = errors.New("catalog: unit of measure not found")
 	ErrUnitCodeTaken    = errors.New("catalog: unit code already used in the tenant")
 	ErrUnitInUse        = errors.New("catalog: unit of measure is used by products")
-	// ErrUnitRequired reports a product input with neither a unit id nor a
-	// unit code, or with both.
-	ErrUnitRequired = errors.New("catalog: a product needs a unit id or a unit code, not both")
 
 	ErrAttributeNotFound    = errors.New("catalog: attribute definition not found")
 	ErrAttributeKeyTaken    = errors.New("catalog: attribute key already used in the tenant")

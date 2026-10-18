@@ -42,12 +42,9 @@ type Deps struct {
 }
 
 // ProductVariants is what the inventory needs of the catalog, through a
-// port cmd/api satisfies with the catalog module: it serves the deprecated
-// product_id of the contract until T24j removes it.
+// port cmd/api satisfies with the catalog module: the product of each
+// variant, for the product_id of the levels and movements.
 type ProductVariants interface {
-	// DefaultVariant returns the id of productID's default variant;
-	// domain.ErrProductNotFound if the product does not exist in tenantID.
-	DefaultVariant(ctx context.Context, tenantID, productID uuid.UUID) (uuid.UUID, error)
 	// ProductsOf returns the product of each of variantIDs that exists in
 	// tenantID; the others are left out.
 	ProductsOf(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)

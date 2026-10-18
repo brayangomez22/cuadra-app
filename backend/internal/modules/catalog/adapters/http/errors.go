@@ -29,7 +29,6 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrVariantAxesMismatch, Status: http.StatusUnprocessableEntity, Code: "variant_axes_mismatch", Message: "La variante debe usar los mismos ejes que las demás variantes del producto."},
 	{Err: domain.ErrDuplicateVariant, Status: http.StatusUnprocessableEntity, Code: "duplicate_variant", Message: "Ya existe una variante del producto con esos valores."},
 	{Err: domain.ErrInvalidUnit, Status: http.StatusUnprocessableEntity, Code: "invalid_unit", Message: "La unidad de medida no es válida."},
-	{Err: domain.ErrUnitRequired, Status: http.StatusUnprocessableEntity, Code: "unit_required", Message: "Indique la unidad de medida (base_unit_id) o su código (base_unit), solo uno de los dos."},
 	{Err: domain.ErrInvalidUnitCode, Status: http.StatusUnprocessableEntity, Code: "invalid_unit_code", Message: "El código de la unidad no es válido: sin espacios y máximo 16 caracteres."},
 	{Err: domain.ErrInvalidUnitName, Status: http.StatusUnprocessableEntity, Code: "invalid_unit_name", Message: "Escriba el nombre de la unidad (máximo 50 caracteres)."},
 	{Err: domain.ErrInvalidPrice, Status: http.StatusUnprocessableEntity, Code: "invalid_price", Message: "El precio debe ser mayor que cero, con máximo 4 decimales."},

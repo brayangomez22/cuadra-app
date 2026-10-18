@@ -72,9 +72,6 @@ type UnitRepository interface {
 	Create(ctx context.Context, u *UnitOfMeasure) error
 	// GetByID returns ErrUnitNotFound when the unit does not exist in tenantID.
 	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*UnitOfMeasure, error)
-	// GetByCode returns the unit with exactly code; ErrUnitNotFound if
-	// tenantID has none.
-	GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*UnitOfMeasure, error)
 	// List returns every unit of the tenant, by name.
 	List(ctx context.Context, tenantID uuid.UUID) ([]*UnitOfMeasure, error)
 	// Update stores the code and the name; ErrUnitNotFound if the unit does

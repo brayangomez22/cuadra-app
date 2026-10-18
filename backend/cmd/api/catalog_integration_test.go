@@ -77,44 +77,6 @@ func TestCatalogFlow(t *testing.T) {
 	cashierToken, _, err := tokens.Issue(session.User.TenantID, uuid.Must(uuid.NewV7()), "cashier")
 	require.NoError(t, err)
 
-	const body = `{"sku":"tub-pvc-12","name":"Tubo PVC presión 1/2 pulgada","base_unit":"m","cost":"8333.33","price":"10000","tax_rate":"0.19"}`
-	var productID string
-
-	t.Run("el dueño crea un producto y recibe el dinero como string", func(t *testing.T) {
-		rec := do(t, http.MethodPost, "/api/v1/products", body, ownerToken)
-		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		var p map[string]any
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &p))
-		require.Equal(t, "TUB-PVC-12", p["sku"])
-		require.Equal(t, "10000.00", p["price"])
-		require.Equal(t, "8333.33", p["cost"])
-		productID = p["id"].(string)
-	})
-
-	t.Run("crear producto sin permiso responde 403", func(t *testing.T) {
-		rec := do(t, http.MethodPost, "/api/v1/products", body, cashierToken)
-		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
-		require.Contains(t, rec.Body.String(), `"forbidden"`)
-	})
-
-	t.Run("el cajero busca el producto sin ver su costo", func(t *testing.T) {
-		rec := do(t, http.MethodGet, "/api/v1/products?q=tubo+pvc", "", cashierToken)
-		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		require.Contains(t, rec.Body.String(), productID)
-		require.NotContains(t, rec.Body.String(), "cost")
-	})
-
-	t.Run("SKU duplicado responde 409 sku_taken", func(t *testing.T) {
-		rec := do(t, http.MethodPost, "/api/v1/products", body, ownerToken)
-		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
-		require.Contains(t, rec.Body.String(), "sku_taken")
-	})
-
-	t.Run("un precio con formato inválido responde 400 por el contrato", func(t *testing.T) {
-		rec := do(t, http.MethodPost, "/api/v1/products", strings.Replace(body, `"10000"`, `"10.000,50"`, 1), ownerToken)
-		require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
-	})
-
 	var units struct {
 		Items []struct {
 			ID   string `json:"id"`
@@ -146,37 +108,80 @@ func TestCatalogFlow(t *testing.T) {
 		}, got)
 	})
 
-	t.Run("el producto creado con el código deprecated lleva su unidad", func(t *testing.T) {
+	body := `{"sku":"tub-pvc-12","name":"Tubo PVC presión 1/2 pulgada","base_unit_id":"` + unitID("m") +
+		`","cost":"8333.33","price":"10000","tax_rate":"0.19","attributes":{}}`
+	var productID string
+
+	t.Run("el dueño crea un producto y recibe el dinero como string", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/products", body, ownerToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		var p map[string]any
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &p))
+		variant := p["variants"].([]any)[0].(map[string]any)
+		require.Equal(t, "TUB-PVC-12", variant["sku"])
+		require.Equal(t, "10000.00", variant["price"])
+		require.Equal(t, "8333.33", variant["cost"])
+		require.NotContains(t, p, "sku", "the default variant's fields are only in variants")
+		productID = p["id"].(string)
+	})
+
+	t.Run("crear producto sin permiso responde 403", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/products", body, cashierToken)
+		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"forbidden"`)
+	})
+
+	t.Run("el cajero busca el producto sin ver su costo", func(t *testing.T) {
+		rec := do(t, http.MethodGet, "/api/v1/products?q=tubo+pvc", "", cashierToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), productID)
+		require.NotContains(t, rec.Body.String(), "cost")
+	})
+
+	t.Run("SKU duplicado responde 409 sku_taken", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/products", body, ownerToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "sku_taken")
+	})
+
+	t.Run("un precio con formato inválido responde 400 por el contrato", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/products", strings.Replace(body, `"10000"`, `"10.000,50"`, 1), ownerToken)
+		require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	})
+
+	t.Run("el producto creado lleva su unidad", func(t *testing.T) {
 		rec := do(t, http.MethodGet, "/api/v1/products/"+productID, "", ownerToken)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		var p map[string]any
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &p))
-		require.Equal(t, "m", p["base_unit"])
 		require.Equal(t, unitID("m"), p["base_unit_id"])
 		require.Equal(t, map[string]any{"id": unitID("m"), "code": "m", "name": "Metro"}, p["unit"])
 	})
 
 	t.Run("crea un producto con base_unit_id y lo devuelve con su unidad", func(t *testing.T) {
 		rec := do(t, http.MethodPost, "/api/v1/products",
-			`{"sku":"cem-50","name":"Cemento gris 50 kg","base_unit_id":"`+unitID("bulto")+`","cost":"25000","price":"30000","tax_rate":"0.19"}`, ownerToken)
+			`{"sku":"cem-50","name":"Cemento gris 50 kg","base_unit_id":"`+unitID("bulto")+`","cost":"25000","price":"30000","tax_rate":"0.19","attributes":{}}`, ownerToken)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		var p map[string]any
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &p))
 		require.Equal(t, unitID("bulto"), p["base_unit_id"])
-		require.Equal(t, "bulto", p["base_unit"])
 		require.Equal(t, map[string]any{"id": unitID("bulto"), "code": "bulto", "name": "Bulto"}, p["unit"])
 	})
 
-	t.Run("un producto sin unidad responde 422 unit_required", func(t *testing.T) {
-		rec := do(t, http.MethodPost, "/api/v1/products",
-			`{"sku":"cam-s","name":"Camiseta básica","cost":"12000","price":"25000","tax_rate":"0.19"}`, ownerToken)
-		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
-		require.Contains(t, rec.Body.String(), "unit_required")
+	t.Run("un producto sin unidad, sin atributos o con el código de unidad responde 400 por el contrato", func(t *testing.T) {
+		for _, body := range []string{
+			`{"sku":"cam-s","name":"Camiseta básica","cost":"12000","price":"25000","tax_rate":"0.19","attributes":{}}`,
+			`{"sku":"cam-s","name":"Camiseta básica","base_unit_id":"` + unitID("und") + `","cost":"12000","price":"25000","tax_rate":"0.19"}`,
+			`{"sku":"cam-s","name":"Camiseta básica","base_unit":"und","cost":"12000","price":"25000","tax_rate":"0.19","attributes":{}}`,
+		} {
+			rec := do(t, http.MethodPost, "/api/v1/products", body, ownerToken)
+			require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+		}
 	})
 
 	t.Run("un producto con una unidad de otro tenant responde 422 unit_not_found", func(t *testing.T) {
 		rec := do(t, http.MethodPost, "/api/v1/products",
-			`{"sku":"cam-s","name":"Camiseta básica","base_unit_id":"`+uuid.Must(uuid.NewV7()).String()+`","cost":"12000","price":"25000","tax_rate":"0.19"}`, ownerToken)
+			`{"sku":"cam-s","name":"Camiseta básica","base_unit_id":"`+uuid.Must(uuid.NewV7()).String()+`","cost":"12000","price":"25000","tax_rate":"0.19","attributes":{}}`, ownerToken)
 		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), "unit_not_found")
 	})

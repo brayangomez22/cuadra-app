@@ -108,7 +108,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 **Tests primero:** un producto simple se crea y se vende igual que antes; con `variants` activo, se crean 6 variantes (3 tallas × 2 colores) y el POS agrega la correcta al escanear; un carrito guardado con la versión anterior se descarta sin error.
 **Después:** `/impeccable critique` del formulario de producto y del POS.
 
-### [ ] T24j · Frontend: configuración y registro, y fin de lo `deprecated`
+### [x] T24j · Frontend: configuración y registro, y fin de lo `deprecated`
 **Depende de:** T24g, T24i.
 **Alcance:** registro con selección de tipo de negocio. Configuración: unidades, atributos y módulos. Menús y campos según los `modules` de `/me`. **Elimina todos los campos `deprecated` del bloque** en `api/openapi.yaml` y el código que los usa, en el backend y en el frontend.
 **Pendientes que entran a esta tarea:** P29, P32, P36, P37, P41 y P50 (`docs/plan/pendientes.md`).
@@ -118,6 +118,7 @@ Refactor para que el core sirva a cualquier tipo de comercio (`docs/propuestas/c
 ### [ ] T24k · Sesión de diseño: dirección visual neutral
 **Depende de:** T24j.
 **Alcance:** revisar con `/impeccable` si la dirección visual actual ("Señal de obra": naranja de seguridad sobre gris cemento, en `src/styles/tokens/_primitives.scss` y `docs/estilos.md`) debe ser más neutral para servir a todos los tipos de negocio. Resultado: la decisión registrada en `docs/decisiones.md` y, si cambia, los tokens primitivos, `docs/estilos.md` y `PRODUCT.md` actualizados, sin tocar los tokens semánticos ni los componentes.
+**Pendientes que entran a esta tarea:** P52 (`docs/plan/pendientes.md`).
 **Aceptación:** capturas del POS y del catálogo antes y después en los anchos de referencia, en tema claro y oscuro, con el contraste verificado.
 
 ### [ ] T25 · Tests end-to-end (Playwright)

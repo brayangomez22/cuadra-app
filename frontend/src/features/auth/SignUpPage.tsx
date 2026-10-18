@@ -6,6 +6,7 @@ import { api } from '@/shared/api/client';
 import { errorCode, errorMessage, NETWORK_ERROR_MESSAGE } from '@/shared/api/errors';
 import { Alert, Button, Field, Input } from '@/shared/ui';
 import { AuthLink, AuthPage } from './AuthPage';
+import { BusinessTypeField } from './BusinessTypeField';
 import { signUpSchema, type SignUpValues } from './schemas';
 import { useAuth } from './useAuth';
 import styles from './SignUpPage.module.scss';
@@ -19,6 +20,7 @@ const fieldByErrorCode: Record<string, keyof SignUpValues> = {
   invalid_email: 'email',
   password_too_short: 'password',
   password_too_long: 'password',
+  unknown_business_template: 'business_template',
 };
 
 export function SignUpPage() {
@@ -32,7 +34,7 @@ export function SignUpPage() {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { tenant_name: '', nit: '', name: '', email: '', password: '' },
+    defaultValues: { tenant_name: '', nit: '', name: '', email: '', password: '', business_template: '' },
   });
 
   async function signUp(values: SignUpValues) {
@@ -87,6 +89,11 @@ export function SignUpPage() {
         <Field label="Contraseña" hint="Mínimo 8 caracteres" error={errors.password?.message}>
           <Input type="password" autoComplete="new-password" {...register('password')} />
         </Field>
+        <BusinessTypeField
+          className={styles.wide}
+          error={errors.business_template?.message}
+          {...register('business_template')}
+        />
         <Button type="submit" size="lg" className={styles.submit} loading={isSubmitting}>
           Crear cuenta
         </Button>

@@ -9,5 +9,5 @@ WHERE id = $1;
 
 -- name: UpdateTenant :execrows
 UPDATE tenants
-SET name = $2, status = $3
+SET name = $2, status = $3, default_tax_rate = $4
 WHERE id = $1;

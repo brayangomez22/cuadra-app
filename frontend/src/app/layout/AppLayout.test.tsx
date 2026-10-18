@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { aUser, fakeApi, signedIn } from '@/test/fakeApi';
 import { renderApp } from '@/test/renderApp';
@@ -17,6 +17,19 @@ describe('AppLayout', () => {
     for (const name of ['Inicio', 'Vender', 'Productos', 'Inventario']) {
       expect(menu.getByRole('link', { name })).toBeInTheDocument();
     }
+  });
+
+  it('muestra Configuración a quien configura el catálogo o la empresa, no al cajero', async () => {
+    for (const role of ['owner', 'admin'] as const) {
+      fakeApi(signedIn(aUser(role)));
+      renderApp('/');
+      expect((await mainMenu()).getByRole('link', { name: 'Configuración' })).toBeInTheDocument();
+      cleanup();
+    }
+
+    fakeApi(signedIn(aUser('cashier')));
+    renderApp('/');
+    expect((await mainMenu()).queryByRole('link', { name: 'Configuración' })).not.toBeInTheDocument();
   });
 
   it('muestra solo las opciones del menú permitidas para el rol', async () => {

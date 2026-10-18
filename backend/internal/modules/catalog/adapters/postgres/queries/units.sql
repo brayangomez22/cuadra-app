@@ -7,11 +7,6 @@ SELECT id, tenant_id, code, name, created_at
 FROM units_of_measure
 WHERE id = $1;
 
--- name: GetUnitByCode :one
-SELECT id, tenant_id, code, name, created_at
-FROM units_of_measure
-WHERE code = $1;
-
 -- name: ListUnits :many
 SELECT id, tenant_id, code, name, created_at
 FROM units_of_measure

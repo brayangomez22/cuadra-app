@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -185,10 +186,72 @@ func TestSignUpTemplates(t *testing.T) {
 		})
 	}
 
-	t.Run("sin plantilla, la empresa empieza con la genérica", func(t *testing.T) {
+	t.Run("un registro sin plantilla responde 400 por el contrato y no crea el tenant", func(t *testing.T) {
 		rec := signUp(t, "ana@sinplantilla.co", "")
+		require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+
+		login := do(t, http.MethodPost, "/api/v1/auth/login", `{"email":"ana@sinplantilla.co","password":"clave-segura-123"}`, "")
+		require.Equal(t, http.StatusUnauthorized, login.Code, "no tenant or user was created")
+	})
+
+	t.Run("el dueño cambia el IVA por defecto y /me lo refleja; solo para su empresa", func(t *testing.T) {
+		tests := []struct{ template, from, to string }{
+			{template: "ferreteria", from: "0.19", to: "0.05"},
+			{template: "drogueria", from: "0", to: "0.19"},
+		}
+		var tokensByTemplate []string
+		for _, tt := range tests {
+			rec := signUp(t, "iva@"+tt.template+".co", tt.template)
+			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+			var session struct {
+				AccessToken string `json:"access_token"`
+			}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &session))
+			tokensByTemplate = append(tokensByTemplate, session.AccessToken)
+		}
+		for i, tt := range tests {
+			rec := do(t, http.MethodPatch, "/api/v1/tenant", `{"default_tax_rate":"`+tt.to+`"}`, tokensByTemplate[i])
+			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+			require.Contains(t, rec.Body.String(), `"default_tax_rate":"`+tt.to+`"`)
+			require.Contains(t, rec.Body.String(), `"business_template":"`+tt.template+`"`)
+		}
+		for i, tt := range tests {
+			var me struct {
+				DefaultTaxRate string `json:"default_tax_rate"`
+			}
+			get(t, "/api/v1/me", tokensByTemplate[i], &me)
+			require.Equal(t, tt.to, me.DefaultTaxRate, tt.template)
+		}
+	})
+
+	t.Run("cambiar el IVA por defecto: 403 sin tenant:manage y 400 por el contrato, sin cambiar nada", func(t *testing.T) {
+		rec := signUp(t, "iva@papeleria.co", "papeleria")
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		require.Contains(t, rec.Body.String(), `"business_template":"generica"`)
+		var session struct {
+			AccessToken string `json:"access_token"`
+			User        struct {
+				TenantID uuid.UUID `json:"tenant_id"`
+			} `json:"user"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &session))
+		// An admin of the same tenant: user management arrives in T41, so the
+		// token is issued directly.
+		adminToken, _, err := tokens.Issue(session.User.TenantID, uuid.Must(uuid.NewV7()), "admin")
+		require.NoError(t, err)
+
+		rec = do(t, http.MethodPatch, "/api/v1/tenant", `{"default_tax_rate":"0"}`, adminToken)
+		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+
+		for _, body := range []string{`{}`, `{"default_tax_rate":"19"}`, `{"default_tax_rate":"0.19","tenant_id":"x"}`} {
+			rec = do(t, http.MethodPatch, "/api/v1/tenant", body, session.AccessToken)
+			require.Equal(t, http.StatusBadRequest, rec.Code, body+": "+rec.Body.String())
+		}
+
+		var me struct {
+			DefaultTaxRate string `json:"default_tax_rate"`
+		}
+		get(t, "/api/v1/me", session.AccessToken, &me)
+		require.Equal(t, "0.19", me.DefaultTaxRate, "nothing changed")
 	})
 
 	t.Run("un registro con una plantilla inexistente responde 422 y no crea el tenant", func(t *testing.T) {

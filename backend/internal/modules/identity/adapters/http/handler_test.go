@@ -28,6 +28,7 @@ type stubUseCases struct {
 	refresh func(string) (app.Session, error)
 	logout  func(string) error
 	me      func(tenantID, userID uuid.UUID) (app.Profile, error)
+	update  func(tenantID, userID uuid.UUID, in app.TenantUpdate) (*domain.Tenant, error)
 	// templates is what BusinessTemplates answers.
 	templates []app.BusinessTemplate
 }
@@ -49,6 +50,10 @@ func (s *stubUseCases) Logout(_ context.Context, raw string) error { return s.lo
 
 func (s *stubUseCases) Me(_ context.Context, tenantID, userID uuid.UUID) (app.Profile, error) {
 	return s.me(tenantID, userID)
+}
+
+func (s *stubUseCases) UpdateTenant(_ context.Context, tenantID, userID uuid.UUID, in app.TenantUpdate) (*domain.Tenant, error) {
+	return s.update(tenantID, userID, in)
 }
 
 var now = time.Date(2026, 10, 10, 15, 0, 0, 0, time.UTC)
@@ -432,5 +437,54 @@ func TestGetMe(t *testing.T) {
 		req = req.WithContext(auth.WithPrincipal(req.Context(), auth.Principal{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7()), Role: "cashier"}))
 
 		requireError(t, serve(t, uc, req), http.StatusUnauthorized, "unauthorized")
+	})
+}
+
+func TestUpdateTenant(t *testing.T) {
+	patch := func(p app.Profile, body string) *http.Request {
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/tenant", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		principal := auth.Principal{TenantID: p.Tenant.ID(), UserID: p.User.ID(), Role: "owner"}
+		return req.WithContext(auth.WithPrincipal(req.Context(), principal))
+	}
+
+	t.Run("pasa el IVA del token y del cuerpo al caso de uso y responde la empresa", func(t *testing.T) {
+		p := profile(t, domain.RoleOwner)
+		var gotTenant, gotUser uuid.UUID
+		var got app.TenantUpdate
+		uc := &stubUseCases{update: func(tenantID, userID uuid.UUID, in app.TenantUpdate) (*domain.Tenant, error) {
+			gotTenant, gotUser, got = tenantID, userID, in
+			require.NoError(t, p.Tenant.SetDefaultTaxRate(*in.DefaultTaxRate))
+			return p.Tenant, nil
+		}}
+
+		rec := serve(t, uc, patch(p, `{"default_tax_rate":"0.05"}`))
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Equal(t, p.Tenant.ID(), gotTenant)
+		require.Equal(t, p.User.ID(), gotUser)
+		require.Equal(t, "0.05", got.DefaultTaxRate.String())
+		require.JSONEq(t, `{
+			"id": "`+p.Tenant.ID().String()+`",
+			"name": "Ferretería El Tornillo",
+			"nit": "890903938-8",
+			"business_template": "ferreteria",
+			"default_tax_rate": "0.05"
+		}`, rec.Body.String())
+	})
+
+	t.Run("un IVA inválido responde 422 invalid_default_tax_rate", func(t *testing.T) {
+		p := profile(t, domain.RoleOwner)
+		uc := &stubUseCases{update: func(uuid.UUID, uuid.UUID, app.TenantUpdate) (*domain.Tenant, error) {
+			return nil, domain.ErrInvalidDefaultTaxRate
+		}}
+
+		requireError(t, serve(t, uc, patch(p, `{"default_tax_rate":"0.12345"}`)), http.StatusUnprocessableEntity, "invalid_default_tax_rate")
+	})
+
+	t.Run("sin usuario autenticado responde 401", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/tenant", strings.NewReader(`{"default_tax_rate":"0.19"}`))
+		req.Header.Set("Content-Type", "application/json")
+		requireError(t, serve(t, &stubUseCases{}, req), http.StatusUnauthorized, "unauthorized")
 	})
 }

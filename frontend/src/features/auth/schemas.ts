@@ -36,6 +36,8 @@ export const signUpSchema = z.object({
     .string()
     .min(8, 'La contraseña debe tener al menos 8 caracteres')
     .max(72, 'La contraseña puede tener máximo 72 caracteres'),
+  // An unchecked radio group gives null.
+  business_template: z.string('Elija el tipo de negocio').min(1, 'Elija el tipo de negocio'),
 });
 
 export type SignUpValues = z.infer<typeof signUpSchema>;

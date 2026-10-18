@@ -18,23 +18,19 @@ const (
 )
 
 // ProductInput is the editable data of a product and of its default
-// variant (SKU, barcode, cost and price). The base unit goes by its id or,
-// until the deprecated base_unit leaves the API (T24j), by its code: exactly
-// one of the two.
+// variant (SKU, barcode, cost and price).
 type ProductInput struct {
-	SKU          string
-	Barcode      string
-	Name         string
-	Description  string
-	CategoryID   *uuid.UUID
-	BaseUnitID   *uuid.UUID
-	BaseUnitCode string
-	Cost         decimal.Decimal
-	Price        decimal.Decimal
-	TaxRate      domain.TaxRate
-	// Attributes are the product's values by attribute key. Nil keeps the
-	// current values on an update, while the frontend does not send them
-	// (T24j makes them required).
+	SKU         string
+	Barcode     string
+	Name        string
+	Description string
+	CategoryID  *uuid.UUID
+	BaseUnitID  uuid.UUID
+	Cost        decimal.Decimal
+	Price       decimal.Decimal
+	TaxRate     domain.TaxRate
+	// Attributes are the product's values by attribute key. On an update
+	// they replace the current ones: a key left out has no value.
 	Attributes map[string]domain.AttributeValue
 }
 
@@ -107,11 +103,9 @@ func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in P
 	if err != nil {
 		return nil, err
 	}
-	attrs := p.Attributes()
-	if in.Attributes != nil {
-		if attrs, err = s.resolveAttributes(ctx, a, in.Attributes); err != nil {
-			return nil, err
-		}
+	attrs, err := s.resolveAttributes(ctx, a, in.Attributes)
+	if err != nil {
+		return nil, err
 	}
 	if err := p.UpdateDetails(in.details(unit, attrs)); err != nil {
 		return nil, err
@@ -141,21 +135,10 @@ func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in P
 	return p, nil
 }
 
-// resolveUnit returns the tenant's unit that in names, by id or by the
-// deprecated code: exactly one of the two (domain.ErrUnitRequired).
+// resolveUnit returns the tenant's unit that in names;
+// domain.ErrUnitNotFound if it does not exist in the tenant.
 func (s *Service) resolveUnit(ctx context.Context, a Actor, in ProductInput) (domain.UnitRef, error) {
-	var (
-		u   *domain.UnitOfMeasure
-		err error
-	)
-	switch {
-	case (in.BaseUnitID == nil) == (in.BaseUnitCode == ""):
-		return domain.UnitRef{}, domain.ErrUnitRequired
-	case in.BaseUnitID != nil:
-		u, err = s.Units.GetByID(ctx, a.TenantID, *in.BaseUnitID)
-	default:
-		u, err = s.Units.GetByCode(ctx, a.TenantID, in.BaseUnitCode)
-	}
+	u, err := s.Units.GetByID(ctx, a.TenantID, in.BaseUnitID)
 	if err != nil {
 		return domain.UnitRef{}, err
 	}

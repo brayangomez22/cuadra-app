@@ -29,7 +29,7 @@ export function AppLayout() {
           title="Menú"
           trigger={<IconButton label="Abrir menú" icon={<IconMenu />} />}
         >
-          <MainNav permissions={user.permissions} onNavigate={() => setMenuOpen(false)} />
+          <MainNav access={user} onNavigate={() => setMenuOpen(false)} />
           <AccountPanel user={user} onLogout={logout} />
         </Drawer>
         <span className={styles.brand}>Cuadra</span>
@@ -37,7 +37,7 @@ export function AppLayout() {
 
       <aside className={styles.sidebar}>
         <span className={clsx(styles.brand, styles.sidebarBrand)}>Cuadra</span>
-        <MainNav permissions={user.permissions} />
+        <MainNav access={user} />
         <AccountPanel user={user} onLogout={logout} className={styles.sidebarAccount} />
       </aside>
 

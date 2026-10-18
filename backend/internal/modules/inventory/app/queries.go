@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 
 	"github.com/google/uuid"
 
@@ -27,25 +26,17 @@ func pageBounds(limit, offset int) (int, int) {
 	return limit, max(offset, 0)
 }
 
-// StockQuery selects the levels at a location, optionally of one variant
-// or (deprecated) of one product's default variant; not both.
+// StockQuery selects the levels at a location, optionally of one variant.
 type StockQuery struct {
 	LocationID uuid.UUID
 	VariantID  *uuid.UUID
-	// ProductID, deprecated in the contract, resolves to the product's default
-	// variant. T24j removes it.
-	ProductID *uuid.UUID
-	Limit     int
-	Offset    int
+	Limit      int
+	Offset     int
 }
 
-// KardexQuery selects a variant's movements, or (deprecated) those of a
-// product's default variant, optionally at one location.
+// KardexQuery selects a variant's movements, optionally at one location.
 type KardexQuery struct {
-	VariantID uuid.UUID
-	// ProductID, deprecated in the contract, resolves to the product's default
-	// variant. T24j removes it.
-	ProductID  uuid.UUID
+	VariantID  uuid.UUID
 	LocationID *uuid.UUID
 	Limit      int
 	Offset     int
@@ -61,45 +52,23 @@ func (s *Service) ListStock(ctx context.Context, a Actor, q StockQuery) (_ domai
 		return domain.StockLevelPage{}, err
 	}
 	f := domain.StockFilter{LocationID: q.LocationID, VariantID: q.VariantID}
-	if q.ProductID != nil {
-		if q.VariantID != nil {
-			return domain.StockLevelPage{}, domain.ErrVariantRequired
-		}
-		// A product that does not exist has no stock, as before variants.
-		id, err := s.Variants.DefaultVariant(ctx, a.TenantID, *q.ProductID)
-		if errors.Is(err, domain.ErrProductNotFound) {
-			return domain.StockLevelPage{Items: []*domain.StockLevel{}}, nil
-		}
-		if err != nil {
-			return domain.StockLevelPage{}, err
-		}
-		f.VariantID = &id
-	}
 	f.Limit, f.Offset = pageBounds(q.Limit, q.Offset)
 	return s.Stock.ListLevels(ctx, a.TenantID, f)
 }
 
 // GetKardex returns one page of a variant's movements, newest first. A
-// variant without movements, or of another tenant, has an empty kardex, and
-// so does a product (deprecated) that does not exist.
+// variant without movements, or of another tenant, has an empty kardex.
 func (s *Service) GetKardex(ctx context.Context, a Actor, q KardexQuery) (_ domain.MovementPage, err error) {
-	ctx, span := s.startSpan(ctx, "GetKardex", a)
+	ctx, span := s.startSpan(ctx, "GetKardex", a, variantAttr(q.VariantID))
 	defer func() { endSpan(span, err) }()
 
-	variantID, err := s.resolveVariant(ctx, a, span, q.VariantID, q.ProductID)
-	if errors.Is(err, domain.ErrProductNotFound) {
-		return domain.MovementPage{Items: []*domain.StockMovement{}}, nil
-	}
-	if err != nil {
-		return domain.MovementPage{}, err
-	}
-	f := domain.KardexFilter{VariantID: variantID, LocationID: q.LocationID}
+	f := domain.KardexFilter{VariantID: q.VariantID, LocationID: q.LocationID}
 	f.Limit, f.Offset = pageBounds(q.Limit, q.Offset)
 	return s.Stock.Kardex(ctx, a.TenantID, f)
 }
 
 // ProductsOf returns the product of each variant of the actor's tenant among
-// variantIDs, for the deprecated product_id of the contract.
+// variantIDs, for the product_id of the levels and movements.
 func (s *Service) ProductsOf(ctx context.Context, a Actor, variantIDs []uuid.UUID) (_ map[uuid.UUID]uuid.UUID, err error) {
 	ctx, span := s.startSpan(ctx, "ProductsOf", a)
 	defer func() { endSpan(span, err) }()

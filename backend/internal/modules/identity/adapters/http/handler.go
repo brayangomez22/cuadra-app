@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/adapters/http/identityapi"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/app"
@@ -29,6 +30,7 @@ type UseCases interface {
 	Logout(ctx context.Context, raw string) error
 	Me(ctx context.Context, tenantID, userID uuid.UUID) (app.Profile, error)
 	BusinessTemplates() []app.BusinessTemplate
+	UpdateTenant(ctx context.Context, tenantID, userID uuid.UUID, in app.TenantUpdate) (*domain.Tenant, error)
 }
 
 // Handler implements identityapi.StrictServerInterface.
@@ -74,9 +76,8 @@ func (h *Handler) SignUp(ctx context.Context, req identityapi.SignUpRequestObjec
 		OwnerName:  req.Body.Name,
 		Email:      req.Body.Email,
 		Password:   req.Body.Password,
-	}
-	if req.Body.BusinessTemplate != nil {
-		in.BusinessTemplate = *req.Body.BusinessTemplate
+
+		BusinessTemplate: req.Body.BusinessTemplate,
 	}
 	session, err := h.uc.SignUp(ctx, in)
 	if err != nil {
@@ -174,6 +175,33 @@ func (h *Handler) GetMe(ctx context.Context, _ identityapi.GetMeRequestObject) (
 		return nil, err
 	}
 	return identityapi.GetMe200JSONResponse(me(profile)), nil
+}
+
+// UpdateTenant changes the settings of the user's tenant.
+func (h *Handler) UpdateTenant(ctx context.Context, req identityapi.UpdateTenantRequestObject) (identityapi.UpdateTenantResponseObject, error) {
+	p, ok := auth.PrincipalFrom(ctx)
+	if !ok {
+		return identityapi.UpdateTenant401JSONResponse{UnauthorizedJSONResponse: identityapi.UnauthorizedJSONResponse(errorBody("unauthorized", unauthorizedMessage))}, nil
+	}
+	var in app.TenantUpdate
+	if req.Body.DefaultTaxRate != nil {
+		rate, err := decimal.NewFromString(*req.Body.DefaultTaxRate)
+		if err != nil {
+			return nil, domain.ErrInvalidDefaultTaxRate
+		}
+		in.DefaultTaxRate = &rate
+	}
+	tenant, err := h.uc.UpdateTenant(ctx, p.TenantID, p.UserID, in)
+	if err != nil {
+		return nil, err
+	}
+	return identityapi.UpdateTenant200JSONResponse{
+		Id:               tenant.ID(),
+		Name:             tenant.Name(),
+		Nit:              tenant.NIT().String(),
+		BusinessTemplate: tenant.BusinessTemplate(),
+		DefaultTaxRate:   tenant.DefaultTaxRate().String(),
+	}, nil
 }
 
 // authSession builds the response body and the refresh cookie of a session.

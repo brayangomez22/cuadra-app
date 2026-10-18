@@ -29,13 +29,15 @@ tags:
       El access token (JWT) dura 15 minutos y se envía en `Authorization: Bearer`. El refresh token
       viaja solo en la cookie `cuadra_refresh` (HttpOnly, Secure, SameSite=Strict, ruta `/api/v1/auth`),
       rota en cada uso y su reutilización cierra todas las sesiones de esa familia.
+  - name: tenant
+    description: |
+      Los datos y la configuración de la empresa: por ahora, el IVA que se propone a un producto nuevo.
   - name: catalog
     description: |
       Productos y categorías de la empresa. El dinero viaja como string decimal y el precio no incluye IVA.
   - name: inventory
     description: |
-      Sedes, existencias y kardex. El stock es de cada variante (`variant_id`); `product_id` queda por compatibilidad
-      y se resuelve a la variante por defecto del producto. Las cantidades están en la unidad base del producto y
+      Sedes, existencias y kardex. El stock es de cada variante (`variant_id`). Las cantidades están en la unidad base del producto y
       viajan como string decimal. Cada cambio de stock queda como un movimiento inmutable del kardex. Los costos (`average_cost`, `unit_cost`,
       `average_cost_after`) solo se envían a quien puede editar el catálogo (`catalog:write`).
   - name: sales
@@ -278,6 +280,41 @@ paths:
                 $ref: "#/components/schemas/Me"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/tenant:
+    patch:
+      tags: [tenant]
+      operationId: updateTenant
+      summary: Cambiar la configuración de la empresa
+      description: Cambia los campos que se envían y conserva los demás. `/me` refleja el cambio.
+      x-permission: tenant:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantUpdate"
+      responses:
+        "200":
+          description: La empresa con su configuración nueva.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: El IVA por defecto no es válido (`invalid_default_tax_rate`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1279,16 +1316,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: product_id
-          in: query
-          deprecated: true
-          description: |
-            Solo la existencia de la variante por defecto de este producto. Use `variant_id`; no se envían los dos
-            (`variant_required`).
-          required: false
-          schema:
-            type: string
-            format: uuid
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -1306,12 +1333,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-        "422":
-          description: Se enviaron `variant_id` y `product_id` a la vez (`variant_required`).
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1325,44 +1346,6 @@ paths:
       description: |
         Los movimientos de la variante, del más reciente al más antiguo. `balance_after` es el saldo en la sede
         del movimiento justo después de él. Una variante sin movimientos, o de otra empresa, tiene el kardex vacío.
-      x-permission: inventory:read
-      parameters:
-        - name: location_id
-          in: query
-          description: Solo los movimientos de esta sede.
-          required: false
-          schema:
-            type: string
-            format: uuid
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/Offset"
-      responses:
-        "200":
-          description: Una página del kardex.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StockMovementPage"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "500":
-          $ref: "#/components/responses/InternalError"
-
-  /api/v1/products/{productId}/kardex:
-    parameters:
-      - $ref: "#/components/parameters/ProductId"
-    get:
-      tags: [inventory]
-      operationId: getKardex
-      deprecated: true
-      summary: Kardex de la variante por defecto de un producto
-      description: |
-        El kardex de la variante por defecto del producto. Use `GET /api/v1/variants/{variantId}/kardex`. Un
-        producto que no existe tiene el kardex vacío.
       x-permission: inventory:read
       parameters:
         - name: location_id
@@ -1420,8 +1403,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "422":
           description: |
-            Algún dato no cumple las reglas (`invalid_quantity`, `invalid_unit_cost`, `variant_required`,
-            `variant_not_found`, `product_not_found`, `location_not_found`, `location_inactive`).
+            Algún dato no cumple las reglas (`invalid_quantity`, `invalid_unit_cost`, `variant_not_found`,
+            `location_not_found`, `location_inactive`).
           content:
             application/json:
               schema:
@@ -1466,8 +1449,7 @@ paths:
         "422":
           description: |
             Algún dato no cumple las reglas (`invalid_quantity`, `adjustment_reason_required`,
-            `adjustment_reason_too_long`, `variant_required`, `variant_not_found`, `product_not_found`,
-            `location_not_found`, `location_inactive`).
+            `adjustment_reason_too_long`, `variant_not_found`, `location_not_found`, `location_inactive`).
           content:
             application/json:
               schema:
@@ -1511,8 +1493,8 @@ paths:
                 $ref: "#/components/schemas/Error"
         "422":
           description: |
-            Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `variant_required`,
-            `variant_not_found`, `product_not_found`, `location_not_found`, `location_inactive`).
+            Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `variant_not_found`,
+            `location_not_found`, `location_inactive`).
           content:
             application/json:
               schema:
@@ -1599,9 +1581,8 @@ paths:
                 $ref: "#/components/schemas/Error"
         "409":
           description: |
-            No hay stock suficiente de una variante (`insufficient_stock`); `details.variant_id` dice cuál y
-            `details.product_id` (deprecated), su producto. El usuario
-            no tiene caja abierta y la empresa la exige (`cash_session_required`), o la caja se cerró
+            No hay stock suficiente de una variante (`insufficient_stock`); `details.variant_id` dice cuál. El
+            usuario no tiene caja abierta y la empresa la exige (`cash_session_required`), o la caja se cerró
             (`cash_session_closed`).
           content:
             application/json:
@@ -1609,9 +1590,8 @@ paths:
                 $ref: "#/components/schemas/Error"
         "422":
           description: |
-            Algún dato no cumple las reglas (`variant_required`; `product_not_found` y `product_inactive`, también
-            para una variante; `location_not_found`,
-            `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
+            Algún dato no cumple las reglas (`product_not_found` y `product_inactive`, también para una
+            variante; `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
             `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`).
           content:
             application/json:
@@ -2140,7 +2120,7 @@ components:
           enum: [ready]
     SignUpRequest:
       type: object
-      required: [tenant_name, nit, name, email, password]
+      required: [tenant_name, nit, name, email, password, business_template]
       additionalProperties: false
       properties:
         tenant_name:
@@ -2175,8 +2155,8 @@ components:
         business_template:
           type: string
           description: |
-            Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Sin ella, la empresa
-            empieza con la plantilla `generica`.
+            Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Siembra las unidades,
+            categorías, atributos, ejes de variante, módulos e IVA por defecto de la empresa.
           pattern: "^[a-z][a-z0-9_]{0,63}$"
           example: generica
     BusinessTemplate:
@@ -2256,7 +2236,9 @@ components:
         default_tax_rate:
           allOf:
             - $ref: "#/components/schemas/TaxRate"
-          description: La tasa de IVA que se propone a un producto nuevo. La siembra la plantilla de la empresa.
+          description: |
+            La tasa de IVA que se propone a un producto nuevo. La siembra la plantilla de la empresa y se cambia con
+            `PATCH /api/v1/tenant`.
         name:
           type: string
         email:
@@ -2277,6 +2259,33 @@ components:
           items:
             type: string
           example: [variants]
+    Tenant:
+      type: object
+      required: [id, name, nit, business_template, default_tax_rate]
+      description: La empresa (tenant) y su configuración.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        nit:
+          type: string
+          example: 890903938-8
+        business_template:
+          type: string
+          example: generica
+        default_tax_rate:
+          $ref: "#/components/schemas/TaxRate"
+    TenantUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        default_tax_rate:
+          allOf:
+            - $ref: "#/components/schemas/TaxRate"
+          description: La tasa de IVA que se propone a un producto nuevo. No cambia la de los productos que ya existen.
     TenantSelectionRequired:
       type: object
       required: [error, tenants]
@@ -2306,12 +2315,6 @@ components:
       description: Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
       pattern: '^0(\.\d{1,4})?$'
       example: "0.19"
-    UnitCode:
-      type: string
-      description: El código de una unidad de medida de la empresa (`und`, `m`).
-      minLength: 1
-      maxLength: 16
-      example: m
     UnitOfMeasure:
       type: object
       required: [id, code, name]
@@ -2542,10 +2545,9 @@ components:
       type: object
       description: |
         Los datos del producto y los de su variante por defecto (`sku`, `barcode`, `cost` y `price`). Las demás
-        variantes se editan con `/products/{productId}/variants`. La unidad base va en `base_unit_id` o, mientras
-        el frontend pasa a `base_unit_id`, por su código en `base_unit` (deprecated): una de las dos. Los
-        atributos se validan contra las definiciones de la empresa (`/product-attributes`).
-      required: [sku, name, cost, price, tax_rate]
+        variantes se editan con `/products/{productId}/variants`. Los atributos se validan contra las definiciones
+        de la empresa (`/product-attributes`).
+      required: [sku, name, base_unit_id, cost, price, tax_rate, attributes]
       additionalProperties: false
       properties:
         sku:
@@ -2575,11 +2577,6 @@ components:
           type: string
           format: uuid
           description: La unidad de medida en la que se cuenta y se vende el producto.
-        base_unit:
-          allOf:
-            - $ref: "#/components/schemas/UnitCode"
-          deprecated: true
-          description: El código de la unidad base. Use `base_unit_id`.
         cost:
           $ref: "#/components/schemas/Money"
         price:
@@ -2590,7 +2587,8 @@ components:
           allOf:
             - $ref: "#/components/schemas/ProductAttributes"
           description: |
-            Los valores de los atributos de la empresa. Si se omite al editar, el producto conserva los que tiene.
+            Los valores de los atributos de la empresa (`{}` si no tiene). Al editar reemplazan los que tiene el
+            producto: un atributo que no se envía queda sin valor.
     AxisValues:
       type: object
       description: |
@@ -2690,20 +2688,11 @@ components:
         solo se envían a quien puede editar el catálogo (`catalog:write`).
     Product:
       type: object
-      required: [id, sku, name, base_unit_id, unit, base_unit, price, price_with_tax, tax_rate, attributes, active, created_at, variants]
+      required: [id, name, base_unit_id, unit, tax_rate, attributes, active, created_at, variants]
       properties:
         id:
           type: string
           format: uuid
-        sku:
-          type: string
-          deprecated: true
-          description: El de la variante por defecto. Use `variants`.
-          example: CIN-18
-        barcode:
-          type: string
-          deprecated: true
-          description: El de la variante por defecto; se omite si no tiene. Use `variants`.
         name:
           type: string
         description:
@@ -2718,35 +2707,10 @@ components:
           format: uuid
         unit:
           $ref: "#/components/schemas/UnitOfMeasure"
-        base_unit:
-          allOf:
-            - $ref: "#/components/schemas/UnitCode"
-          deprecated: true
-          description: El código de `unit`. Use `unit`.
-        cost:
-          allOf:
-            - $ref: "#/components/schemas/Money"
-          deprecated: true
-          description: El de la variante por defecto. Use `variants`.
-        price:
-          allOf:
-            - $ref: "#/components/schemas/Money"
-          deprecated: true
-          description: El de la variante por defecto. Use `variants`.
-        price_with_tax:
-          allOf:
-            - $ref: "#/components/schemas/Money"
-          deprecated: true
-          description: El de la variante por defecto. Use `variants`.
         tax_rate:
           $ref: "#/components/schemas/TaxRate"
         attributes:
           $ref: "#/components/schemas/ProductAttributes"
-        margin_percent:
-          type: string
-          deprecated: true
-          description: El de la variante por defecto. Use `variants`.
-          example: "16.6667"
         active:
           type: boolean
           description: Un producto inactivo no se vende, con ninguna de sus variantes.
@@ -2761,9 +2725,7 @@ components:
             $ref: "#/components/schemas/ProductVariant"
       description: |
         Un producto del catálogo: lo que comparten sus variantes (nombre, categoría, unidad base y tasa de IVA).
-        `sku`, `barcode`, `cost`, `price`, `price_with_tax` y `margin_percent` son los de la variante por defecto y se
-        mantienen mientras el frontend pasa a `variants`. `cost` y `margin_percent` solo se envían a quien puede
-        editar el catálogo (`catalog:write`).
+        Lo que se vende y se cuenta (SKU, código de barras, costo y precio) va en `variants`.
     ProductPage:
       type: object
       required: [items, total]
@@ -2954,18 +2916,12 @@ components:
           description: Cantidad total de movimientos que cumplen el filtro, sin paginar.
     ReceiptInput:
       type: object
-      required: [location_id, quantity, unit_cost]
+      required: [variant_id, location_id, quantity, unit_cost]
       additionalProperties: false
-      description: Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`).
       properties:
         variant_id:
           type: string
           format: uuid
-        product_id:
-          type: string
-          format: uuid
-          deprecated: true
-          description: Se resuelve a la variante por defecto del producto. Use `variant_id`.
         location_id:
           type: string
           format: uuid
@@ -2975,18 +2931,12 @@ components:
           $ref: "#/components/schemas/Money"
     AdjustmentInput:
       type: object
-      required: [location_id, quantity, reason]
+      required: [variant_id, location_id, quantity, reason]
       additionalProperties: false
-      description: Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`).
       properties:
         variant_id:
           type: string
           format: uuid
-        product_id:
-          type: string
-          format: uuid
-          deprecated: true
-          description: Se resuelve a la variante por defecto del producto. Use `variant_id`.
         location_id:
           type: string
           format: uuid
@@ -2999,18 +2949,12 @@ components:
           example: Unidad dañada en la bodega
     TransferInput:
       type: object
-      required: [from_location_id, to_location_id, quantity]
+      required: [variant_id, from_location_id, to_location_id, quantity]
       additionalProperties: false
-      description: Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`).
       properties:
         variant_id:
           type: string
           format: uuid
-        product_id:
-          type: string
-          format: uuid
-          deprecated: true
-          description: Se resuelve a la variante por defecto del producto. Use `variant_id`.
         from_location_id:
           type: string
           format: uuid
@@ -3050,20 +2994,14 @@ components:
     SaleLineInput:
       type: object
       description: |
-        Una línea del carrito: una variante y la cantidad. Lleva `variant_id` o, por compatibilidad, `product_id`;
-        uno de los dos, no ambos (`variant_required`). `discount` es un monto en pesos sobre la línea, antes de IVA
-        (por defecto, 0). El precio lo pone el servidor.
-      required: [quantity]
+        Una línea del carrito: una variante y la cantidad. `discount` es un monto en pesos sobre la línea, antes de
+        IVA (por defecto, 0). El precio lo pone el servidor.
+      required: [variant_id, quantity]
       additionalProperties: false
       properties:
         variant_id:
           type: string
           format: uuid
-        product_id:
-          type: string
-          format: uuid
-          deprecated: true
-          description: Se resuelve a la variante por defecto del producto. Use `variant_id`.
         quantity:
           $ref: "#/components/schemas/Quantity"
         discount:

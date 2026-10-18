@@ -54,10 +54,6 @@ type VariantCatalog interface {
 	// Variants returns the variants of tenantID among ids (distinct); the
 	// ones that do not exist in the tenant are left out.
 	Variants(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) ([]VariantInfo, error)
-	// DefaultVariants returns the default variant of each of productIDs
-	// (distinct) that exists in tenantID. It serves the deprecated
-	// product_id of a sale line, which T24j removes.
-	DefaultVariants(ctx context.Context, tenantID uuid.UUID, productIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
 }
 
 // StockLine is the quantity of a variant a sale takes from stock.

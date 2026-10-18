@@ -77,7 +77,7 @@ func errorBody(t *testing.T, body []byte) (code, message string, details map[str
 func TestProductAttributesHTTP(t *testing.T) {
 	t.Run("crear un producto pasa los atributos de texto y sí/no al caso de uso", func(t *testing.T) {
 		uc := &stubUseCases{product: product(t, "8333.33", "10000")}
-		body := `{"sku":"tub-pvc-12","name":"Tubo","base_unit":"m","cost":"1","price":"2","tax_rate":"0.19",` +
+		body := `{"sku":"tub-pvc-12","name":"Tubo","base_unit_id":"` + meters.ID().String() + `","cost":"1","price":"2","tax_rate":"0.19",` +
 			`"attributes":{"marca":"Acme","hojas":"2.5","importado":true}}`
 
 		rec := serve(t, uc, owner, http.MethodPost, "/api/v1/products", body)
@@ -88,18 +88,9 @@ func TestProductAttributesHTTP(t *testing.T) {
 		}, uc.input.Attributes)
 	})
 
-	t.Run("sin atributos en el cuerpo, el caso de uso recibe nil y conserva los actuales", func(t *testing.T) {
-		uc := &stubUseCases{product: product(t, "8333.33", "10000")}
-
-		rec := serve(t, uc, owner, http.MethodPut, "/api/v1/products/"+uuid.Must(uuid.NewV7()).String(), productBody)
-
-		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		require.Nil(t, uc.input.Attributes)
-	})
-
 	t.Run("un valor que no es texto ni sí/no se rechaza nombrando el atributo", func(t *testing.T) {
 		uc := &stubUseCases{product: product(t, "8333.33", "10000")}
-		body := `{"sku":"tub-pvc-12","name":"Tubo","base_unit":"m","cost":"1","price":"2","tax_rate":"0.19","attributes":{"hojas":100}}`
+		body := `{"sku":"tub-pvc-12","name":"Tubo","base_unit_id":"` + meters.ID().String() + `","cost":"1","price":"2","tax_rate":"0.19","attributes":{"hojas":100}}`
 
 		rec := serve(t, uc, owner, http.MethodPost, "/api/v1/products", body)
 

@@ -439,24 +439,19 @@ type SaleLine struct {
 	VariantLabel *string `json:"variant_label,omitempty"`
 }
 
-// SaleLineInput Una línea del carrito: una variante y la cantidad. Lleva `variant_id` o, por compatibilidad, `product_id`;
-// uno de los dos, no ambos (`variant_required`). `discount` es un monto en pesos sobre la línea, antes de IVA
-// (por defecto, 0). El precio lo pone el servidor.
+// SaleLineInput Una línea del carrito: una variante y la cantidad. `discount` es un monto en pesos sobre la línea, antes de
+// IVA (por defecto, 0). El precio lo pone el servidor.
 type SaleLineInput struct {
 	// Discount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
 	Discount *Money `json:"discount,omitempty"`
 
-	// ProductId Se resuelve a la variante por defecto del producto. Use `variant_id`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
-
 	// Quantity Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 2.5
-	Quantity  Quantity            `json:"quantity"`
-	VariantId *openapi_types.UUID `json:"variant_id,omitempty"`
+	Quantity  Quantity           `json:"quantity"`
+	VariantId openapi_types.UUID `json:"variant_id"`
 }
 
 // SalePage defines model for SalePage.

@@ -1,0 +1,11 @@
+// One narrow column: a setting and its explanation read together.
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-inline-size: var(--size-form);
+}
+
+.submit {
+  align-self: flex-start;
+}

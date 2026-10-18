@@ -6,7 +6,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useAuth } from '@/features/auth';
 import { api } from '@/shared/api/client';
 import { ApiError, describeError, unwrap } from '@/shared/api/errors';
-import { formatPercent, toDecimalInput } from '@/shared/format';
+import { toDecimalInput } from '@/shared/format';
 import {
   Alert,
   Badge,
@@ -38,6 +38,7 @@ import {
 import { AttributeFields } from './AttributeFields';
 import { VariantEditor, VariantList } from './ProductVariants';
 import { resolveRows, saveVariants, type ResolvedRow } from './saveVariants';
+import { taxRateOptions } from './taxRates';
 import {
   NO_CATEGORY,
   NO_VALUE,
@@ -72,9 +73,6 @@ const fieldByErrorCode: Record<string, VariantField | 'name' | 'description' | '
 
 // Errors of one attribute name it in details.attribute.
 const attributeErrorCodes = new Set(['unknown_attribute', 'invalid_attribute_value', 'attribute_required']);
-
-// The usual rates in Colombia; a product with another rate keeps its own.
-const commonTaxRates = ['0', '0.05', '0.19'];
 
 /** Creates a product at /productos/nuevo and edits one at /productos/:productId/editar. */
 export function ProductFormPage() {
@@ -193,7 +191,7 @@ function ProductForm({ product, categories, units, definitions, axes, defaultTax
       defaultIndex = defaultRow(values.variants, current);
     }
     const main = resolved[defaultIndex];
-    const body = toInput(values, definitions, {
+    const body = toInput(values, {
       sku: main?.sku ?? values.sku,
       barcode: main ? main.barcode : values.barcode,
       cost: main?.cost ?? values.cost,
@@ -378,7 +376,7 @@ function ProductForm({ product, categories, units, definitions, axes, defaultTax
                 control={control}
                 name="tax_rate"
                 render={({ field }) => (
-                  <Select options={taxOptions(field.value)} value={field.value} onValueChange={field.onChange} />
+                  <Select options={taxRateOptions(field.value)} value={field.value} onValueChange={field.onChange} />
                 )}
               />
             </Field>
@@ -492,7 +490,7 @@ function defaultRow(rows: VariantRow[], product: Product | undefined) {
 
 type DefaultVariantInput = Pick<ProductInput, 'sku' | 'cost' | 'price'> & { barcode: string };
 
-function toInput(values: ProductFormValues, definitions: AttributeDefinition[], variant: DefaultVariantInput): ProductInput {
+function toInput(values: ProductFormValues, variant: DefaultVariantInput): ProductInput {
   return {
     sku: variant.sku,
     ...(variant.barcode && { barcode: variant.barcode }),
@@ -503,10 +501,8 @@ function toInput(values: ProductFormValues, definitions: AttributeDefinition[], 
     cost: variant.cost,
     price: variant.price,
     tax_rate: values.tax_rate,
-    // Without definitions the product keeps what it has (attributes omitted).
-    ...(definitions.length > 0 && {
-      attributes: Object.fromEntries(Object.entries(values.attributes).filter(([, value]) => value !== '')),
-    }),
+    // The values replace the product's: an optional attribute left empty has none.
+    attributes: Object.fromEntries(Object.entries(values.attributes).filter(([, value]) => value !== '')),
   };
 }
 
@@ -520,9 +516,4 @@ function categoryOptions(categories: Category[]): SelectOption[] {
   const options = categories.map((category) => ({ value: category.id, label: path(category) }));
   options.sort((a, b) => a.label.localeCompare(b.label, 'es'));
   return [{ value: NO_CATEGORY, label: 'Sin categoría' }, ...options];
-}
-
-function taxOptions(current: string): SelectOption[] {
-  const rates = commonTaxRates.includes(current) ? commonTaxRates : [...commonTaxRates, current];
-  return rates.map((rate) => ({ value: rate, label: formatPercent(rate, 'rate') }));
 }

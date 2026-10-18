@@ -24,14 +24,8 @@ var (
 	ErrTransferMismatch         = errors.New("inventory: transfer between different variants or tenants")
 	ErrLocationInactive         = errors.New("inventory: location is inactive")
 	ErrSaleAlreadyReversed      = errors.New("inventory: the sale's stock was already given back")
-	// ErrVariantRequired is a movement that names neither a variant nor a
-	// product, or names both.
-	ErrVariantRequired = errors.New("inventory: a variant or a product is required, not both")
 
 	ErrLocationNotFound  = errors.New("inventory: location not found")
 	ErrLocationNameTaken = errors.New("inventory: location name taken")
 	ErrVariantNotFound   = errors.New("inventory: variant not found")
-	// ErrProductNotFound is a deprecated product_id that does not resolve to
-	// a default variant in the tenant.
-	ErrProductNotFound = errors.New("inventory: product not found")
 )
