@@ -37,6 +37,7 @@ El núcleo es el mismo para todos los negocios, y cada tipo de negocio se adapta
 - **Confiable y sobrio**, como una buena herramienta: no juguete, no banco. Habla como un colega del comercio, de "usted" o neutro, sin tecnicismos ni anglicismos ("Cobrar", no "Checkout").
 - **Directo:** verbos de acción en los botones ("Cobrar", "Registrar entrada", "Guardar precio").
 - **Sin decoración gratuita:** ilustraciones, degradados y animaciones solo si ayudan a entender algo. La personalidad sale de la tipografía, la jerarquía y un color de marca bien usado.
+- **De ningún gremio en particular:** la dirección visual ("Mostrador", en `docs/estilos.md`) sirve igual a una ferretería, una droguería o un almacén de ropa. Nada de texturas, íconos o metáforas de un tipo de negocio; el naranja es el color de la marca, no el de la obra.
 - **Colombiano sin folclor:** formatos locales (COP, fechas `dd/mm/aaaa`, hora de Bogotá) sin caer en clichés visuales.
 
 ## Principios de diseño
