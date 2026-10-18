@@ -283,7 +283,7 @@ func TestQuerySpans(t *testing.T) {
 // insertTenant stores the tenant row of id within tx: tenants is a business
 // table whose policy compares id with app.tenant_id.
 func insertTenant(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
-	_, err := tx.Exec(ctx, "INSERT INTO tenants (id, name, nit, status, business_template, created_at) VALUES ($1, 'Ferretería', '890903938-8', 'active', 'ferreteria', now())", id)
+	_, err := tx.Exec(ctx, "INSERT INTO tenants (id, name, nit, status, business_template, created_at) VALUES ($1, 'Ferretería', '900123456-8', 'active', 'ferreteria', now())", id)
 	return err
 }
 

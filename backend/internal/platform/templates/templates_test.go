@@ -74,6 +74,15 @@ func TestBusinessTemplates(t *testing.T) {
 		}
 	})
 
+	t.Run("negocio general es la plantilla de respaldo y se lista primero", func(t *testing.T) {
+		list := catalog.List()
+		require.Equal(t, "generica", list[0].ID)
+		require.True(t, list[0].Fallback)
+		for _, tpl := range list[1:] {
+			require.False(t, tpl.Fallback, tpl.ID)
+		}
+	})
+
 	t.Run("una plantilla inexistente no se encuentra", func(t *testing.T) {
 		_, ok := catalog.Get("panaderia")
 		require.False(t, ok)
@@ -130,6 +139,21 @@ func TestLoad(t *testing.T) {
 		require.Equal(t, []templates.Template{tpl}, catalog.List())
 	})
 
+	t.Run("lista primero la plantilla de respaldo y luego las demás por nombre", func(t *testing.T) {
+		// The file names (IDs) sort the other way round from the names.
+		catalog, err := templates.Load(fstest.MapFS{
+			"a_ropa.yaml":       {Data: []byte(replace(valid, "Negocio de prueba", "Ropa y calzado"))},
+			"b_ferreteria.yaml": {Data: []byte(replace(valid, "Negocio de prueba", "Ferretería"))},
+			"c_general.yaml":    {Data: []byte(replace(valid, "name: Negocio de prueba\n", "name: Negocio general\nfallback: true\n"))},
+		}, allModules)
+		require.NoError(t, err)
+		ids := []string{}
+		for _, tpl := range catalog.List() {
+			ids = append(ids, tpl.ID)
+		}
+		require.Equal(t, []string{"c_general", "b_ferreteria", "a_ropa"}, ids)
+	})
+
 	t.Run("un atributo sin required no es obligatorio", func(t *testing.T) {
 		catalog, err := templates.Load(fstest.MapFS{"prueba.yaml": {Data: []byte(replace(valid, "type: text, required: true}", "type: text}"))}}, allModules)
 		require.NoError(t, err)
@@ -161,6 +185,7 @@ func TestLoad(t *testing.T) {
 			{name: "eje sin valores", files: map[string]string{"prueba.yaml": replace(valid, "values: [S, M]", "values: []")}},
 			{name: "eje repetido", files: map[string]string{"prueba.yaml": replace(valid, "  - {name: talla, values: [S, M]}\n", "  - {name: talla, values: [S, M]}\n  - {name: Talla, values: [L]}\n")}},
 			{name: "segmento repetido", files: map[string]string{"prueba.yaml": replace(valid, "[Público, Mayorista]", "[Público, Público]")}},
+			{name: "fallback que no es sí/no", files: map[string]string{"prueba.yaml": valid + "fallback: si\n"}},
 			{name: "nombre de archivo que no es un ID", files: map[string]string{"Ropa-Calzado.yaml": valid}},
 		}
 		for _, tt := range tests {

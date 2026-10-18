@@ -52,7 +52,9 @@
   }
 
   @include respond-to(md) {
-    grid-template-columns: minmax(0, 1fr) 11ch 9ch 14ch auto;
+    // The discount column is as wide as its label, which never wraps: its
+    // width depends on the font, so a fixed one would split it.
+    grid-template-columns: minmax(0, 1fr) 11ch minmax(9ch, min-content) 14ch auto;
     grid-template-areas: 'product quantity discount amount remove';
     align-items: center;
     padding-inline: var(--space-4);
@@ -86,6 +88,10 @@
 
 .discount {
   grid-area: discount;
+}
+
+.discountLabel {
+  white-space: nowrap;
 }
 
 .amount {

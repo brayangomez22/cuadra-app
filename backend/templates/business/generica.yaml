@@ -1,5 +1,7 @@
 # Negocio general: para cualquier comercio que no encaje en otra plantilla.
 name: Negocio general
+# Se lista primero, antes que los tipos de negocio en orden alfabético.
+fallback: true
 description: Para cualquier comercio. Empieza con lo básico y se ajusta después.
 modules: []
 # Tasa de IVA que se propone a un producto nuevo.

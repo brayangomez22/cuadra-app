@@ -1,9 +1,18 @@
-import { useEffect, useRef, type Dispatch, type KeyboardEvent } from 'react';
-import { variantName } from '@/features/catalog';
-import { formatMoney, isZero } from '@/shared/format';
-import { Badge, EmptyState, Field, IconAlert, IconButton, IconCart, IconClose, Input } from '@/shared/ui';
-import type { CartAction, CartTotals } from './cart';
-import styles from './CartLines.module.scss';
+import { useEffect, useRef, type Dispatch, type KeyboardEvent } from "react";
+import { variantName } from "@/features/catalog";
+import { formatMoney, isZero } from "@/shared/format";
+import {
+  Badge,
+  EmptyState,
+  Field,
+  IconAlert,
+  IconButton,
+  IconCart,
+  IconClose,
+  Input,
+} from "@/shared/ui";
+import type { CartAction, CartTotals } from "./cart";
+import styles from "./CartLines.module.scss";
 
 type Props = {
   totals: CartTotals;
@@ -22,7 +31,14 @@ type Props = {
  * The lines of the sale in progress, the newest last. Quantity and discount
  * are edited in place; Enter in either goes back to the search.
  */
-export function CartLines({ totals, dispatch, showDiscount, outOfStock, added, onDone }: Props) {
+export function CartLines({
+  totals,
+  dispatch,
+  showDiscount,
+  outOfStock,
+  added,
+  onDone,
+}: Props) {
   const lines = useRef(new Map<string, HTMLLIElement>());
 
   // On a phone or at 200% zoom the added line can be off screen: bring it in,
@@ -30,7 +46,8 @@ export function CartLines({ totals, dispatch, showDiscount, outOfStock, added, o
   const addedSeq = added?.seq;
   const addedId = added?.variantId;
   useEffect(() => {
-    if (addedId) lines.current.get(addedId)?.scrollIntoView?.({ block: 'nearest' });
+    if (addedId)
+      lines.current.get(addedId)?.scrollIntoView?.({ block: "nearest" });
   }, [addedId, addedSeq]);
 
   if (totals.lines.length === 0) {
@@ -45,7 +62,7 @@ export function CartLines({ totals, dispatch, showDiscount, outOfStock, added, o
   }
 
   const backToSearch = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== 'Enter') return;
+    if (event.key !== "Enter") return;
     event.preventDefault();
     onDone();
   };
@@ -67,7 +84,7 @@ export function CartLines({ totals, dispatch, showDiscount, outOfStock, added, o
             }}
             className={styles.line}
             aria-label={name}
-            data-state={noStock ? 'error' : isAdded ? 'added' : undefined}
+            data-state={noStock ? "error" : isAdded ? "added" : undefined}
           >
             <div className={styles.product}>
               <span className={styles.name}>{name}</span>
@@ -75,23 +92,46 @@ export function CartLines({ totals, dispatch, showDiscount, outOfStock, added, o
                 {item.sku} · {formatMoney(item.priceWithTax)} / {item.unit}
               </span>
               {noStock && (
-                <Badge tone="danger" icon={<IconAlert />} className={styles.badge}>
+                <Badge
+                  tone="danger"
+                  icon={<IconAlert />}
+                  className={styles.badge}
+                >
                   Sin stock suficiente
                 </Badge>
               )}
             </div>
-            <Field className={styles.quantity} label={<>Cantidad {forProduct}</>} error={quantityError}>
+            <Field
+              className={styles.quantity}
+              label={<>Cantidad {forProduct}</>}
+              error={quantityError}
+            >
               <Input
                 align="end"
                 inputMode="decimal"
                 autoComplete="off"
                 value={line.quantity}
-                onChange={(event) => dispatch({ type: 'setQuantity', variantId: item.variantId, text: event.target.value })}
+                onChange={(event) =>
+                  dispatch({
+                    type: "setQuantity",
+                    variantId: item.variantId,
+                    text: event.target.value,
+                  })
+                }
                 onKeyDown={backToSearch}
               />
             </Field>
             {showDiscount && (
-              <Field className={styles.discount} label={<>Descuento % {forProduct}</>} error={discountError}>
+              <Field
+                className={styles.discount}
+                label={
+                  <>
+                    <span className={styles.discountLabel}>Descuento %</span>{" "}
+                    {forProduct}
+                  </>
+                }
+                error={discountError}
+              >
                 <Input
                   align="end"
                   inputMode="decimal"
@@ -99,7 +139,11 @@ export function CartLines({ totals, dispatch, showDiscount, outOfStock, added, o
                   placeholder="0"
                   value={line.discount}
                   onChange={(event) =>
-                    dispatch({ type: 'setDiscount', variantId: item.variantId, text: event.target.value })
+                    dispatch({
+                      type: "setDiscount",
+                      variantId: item.variantId,
+                      text: event.target.value,
+                    })
                   }
                   onKeyDown={backToSearch}
                 />
@@ -107,12 +151,16 @@ export function CartLines({ totals, dispatch, showDiscount, outOfStock, added, o
             )}
             <div className={styles.amount}>
               {amounts ? (
-                <span className={styles.total}>{formatMoney(amounts.total)}</span>
+                <span className={styles.total}>
+                  {formatMoney(amounts.total)}
+                </span>
               ) : (
                 <span className={styles.meta}>Sin total</span>
               )}
               {amounts && !isZero(amounts.discount) && (
-                <span className={styles.meta}>−{formatMoney(amounts.discount)} antes de IVA</span>
+                <span className={styles.meta}>
+                  −{formatMoney(amounts.discount)} antes de IVA
+                </span>
               )}
             </div>
             <IconButton
@@ -120,7 +168,7 @@ export function CartLines({ totals, dispatch, showDiscount, outOfStock, added, o
               label={`Quitar ${name}`}
               icon={<IconClose />}
               onClick={() => {
-                dispatch({ type: 'remove', variantId: item.variantId });
+                dispatch({ type: "remove", variantId: item.variantId });
                 onDone();
               }}
             />

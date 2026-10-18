@@ -17,7 +17,7 @@ func TestRehydrateTenant(t *testing.T) {
 		return domain.TenantSnapshot{
 			ID:               uuid.Must(uuid.NewV7()),
 			Name:             "Ferretería El Tornillo",
-			NIT:              mustNIT(t, "890903938-8"),
+			NIT:              mustNIT(t, "900123456-8"),
 			Status:           domain.TenantSuspended,
 			BusinessTemplate: "ropa_calzado",
 			DefaultTaxRate:   decimal.RequireFromString("0.19"),
@@ -31,7 +31,7 @@ func TestRehydrateTenant(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, s.ID, tenant.ID())
 		require.Equal(t, "Ferretería El Tornillo", tenant.Name())
-		require.Equal(t, "890903938-8", tenant.NIT().String())
+		require.Equal(t, "900123456-8", tenant.NIT().String())
 		require.Equal(t, domain.TenantSuspended, tenant.Status())
 		require.False(t, tenant.IsActive())
 		require.Equal(t, "ropa_calzado", tenant.BusinessTemplate())

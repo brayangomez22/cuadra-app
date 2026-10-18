@@ -60,7 +60,7 @@ var now = time.Date(2026, 10, 10, 15, 0, 0, 0, time.UTC)
 
 func profile(t *testing.T, role domain.Role) app.Profile {
 	t.Helper()
-	nit, err := domain.ParseNIT("890903938-8")
+	nit, err := domain.ParseNIT("900123456-8")
 	require.NoError(t, err)
 	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", decimal.RequireFromString("0.19"), now)
 	require.NoError(t, err)
@@ -161,7 +161,7 @@ func requireSession(t *testing.T, rec *httptest.ResponseRecorder, status int, wa
 }
 
 func TestSignUp(t *testing.T) {
-	body := `{"tenant_name":"Ferretería El Tornillo","nit":"890903938-8","name":"Ana Gómez","email":"ana@eltornillo.co","password":"clave-segura-123"}`
+	body := `{"tenant_name":"Ferretería El Tornillo","nit":"900123456-8","name":"Ana Gómez","email":"ana@eltornillo.co","password":"clave-segura-123"}`
 
 	t.Run("responde 201 con la sesión y la cookie de refresh segura", func(t *testing.T) {
 		want := session(t)
@@ -172,7 +172,7 @@ func TestSignUp(t *testing.T) {
 
 		requireSession(t, rec, http.StatusCreated, want)
 		require.Equal(t, app.SignUpInput{
-			TenantName: "Ferretería El Tornillo", NIT: "890903938-8", OwnerName: "Ana Gómez",
+			TenantName: "Ferretería El Tornillo", NIT: "900123456-8", OwnerName: "Ana Gómez",
 			Email: "ana@eltornillo.co", Password: "clave-segura-123",
 		}, got, "without business_template the use case picks the default")
 	})
@@ -402,7 +402,7 @@ func TestGetMe(t *testing.T) {
 			"id": "`+p.User.ID().String()+`",
 			"tenant_id": "`+p.Tenant.ID().String()+`",
 			"tenant_name": "Ferretería El Tornillo",
-			"tenant_nit": "890903938-8",
+			"tenant_nit": "900123456-8",
 			"business_template": "ferreteria",
 			"default_tax_rate": "0.19",
 			"name": "Ana Gómez",
@@ -467,7 +467,7 @@ func TestUpdateTenant(t *testing.T) {
 		require.JSONEq(t, `{
 			"id": "`+p.Tenant.ID().String()+`",
 			"name": "Ferretería El Tornillo",
-			"nit": "890903938-8",
+			"nit": "900123456-8",
 			"business_template": "ferreteria",
 			"default_tax_rate": "0.05"
 		}`, rec.Body.String())

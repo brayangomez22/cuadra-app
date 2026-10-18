@@ -469,7 +469,7 @@ func newEnv(t *testing.T) *env {
 }
 
 const (
-	validNIT      = "890903938-8"
+	validNIT      = "900123456-8"
 	validPassword = "clave-segura-123"
 )
 

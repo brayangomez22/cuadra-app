@@ -46,7 +46,7 @@ func newFixture(t *testing.T) fixture {
 // is not unique.
 func (f fixture) createTenant(t *testing.T) *domain.Tenant {
 	t.Helper()
-	nit, err := domain.ParseNIT("890903938-8")
+	nit, err := domain.ParseNIT("900123456-8")
 	require.NoError(t, err)
 	tenant, err := domain.NewTenant("Ferretería El Tornillo", nit, "ferreteria", decimal.RequireFromString("0.19"), now)
 	require.NoError(t, err)
@@ -100,7 +100,7 @@ func TestTenantRepository(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, tenant.ID(), got.ID())
 		require.Equal(t, "Ferretería El Tornillo", got.Name())
-		require.Equal(t, "890903938-8", got.NIT().String())
+		require.Equal(t, "900123456-8", got.NIT().String())
 		require.Equal(t, domain.TenantActive, got.Status())
 		require.Equal(t, "ferreteria", got.BusinessTemplate())
 		require.Equal(t, "0.19", got.DefaultTaxRate().String())
@@ -108,7 +108,7 @@ func TestTenantRepository(t *testing.T) {
 	})
 
 	t.Run("guarda el IVA por defecto de cada plantilla", func(t *testing.T) {
-		nit, err := domain.ParseNIT("890903938-8")
+		nit, err := domain.ParseNIT("900123456-8")
 		require.NoError(t, err)
 		for template, rate := range map[string]string{"drogueria": "0", "ropa_calzado": "0.19"} {
 			tenant, err := domain.NewTenant("Mi negocio", nit, template, decimal.RequireFromString(rate), now)
@@ -331,7 +331,7 @@ func TestRowLevelSecurityPolicies(t *testing.T) {
 		err := f.db.WithTenantTx(t.Context(), tenant.ID(), func(tx pgx.Tx) error {
 			_, err := tx.Exec(t.Context(), `
 				INSERT INTO tenants (id, name, nit, status, business_template, default_tax_rate, created_at)
-				VALUES ($1, 'Otra', '890903938-8', 'active', 'generica', 0.19, now())`, uuid.Must(uuid.NewV7()))
+				VALUES ($1, 'Otra', '900123456-8', 'active', 'generica', 0.19, now())`, uuid.Must(uuid.NewV7()))
 			return err
 		})
 		requireRLSViolation(t, err)

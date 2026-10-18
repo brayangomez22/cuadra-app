@@ -20,7 +20,7 @@ type NIT struct {
 	checkDigit int
 }
 
-// ParseNIT accepts "890903938-8", "890.903.938-8" or "8909039388" (the last
+// ParseNIT accepts "900123456-8", "900.123.456-8" or "9001234568" (the last
 // digit is the DV when there is no dash) and verifies the check digit with
 // the DIAN algorithm. Dots and spaces are ignored.
 func ParseNIT(s string) (NIT, error) {
@@ -74,7 +74,7 @@ func allDigits(s string) bool {
 	return s != ""
 }
 
-// String returns the canonical form "number-DV", for example "890903938-8".
+// String returns the canonical form "number-DV", for example "900123456-8".
 func (n NIT) String() string {
 	if n.IsZero() {
 		return ""

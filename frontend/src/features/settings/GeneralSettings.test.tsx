@@ -22,7 +22,7 @@ describe('GeneralSettings', () => {
         return json(200, {
           id: aUser().tenant_id,
           name: 'Ferretería El Tornillo',
-          nit: '890903938-8',
+          nit: '900123456-8',
           business_template: 'ferreteria',
           default_tax_rate: rate,
         });
