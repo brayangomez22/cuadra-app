@@ -283,7 +283,7 @@ func TestConfirmSaleCashErrors(t *testing.T) {
 			{domain.ErrCashSessionClosed, http.StatusConflict, "cash_session_closed"},
 			{domain.ErrCashSessionLocationMismatch, http.StatusUnprocessableEntity, "cash_session_location_mismatch"},
 		}
-		body := `{"location_id":"` + newID().String() + `","lines":[{"product_id":"` + newID().String() + `","quantity":"1"}],"payments":[]}`
+		body := `{"location_id":"` + newID().String() + `","lines":[{"variant_id":"` + newID().String() + `","quantity":"1"}],"payments":[]}`
 		for _, tt := range tests {
 			rec := serve(t, &stubUseCases{err: tt.err}, &owner, http.MethodPost, "/api/v1/sales", body)
 			require.Equal(t, tt.status, rec.Code, rec.Body.String())

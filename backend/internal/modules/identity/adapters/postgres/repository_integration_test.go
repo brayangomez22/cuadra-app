@@ -131,6 +131,36 @@ func TestTenantRepository(t *testing.T) {
 		require.Equal(t, domain.TenantSuspended, got.Status())
 	})
 
+	t.Run("actualiza el IVA por defecto de un tenant", func(t *testing.T) {
+		tenant := f.createTenant(t)
+		require.NoError(t, tenant.SetDefaultTaxRate(decimal.RequireFromString("0.05")))
+		require.NoError(t, f.tenants.Update(t.Context(), tenant))
+
+		got, err := f.tenants.GetByID(t.Context(), tenant.ID())
+		require.NoError(t, err)
+		require.Equal(t, "0.05", got.DefaultTaxRate().String())
+	})
+
+	t.Run("un UPDATE desde el tenant B no cambia el IVA por defecto del tenant A", func(t *testing.T) {
+		tenantA := f.createTenant(t)
+		tenantB := f.createTenant(t)
+
+		// Bypasses the repository: it always scopes the transaction to the
+		// tenant itself, so only raw SQL can try the cross-tenant write.
+		var affected int64
+		err := f.db.WithTenantTx(t.Context(), tenantB.ID(), func(tx pgx.Tx) error {
+			tag, err := tx.Exec(t.Context(), "UPDATE tenants SET default_tax_rate = 0 WHERE id = $1", tenantA.ID())
+			affected = tag.RowsAffected()
+			return err
+		})
+		require.NoError(t, err)
+		require.Zero(t, affected)
+
+		got, err := f.tenants.GetByID(t.Context(), tenantA.ID())
+		require.NoError(t, err)
+		require.Equal(t, "0.19", got.DefaultTaxRate().String())
+	})
+
 	t.Run("GetByID de un tenant inexistente devuelve ErrTenantNotFound", func(t *testing.T) {
 		_, err := f.tenants.GetByID(t.Context(), uuid.Must(uuid.NewV7()))
 		require.ErrorIs(t, err, domain.ErrTenantNotFound)

@@ -167,6 +167,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar la configuración de la empresa
+         * @description Cambia los campos que se envían y conserva los demás. `/me` refleja el cambio.
+         */
+        patch: operations["updateTenant"];
+        trace?: never;
+    };
     "/api/v1/modules": {
         parameters: {
             query?: never;
@@ -613,30 +633,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/products/{productId}/kardex": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                productId: components["parameters"]["ProductId"];
-            };
-            cookie?: never;
-        };
-        /**
-         * Kardex de la variante por defecto de un producto
-         * @deprecated
-         * @description El kardex de la variante por defecto del producto. Use `GET /api/v1/variants/{variantId}/kardex`. Un
-         *     producto que no existe tiene el kardex vacío.
-         */
-        get: operations["getKardex"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/inventory/receipts": {
         parameters: {
             query?: never;
@@ -963,11 +959,11 @@ export interface components {
              */
             password: string;
             /**
-             * @description Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Sin ella, la empresa
-             *     empieza con la plantilla `generica`.
+             * @description Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Siembra las unidades,
+             *     categorías, atributos, ejes de variante, módulos e IVA por defecto de la empresa.
              * @example generica
              */
-            business_template?: string;
+            business_template: string;
         };
         BusinessTemplate: {
             /** @example generica */
@@ -1017,7 +1013,10 @@ export interface components {
              * @example generica
              */
             business_template: string;
-            /** @description La tasa de IVA que se propone a un producto nuevo. La siembra la plantilla de la empresa. */
+            /**
+             * @description La tasa de IVA que se propone a un producto nuevo. La siembra la plantilla de la empresa y se cambia con
+             *     `PATCH /api/v1/tenant`.
+             */
             default_tax_rate: components["schemas"]["TaxRate"];
             name: string;
             email: string;
@@ -1039,6 +1038,21 @@ export interface components {
              */
             modules: string[];
         };
+        /** @description La empresa (tenant) y su configuración. */
+        Tenant: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @example 890903938-8 */
+            nit: string;
+            /** @example generica */
+            business_template: string;
+            default_tax_rate: components["schemas"]["TaxRate"];
+        };
+        TenantUpdate: {
+            /** @description La tasa de IVA que se propone a un producto nuevo. No cambia la de los productos que ya existen. */
+            default_tax_rate?: components["schemas"]["TaxRate"];
+        };
         TenantSelectionRequired: {
             error: components["schemas"]["ErrorDetail"];
             tenants: components["schemas"]["TenantOption"][];
@@ -1058,11 +1072,6 @@ export interface components {
          * @example 0.19
          */
         TaxRate: string;
-        /**
-         * @description El código de una unidad de medida de la empresa (`und`, `m`).
-         * @example m
-         */
-        UnitCode: string;
         /** @description Una unidad de medida de la empresa, en la que se cuentan y se venden sus productos. */
         UnitOfMeasure: {
             /** Format: uuid */
@@ -1199,9 +1208,8 @@ export interface components {
         };
         /**
          * @description Los datos del producto y los de su variante por defecto (`sku`, `barcode`, `cost` y `price`). Las demás
-         *     variantes se editan con `/products/{productId}/variants`. La unidad base va en `base_unit_id` o, mientras
-         *     el frontend pasa a `base_unit_id`, por su código en `base_unit` (deprecated): una de las dos. Los
-         *     atributos se validan contra las definiciones de la empresa (`/product-attributes`).
+         *     variantes se editan con `/products/{productId}/variants`. Los atributos se validan contra las definiciones
+         *     de la empresa (`/product-attributes`).
          */
         ProductInput: {
             /**
@@ -1223,17 +1231,15 @@ export interface components {
              * Format: uuid
              * @description La unidad de medida en la que se cuenta y se vende el producto.
              */
-            base_unit_id?: string;
-            /**
-             * @deprecated
-             * @description El código de la unidad base. Use `base_unit_id`.
-             */
-            base_unit?: components["schemas"]["UnitCode"];
+            base_unit_id: string;
             cost: components["schemas"]["Money"];
             price: components["schemas"]["Money"];
             tax_rate: components["schemas"]["TaxRate"];
-            /** @description Los valores de los atributos de la empresa. Si se omite al editar, el producto conserva los que tiene. */
-            attributes?: components["schemas"]["ProductAttributes"];
+            /**
+             * @description Los valores de los atributos de la empresa (`{}` si no tiene). Al editar reemplazan los que tiene el
+             *     producto: un atributo que no se envía queda sin valor.
+             */
+            attributes: components["schemas"]["ProductAttributes"];
         };
         /**
          * @description El valor de la variante en cada eje que define la empresa (`{"color": "Azul"}`, ver `/variant-axes`), hasta
@@ -1300,24 +1306,11 @@ export interface components {
         };
         /**
          * @description Un producto del catálogo: lo que comparten sus variantes (nombre, categoría, unidad base y tasa de IVA).
-         *     `sku`, `barcode`, `cost`, `price`, `price_with_tax` y `margin_percent` son los de la variante por defecto y se
-         *     mantienen mientras el frontend pasa a `variants`. `cost` y `margin_percent` solo se envían a quien puede
-         *     editar el catálogo (`catalog:write`).
+         *     Lo que se vende y se cuenta (SKU, código de barras, costo y precio) va en `variants`.
          */
         Product: {
             /** Format: uuid */
             id: string;
-            /**
-             * @deprecated
-             * @description El de la variante por defecto. Use `variants`.
-             * @example CIN-18
-             */
-            sku: string;
-            /**
-             * @deprecated
-             * @description El de la variante por defecto; se omite si no tiene. Use `variants`.
-             */
-            barcode?: string;
             name: string;
             /** @description Se omite si está vacía. */
             description?: string;
@@ -1329,34 +1322,8 @@ export interface components {
             /** Format: uuid */
             base_unit_id: string;
             unit: components["schemas"]["UnitOfMeasure"];
-            /**
-             * @deprecated
-             * @description El código de `unit`. Use `unit`.
-             */
-            base_unit: components["schemas"]["UnitCode"];
-            /**
-             * @deprecated
-             * @description El de la variante por defecto. Use `variants`.
-             */
-            cost?: components["schemas"]["Money"];
-            /**
-             * @deprecated
-             * @description El de la variante por defecto. Use `variants`.
-             */
-            price: components["schemas"]["Money"];
-            /**
-             * @deprecated
-             * @description El de la variante por defecto. Use `variants`.
-             */
-            price_with_tax: components["schemas"]["Money"];
             tax_rate: components["schemas"]["TaxRate"];
             attributes: components["schemas"]["ProductAttributes"];
-            /**
-             * @deprecated
-             * @description El de la variante por defecto. Use `variants`.
-             * @example 16.6667
-             */
-            margin_percent?: string;
             /** @description Un producto inactivo no se vende, con ninguna de sus variantes. */
             active: boolean;
             /** Format: date-time */
@@ -1484,47 +1451,26 @@ export interface components {
             /** @description Cantidad total de movimientos que cumplen el filtro, sin paginar. */
             total: number;
         };
-        /** @description Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`). */
         ReceiptInput: {
             /** Format: uuid */
-            variant_id?: string;
-            /**
-             * Format: uuid
-             * @deprecated
-             * @description Se resuelve a la variante por defecto del producto. Use `variant_id`.
-             */
-            product_id?: string;
+            variant_id: string;
             /** Format: uuid */
             location_id: string;
             quantity: components["schemas"]["Quantity"];
             unit_cost: components["schemas"]["Money"];
         };
-        /** @description Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`). */
         AdjustmentInput: {
             /** Format: uuid */
-            variant_id?: string;
-            /**
-             * Format: uuid
-             * @deprecated
-             * @description Se resuelve a la variante por defecto del producto. Use `variant_id`.
-             */
-            product_id?: string;
+            variant_id: string;
             /** Format: uuid */
             location_id: string;
             quantity: components["schemas"]["SignedQuantity"];
             /** @example Unidad dañada en la bodega */
             reason: string;
         };
-        /** @description Lleva `variant_id` o, por compatibilidad, `product_id`; uno de los dos, no ambos (`variant_required`). */
         TransferInput: {
             /** Format: uuid */
-            variant_id?: string;
-            /**
-             * Format: uuid
-             * @deprecated
-             * @description Se resuelve a la variante por defecto del producto. Use `variant_id`.
-             */
-            product_id?: string;
+            variant_id: string;
             /** Format: uuid */
             from_location_id: string;
             /** Format: uuid */
@@ -1545,19 +1491,12 @@ export interface components {
             payments: components["schemas"]["PaymentInput"][];
         };
         /**
-         * @description Una línea del carrito: una variante y la cantidad. Lleva `variant_id` o, por compatibilidad, `product_id`;
-         *     uno de los dos, no ambos (`variant_required`). `discount` es un monto en pesos sobre la línea, antes de IVA
-         *     (por defecto, 0). El precio lo pone el servidor.
+         * @description Una línea del carrito: una variante y la cantidad. `discount` es un monto en pesos sobre la línea, antes de
+         *     IVA (por defecto, 0). El precio lo pone el servidor.
          */
         SaleLineInput: {
             /** Format: uuid */
-            variant_id?: string;
-            /**
-             * Format: uuid
-             * @deprecated
-             * @description Se resuelve a la variante por defecto del producto. Use `variant_id`.
-             */
-            product_id?: string;
+            variant_id: string;
             quantity: components["schemas"]["Quantity"];
             discount?: components["schemas"]["Money"];
         };
@@ -2165,6 +2104,43 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantUpdate"];
+            };
+        };
+        responses: {
+            /** @description La empresa con su configuración nueva. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenant"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description El IVA por defecto no es válido (`invalid_default_tax_rate`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             500: components["responses"]["InternalError"];
         };
     };
@@ -3246,12 +3222,6 @@ export interface operations {
             query?: {
                 /** @description Solo la existencia de esta variante. */
                 variant_id?: string;
-                /**
-                 * @deprecated
-                 * @description Solo la existencia de la variante por defecto de este producto. Use `variant_id`; no se envían los dos
-                 *     (`variant_required`).
-                 */
-                product_id?: string;
                 /** @description Cantidad máxima de resultados. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Cantidad de resultados a saltar. */
@@ -3278,15 +3248,6 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Se enviaron `variant_id` y `product_id` a la vez (`variant_required`). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
             500: components["responses"]["InternalError"];
         };
     };
@@ -3303,39 +3264,6 @@ export interface operations {
             header?: never;
             path: {
                 variantId: components["parameters"]["VariantId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Una página del kardex. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StockMovementPage"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalError"];
-        };
-    };
-    getKardex: {
-        parameters: {
-            query?: {
-                /** @description Solo los movimientos de esta sede. */
-                location_id?: string;
-                /** @description Cantidad máxima de resultados. */
-                limit?: components["parameters"]["Limit"];
-                /** @description Cantidad de resultados a saltar. */
-                offset?: components["parameters"]["Offset"];
-            };
-            header?: never;
-            path: {
-                productId: components["parameters"]["ProductId"];
             };
             cookie?: never;
         };
@@ -3382,8 +3310,8 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /**
-             * @description Algún dato no cumple las reglas (`invalid_quantity`, `invalid_unit_cost`, `variant_required`,
-             *     `variant_not_found`, `product_not_found`, `location_not_found`, `location_inactive`).
+             * @description Algún dato no cumple las reglas (`invalid_quantity`, `invalid_unit_cost`, `variant_not_found`,
+             *     `location_not_found`, `location_inactive`).
              */
             422: {
                 headers: {
@@ -3432,8 +3360,7 @@ export interface operations {
             };
             /**
              * @description Algún dato no cumple las reglas (`invalid_quantity`, `adjustment_reason_required`,
-             *     `adjustment_reason_too_long`, `variant_required`, `variant_not_found`, `product_not_found`,
-             *     `location_not_found`, `location_inactive`).
+             *     `adjustment_reason_too_long`, `variant_not_found`, `location_not_found`, `location_inactive`).
              */
             422: {
                 headers: {
@@ -3481,8 +3408,8 @@ export interface operations {
                 };
             };
             /**
-             * @description Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `variant_required`,
-             *     `variant_not_found`, `product_not_found`, `location_not_found`, `location_inactive`).
+             * @description Algún dato no cumple las reglas (`invalid_quantity`, `same_location_transfer`, `variant_not_found`,
+             *     `location_not_found`, `location_inactive`).
              */
             422: {
                 headers: {
@@ -3562,9 +3489,8 @@ export interface operations {
                 };
             };
             /**
-             * @description No hay stock suficiente de una variante (`insufficient_stock`); `details.variant_id` dice cuál y
-             *     `details.product_id` (deprecated), su producto. El usuario
-             *     no tiene caja abierta y la empresa la exige (`cash_session_required`), o la caja se cerró
+             * @description No hay stock suficiente de una variante (`insufficient_stock`); `details.variant_id` dice cuál. El
+             *     usuario no tiene caja abierta y la empresa la exige (`cash_session_required`), o la caja se cerró
              *     (`cash_session_closed`).
              */
             409: {
@@ -3576,9 +3502,8 @@ export interface operations {
                 };
             };
             /**
-             * @description Algún dato no cumple las reglas (`variant_required`; `product_not_found` y `product_inactive`, también
-             *     para una variante; `location_not_found`,
-             *     `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
+             * @description Algún dato no cumple las reglas (`product_not_found` y `product_inactive`, también para una
+             *     variante; `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
              *     `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`).
              */
             422: {

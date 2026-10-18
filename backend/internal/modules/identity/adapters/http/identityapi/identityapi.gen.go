@@ -121,7 +121,8 @@ type Me struct {
 	// Example: generica
 	BusinessTemplate string `json:"business_template"`
 
-	// DefaultTaxRate La tasa de IVA que se propone a un producto nuevo. La siembra la plantilla de la empresa.
+	// DefaultTaxRate La tasa de IVA que se propone a un producto nuevo. La siembra la plantilla de la empresa y se cambia con
+	// `PATCH /api/v1/tenant`.
 	DefaultTaxRate TaxRate            `json:"default_tax_rate"`
 	Email          string             `json:"email"`
 	Id             openapi_types.UUID `json:"id"`
@@ -152,12 +153,12 @@ type MeRole string
 
 // SignUpRequest defines model for SignUpRequest.
 type SignUpRequest struct {
-	// BusinessTemplate Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Sin ella, la empresa
-	// empieza con la plantilla `generica`.
+	// BusinessTemplate Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Siembra las unidades,
+	// categorías, atributos, ejes de variante, módulos e IVA por defecto de la empresa.
 	//
 	//
 	// Example: generica
-	BusinessTemplate *string `json:"business_template,omitempty"`
+	BusinessTemplate string `json:"business_template"`
 
 	// Email Example: ana@minegocio.co
 	Email string `json:"email"`
@@ -186,6 +187,22 @@ type SignUpRequest struct {
 // Example: 0.19
 type TaxRate = string
 
+// Tenant La empresa (tenant) y su configuración.
+type Tenant struct {
+	// BusinessTemplate Example: generica
+	BusinessTemplate string `json:"business_template"`
+
+	// DefaultTaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
+	//
+	// Example: 0.19
+	DefaultTaxRate TaxRate            `json:"default_tax_rate"`
+	Id             openapi_types.UUID `json:"id"`
+	Name           string             `json:"name"`
+
+	// Nit Example: 890903938-8
+	Nit string `json:"nit"`
+}
+
 // TenantOption defines model for TenantOption.
 type TenantOption struct {
 	Id   openapi_types.UUID `json:"id"`
@@ -196,6 +213,12 @@ type TenantOption struct {
 type TenantSelectionRequired struct {
 	Error   ErrorDetail    `json:"error"`
 	Tenants []TenantOption `json:"tenants"`
+}
+
+// TenantUpdate defines model for TenantUpdate.
+type TenantUpdate struct {
+	// DefaultTaxRate La tasa de IVA que se propone a un producto nuevo. No cambia la de los productos que ya existen.
+	DefaultTaxRate *TaxRate `json:"default_tax_rate,omitempty"`
 }
 
 // AttributeId defines model for AttributeId.
@@ -234,6 +257,9 @@ type VariantId = openapi_types.UUID
 // BadRequest Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type BadRequest = Error
 
+// Forbidden Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
+type Forbidden = Error
+
 // InternalError Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type InternalError = Error
 
@@ -258,6 +284,9 @@ type LoginJSONRequestBody = LoginRequest
 // SignUpJSONRequestBody defines body for SignUp for application/json ContentType.
 type SignUpJSONRequestBody = SignUpRequest
 
+// UpdateTenantJSONRequestBody defines body for UpdateTenant for application/json ContentType.
+type UpdateTenantJSONRequestBody = TenantUpdate
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Login Iniciar sesión
@@ -278,6 +307,9 @@ type ServerInterface interface {
 	// GetMe Usuario actual
 	// (GET /api/v1/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
+	// UpdateTenant Cambiar la configuración de la empresa
+	// (PATCH /api/v1/tenant)
+	UpdateTenant(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -415,6 +447,20 @@ func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request)
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateTenant operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTenant(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTenant(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -541,11 +587,14 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/refresh", wrapper.RefreshSession)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/me", wrapper.GetMe)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/tenant", wrapper.UpdateTenant)
 
 	return m
 }
 
 type BadRequestJSONResponse Error
+
+type ForbiddenJSONResponse Error
 
 type InternalErrorJSONResponse Error
 
@@ -943,6 +992,98 @@ func (response GetMe500JSONResponse) VisitGetMeResponse(w http.ResponseWriter) e
 	return err
 }
 
+type UpdateTenantRequestObject struct {
+	Body *UpdateTenantJSONRequestBody
+}
+
+type UpdateTenantResponseObject interface {
+	VisitUpdateTenantResponse(w http.ResponseWriter) error
+}
+
+type UpdateTenant200JSONResponse Tenant
+
+func (response UpdateTenant200JSONResponse) VisitUpdateTenantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTenant400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateTenant400JSONResponse) VisitUpdateTenantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTenant401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateTenant401JSONResponse) VisitUpdateTenantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTenant403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateTenant403JSONResponse) VisitUpdateTenantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTenant422JSONResponse Error
+
+func (response UpdateTenant422JSONResponse) VisitUpdateTenantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTenant500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateTenant500JSONResponse) VisitUpdateTenantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// Login Iniciar sesión
@@ -963,6 +1104,9 @@ type StrictServerInterface interface {
 	// GetMe Usuario actual
 	// (GET /api/v1/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
+	// UpdateTenant Cambiar la configuración de la empresa
+	// (PATCH /api/v1/tenant)
+	UpdateTenant(ctx context.Context, request UpdateTenantRequestObject) (UpdateTenantResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -1159,6 +1303,37 @@ func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetMeResponseObject); ok {
 		if err := validResponse.VisitGetMeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateTenant operation middleware
+func (sh *strictHandler) UpdateTenant(w http.ResponseWriter, r *http.Request) {
+	var request UpdateTenantRequestObject
+
+	var body UpdateTenantJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateTenant(ctx, request.(UpdateTenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateTenant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateTenantResponseObject); ok {
+		if err := validResponse.VisitUpdateTenantResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -71,9 +71,8 @@ func newTenant(s TenantSnapshot) (*Tenant, error) {
 	if !businessTemplateFormat.MatchString(s.BusinessTemplate) {
 		return nil, ErrUnknownBusinessTemplate
 	}
-	if s.DefaultTaxRate.IsNegative() || s.DefaultTaxRate.GreaterThanOrEqual(decimal.NewFromInt(1)) ||
-		!s.DefaultTaxRate.Equal(s.DefaultTaxRate.Truncate(4)) {
-		return nil, ErrInvalidDefaultTaxRate
+	if err := checkDefaultTaxRate(s.DefaultTaxRate); err != nil {
+		return nil, err
 	}
 	return &Tenant{
 		id: s.ID, name: name, nit: s.NIT, status: s.Status, template: s.BusinessTemplate,
@@ -134,3 +133,22 @@ type TenantSnapshot struct {
 // RehydrateTenant rebuilds a stored tenant, checking the same invariants as
 // NewTenant so corrupt data surfaces as an error instead of an invalid entity.
 func RehydrateTenant(s TenantSnapshot) (*Tenant, error) { return newTenant(s) }
+
+// SetDefaultTaxRate changes the IVA rate proposed to new products; the
+// products that exist keep theirs. An invalid rate changes nothing.
+func (t *Tenant) SetDefaultTaxRate(rate decimal.Decimal) error {
+	if err := checkDefaultTaxRate(rate); err != nil {
+		return err
+	}
+	t.defaultTaxRate = rate
+	return nil
+}
+
+// checkDefaultTaxRate checks rate is a fraction from 0 to below 1 with up to
+// 4 decimals, as a product's rate.
+func checkDefaultTaxRate(rate decimal.Decimal) error {
+	if rate.IsNegative() || rate.GreaterThanOrEqual(decimal.NewFromInt(1)) || !rate.Equal(rate.Truncate(4)) {
+		return ErrInvalidDefaultTaxRate
+	}
+	return nil
+}

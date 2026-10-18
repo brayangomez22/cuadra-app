@@ -134,10 +134,10 @@ type errorBody struct {
 func TestConfirmSale(t *testing.T) {
 	t.Run("traduce el carrito y responde la venta con montos en string", func(t *testing.T) {
 		uc := &stubUseCases{sale: aSale(t)}
-		variant, product, location := newID(), newID(), newID()
+		variant, other, location := newID(), newID(), newID()
 		body := `{"location_id":"` + location.String() + `","lines":[` +
 			`{"variant_id":"` + variant.String() + `","quantity":"2.5","discount":"100"},` +
-			`{"product_id":"` + product.String() + `","quantity":"1"}],` +
+			`{"variant_id":"` + other.String() + `","quantity":"1"}],` +
 			`"payments":[{"method":"cash","amount":"30000"},{"method":"nequi","amount":"1000.5"}]}`
 
 		p := cashier()
@@ -148,9 +148,7 @@ func TestConfirmSale(t *testing.T) {
 		require.Equal(t, location, uc.confirm.LocationID)
 		require.Len(t, uc.confirm.Lines, 2)
 		require.Equal(t, variant, uc.confirm.Lines[0].VariantID)
-		require.Equal(t, uuid.Nil, uc.confirm.Lines[0].ProductID)
-		require.Equal(t, product, uc.confirm.Lines[1].ProductID, "product_id (deprecated) llega al caso de uso")
-		require.Equal(t, uuid.Nil, uc.confirm.Lines[1].VariantID)
+		require.Equal(t, other, uc.confirm.Lines[1].VariantID)
 		require.True(t, dec("100").Equal(uc.confirm.Lines[0].Discount))
 		require.True(t, uc.confirm.Lines[1].Discount.IsZero(), "sin descuento es 0")
 		require.Equal(t, "nequi", uc.confirm.Payments[1].Method)
@@ -197,13 +195,13 @@ func TestConfirmSale(t *testing.T) {
 
 	t.Run("quien tiene sales:discount descuenta sin tope", func(t *testing.T) {
 		uc := &stubUseCases{sale: aSale(t)}
-		body := `{"location_id":"` + newID().String() + `","lines":[{"product_id":"` + newID().String() + `","quantity":"1"}],"payments":[]}`
+		body := `{"location_id":"` + newID().String() + `","lines":[{"variant_id":"` + newID().String() + `","quantity":"1"}],"payments":[]}`
 		rec := serve(t, uc, &owner, http.MethodPost, "/api/v1/sales", body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		require.True(t, uc.actor.UnlimitedDiscount)
 	})
 
-	t.Run("sin stock responde 409 con el nombre, la variante y el producto", func(t *testing.T) {
+	t.Run("sin stock responde 409 con el nombre y la variante", func(t *testing.T) {
 		tests := []struct {
 			name, product, label, message string
 		}{
@@ -212,9 +210,9 @@ func TestConfirmSale(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				variant, product := newID(), newID()
+				variant := newID()
 				uc := &stubUseCases{err: &domain.InsufficientStockError{
-					VariantID: variant, ProductID: product, ProductName: tt.product, VariantLabel: tt.label,
+					VariantID: variant, ProductName: tt.product, VariantLabel: tt.label,
 				}}
 				body := `{"location_id":"` + newID().String() + `","lines":[{"variant_id":"` + variant.String() + `","quantity":"1"}],"payments":[]}`
 
@@ -224,7 +222,7 @@ func TestConfirmSale(t *testing.T) {
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
 				require.Equal(t, "insufficient_stock", got.Error.Code)
 				require.Equal(t, tt.message, got.Error.Message)
-				require.Equal(t, map[string]string{"variant_id": variant.String(), "product_id": product.String()}, got.Error.Details)
+				require.Equal(t, map[string]string{"variant_id": variant.String()}, got.Error.Details)
 			})
 		}
 	})
@@ -242,9 +240,8 @@ func TestConfirmSale(t *testing.T) {
 			{domain.ErrLocationInactive, http.StatusUnprocessableEntity, "location_inactive"},
 			{domain.ErrLocationNotFound, http.StatusUnprocessableEntity, "location_not_found"},
 			{domain.ErrInsufficientStock, http.StatusConflict, "insufficient_stock"},
-			{domain.ErrVariantRequired, http.StatusUnprocessableEntity, "variant_required"},
 		}
-		body := `{"location_id":"` + newID().String() + `","lines":[{"product_id":"` + newID().String() + `","quantity":"1"}],"payments":[]}`
+		body := `{"location_id":"` + newID().String() + `","lines":[{"variant_id":"` + newID().String() + `","quantity":"1"}],"payments":[]}`
 		for _, tt := range tests {
 			rec := serve(t, &stubUseCases{err: tt.err}, &owner, http.MethodPost, "/api/v1/sales", body)
 			require.Equal(t, tt.status, rec.Code, rec.Body.String())

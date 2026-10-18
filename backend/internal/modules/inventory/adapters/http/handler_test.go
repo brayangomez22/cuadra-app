@@ -163,7 +163,7 @@ func TestReceiveStock(t *testing.T) {
 		got := decodeMap(t, rec)
 		require.Equal(t, m.ID().String(), got["id"])
 		require.Equal(t, m.VariantID().String(), got["variant_id"])
-		require.Equal(t, productID.String(), got["product_id"], "the deprecated product_id is the variant's product")
+		require.Equal(t, productID.String(), got["product_id"], "product_id is the variant's product")
 		require.Equal(t, []uuid.UUID{m.VariantID()}, uc.productsOf)
 		require.Equal(t, "purchase_in", got["type"])
 		require.Equal(t, "2.5", got["quantity"])
@@ -183,7 +183,6 @@ func TestReceiveStock(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		require.Equal(t, app.Actor{TenantID: owner.TenantID, UserID: owner.UserID}, uc.actor)
 		require.Equal(t, variantID, uc.receipt.VariantID)
-		require.Equal(t, uuid.Nil, uc.receipt.ProductID)
 		require.Equal(t, locationID, uc.receipt.LocationID)
 		require.True(t, dec("2.5").Equal(uc.receipt.Quantity))
 		require.True(t, dec("1200.5").Equal(uc.receipt.UnitCost))
@@ -204,35 +203,9 @@ func TestReceiveStock(t *testing.T) {
 		requireError(t, rec, http.StatusUnprocessableEntity, "location_inactive")
 	})
 
-	t.Run("con product_id (deprecated) lo pasa al caso de uso sin variante", func(t *testing.T) {
-		productID := newID()
-		uc := &stubUseCases{movement: receipt(t)}
-		rec := serve(t, uc, &owner, http.MethodPost, "/api/v1/inventory/receipts",
-			`{"product_id":"`+productID.String()+`","location_id":"`+locationID.String()+`","quantity":"1","unit_cost":"1"}`)
-
-		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		require.Equal(t, productID, uc.receipt.ProductID)
-		require.Equal(t, uuid.Nil, uc.receipt.VariantID)
-	})
-
-	t.Run("sin variant_id ni product_id responde 422 variant_required", func(t *testing.T) {
-		uc := &stubUseCases{err: domain.ErrVariantRequired}
-		rec := serve(t, uc, &owner, http.MethodPost, "/api/v1/inventory/receipts",
-			`{"location_id":"`+locationID.String()+`","quantity":"1","unit_cost":"1"}`)
-
-		requireError(t, rec, http.StatusUnprocessableEntity, "variant_required")
-		require.Equal(t, uuid.Nil, uc.receipt.VariantID)
-		require.Equal(t, uuid.Nil, uc.receipt.ProductID)
-	})
-
 	t.Run("variante inexistente responde 422 variant_not_found", func(t *testing.T) {
 		rec := serve(t, &stubUseCases{err: domain.ErrVariantNotFound}, &owner, http.MethodPost, "/api/v1/inventory/receipts", body)
 		requireError(t, rec, http.StatusUnprocessableEntity, "variant_not_found")
-	})
-
-	t.Run("producto inexistente responde 422 product_not_found", func(t *testing.T) {
-		rec := serve(t, &stubUseCases{err: domain.ErrProductNotFound}, &owner, http.MethodPost, "/api/v1/inventory/receipts", body)
-		requireError(t, rec, http.StatusUnprocessableEntity, "product_not_found")
 	})
 
 	t.Run("sin principal responde 401 y no llama al caso de uso", func(t *testing.T) {
@@ -391,15 +364,6 @@ func TestListStock(t *testing.T) {
 		require.Equal(t, app.StockQuery{LocationID: locationID, VariantID: &variantID, Limit: 5, Offset: 10}, uc.stockQuery)
 	})
 
-	t.Run("pasa el product_id (deprecated) del filtro", func(t *testing.T) {
-		productID := newID()
-		uc := &stubUseCases{}
-		rec := serve(t, uc, &owner, http.MethodGet, "/api/v1/locations/"+locationID.String()+"/stock?product_id="+productID.String(), "")
-
-		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		require.Equal(t, app.StockQuery{LocationID: locationID, ProductID: &productID, Limit: 20}, uc.stockQuery)
-	})
-
 	t.Run("sede inexistente responde 404 location_not_found", func(t *testing.T) {
 		rec := serve(t, &stubUseCases{err: domain.ErrLocationNotFound}, &owner, http.MethodGet, "/api/v1/locations/"+locationID.String()+"/stock", "")
 		requireError(t, rec, http.StatusNotFound, "location_not_found")
@@ -423,13 +387,9 @@ func TestGetKardex(t *testing.T) {
 		require.Equal(t, m.VariantID().String(), got["items"].([]any)[0].(map[string]any)["variant_id"])
 	})
 
-	t.Run("el kardex de un producto (deprecated) pasa el producto", func(t *testing.T) {
-		productID := newID()
-		uc := &stubUseCases{}
+	t.Run("el kardex por producto ya no existe", func(t *testing.T) {
+		rec := serve(t, &stubUseCases{}, &owner, http.MethodGet, "/api/v1/products/"+newID().String()+"/kardex", "")
 
-		rec := serve(t, uc, &owner, http.MethodGet, "/api/v1/products/"+productID.String()+"/kardex", "")
-
-		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		require.Equal(t, app.KardexQuery{ProductID: productID, Limit: 20}, uc.kardexQuery)
+		require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	})
 }

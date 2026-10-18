@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { createBrowserRouter, type RouteObject } from 'react-router';
-import { GuestOnly, RequireAuth, RequirePermission } from '@/features/auth';
+import { GuestOnly, RequireAuth, RequirePermission, type Gated } from '@/features/auth';
 import { Spinner } from '@/shared/ui';
 import { AppLayout } from './layout/AppLayout';
 import { HomePage } from './pages/HomePage';
@@ -14,6 +14,17 @@ function page(load: () => Promise<ComponentType>): Pick<RouteObject, 'lazy' | 'H
     lazy: async () => ({ Component: await load() }),
     // Shown while the section loads on the first page of a visit.
     HydrateFallback: () => <Spinner label="Cargando…" />,
+  };
+}
+
+// gate guards a group of settings sections inside the settings layout, which
+// keeps the page's title: the section answers "no access" in its place.
+function gate(access: Gated): Pick<RouteObject, 'lazy'> {
+  return {
+    lazy: async () => {
+      const { SectionGate } = await import('@/features/settings');
+      return { Component: () => <SectionGate {...access} /> };
+    },
   };
 }
 
@@ -92,6 +103,50 @@ export const routes: RouteObject[] = [
                 element: <RequirePermission permission="sales:read" />,
                 children: [
                   { path: '/caja/:sessionId', ...page(async () => (await import('@/features/sales')).CashReportPage) },
+                ],
+              },
+              // Settings: owners and admins (catalog:write); each group of
+              // sections asks for its own permission or module.
+              {
+                element: <RequirePermission permission="catalog:write" />,
+                children: [
+                  {
+                    path: '/configuracion',
+                    ...page(async () => (await import('@/features/settings')).SettingsLayout),
+                    children: [
+                      { index: true, ...page(async () => (await import('@/features/settings')).SettingsHome) },
+                      {
+                        path: 'unidades',
+                        ...page(async () => (await import('@/features/settings')).UnitsSettings),
+                      },
+                      {
+                        path: 'atributos',
+                        ...page(async () => (await import('@/features/settings')).AttributesSettings),
+                      },
+                      {
+                        ...gate({ module: 'variants' }),
+                        children: [
+                          {
+                            path: 'ejes',
+                            ...page(async () => (await import('@/features/settings')).VariantAxesSettings),
+                          },
+                        ],
+                      },
+                      {
+                        ...gate({ permission: 'tenant:manage' }),
+                        children: [
+                          {
+                            path: 'general',
+                            ...page(async () => (await import('@/features/settings')).GeneralSettings),
+                          },
+                          {
+                            path: 'modulos',
+                            ...page(async () => (await import('@/features/settings')).ModulesSettings),
+                          },
+                        ],
+                      },
+                    ],
+                  },
                 ],
               },
               {

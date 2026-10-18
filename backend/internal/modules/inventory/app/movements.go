@@ -8,42 +8,30 @@ import (
 	"github.com/shopspring/decimal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/domain"
 )
 
-// ReceiptInput is an entry of goods at a location. It names the variant, or
-// (deprecated) the product whose default variant receives it; not both.
+// ReceiptInput is an entry of goods of a variant at a location.
 type ReceiptInput struct {
-	VariantID uuid.UUID
-	// ProductID, deprecated in the contract, resolves to the product's default
-	// variant. T24j removes it.
-	ProductID  uuid.UUID
+	VariantID  uuid.UUID
 	LocationID uuid.UUID
 	Quantity   decimal.Decimal
 	UnitCost   decimal.Decimal
 }
 
-// AdjustmentInput is a correction of the stock at a location; Quantity is
-// signed. It names the variant or the product like ReceiptInput.
+// AdjustmentInput is a correction of a variant's stock at a location;
+// Quantity is signed.
 type AdjustmentInput struct {
-	VariantID uuid.UUID
-	// ProductID, deprecated in the contract, resolves to the product's default
-	// variant. T24j removes it.
-	ProductID  uuid.UUID
+	VariantID  uuid.UUID
 	LocationID uuid.UUID
 	Quantity   decimal.Decimal
 	Reason     string
 }
 
-// TransferInput moves stock of a variant between two locations. It names
-// the variant or the product like ReceiptInput.
+// TransferInput moves stock of a variant between two locations.
 type TransferInput struct {
-	VariantID uuid.UUID
-	// ProductID, deprecated in the contract, resolves to the product's default
-	// variant. T24j removes it.
-	ProductID      uuid.UUID
+	VariantID      uuid.UUID
 	FromLocationID uuid.UUID
 	ToLocationID   uuid.UUID
 	Quantity       decimal.Decimal
@@ -52,12 +40,9 @@ type TransferInput struct {
 // ReceiveStock registers an entry of goods (purchase_in) and updates the
 // weighted average cost.
 func (s *Service) ReceiveStock(ctx context.Context, a Actor, in ReceiptInput) (_ *domain.StockMovement, err error) {
-	ctx, span := s.startSpan(ctx, "ReceiveStock", a, locationAttr(in.LocationID))
+	ctx, span := s.startSpan(ctx, "ReceiveStock", a, locationAttr(in.LocationID), variantAttr(in.VariantID))
 	defer func() { endSpan(span, err) }()
 
-	if in.VariantID, err = s.resolveVariant(ctx, a, span, in.VariantID, in.ProductID); err != nil {
-		return nil, err
-	}
 	if err := s.requireActiveLocation(ctx, a, in.LocationID); err != nil {
 		return nil, err
 	}
@@ -78,12 +63,9 @@ func (s *Service) ReceiveStock(ctx context.Context, a Actor, in ReceiptInput) (_
 // AdjustStock registers a correction of the stock (adjustment). A negative
 // one follows the tenant's stock policy.
 func (s *Service) AdjustStock(ctx context.Context, a Actor, in AdjustmentInput) (_ *domain.StockMovement, err error) {
-	ctx, span := s.startSpan(ctx, "AdjustStock", a, locationAttr(in.LocationID))
+	ctx, span := s.startSpan(ctx, "AdjustStock", a, locationAttr(in.LocationID), variantAttr(in.VariantID))
 	defer func() { endSpan(span, err) }()
 
-	if in.VariantID, err = s.resolveVariant(ctx, a, span, in.VariantID, in.ProductID); err != nil {
-		return nil, err
-	}
 	if err := s.requireActiveLocation(ctx, a, in.LocationID); err != nil {
 		return nil, err
 	}
@@ -111,12 +93,10 @@ func (s *Service) AdjustStock(ctx context.Context, a Actor, in AdjustmentInput) 
 func (s *Service) TransferStock(ctx context.Context, a Actor, in TransferInput) (out, inMov *domain.StockMovement, err error) {
 	ctx, span := s.startSpan(ctx, "TransferStock", a,
 		attribute.String("location.from_id", in.FromLocationID.String()),
-		attribute.String("location.to_id", in.ToLocationID.String()))
+		attribute.String("location.to_id", in.ToLocationID.String()),
+		variantAttr(in.VariantID))
 	defer func() { endSpan(span, err) }()
 
-	if in.VariantID, err = s.resolveVariant(ctx, a, span, in.VariantID, in.ProductID); err != nil {
-		return nil, nil, err
-	}
 	// domain.Transfer checks it too; checking first keeps Apply from being
 	// asked to lock the same level twice.
 	if in.FromLocationID == in.ToLocationID {
@@ -143,23 +123,6 @@ func (s *Service) TransferStock(ctx context.Context, a Actor, in TransferInput) 
 	}
 	s.countMovements(ctx, out, inMov)
 	return out, inMov, nil
-}
-
-// resolveVariant returns the variant a movement is for: variantID, or the
-// default variant of productID (deprecated). Exactly one of them must be set;
-// otherwise ErrVariantRequired. It records the variant on the span.
-func (s *Service) resolveVariant(ctx context.Context, a Actor, span trace.Span, variantID, productID uuid.UUID) (uuid.UUID, error) {
-	switch {
-	case (variantID == uuid.Nil) == (productID == uuid.Nil):
-		return uuid.Nil, domain.ErrVariantRequired
-	case productID != uuid.Nil:
-		var err error
-		if variantID, err = s.Variants.DefaultVariant(ctx, a.TenantID, productID); err != nil {
-			return uuid.Nil, err
-		}
-	}
-	span.SetAttributes(variantAttr(variantID))
-	return variantID, nil
 }
 
 // info is who registers a movement and when: the actor, now.

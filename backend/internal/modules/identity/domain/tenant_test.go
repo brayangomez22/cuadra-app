@@ -97,3 +97,33 @@ func TestNewTenant(t *testing.T) {
 		require.True(t, tenant.IsActive())
 	})
 }
+
+func TestTenantSetDefaultTaxRate(t *testing.T) {
+	now := time.Date(2026, 10, 17, 9, 0, 0, 0, time.UTC)
+
+	t.Run("cambia el IVA por defecto de la empresa", func(t *testing.T) {
+		tests := []struct {
+			template string
+			from, to string
+		}{
+			{template: "ferreteria", from: "0.19", to: "0.05"},
+			{template: "drogueria", from: "0", to: "0.19"},
+			{template: "ropa_calzado", from: "0.19", to: "0"},
+		}
+		for _, tt := range tests {
+			tenant, err := domain.NewTenant("Mi negocio", mustNIT(t, "890903938-8"), tt.template, decimal.RequireFromString(tt.from), now)
+			require.NoError(t, err)
+			require.NoError(t, tenant.SetDefaultTaxRate(decimal.RequireFromString(tt.to)), tt.template)
+			require.Equal(t, tt.to, tenant.DefaultTaxRate().String(), tt.template)
+		}
+	})
+
+	t.Run("rechaza un IVA negativo, de 100 % o más, o con más de 4 decimales sin cambiar el actual", func(t *testing.T) {
+		tenant, err := domain.NewTenant("Mi negocio", mustNIT(t, "890903938-8"), "papeleria", decimal.RequireFromString("0.19"), now)
+		require.NoError(t, err)
+		for _, rate := range []string{"-0.01", "1", "1.19", "0.12345"} {
+			require.ErrorIs(t, tenant.SetDefaultTaxRate(decimal.RequireFromString(rate)), domain.ErrInvalidDefaultTaxRate, rate)
+			require.Equal(t, "0.19", tenant.DefaultTaxRate().String(), rate)
+		}
+	})
+}

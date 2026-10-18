@@ -332,47 +332,6 @@ func TestConfirmSale(t *testing.T) {
 		}
 	})
 
-	t.Run("product_id (deprecated) vende la variante por defecto del producto", func(t *testing.T) {
-		e := newEnv(t)
-		variant := e.addProduct("Cemento gris 50kg", "30000", "0.19", true)
-		product := e.productOf(variant)
-
-		sale, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
-			LocationID: newID(),
-			Lines:      []app.LineRequest{{ProductID: product, Quantity: dec("1"), Discount: dec("0")}},
-			Payments:   []app.PaymentRequest{cash("35700")},
-		})
-		require.NoError(t, err)
-		require.Equal(t, variant, sale.Lines()[0].VariantID())
-		require.Equal(t, product, sale.Lines()[0].ProductID())
-		require.Equal(t, [][]uuid.UUID{{product}}, e.store.defaultCalls)
-	})
-
-	t.Run("product_id (deprecated) de un producto inexistente es product_not_found", func(t *testing.T) {
-		e := newEnv(t)
-		_, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
-			LocationID: newID(),
-			Lines:      []app.LineRequest{{ProductID: newID(), Quantity: dec("1"), Discount: dec("0")}},
-			Payments:   []app.PaymentRequest{cash("1000")},
-		})
-		require.ErrorIs(t, err, domain.ErrProductNotFound)
-	})
-
-	t.Run("una línea lleva variant_id o product_id, no los dos ni ninguno", func(t *testing.T) {
-		e := newEnv(t)
-		variant := e.addProduct("Cemento gris 50kg", "30000", "0.19", true)
-		for _, l := range []app.LineRequest{
-			{Quantity: dec("1"), Discount: dec("0")},
-			{VariantID: variant, ProductID: e.productOf(variant), Quantity: dec("1"), Discount: dec("0")},
-		} {
-			_, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{
-				LocationID: newID(), Lines: []app.LineRequest{l}, Payments: []app.PaymentRequest{cash("35700")},
-			})
-			require.ErrorIs(t, err, domain.ErrVariantRequired)
-		}
-		require.Empty(t, e.store.catalogCalls)
-	})
-
 	t.Run("resuelve los precios antes de abrir la transacción de la venta", func(t *testing.T) {
 		e := newEnv(t)
 		id := e.addProduct("Cemento gris 50kg", "30000", "0.19", true)

@@ -305,9 +305,6 @@ func productInput(body catalogapi.ProductInput) (app.ProductInput, error) {
 	if body.Description != nil {
 		in.Description = *body.Description
 	}
-	if body.BaseUnit != nil {
-		in.BaseUnitCode = *body.BaseUnit
-	}
 	return in, nil
 }
 
@@ -329,33 +326,24 @@ func variantInput(sku string, barcode *string, costText, priceText string, axes 
 	return in, nil
 }
 
-// productBody builds the response; cost and margin only for who may edit
-// the catalog. The deprecated top-level fields repeat the default variant's
-// until the frontend reads variants (removed in T24j).
+// productBody builds the response; the variants carry cost and margin only
+// for who may edit the catalog.
 func productBody(p *domain.Product, seesCost bool) catalogapi.Product {
 	variants := make([]catalogapi.ProductVariant, 0, len(p.Variants()))
 	for _, v := range p.Variants() {
 		variants = append(variants, variantBody(v, p.TaxRate(), seesCost))
 	}
-	def := variantBody(p.DefaultVariant(), p.TaxRate(), seesCost)
 	body := catalogapi.Product{
-		Id:            p.ID(),
-		Sku:           def.Sku,
-		Barcode:       def.Barcode,
-		Name:          p.Name(),
-		CategoryId:    p.CategoryID(),
-		BaseUnitId:    p.BaseUnit().ID,
-		Unit:          unitBody(p.BaseUnit()),
-		BaseUnit:      p.BaseUnit().Code,
-		Cost:          def.Cost,
-		Price:         def.Price,
-		PriceWithTax:  def.PriceWithTax,
-		MarginPercent: def.MarginPercent,
-		TaxRate:       formatRate(p.TaxRate()),
-		Attributes:    attributesBody(p.Attributes()),
-		Active:        p.IsActive(),
-		CreatedAt:     p.CreatedAt(),
-		Variants:      variants,
+		Id:         p.ID(),
+		Name:       p.Name(),
+		CategoryId: p.CategoryID(),
+		BaseUnitId: p.BaseUnit().ID,
+		Unit:       unitBody(p.BaseUnit()),
+		TaxRate:    formatRate(p.TaxRate()),
+		Attributes: attributesBody(p.Attributes()),
+		Active:     p.IsActive(),
+		CreatedAt:  p.CreatedAt(),
+		Variants:   variants,
 	}
 	if description := p.Description(); description != "" {
 		body.Description = &description

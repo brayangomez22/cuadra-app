@@ -108,7 +108,7 @@ func TestModulesFlow(t *testing.T) {
 	}
 
 	signup := do(t, http.MethodPost, "/api/v1/auth/signup",
-		`{"tenant_name":"Moda Urbana","nit":"890903938-8","name":"Ana Gómez","email":"ana@modulos.co","password":"clave-segura-123"}`, "")
+		`{"tenant_name":"Moda Urbana","nit":"890903938-8","name":"Ana Gómez","email":"ana@modulos.co","password":"clave-segura-123","business_template":"generica"}`, "")
 	require.Equal(t, http.StatusCreated, signup.Code, signup.Body.String())
 	var session struct {
 		AccessToken string `json:"access_token"`
@@ -122,7 +122,8 @@ func TestModulesFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	rec := do(t, http.MethodPost, "/api/v1/products",
-		`{"sku":"cam-s","name":"Camiseta básica","base_unit":"und","cost":"12000","price":"25000","tax_rate":"0.19"}`, ownerToken)
+		`{"sku":"cam-s","name":"Camiseta básica","base_unit_id":"`+unitID(t, do, ownerToken, "und")+
+			`","cost":"12000","price":"25000","tax_rate":"0.19","attributes":{}}`, ownerToken)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	var product struct {
 		ID       string
@@ -198,7 +199,7 @@ func TestModulesFlow(t *testing.T) {
 		rec := do(t, http.MethodPut, "/api/v1/modules/variants", `{"active":true}`, ownerToken)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		other := do(t, http.MethodPost, "/api/v1/auth/signup",
-			`{"tenant_name":"Ferretería El Tornillo","nit":"900123456-8","name":"Luis Pérez","email":"luis@modulos.co","password":"clave-segura-123"}`, "")
+			`{"tenant_name":"Ferretería El Tornillo","nit":"900123456-8","name":"Luis Pérez","email":"luis@modulos.co","password":"clave-segura-123","business_template":"ferreteria"}`, "")
 		require.Equal(t, http.StatusCreated, other.Code, other.Body.String())
 		var otherSession struct {
 			AccessToken string `json:"access_token"`

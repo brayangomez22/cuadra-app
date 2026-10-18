@@ -18,8 +18,7 @@ type SignUpInput struct {
 	OwnerName  string
 	Email      string
 	Password   string
-	// BusinessTemplate is the ID of the template the tenant starts from;
-	// empty means DefaultBusinessTemplate.
+	// BusinessTemplate is the ID of the template the tenant starts from.
 	BusinessTemplate string
 }
 
@@ -43,9 +42,6 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err er
 		return Session{}, err
 	}
 	template := in.BusinessTemplate
-	if template == "" {
-		template = DefaultBusinessTemplate
-	}
 	tpl, ok := s.findTemplate(template)
 	if !ok {
 		return Session{}, domain.ErrUnknownBusinessTemplate

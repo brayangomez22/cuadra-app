@@ -383,83 +383,16 @@ func TestStockByVariant(t *testing.T) {
 		requireDecimal(t, "4", e.level(sizeL, loc.ID()).Quantity)
 	})
 
-	t.Run("una entrada con product_id va a la variante por defecto del producto", func(t *testing.T) {
+	t.Run("el span de un movimiento lleva la variante", func(t *testing.T) {
 		// Ferretería: un producto simple, con solo su variante por defecto.
 		e := newEnv(t)
 		loc := e.createLocation(t, "Bodega")
-		productID, variants := e.addProduct(0)
+		_, variants := e.addProduct(0)
 
-		m, err := e.svc.ReceiveStock(t.Context(), e.actor, app.ReceiptInput{
-			ProductID: productID, LocationID: loc.ID(), Quantity: dec("10"), UnitCost: dec("28000"),
-		})
+		e.receive(t, variants[0], loc.ID(), "10", "28000")
 
-		require.NoError(t, err)
-		require.Equal(t, variants[0], m.VariantID())
-		requireDecimal(t, "10", e.level(variants[0], loc.ID()).Quantity)
 		_, attrs := e.span(t, "inventory.ReceiveStock")
 		require.Equal(t, variants[0].String(), attrs["variant.id"].AsString())
-	})
-
-	t.Run("un ajuste y un traslado con product_id también van a la variante por defecto", func(t *testing.T) {
-		e := newEnv(t)
-		from, to := e.createLocation(t, "Bodega"), e.createLocation(t, "Sede centro")
-		productID, variants := e.addProduct(1)
-		e.receive(t, variants[0], from.ID(), "10", "1000")
-
-		adj, err := e.svc.AdjustStock(t.Context(), e.actor, app.AdjustmentInput{
-			ProductID: productID, LocationID: from.ID(), Quantity: dec("-1"), Reason: "Conteo",
-		})
-		require.NoError(t, err)
-		out, in, err := e.svc.TransferStock(t.Context(), e.actor, app.TransferInput{
-			ProductID: productID, FromLocationID: from.ID(), ToLocationID: to.ID(), Quantity: dec("4"),
-		})
-		require.NoError(t, err)
-
-		for _, m := range []*domain.StockMovement{adj, out, in} {
-			require.Equal(t, variants[0], m.VariantID())
-		}
-		requireDecimal(t, "5", e.level(variants[0], from.ID()).Quantity)
-		requireDecimal(t, "4", e.level(variants[0], to.ID()).Quantity)
-	})
-
-	t.Run("una entrada con product_id de un producto inexistente falla con ErrProductNotFound", func(t *testing.T) {
-		e := newEnv(t)
-		loc := e.createLocation(t, "Bodega")
-		_, err := e.svc.ReceiveStock(t.Context(), e.actor, app.ReceiptInput{
-			ProductID: newID(), LocationID: loc.ID(), Quantity: dec("1"), UnitCost: dec("1"),
-		})
-		require.ErrorIs(t, err, domain.ErrProductNotFound)
-	})
-
-	t.Run("no resuelve el producto de otro tenant", func(t *testing.T) {
-		e := newEnv(t)
-		productID, _ := e.addProduct(0)
-		other := app.Actor{TenantID: newID(), UserID: newID()}
-		loc, err := e.svc.CreateLocation(t.Context(), other, "Bodega")
-		require.NoError(t, err)
-		_, err = e.svc.ReceiveStock(t.Context(), other, app.ReceiptInput{
-			ProductID: productID, LocationID: loc.ID(), Quantity: dec("1"), UnitCost: dec("1"),
-		})
-		require.ErrorIs(t, err, domain.ErrProductNotFound)
-	})
-
-	t.Run("rechaza un movimiento sin variante ni producto, o con ambos", func(t *testing.T) {
-		e := newEnv(t)
-		loc := e.createLocation(t, "Bodega")
-		productID, variants := e.addProduct(0)
-		for name, in := range map[string]app.ReceiptInput{
-			"sin variante ni producto": {LocationID: loc.ID(), Quantity: dec("1"), UnitCost: dec("1")},
-			"con ambos":                {VariantID: variants[0], ProductID: productID, LocationID: loc.ID(), Quantity: dec("1"), UnitCost: dec("1")},
-		} {
-			_, err := e.svc.ReceiveStock(t.Context(), e.actor, in)
-			require.ErrorIs(t, err, domain.ErrVariantRequired, name)
-		}
-		_, err := e.svc.AdjustStock(t.Context(), e.actor, app.AdjustmentInput{LocationID: loc.ID(), Quantity: dec("1"), Reason: "Conteo"})
-		require.ErrorIs(t, err, domain.ErrVariantRequired)
-		_, _, err = e.svc.TransferStock(t.Context(), e.actor, app.TransferInput{
-			FromLocationID: loc.ID(), ToLocationID: newID(), Quantity: dec("1"),
-		})
-		require.ErrorIs(t, err, domain.ErrVariantRequired)
 	})
 
 	t.Run("el kardex de una variante reconstruye su stock", func(t *testing.T) {
@@ -487,42 +420,6 @@ func TestStockByVariant(t *testing.T) {
 			requireDecimal(t, e.level(v, id).Quantity.String(), page.Items[0].BalanceAfter())
 		}
 		requireDecimal(t, "4.5", e.level(v, from.ID()).Quantity)
-	})
-
-	t.Run("el kardex por producto devuelve el de su variante por defecto; si el producto no existe, está vacío", func(t *testing.T) {
-		e := newEnv(t)
-		loc := e.createLocation(t, "Bodega")
-		productID, variants := e.addProduct(1)
-		e.receive(t, variants[0], loc.ID(), "1", "100")
-		e.receive(t, variants[1], loc.ID(), "2", "100")
-
-		page, err := e.svc.GetKardex(t.Context(), e.actor, app.KardexQuery{ProductID: productID})
-		require.NoError(t, err)
-		require.Equal(t, 1, page.Total)
-		require.Equal(t, variants[0], page.Items[0].VariantID())
-
-		page, err = e.svc.GetKardex(t.Context(), e.actor, app.KardexQuery{ProductID: newID()})
-		require.NoError(t, err)
-		require.Zero(t, page.Total)
-		require.Empty(t, page.Items)
-	})
-
-	t.Run("las existencias filtradas por producto son las de su variante por defecto", func(t *testing.T) {
-		e := newEnv(t)
-		loc := e.createLocation(t, "Bodega")
-		productID, variants := e.addProduct(1)
-		e.receive(t, variants[0], loc.ID(), "1", "100")
-		e.receive(t, variants[1], loc.ID(), "2", "100")
-
-		page, err := e.svc.ListStock(t.Context(), e.actor, app.StockQuery{LocationID: loc.ID(), ProductID: &productID})
-		require.NoError(t, err)
-		require.Equal(t, 1, page.Total)
-		require.Equal(t, variants[0], page.Items[0].VariantID())
-
-		missing := newID()
-		page, err = e.svc.ListStock(t.Context(), e.actor, app.StockQuery{LocationID: loc.ID(), ProductID: &missing})
-		require.NoError(t, err)
-		require.Zero(t, page.Total)
 	})
 
 	t.Run("dice el producto de cada variante, solo del tenant", func(t *testing.T) {

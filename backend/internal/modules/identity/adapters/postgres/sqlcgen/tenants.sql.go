@@ -74,18 +74,24 @@ func (q *Queries) GetTenant(ctx context.Context, id uuid.UUID) (GetTenantRow, er
 
 const updateTenant = `-- name: UpdateTenant :execrows
 UPDATE tenants
-SET name = $2, status = $3
+SET name = $2, status = $3, default_tax_rate = $4
 WHERE id = $1
 `
 
 type UpdateTenantParams struct {
-	ID     uuid.UUID
-	Name   string
-	Status string
+	ID             uuid.UUID
+	Name           string
+	Status         string
+	DefaultTaxRate decimal.Decimal
 }
 
 func (q *Queries) UpdateTenant(ctx context.Context, arg UpdateTenantParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updateTenant, arg.ID, arg.Name, arg.Status)
+	result, err := q.db.Exec(ctx, updateTenant,
+		arg.ID,
+		arg.Name,
+		arg.Status,
+		arg.DefaultTaxRate,
+	)
 	if err != nil {
 		return 0, err
 	}

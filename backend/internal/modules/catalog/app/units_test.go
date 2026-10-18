@@ -25,7 +25,7 @@ func TestProductUnit(t *testing.T) {
 				unit := e.addUnit(t, e.actor.TenantID, tt.code, tt.unitName)
 				in := e.productInput(t)
 				unitID := unit.ID()
-				in.BaseUnitID = &unitID
+				in.BaseUnitID = unitID
 
 				p, err := e.svc.CreateProduct(t.Context(), e.actor, in)
 				require.NoError(t, err)
@@ -38,24 +38,13 @@ func TestProductUnit(t *testing.T) {
 		}
 	})
 
-	t.Run("crea un producto con el código de unidad deprecated", func(t *testing.T) {
-		e := newEnv(t)
-		in := e.productInput(t)
-		in.BaseUnitID, in.BaseUnitCode = nil, "m"
-
-		p, err := e.svc.CreateProduct(t.Context(), e.actor, in)
-		require.NoError(t, err)
-
-		require.Equal(t, e.meters.Ref(), p.BaseUnit())
-	})
-
 	t.Run("cambia la unidad de un producto", func(t *testing.T) {
 		e := newEnv(t)
 		p := e.createProduct(t, e.productInput(t))
 		piece := e.addUnit(t, e.actor.TenantID, "und", "Unidad")
 		in := e.productInput(t)
 		unitID := piece.ID()
-		in.BaseUnitID = &unitID
+		in.BaseUnitID = unitID
 
 		p, err := e.svc.UpdateProduct(t.Context(), e.actor, p.ID(), in)
 		require.NoError(t, err)
@@ -71,13 +60,12 @@ func TestProductUnit(t *testing.T) {
 		}{
 			{"id inexistente", func(_ *env, in *app.ProductInput) {
 				missing := uuid.Must(uuid.NewV7())
-				in.BaseUnitID = &missing
+				in.BaseUnitID = missing
 			}},
 			{"id de una unidad de otro tenant", func(e *env, in *app.ProductInput) {
 				unitID := e.addUnit(t, otherTenant, "m", "Metro").ID()
-				in.BaseUnitID = &unitID
+				in.BaseUnitID = unitID
 			}},
-			{"código inexistente", func(_ *env, in *app.ProductInput) { in.BaseUnitID, in.BaseUnitCode = nil, "docena" }},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -95,25 +83,6 @@ func TestProductUnit(t *testing.T) {
 		}
 	})
 
-	t.Run("rechaza un producto sin unidad o con id y código a la vez", func(t *testing.T) {
-		tests := []struct {
-			name   string
-			mutate func(*app.ProductInput)
-		}{
-			{"sin unidad", func(in *app.ProductInput) { in.BaseUnitID, in.BaseUnitCode = nil, "" }},
-			{"id y código", func(in *app.ProductInput) { in.BaseUnitCode = "m" }},
-		}
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				e := newEnv(t)
-				in := e.productInput(t)
-				tt.mutate(&in)
-
-				_, err := e.svc.CreateProduct(t.Context(), e.actor, in)
-				require.ErrorIs(t, err, domain.ErrUnitRequired)
-			})
-		}
-	})
 }
 
 func TestUnits(t *testing.T) {

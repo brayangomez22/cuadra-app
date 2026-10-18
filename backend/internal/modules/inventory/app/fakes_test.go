@@ -188,17 +188,6 @@ type catalogVariant struct {
 // fakeVariants is the catalog behind the ProductVariants port.
 type fakeVariants struct{ *store }
 
-func (f fakeVariants) DefaultVariant(_ context.Context, tenantID, productID uuid.UUID) (uuid.UUID, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	for id, v := range f.variants {
-		if v.tenantID == tenantID && v.productID == productID && v.isDefault {
-			return id, nil
-		}
-	}
-	return uuid.Nil, domain.ErrProductNotFound
-}
-
 func (f fakeVariants) ProductsOf(_ context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

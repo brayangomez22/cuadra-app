@@ -32,8 +32,6 @@ type reservation struct {
 type store struct {
 	mu       sync.Mutex
 	variants map[catalogKey]app.VariantInfo
-	// defaults is the default variant of each product.
-	defaults map[catalogKey]uuid.UUID
 	policies map[uuid.UUID]domain.SalesPolicy
 	sales    map[uuid.UUID]*domain.Sale
 	reserved []reservation
@@ -47,10 +45,8 @@ type store struct {
 	numbers map[uuid.UUID]int64
 	// filters records the filters List received.
 	filters []domain.SaleFilter
-	// catalogCalls records the variant ids each catalog lookup received;
-	// defaultCalls, the product ids of each lookup of default variants.
+	// catalogCalls records the variant ids each catalog lookup received.
 	catalogCalls [][]uuid.UUID
-	defaultCalls [][]uuid.UUID
 	// events records, in order, when prices were resolved ("resolve") and
 	// when the sale's transaction began ("save").
 	events []string
@@ -73,19 +69,6 @@ func (f fakeCatalog) Variants(_ context.Context, tenantID uuid.UUID, ids []uuid.
 	for _, id := range ids {
 		if v, ok := f.variants[catalogKey{tenantID, id}]; ok {
 			out = append(out, v)
-		}
-	}
-	return out, nil
-}
-
-func (f fakeCatalog) DefaultVariants(_ context.Context, tenantID uuid.UUID, productIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.defaultCalls = append(f.defaultCalls, productIDs)
-	out := map[uuid.UUID]uuid.UUID{}
-	for _, id := range productIDs {
-		if v, ok := f.defaults[catalogKey{tenantID, id}]; ok {
-			out[id] = v
 		}
 	}
 	return out, nil
@@ -366,7 +349,6 @@ func newEnv(t *testing.T, rules ...app.PriceRule) *env {
 	e := &env{
 		store: &store{
 			variants: map[catalogKey]app.VariantInfo{},
-			defaults: map[catalogKey]uuid.UUID{},
 			policies: map[uuid.UUID]domain.SalesPolicy{},
 			sales:    map[uuid.UUID]*domain.Sale{},
 			numbers:  map[uuid.UUID]int64{},
@@ -418,7 +400,6 @@ func (e *env) addProduct(name, price, rate string, active bool) uuid.UUID {
 	e.store.variants[catalogKey{e.actor.TenantID, variantID}] = app.VariantInfo{
 		ID: variantID, ProductID: productID, ProductName: name, Price: dec(price), TaxRate: dec(rate), Active: active,
 	}
-	e.store.defaults[catalogKey{e.actor.TenantID, productID}] = variantID
 	return variantID
 }
 

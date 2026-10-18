@@ -18,7 +18,6 @@ var (
 	ErrInvalidVariantID     = errors.New("sales: invalid variant id")
 	ErrInvalidVariantLabel  = errors.New("sales: invalid variant label")
 	ErrInvalidPriceRule     = errors.New("sales: invalid price rule")
-	ErrVariantRequired      = errors.New("sales: a line needs a variant or a product, not both")
 	ErrInvalidQuantity      = errors.New("sales: invalid quantity")
 	ErrInvalidUnitPrice     = errors.New("sales: invalid unit price")
 	ErrInvalidTaxRate       = errors.New("sales: invalid tax rate")
@@ -71,10 +70,7 @@ var (
 // VariantID; ConfirmSale adds its product, name and label from the catalog
 // so the cashier knows which line to change.
 type InsufficientStockError struct {
-	VariantID uuid.UUID
-	// ProductID is the variant's product, for the deprecated
-	// details.product_id of the API.
-	ProductID    uuid.UUID
+	VariantID    uuid.UUID
 	ProductName  string
 	VariantLabel string
 }

@@ -19,11 +19,10 @@ func (e *env) productInput(t *testing.T) app.ProductInput {
 	t.Helper()
 	rate, err := domain.ParseTaxRate(dec("0.19"))
 	require.NoError(t, err)
-	unitID := e.meters.ID()
 	return app.ProductInput{
 		SKU:        "tub-pvc-12",
 		Name:       "Tubo PVC presión 1/2 pulgada",
-		BaseUnitID: &unitID,
+		BaseUnitID: e.meters.ID(),
 		Cost:       dec("8333.33"),
 		Price:      dec("10000"),
 		TaxRate:    rate,
@@ -87,7 +86,7 @@ func TestCreateProduct(t *testing.T) {
 		other := app.Actor{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())}
 		in := e.productInput(t)
 		unitID := e.addUnit(t, other.TenantID, "m", "Metro").ID()
-		in.BaseUnitID = &unitID
+		in.BaseUnitID = unitID
 		categoryID := category.ID()
 		in.CategoryID = &categoryID
 

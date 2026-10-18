@@ -103,11 +103,12 @@ func TestSalesFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	rec := do(t, http.MethodPost, "/api/v1/products",
-		`{"sku":"cem-50","name":"Cemento gris 50kg","base_unit":"bulto","cost":"25000","price":"30000","tax_rate":"0.19"}`, ownerToken)
+		`{"sku":"cem-50","name":"Cemento gris 50kg","base_unit_id":"`+unitID(t, do, ownerToken, "bulto")+
+			`","cost":"25000","price":"30000","tax_rate":"0.19","attributes":{}}`, ownerToken)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	productID := id(t, rec)
-	// The first sales send the deprecated product_id: the stock goes out of
-	// the product's default variant, whose id is not the product's.
+	// A simple product sells its default variant, whose id is not the
+	// product's.
 	var created struct {
 		Variants []struct{ ID string } `json:"variants"`
 	}
@@ -118,7 +119,7 @@ func TestSalesFlow(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	locationID := id(t, rec)
 	rec = do(t, http.MethodPost, "/api/v1/inventory/receipts",
-		`{"product_id":"`+productID+`","location_id":"`+locationID+`","quantity":"10","unit_cost":"25000"}`, ownerToken)
+		`{"variant_id":"`+variantID+`","location_id":"`+locationID+`","quantity":"10","unit_cost":"25000"}`, ownerToken)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	stockOf := func(t *testing.T, variantID string) string {
@@ -134,7 +135,7 @@ func TestSalesFlow(t *testing.T) {
 	}
 	stock := func(t *testing.T) string { t.Helper(); return stockOf(t, variantID) }
 	saleBody := func(qty, cash string) string {
-		return `{"location_id":"` + locationID + `","lines":[{"product_id":"` + productID + `","quantity":"` + qty + `"}],` +
+		return `{"location_id":"` + locationID + `","lines":[{"variant_id":"` + variantID + `","quantity":"` + qty + `"}],` +
 			`"payments":[{"method":"cash","amount":"` + cash + `"}]}`
 	}
 
@@ -204,7 +205,7 @@ func TestSalesFlow(t *testing.T) {
 		require.Equal(t, "7.5", stock(t))
 	})
 
-	t.Run("si no hay stock suficiente responde 409 con el producto y no guarda la venta", func(t *testing.T) {
+	t.Run("si no hay stock suficiente responde 409 con la variante y no guarda la venta", func(t *testing.T) {
 		rec := do(t, http.MethodPost, "/api/v1/sales", saleBody("8", "300000"), cashierToken)
 		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 		var body struct {
@@ -216,7 +217,7 @@ func TestSalesFlow(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 		require.Equal(t, "insufficient_stock", body.Error.Code)
 		require.Equal(t, "No hay stock suficiente de Cemento gris 50kg.", body.Error.Message)
-		require.Equal(t, productID, body.Error.Details["product_id"])
+		require.Equal(t, map[string]string{"variant_id": variantID}, body.Error.Details)
 		require.Equal(t, "7.5", stock(t))
 
 		next := do(t, http.MethodPost, "/api/v1/sales", saleBody("1", "35700"), cashierToken)
@@ -225,7 +226,7 @@ func TestSalesFlow(t *testing.T) {
 	})
 
 	t.Run("el cajero no puede descontar sin tope configurado", func(t *testing.T) {
-		body := `{"location_id":"` + locationID + `","lines":[{"product_id":"` + productID + `","quantity":"1","discount":"1000"}],` +
+		body := `{"location_id":"` + locationID + `","lines":[{"variant_id":"` + variantID + `","quantity":"1","discount":"1000"}],` +
 			`"payments":[{"method":"cash","amount":"35700"}]}`
 		rec := do(t, http.MethodPost, "/api/v1/sales", body, cashierToken)
 		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
@@ -304,7 +305,7 @@ func TestSalesFlow(t *testing.T) {
 		require.Contains(t, rec.Body.String(), "sale_not_confirmed")
 		require.Equal(t, "7", stock(t))
 
-		rec = do(t, http.MethodGet, "/api/v1/products/"+productID+"/kardex", "", ownerToken)
+		rec = do(t, http.MethodGet, "/api/v1/variants/"+variantID+"/kardex", "", ownerToken)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), `"type":"sale_void"`)
 	})
@@ -403,7 +404,8 @@ func TestSalesFlow(t *testing.T) {
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		}
 		rec = do(t, http.MethodPost, "/api/v1/products",
-			`{"sku":"cam-s","name":"Camiseta básica","base_unit":"und","cost":"12000","price":"25000","tax_rate":"0.19"}`, ownerToken)
+			`{"sku":"cam-s","name":"Camiseta básica","base_unit_id":"`+unitID(t, do, ownerToken, "und")+
+				`","cost":"12000","price":"25000","tax_rate":"0.19","attributes":{}}`, ownerToken)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		var product struct {
 			ID       string
@@ -470,16 +472,19 @@ func TestSalesFlow(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 		require.Equal(t, "No hay stock suficiente de Camiseta básica (Rojo · M).", body.Error.Message)
-		require.Equal(t, map[string]string{"variant_id": medium, "product_id": product.ID}, body.Error.Details)
+		require.Equal(t, map[string]string{"variant_id": medium}, body.Error.Details)
 
 		rec = do(t, http.MethodPost, "/api/v1/sales/"+sale.ID+"/void", `{"reason":"Cambio de talla"}`, ownerToken)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		require.Equal(t, "5", stockOf(t, medium))
 		require.Equal(t, "5", stockOf(t, small))
 
-		rec = do(t, http.MethodPost, "/api/v1/sales", `{"location_id":"`+locationID+`","lines":[`+
-			`{"variant_id":"`+medium+`","product_id":"`+product.ID+`","quantity":"1"}],"payments":[]}`, ownerToken)
-		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
-		require.Contains(t, rec.Body.String(), "variant_required")
+		for _, l := range []string{
+			`{"product_id":"` + product.ID + `","quantity":"1"}`,
+			`{"variant_id":"` + medium + `","product_id":"` + product.ID + `","quantity":"1"}`,
+		} {
+			rec = do(t, http.MethodPost, "/api/v1/sales", `{"location_id":"`+locationID+`","lines":[`+l+`],"payments":[]}`, ownerToken)
+			require.Equal(t, http.StatusBadRequest, rec.Code, "a line names its variant only: "+rec.Body.String())
+		}
 	})
 }

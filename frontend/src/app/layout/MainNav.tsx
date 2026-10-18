@@ -1,15 +1,16 @@
 import { NavLink } from 'react-router';
+import { visibleItems, type Access } from '@/features/auth';
 import { navItems } from './navItems';
 import styles from './MainNav.module.scss';
 
 type Props = {
-  permissions: readonly string[];
+  access: Access;
   /** Called when an item is chosen, e.g. to close the menu panel on a phone. */
   onNavigate?: () => void;
 };
 
-export function MainNav({ permissions, onNavigate }: Props) {
-  const items = navItems.filter((item) => !item.permission || permissions.includes(item.permission));
+export function MainNav({ access, onNavigate }: Props) {
+  const items = visibleItems(navItems, access);
   return (
     <nav aria-label="Menú principal" className={styles.root}>
       <ul className={styles.list}>

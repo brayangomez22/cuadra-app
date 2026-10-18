@@ -91,14 +91,6 @@ func (h *Handler) productsOf(ctx context.Context, variantIDs ...uuid.UUID) (map[
 	return h.uc.ProductsOf(ctx, actor(ctx), variantIDs)
 }
 
-// orNil returns the id, or uuid.Nil when the contract left it out.
-func orNil(id *uuid.UUID) uuid.UUID {
-	if id == nil {
-		return uuid.Nil
-	}
-	return *id
-}
-
 // page returns the contract's limit and offset, with their defaults.
 func page(limit, offset *int) (int, int) {
 	l, o := defaultPageSize, 0
@@ -135,7 +127,7 @@ func (h *Handler) CreateLocation(ctx context.Context, req inventoryapi.CreateLoc
 
 // ListStock returns the stock at a location.
 func (h *Handler) ListStock(ctx context.Context, req inventoryapi.ListStockRequestObject) (inventoryapi.ListStockResponseObject, error) {
-	q := app.StockQuery{LocationID: req.LocationId, VariantID: req.Params.VariantId, ProductID: req.Params.ProductId}
+	q := app.StockQuery{LocationID: req.LocationId, VariantID: req.Params.VariantId}
 	q.Limit, q.Offset = page(req.Params.Limit, req.Params.Offset)
 	result, err := h.uc.ListStock(ctx, actor(ctx), q)
 	if errors.Is(err, domain.ErrLocationNotFound) {
@@ -171,18 +163,6 @@ func (h *Handler) GetVariantKardex(ctx context.Context, req inventoryapi.GetVari
 		return nil, err
 	}
 	return inventoryapi.GetVariantKardex200JSONResponse(body), nil
-}
-
-// GetKardex returns the movements of a product's default variant
-// (deprecated: GetVariantKardex).
-func (h *Handler) GetKardex(ctx context.Context, req inventoryapi.GetKardexRequestObject) (inventoryapi.GetKardexResponseObject, error) {
-	q := app.KardexQuery{ProductID: req.ProductId, LocationID: req.Params.LocationId}
-	q.Limit, q.Offset = page(req.Params.Limit, req.Params.Offset)
-	body, err := h.kardex(ctx, q)
-	if err != nil {
-		return nil, err
-	}
-	return inventoryapi.GetKardex200JSONResponse(body), nil
 }
 
 func (h *Handler) kardex(ctx context.Context, q app.KardexQuery) (inventoryapi.StockMovementPage, error) {
@@ -226,8 +206,7 @@ func (h *Handler) ReceiveStock(ctx context.Context, req inventoryapi.ReceiveStoc
 		return nil, err
 	}
 	m, err := h.uc.ReceiveStock(ctx, actor(ctx), app.ReceiptInput{
-		VariantID: orNil(req.Body.VariantId), ProductID: orNil(req.Body.ProductId),
-		LocationID: req.Body.LocationId, Quantity: qty, UnitCost: cost,
+		VariantID: req.Body.VariantId, LocationID: req.Body.LocationId, Quantity: qty, UnitCost: cost,
 	})
 	if err != nil {
 		return nil, err
@@ -246,8 +225,7 @@ func (h *Handler) AdjustStock(ctx context.Context, req inventoryapi.AdjustStockR
 		return nil, err
 	}
 	m, err := h.uc.AdjustStock(ctx, actor(ctx), app.AdjustmentInput{
-		VariantID: orNil(req.Body.VariantId), ProductID: orNil(req.Body.ProductId),
-		LocationID: req.Body.LocationId, Quantity: qty, Reason: req.Body.Reason,
+		VariantID: req.Body.VariantId, LocationID: req.Body.LocationId, Quantity: qty, Reason: req.Body.Reason,
 	})
 	if err != nil {
 		return nil, err
@@ -266,8 +244,7 @@ func (h *Handler) TransferStock(ctx context.Context, req inventoryapi.TransferSt
 		return nil, err
 	}
 	out, in, err := h.uc.TransferStock(ctx, actor(ctx), app.TransferInput{
-		VariantID: orNil(req.Body.VariantId), ProductID: orNil(req.Body.ProductId),
-		FromLocationID: req.Body.FromLocationId, ToLocationID: req.Body.ToLocationId, Quantity: qty,
+		VariantID: req.Body.VariantId, FromLocationID: req.Body.FromLocationId, ToLocationID: req.Body.ToLocationId, Quantity: qty,
 	})
 	if err != nil {
 		return nil, err

@@ -97,3 +97,24 @@ export const IconCash = createIcon(
     <path d="M6 12h.01M18 12h.01" />
   </>,
 );
+// Sliders: the business settings (Configuración).
+export const IconSettings = createIcon(
+  <>
+    <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" />
+    <circle cx="15" cy="6" r="2" />
+    <circle cx="9" cy="12" r="2" />
+    <circle cx="17" cy="18" r="2" />
+  </>,
+);
+export const IconEdit = createIcon(
+  <>
+    <path d="M12 20h9" />
+    <path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </>,
+);
+export const IconTrash = createIcon(
+  <>
+    <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+    <path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6M10 11v6M14 11v6" />
+  </>,
+);

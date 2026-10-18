@@ -80,12 +80,9 @@ func attributeBody(d *domain.AttributeDefinition) catalogapi.AttributeDefinition
 // attributeValues translates a product's attribute values. The contract
 // already allows only strings and booleans; anything else is reported for
 // its attribute.
-func attributeValues(in *catalogapi.ProductAttributes) (map[string]domain.AttributeValue, error) {
-	if in == nil {
-		return nil, nil
-	}
-	out := make(map[string]domain.AttributeValue, len(*in))
-	for key, v := range *in {
+func attributeValues(in catalogapi.ProductAttributes) (map[string]domain.AttributeValue, error) {
+	out := make(map[string]domain.AttributeValue, len(in))
+	for key, v := range in {
 		switch v := v.(type) {
 		case string:
 			out[key] = domain.TextValue(v)

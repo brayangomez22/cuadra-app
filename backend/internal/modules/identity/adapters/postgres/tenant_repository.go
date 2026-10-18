@@ -93,16 +93,17 @@ func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.T
 	return tenantFromRow(row)
 }
 
-// Update stores the name and status; domain.ErrTenantNotFound if the tenant
+// Update stores the name, status and default tax rate; domain.ErrTenantNotFound if the tenant
 // does not exist.
 func (r *TenantRepository) Update(ctx context.Context, t *domain.Tenant) error {
 	var affected int64
 	err := r.db.WithTenantTx(ctx, t.ID(), func(tx pgx.Tx) error {
 		var err error
 		affected, err = sqlcgen.New(tx).UpdateTenant(ctx, sqlcgen.UpdateTenantParams{
-			ID:     t.ID(),
-			Name:   t.Name(),
-			Status: string(t.Status()),
+			ID:             t.ID(),
+			Name:           t.Name(),
+			Status:         string(t.Status()),
+			DefaultTaxRate: t.DefaultTaxRate(),
 		})
 		return err
 	})

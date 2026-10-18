@@ -33,9 +33,9 @@ func TestUnitRepository(t *testing.T) {
 		require.Equal(t, tenant, got.TenantID())
 		require.Equal(t, now, got.CreatedAt())
 
-		got, err = f.units.GetByCode(t.Context(), tenant, "bulto")
+		got, err = f.units.GetByID(t.Context(), tenant, bulto.ID())
 		require.NoError(t, err)
-		require.Equal(t, bulto.ID(), got.ID())
+		require.Equal(t, "bulto", got.Code())
 
 		require.NoError(t, pair.Update("pares", "Pares"))
 		require.NoError(t, f.units.Update(t.Context(), pair))
@@ -50,8 +50,6 @@ func TestUnitRepository(t *testing.T) {
 		missing := uuid.Must(uuid.NewV7())
 
 		_, err := f.units.GetByID(t.Context(), tenant, missing)
-		require.ErrorIs(t, err, domain.ErrUnitNotFound)
-		_, err = f.units.GetByCode(t.Context(), tenant, "docena")
 		require.ErrorIs(t, err, domain.ErrUnitNotFound)
 		require.ErrorIs(t, f.units.Delete(t.Context(), tenant, missing), domain.ErrUnitNotFound)
 		ghost, err := domain.NewUnit(tenant, "docena", "Docena", now)

@@ -147,17 +147,38 @@ func TestProductAttributes(t *testing.T) {
 		})
 	}
 
-	t.Run("actualizar sin atributos conserva los actuales", func(t *testing.T) {
+	t.Run("actualizar sin atributos deja el producto sin valores", func(t *testing.T) {
+		tests := []struct{ business, key, label, value string }{
+			{business: "ferretería", key: "marca", label: "Marca", value: "Acme"},
+			{business: "droguería", key: "principio_activo", label: "Principio activo", value: "Acetaminofén"},
+		}
+		for _, tt := range tests {
+			e := newEnv(t)
+			e.addAttribute(t, e.actor.TenantID, domain.AttributeParams{Key: tt.key, Label: tt.label, Type: domain.AttributeText})
+			in := e.productInput(t)
+			in.Attributes = map[string]domain.AttributeValue{tt.key: domain.TextValue(tt.value)}
+			p := e.createProduct(t, in)
+			in.Attributes = map[string]domain.AttributeValue{}
+
+			_, err := e.svc.UpdateProduct(t.Context(), e.actor, p.ID(), in)
+			require.NoError(t, err, tt.business)
+
+			stored, err := e.svc.GetProduct(t.Context(), e.actor, p.ID())
+			require.NoError(t, err)
+			require.Empty(t, stored.Attributes().Values(), tt.business)
+		}
+	})
+
+	t.Run("actualizar sin un atributo obligatorio falla y conserva el valor", func(t *testing.T) {
 		e := newEnv(t)
 		e.addAttribute(t, e.actor.TenantID, domain.AttributeParams{Key: "marca", Label: "Marca", Type: domain.AttributeText, Required: true})
 		in := e.productInput(t)
 		in.Attributes = map[string]domain.AttributeValue{"marca": domain.TextValue("Acme")}
 		p := e.createProduct(t, in)
 		in.Attributes = nil
-		in.Name = "Tubo PVC presión 3/4 pulgada"
 
 		_, err := e.svc.UpdateProduct(t.Context(), e.actor, p.ID(), in)
-		require.NoError(t, err)
+		require.ErrorIs(t, err, domain.ErrAttributeRequired)
 
 		stored, err := e.svc.GetProduct(t.Context(), e.actor, p.ID())
 		require.NoError(t, err)

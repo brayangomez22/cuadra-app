@@ -210,7 +210,7 @@ func product(t *testing.T, cost, price string) *domain.Product {
 	return p
 }
 
-const productBody = `{"sku":"tub-pvc-12","barcode":"7701234567890","name":"Tubo PVC presión 1/2 pulgada","base_unit":"m","cost":"8333.33","price":"10000","tax_rate":"0.19"}`
+var productBody = `{"sku":"tub-pvc-12","barcode":"7701234567890","name":"Tubo PVC presión 1/2 pulgada","base_unit_id":"` + meters.ID().String() + `","cost":"8333.33","price":"10000","tax_rate":"0.19","attributes":{}}`
 
 func TestCreateProduct(t *testing.T) {
 	t.Run("crear producto devuelve 201 con el dinero como string", func(t *testing.T) {
@@ -220,14 +220,17 @@ func TestCreateProduct(t *testing.T) {
 
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		body := decodeMap(t, rec)
-		require.Equal(t, "TUB-PVC-12", body["sku"])
-		require.Equal(t, "10000.00", body["price"])
-		require.Equal(t, "8333.33", body["cost"])
-		require.Equal(t, "11900.00", body["price_with_tax"])
+		variant := body["variants"].([]any)[0].(map[string]any)
+		require.Equal(t, "TUB-PVC-12", variant["sku"])
+		require.Equal(t, "10000.00", variant["price"])
+		require.Equal(t, "8333.33", variant["cost"])
+		require.Equal(t, "11900.00", variant["price_with_tax"])
+		require.Equal(t, "16.6667", variant["margin_percent"])
 		require.Equal(t, "0.19", body["tax_rate"])
-		require.Equal(t, "16.6667", body["margin_percent"])
-		require.Equal(t, "m", body["base_unit"])
 		require.Equal(t, meters.ID().String(), body["base_unit_id"])
+		for _, removed := range []string{"sku", "barcode", "base_unit", "cost", "price", "price_with_tax", "margin_percent"} {
+			require.NotContains(t, body, removed)
+		}
 		require.Equal(t, map[string]any{"id": meters.ID().String(), "code": "m", "name": "Metro"}, body["unit"])
 		require.Equal(t, true, body["active"])
 		require.NotContains(t, body, "category_id")
@@ -242,23 +245,12 @@ func TestCreateProduct(t *testing.T) {
 		require.Equal(t, app.Actor{TenantID: owner.TenantID, UserID: owner.UserID}, uc.actor)
 		require.Equal(t, "tub-pvc-12", uc.input.SKU)
 		require.Equal(t, "7701234567890", uc.input.Barcode)
-		require.Equal(t, "m", uc.input.BaseUnitCode)
-		require.Nil(t, uc.input.BaseUnitID)
+		require.Equal(t, meters.ID(), uc.input.BaseUnitID)
+		require.Equal(t, map[string]domain.AttributeValue{}, uc.input.Attributes)
 		require.True(t, decimal.RequireFromString("8333.33").Equal(uc.input.Cost))
 		require.True(t, decimal.RequireFromString("10000").Equal(uc.input.Price))
 		require.True(t, decimal.RequireFromString("0.19").Equal(uc.input.TaxRate.Rate()))
 		require.Nil(t, uc.input.CategoryID)
-	})
-
-	t.Run("pasa la unidad por su id", func(t *testing.T) {
-		uc := &stubUseCases{product: product(t, "8333.33", "10000")}
-		body := strings.Replace(productBody, `"base_unit":"m"`, `"base_unit_id":"`+meters.ID().String()+`"`, 1)
-
-		rec := serve(t, uc, owner, http.MethodPost, "/api/v1/products", body)
-
-		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		require.Equal(t, meters.ID(), *uc.input.BaseUnitID)
-		require.Empty(t, uc.input.BaseUnitCode)
 	})
 
 	t.Run("errores de la unidad del producto", func(t *testing.T) {
@@ -266,7 +258,6 @@ func TestCreateProduct(t *testing.T) {
 			err  error
 			code string
 		}{
-			{domain.ErrUnitRequired, "unit_required"},
 			{domain.ErrUnitNotFound, "unit_not_found"},
 		}
 		for _, tt := range tests {
@@ -282,9 +273,10 @@ func TestCreateProduct(t *testing.T) {
 		uc := &stubUseCases{product: product(t, "8333.3333", "10000.5")}
 
 		body := decodeMap(t, serve(t, uc, owner, http.MethodPost, "/api/v1/products", productBody))
+		variant := body["variants"].([]any)[0].(map[string]any)
 
-		require.Equal(t, "8333.3333", body["cost"])
-		require.Equal(t, "10000.50", body["price"])
+		require.Equal(t, "8333.3333", variant["cost"])
+		require.Equal(t, "10000.50", variant["price"])
 	})
 
 	t.Run("SKU duplicado responde 409 sku_taken", func(t *testing.T) {
@@ -323,10 +315,10 @@ func TestGetProduct(t *testing.T) {
 		rec := serve(t, uc, cashier(), http.MethodGet, "/api/v1/products/"+p.ID().String(), "")
 
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		body := decodeMap(t, rec)
-		require.Equal(t, "10000.00", body["price"])
-		require.NotContains(t, body, "cost")
-		require.NotContains(t, body, "margin_percent")
+		variant := decodeMap(t, rec)["variants"].([]any)[0].(map[string]any)
+		require.Equal(t, "10000.00", variant["price"])
+		require.NotContains(t, variant, "cost")
+		require.NotContains(t, variant, "margin_percent")
 		require.Equal(t, p.ID(), uc.id)
 	})
 

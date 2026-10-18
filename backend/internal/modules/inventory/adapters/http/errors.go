@@ -28,9 +28,7 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrInvalidQuantity, Status: http.StatusUnprocessableEntity, Code: "invalid_quantity", Message: "La cantidad no es válida: distinta de cero y con máximo 4 decimales."},
 	{Err: domain.ErrInvalidUnitCost, Status: http.StatusUnprocessableEntity, Code: "invalid_unit_cost", Message: "El costo no puede ser negativo y tiene máximo 4 decimales."},
 	{Err: domain.ErrInvalidLocationName, Status: http.StatusUnprocessableEntity, Code: "invalid_location_name", Message: "Escriba el nombre de la sede (máximo 100 caracteres)."},
-	{Err: domain.ErrVariantRequired, Status: http.StatusUnprocessableEntity, Code: "variant_required", Message: "Indique la variante (variant_id) o el producto (product_id), solo uno de los dos."},
 	{Err: domain.ErrVariantNotFound, Status: http.StatusUnprocessableEntity, Code: "variant_not_found", Message: "La variante no existe."},
-	{Err: domain.ErrProductNotFound, Status: http.StatusUnprocessableEntity, Code: "product_not_found", Message: "El producto no existe."},
 	{Err: domain.ErrLocationNotFound, Status: http.StatusUnprocessableEntity, Code: locationNotFoundCode, Message: locationNotFoundMessage},
 	{Err: domain.ErrLocationInactive, Status: http.StatusUnprocessableEntity, Code: "location_inactive", Message: "La sede está inactiva. Actívela antes de mover mercancía en ella."},
 }

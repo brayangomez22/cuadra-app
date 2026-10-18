@@ -304,7 +304,7 @@ Se importan desde `@/shared/ui`. El catálogo visual con todos los estados está
 | `Badge` | `tone` `neutral`, `success`, `warning`, `danger` o `info`. El texto debe decir el estado por sí solo. |
 | `EmptyState` | `icon`, `title`, `description`, `action` y `headingLevel`. |
 | `Spinner` / `Skeleton` | `Spinner` anuncia "Cargando…" (o su `label`); `decorative` si el control ya anuncia `aria-busy`. `Skeleton` es decorativo. |
-| Íconos | `IconClose`, `IconCheck`, `IconChevronDown`, `IconPlus`, `IconSearch`, `IconAlert`, `IconInfo`, `IconSuccess`, `IconBox`, `IconMenu`, `IconLogout`, `IconHome`, `IconCart`, `IconTag` e `IconCash`: SVG propios de 1em en `currentColor`, siempre decorativos. Un ícono nuevo se agrega en `shared/ui/icons`. |
+| Íconos | `IconClose`, `IconCheck`, `IconChevronDown`, `IconPlus`, `IconSearch`, `IconAlert`, `IconInfo`, `IconSuccess`, `IconBox`, `IconMenu`, `IconLogout`, `IconHome`, `IconCart`, `IconTag`, `IconCash`, `IconSettings`, `IconEdit` e `IconTrash`: SVG propios de 1em en `currentColor`, siempre decorativos. Un ícono nuevo se agrega en `shared/ui/icons`. |
 
 ## 7. Particularidades de este producto
 

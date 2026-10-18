@@ -101,7 +101,7 @@ func (h *Handler) ConfirmSale(ctx context.Context, req salesapi.ConfirmSaleReque
 			}
 		}
 		in.Lines = append(in.Lines, app.LineRequest{
-			VariantID: valueOf(l.VariantId), ProductID: valueOf(l.ProductId), Quantity: qty, Discount: discount,
+			VariantID: l.VariantId, Quantity: qty, Discount: discount,
 		})
 	}
 	for _, p := range req.Body.Payments {
@@ -216,12 +216,4 @@ func saleBody(s *domain.Sale) salesapi.Sale {
 		body.Void = &salesapi.SaleVoid{UserId: v.UserID, Reason: v.Reason, VoidedAt: v.At}
 	}
 	return body
-}
-
-// valueOf is an optional id of the request, or uuid.Nil if absent.
-func valueOf(id *uuid.UUID) uuid.UUID {
-	if id == nil {
-		return uuid.Nil
-	}
-	return *id
 }

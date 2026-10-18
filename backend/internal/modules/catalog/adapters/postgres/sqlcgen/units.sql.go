@@ -68,25 +68,6 @@ func (q *Queries) GetUnit(ctx context.Context, id uuid.UUID) (UnitsOfMeasure, er
 	return i, err
 }
 
-const getUnitByCode = `-- name: GetUnitByCode :one
-SELECT id, tenant_id, code, name, created_at
-FROM units_of_measure
-WHERE code = $1
-`
-
-func (q *Queries) GetUnitByCode(ctx context.Context, code string) (UnitsOfMeasure, error) {
-	row := q.db.QueryRow(ctx, getUnitByCode, code)
-	var i UnitsOfMeasure
-	err := row.Scan(
-		&i.ID,
-		&i.TenantID,
-		&i.Code,
-		&i.Name,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const listUnits = `-- name: ListUnits :many
 SELECT id, tenant_id, code, name, created_at
 FROM units_of_measure

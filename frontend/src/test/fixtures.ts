@@ -38,55 +38,52 @@ export function unitOf(code: string): UnitOfMeasure {
   };
 }
 
-export function aProduct(overrides: Partial<Product> = {}): Product {
-  const code = overrides.base_unit ?? 'und';
-  const unit = overrides.unit ?? unitOf(code);
-  const product = {
+// The default variant's fields, which a test may give to aProduct and
+// aCement as if they were the product's: a simple product shows only them.
+type DefaultVariantFields = Partial<
+  Pick<ProductVariant, 'sku' | 'barcode' | 'cost' | 'price' | 'price_with_tax' | 'margin_percent'>
+>;
+
+type ProductOverrides = Partial<Product> & DefaultVariantFields & { unitCode?: string };
+
+export function aProduct(overrides: ProductOverrides = {}): Product {
+  const { sku, barcode, cost, price, price_with_tax, margin_percent, unitCode, ...rest } = overrides;
+  const unit = rest.unit ?? unitOf(unitCode ?? 'und');
+  const product: Omit<Product, 'variants'> = {
     id: ids.pipe,
-    sku: 'TUB-PVC-12',
     name: 'Tubo PVC presión 1/2 pulgada',
-    base_unit: code,
     base_unit_id: unit.id,
     unit,
-    cost: '8333.33',
-    price: '10000.00',
-    price_with_tax: '11900.00',
     tax_rate: '0.19',
-    margin_percent: '16.6667',
     attributes: {},
     active: true,
     created_at: '2026-10-01T15:00:00Z',
-    ...overrides,
+    ...rest,
   };
-  return { ...product, variants: overrides.variants ?? [defaultVariantOf(product)] };
-}
-
-// defaultVariantOf is the variant the API derives a product's top-level SKU,
-// barcode, cost and price from. A product from before variants reuses its id.
-function defaultVariantOf(product: Omit<Product, 'variants'>): ProductVariant {
   const variant: ProductVariant = {
+    // A product from before variants reuses its id in its default variant.
     id: product.id,
-    sku: product.sku,
-    price: product.price,
-    price_with_tax: product.price_with_tax,
+    sku: sku ?? 'TUB-PVC-12',
+    cost: cost ?? '8333.33',
+    price: price ?? '10000.00',
+    price_with_tax: price_with_tax ?? '11900.00',
+    margin_percent: margin_percent ?? '16.6667',
     axis_values: {},
     label: '',
     is_default: true,
     active: true,
     created_at: product.created_at,
   };
-  if (product.barcode !== undefined) variant.barcode = product.barcode;
-  if (product.cost !== undefined) variant.cost = product.cost;
-  if (product.margin_percent !== undefined) variant.margin_percent = product.margin_percent;
-  return variant;
+  if (barcode !== undefined) variant.barcode = barcode;
+  return { ...product, variants: rest.variants ?? [variant] };
 }
 
-export function aCement(overrides: Partial<Product> = {}): Product {
+export function aCement(overrides: ProductOverrides = {}): Product {
   return aProduct({
     id: ids.cement,
     sku: 'CEM-50',
     name: 'Cemento gris 50kg',
-    base_unit: 'bulto',
+    unitCode: 'bulto',
     cost: '28000.00',
     price: '32000.00',
     price_with_tax: '38080.00',
@@ -162,16 +159,9 @@ export function aGarment(overrides: Partial<Product> = {}): Product {
   const unit = unitOf('und');
   return {
     id: ids.garment,
-    sku: 'CAM-S-ROJO',
-    barcode: variantBarcode('S', 'Rojo'),
     name: 'Camiseta básica',
-    base_unit: 'und',
     base_unit_id: unit.id,
     unit,
-    cost: '15000.00',
-    price: '25000.00',
-    price_with_tax: '29750.00',
-    margin_percent: '40',
     tax_rate: '0.19',
     attributes: { marca: 'Acme', material: 'Algodón' },
     active: true,
@@ -183,16 +173,15 @@ export function aGarment(overrides: Partial<Product> = {}): Product {
 
 // withoutCost is a product as the API sends it to a role without catalog:write.
 export function withoutCost(product: Product): Product {
-  const copy = { ...product };
-  delete copy.cost;
-  delete copy.margin_percent;
-  copy.variants = product.variants.map((variant) => {
-    const v = { ...variant };
-    delete v.cost;
-    delete v.margin_percent;
-    return v;
-  });
-  return copy;
+  return {
+    ...product,
+    variants: product.variants.map((variant) => {
+      const v = { ...variant };
+      delete v.cost;
+      delete v.margin_percent;
+      return v;
+    }),
+  };
 }
 
 export function aLocation(overrides: Partial<Location> = {}): Location {

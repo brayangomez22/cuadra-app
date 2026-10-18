@@ -14,7 +14,8 @@ type TenantRepository interface {
 	Create(ctx context.Context, t *Tenant) error
 	// GetByID returns ErrTenantNotFound when the tenant does not exist.
 	GetByID(ctx context.Context, id uuid.UUID) (*Tenant, error)
-	// Update stores the name and status; ErrTenantNotFound if it does not exist.
+	// Update stores the name, status and default tax rate; ErrTenantNotFound
+	// if it does not exist.
 	Update(ctx context.Context, t *Tenant) error
 	// CreateWithOwner stores a new tenant and its first user and then calls
 	// setUp, in one transaction: either all of it is stored or nothing is

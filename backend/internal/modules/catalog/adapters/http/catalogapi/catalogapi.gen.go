@@ -185,9 +185,7 @@ type ErrorDetail struct {
 type Money = string
 
 // Product Un producto del catálogo: lo que comparten sus variantes (nombre, categoría, unidad base y tasa de IVA).
-// `sku`, `barcode`, `cost`, `price`, `price_with_tax` y `margin_percent` son los de la variante por defecto y se
-// mantienen mientras el frontend pasa a `variants`. `cost` y `margin_percent` solo se envían a quien puede
-// editar el catálogo (`catalog:write`).
+// Lo que se vende y se cuenta (SKU, código de barras, costo y precio) va en `variants`.
 type Product struct {
 	// Active Un producto inactivo no se vende, con ninguna de sus variantes.
 	Active bool `json:"active"`
@@ -197,49 +195,17 @@ type Product struct {
 	//
 	//
 	// Example: {"importado":true,"marca":"Acme"}
-	Attributes ProductAttributes `json:"attributes"`
-
-	// Barcode El de la variante por defecto; se omite si no tiene. Use `variants`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Barcode *string `json:"barcode,omitempty"`
-
-	// BaseUnit El código de `unit`. Use `unit`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	BaseUnit   UnitCode           `json:"base_unit"`
+	Attributes ProductAttributes  `json:"attributes"`
 	BaseUnitId openapi_types.UUID `json:"base_unit_id"`
 
 	// CategoryId Se omite si el producto no tiene categoría.
 	CategoryId *openapi_types.UUID `json:"category_id,omitempty"`
-
-	// Cost El de la variante por defecto. Use `variants`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Cost      *Money    `json:"cost,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt  time.Time           `json:"created_at"`
 
 	// Description Se omite si está vacía.
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
-
-	// MarginPercent El de la variante por defecto. Use `variants`.
-	//
-	// Example: 16.6667
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	MarginPercent *string `json:"margin_percent,omitempty"`
-	Name          string  `json:"name"`
-
-	// Price El de la variante por defecto. Use `variants`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Price Money `json:"price"`
-
-	// PriceWithTax El de la variante por defecto. Use `variants`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	PriceWithTax Money `json:"price_with_tax"`
-
-	// Sku El de la variante por defecto. Use `variants`.
-	//
-	// Example: CIN-18
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Sku string `json:"sku"`
+	Name        string             `json:"name"`
 
 	// TaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
 	//
@@ -260,24 +226,20 @@ type Product struct {
 type ProductAttributes map[string]AttributeValue
 
 // ProductInput Los datos del producto y los de su variante por defecto (`sku`, `barcode`, `cost` y `price`). Las demás
-// variantes se editan con `/products/{productId}/variants`. La unidad base va en `base_unit_id` o, mientras
-// el frontend pasa a `base_unit_id`, por su código en `base_unit` (deprecated): una de las dos. Los
-// atributos se validan contra las definiciones de la empresa (`/product-attributes`).
+// variantes se editan con `/products/{productId}/variants`. Los atributos se validan contra las definiciones
+// de la empresa (`/product-attributes`).
 type ProductInput struct {
-	// Attributes Los valores de los atributos de la empresa. Si se omite al editar, el producto conserva los que tiene.
-	Attributes *ProductAttributes `json:"attributes,omitempty"`
+	// Attributes Los valores de los atributos de la empresa (`{}` si no tiene). Al editar reemplazan los que tiene el
+	// producto: un atributo que no se envía queda sin valor.
+	Attributes ProductAttributes `json:"attributes"`
 
 	// Barcode Código de barras, único en la empresa. Vacío u omitido si no tiene.
 	//
 	// Example: 7701234567890
 	Barcode *string `json:"barcode,omitempty"`
 
-	// BaseUnit El código de la unidad base. Use `base_unit_id`.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	BaseUnit *UnitCode `json:"base_unit,omitempty"`
-
 	// BaseUnitId La unidad de medida en la que se cuenta y se vende el producto.
-	BaseUnitId *openapi_types.UUID `json:"base_unit_id,omitempty"`
+	BaseUnitId openapi_types.UUID  `json:"base_unit_id"`
 	CategoryId *openapi_types.UUID `json:"category_id,omitempty"`
 
 	// Cost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
@@ -425,11 +387,6 @@ type ProductVariantUpdate struct {
 //
 // Example: 0.19
 type TaxRate = string
-
-// UnitCode El código de una unidad de medida de la empresa (`und`, `m`).
-//
-// Example: m
-type UnitCode = string
 
 // UnitInput defines model for UnitInput.
 type UnitInput struct {

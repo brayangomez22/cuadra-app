@@ -44,18 +44,6 @@ func (c salesCatalog) Variants(ctx context.Context, tenantID uuid.UUID, ids []uu
 	return out, nil
 }
 
-func (c salesCatalog) DefaultVariants(ctx context.Context, tenantID uuid.UUID, productIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
-	products, err := c.m.ProductsByID(ctx, tenantID, productIDs)
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[uuid.UUID]uuid.UUID, len(products))
-	for _, p := range products {
-		out[p.ID()] = p.DefaultVariant().ID()
-	}
-	return out, nil
-}
-
 // salesStock satisfies salesapp.StockReserver with the inventory module: a
 // sale takes its stock out of the variants it sold.
 type salesStock struct{ inventory *inventory.Module }
@@ -94,19 +82,9 @@ func salesStockError(err error) error {
 }
 
 // inventoryCatalog satisfies inventoryapp.ProductVariants with the catalog
-// module, for the deprecated product_id of the inventory contract.
+// module: the product of each variant, for the product_id of the levels and
+// movements.
 type inventoryCatalog struct{ m *catalog.Module }
-
-func (c inventoryCatalog) DefaultVariant(ctx context.Context, tenantID, productID uuid.UUID) (uuid.UUID, error) {
-	products, err := c.m.ProductsByID(ctx, tenantID, []uuid.UUID{productID})
-	if err != nil {
-		return uuid.Nil, err
-	}
-	if len(products) == 0 {
-		return uuid.Nil, inventorydomain.ErrProductNotFound
-	}
-	return products[0].DefaultVariant().ID(), nil
-}
 
 func (c inventoryCatalog) ProductsOf(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
 	return c.m.VariantProducts(ctx, tenantID, variantIDs)

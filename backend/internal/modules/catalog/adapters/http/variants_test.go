@@ -51,13 +51,8 @@ type variantJSON struct {
 }
 
 type productJSON struct {
-	ID           string        `json:"id"`
-	SKU          string        `json:"sku"`
-	Barcode      *string       `json:"barcode"`
-	Price        string        `json:"price"`
-	PriceWithTax string        `json:"price_with_tax"`
-	Cost         *string       `json:"cost"`
-	Variants     []variantJSON `json:"variants"`
+	ID       string        `json:"id"`
+	Variants []variantJSON `json:"variants"`
 }
 
 func decodeProduct(t *testing.T, raw []byte) productJSON {
@@ -68,7 +63,7 @@ func decodeProduct(t *testing.T, raw []byte) productJSON {
 }
 
 func TestProductVariantsBody(t *testing.T) {
-	t.Run("el producto responde variants y los campos deprecated iguales a su variante por defecto", func(t *testing.T) {
+	t.Run("el producto responde sus variants, con la variante por defecto primero", func(t *testing.T) {
 		p := productWithVariants(t)
 		uc := &stubUseCases{product: p}
 
@@ -81,12 +76,7 @@ func TestProductVariantsBody(t *testing.T) {
 		require.Equal(t, p.DefaultVariant().ID().String(), def.ID)
 		require.True(t, def.IsDefault)
 		require.Equal(t, map[string]string{"talla": "S"}, def.AxisValues)
-		require.Equal(t, "CAM-S", body.SKU)
-		require.Equal(t, def.SKU, body.SKU)
-		require.Equal(t, def.Barcode, body.Barcode)
-		require.Equal(t, def.Price, body.Price)
-		require.Equal(t, def.PriceWithTax, body.PriceWithTax)
-		require.Equal(t, def.Cost, body.Cost)
+		require.Equal(t, "CAM-S", def.SKU)
 
 		require.Equal(t, "CAM-M", m.SKU)
 		require.False(t, m.IsDefault)
@@ -134,7 +124,6 @@ func TestProductVariantsBody(t *testing.T) {
 			require.Nil(t, v.Cost)
 			require.Nil(t, v.MarginPercent)
 		}
-		require.Nil(t, body.Cost)
 	})
 }
 

@@ -56,9 +56,6 @@ type BusinessTemplate struct {
 	DefaultTaxRate decimal.Decimal
 }
 
-// DefaultBusinessTemplate is the template of a sign-up that names none.
-const DefaultBusinessTemplate = "generica"
-
 // BusinessTemplates lists the templates a business can sign up with. They
 // are static data, so it opens no span.
 func (s *Service) BusinessTemplates() []BusinessTemplate { return s.Setup.Templates() }
