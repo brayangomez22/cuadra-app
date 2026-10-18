@@ -29,7 +29,7 @@ export const signUpSchema = z.object({
     .trim()
     .min(1, 'Escriba el NIT')
     .max(20, 'El NIT puede tener máximo 20 caracteres')
-    .regex(/^\d[\d. ]*(-\d)?$/, 'Escriba el NIT con su dígito de verificación, por ejemplo 890903938-8'),
+    .regex(/^\d[\d. ]*(-\d)?$/, 'Escriba el NIT con su dígito de verificación, por ejemplo 900123456-8'),
   name: z.string().trim().min(1, 'Escriba su nombre').max(200, 'El nombre puede tener máximo 200 caracteres'),
   email,
   password: z

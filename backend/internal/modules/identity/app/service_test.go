@@ -160,7 +160,7 @@ func TestSignUp(t *testing.T) {
 			wantErr error
 		}{
 			{name: "email inválido", mutate: func(in *app.SignUpInput) { in.Email = "ana@" }, wantErr: domain.ErrInvalidEmail},
-			{name: "NIT con DV incorrecto", mutate: func(in *app.SignUpInput) { in.NIT = "890903938-1" }, wantErr: domain.ErrInvalidNITCheckDigit},
+			{name: "NIT con DV incorrecto", mutate: func(in *app.SignUpInput) { in.NIT = "900123456-1" }, wantErr: domain.ErrInvalidNITCheckDigit},
 			{name: "contraseña corta", mutate: func(in *app.SignUpInput) { in.Password = "corta" }, wantErr: domain.ErrPasswordTooShort},
 			{name: "contraseña larga", mutate: func(in *app.SignUpInput) { in.Password = string(make([]byte, 73)) }, wantErr: domain.ErrPasswordTooLong},
 			{name: "empresa sin nombre", mutate: func(in *app.SignUpInput) { in.TenantName = "  " }, wantErr: domain.ErrInvalidTenantName},

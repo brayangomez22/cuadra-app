@@ -1,7 +1,8 @@
 @use '@/styles/abstracts' as *;
 
-// The sections go above the content on a phone and tablet, as a row that
-// wraps; from lg up they are a column at the start.
+// The sections go above the content on a phone and tablet, as one row that
+// scrolls on its own when it does not fit (the cut-off tab shows there is
+// more); from lg up they are a column at the start.
 .root {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -19,13 +20,26 @@
 
 .list {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-1);
-  padding: 0;
+
+  // Room for the focus ring, which the scrolling would clip; the negative
+  // margin keeps the tabs aligned with the content.
+  margin-inline: calc(var(--space-1) * -1);
+  padding: var(--space-1);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
   list-style: none;
+
+  > li {
+    flex-shrink: 0;
+  }
 
   @include respond-to(lg) {
     flex-direction: column;
+    margin-inline: 0;
+    padding: 0;
+    overflow-x: visible;
   }
 }
 
@@ -39,6 +53,7 @@
   border-radius: var(--radius-md);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-default);
+  white-space: nowrap;
   text-decoration: none;
 
   @include focus-ring;

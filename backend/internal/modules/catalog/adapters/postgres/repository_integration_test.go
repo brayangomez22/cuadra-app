@@ -58,7 +58,7 @@ func (f fixture) createTenant(t *testing.T) uuid.UUID {
 	id := uuid.Must(uuid.NewV7())
 	require.NoError(t, f.db.WithTenantTx(t.Context(), id, func(tx pgx.Tx) error {
 		_, err := tx.Exec(t.Context(),
-			"INSERT INTO tenants (id, name, nit, status, business_template, created_at) VALUES ($1, 'Ferretería', '890903938-8', 'active', 'ferreteria', $2)", id, now)
+			"INSERT INTO tenants (id, name, nit, status, business_template, created_at) VALUES ($1, 'Ferretería', '900123456-8', 'active', 'ferreteria', $2)", id, now)
 		return err
 	}))
 	f.piece[id] = f.createUnit(t, id, "und", "Unidad").Ref()

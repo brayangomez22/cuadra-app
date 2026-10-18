@@ -77,7 +77,7 @@ export function SignUpPage() {
         <Field label="Nombre de la empresa" error={errors.tenant_name?.message}>
           <Input autoComplete="organization" autoFocus {...register('tenant_name')} />
         </Field>
-        <Field label="NIT" hint="Con dígito de verificación: 890903938-8" error={errors.nit?.message}>
+        <Field label="NIT" hint="Con dígito de verificación: 900123456-8" error={errors.nit?.message}>
           <Input inputMode="numeric" autoComplete="off" {...register('nit')} />
         </Field>
         <Field label="Su nombre" error={errors.name?.message}>

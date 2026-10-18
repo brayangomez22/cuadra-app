@@ -86,7 +86,7 @@ func TestAuthFlow(t *testing.T) {
 	}
 
 	signup := do(t, http.MethodPost, "/api/v1/auth/signup",
-		`{"tenant_name":"Ferretería El Tornillo","nit":"890903938-8","name":"Ana Gómez","email":"Ana@ElTornillo.co","password":"clave-segura-123","business_template":"ferreteria"}`, "", nil)
+		`{"tenant_name":"Ferretería El Tornillo","nit":"900123456-8","name":"Ana Gómez","email":"Ana@ElTornillo.co","password":"clave-segura-123","business_template":"ferreteria"}`, "", nil)
 	require.Equal(t, http.StatusCreated, signup.Code, signup.Body.String())
 	first, firstCookie := parse(t, signup)
 	require.Equal(t, "owner", first.User.Role)

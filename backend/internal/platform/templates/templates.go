@@ -50,6 +50,9 @@ type Template struct {
 	// Name and Description are shown to whoever signs up.
 	Name        string
 	Description string
+	// Fallback marks the template for whoever fits no other: it is listed
+	// first.
+	Fallback bool
 	// Modules are the modules active from the sign-up.
 	Modules []string
 	// DefaultTaxRate is the IVA rate the product form proposes.
@@ -93,6 +96,7 @@ type Axis struct {
 type file struct {
 	Name             string      `yaml:"name"`
 	Description      string      `yaml:"description"`
+	Fallback         bool        `yaml:"fallback"`
 	Modules          []string    `yaml:"modules"`
 	DefaultTaxRate   string      `yaml:"default_tax_rate"`
 	Units            []Unit      `yaml:"units"`
@@ -133,6 +137,15 @@ func Load(fsys fs.FS, checkModules func([]string) error) (*Catalog, error) {
 		}
 		c.list = append(c.list, t)
 	}
+	slices.SortStableFunc(c.list, func(a, b Template) int {
+		if a.Fallback != b.Fallback {
+			if a.Fallback {
+				return -1
+			}
+			return 1
+		}
+		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+	})
 	return c, nil
 }
 
@@ -187,7 +200,7 @@ func load(fsys fs.FS, name string, schema *jsonschema.Schema) (Template, error) 
 		return Template{}, invalid("default_tax_rate: %v", err)
 	}
 	t := Template{
-		ID: id, Name: f.Name, Description: f.Description, Modules: f.Modules, DefaultTaxRate: rate, Units: f.Units,
+		ID: id, Name: f.Name, Description: f.Description, Fallback: f.Fallback, Modules: f.Modules, DefaultTaxRate: rate, Units: f.Units,
 		Categories: f.Categories, Attributes: f.Attributes, VariantAxes: f.VariantAxes, CustomerSegments: f.CustomerSegments,
 	}
 	if err := checkUnique(t); err != nil {
@@ -231,7 +244,7 @@ func keys[T any](items []T, key func(T) string) []string {
 	return out
 }
 
-// List returns every template, by ID.
+// List returns every template: the fallback ones first, then by name.
 func (c *Catalog) List() []Template {
 	out := make([]Template, len(c.list))
 	for i, t := range c.list {

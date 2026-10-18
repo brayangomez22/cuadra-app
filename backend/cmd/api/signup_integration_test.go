@@ -71,7 +71,7 @@ func TestSignUpTemplates(t *testing.T) {
 	}
 	signUp := func(t *testing.T, email, template string) *httptest.ResponseRecorder {
 		t.Helper()
-		body := `{"tenant_name":"Mi negocio","nit":"890903938-8","name":"Ana Gómez","email":"` + email + `","password":"clave-segura-123"`
+		body := `{"tenant_name":"Mi negocio","nit":"900123456-8","name":"Ana Gómez","email":"` + email + `","password":"clave-segura-123"`
 		if template != "" {
 			body += `,"business_template":"` + template + `"`
 		}

@@ -25,7 +25,7 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrUserNotFound, Status: http.StatusUnauthorized, Code: "unauthorized", Message: unauthorizedMessage},
 	{Err: domain.ErrInvalidEmail, Status: http.StatusUnprocessableEntity, Code: "invalid_email", Message: "El correo no es válido."},
 	{Err: domain.ErrInvalidNITCheckDigit, Status: http.StatusUnprocessableEntity, Code: "invalid_nit_check_digit", Message: "El dígito de verificación del NIT no coincide."},
-	{Err: domain.ErrInvalidNIT, Status: http.StatusUnprocessableEntity, Code: "invalid_nit", Message: "El NIT no es válido. Escríbalo con su dígito de verificación, por ejemplo 890903938-8."},
+	{Err: domain.ErrInvalidNIT, Status: http.StatusUnprocessableEntity, Code: "invalid_nit", Message: "El NIT no es válido. Escríbalo con su dígito de verificación, por ejemplo 900123456-8."},
 	{Err: domain.ErrPasswordTooShort, Status: http.StatusUnprocessableEntity, Code: "password_too_short", Message: "La contraseña debe tener al menos 8 caracteres."},
 	{Err: domain.ErrPasswordTooLong, Status: http.StatusUnprocessableEntity, Code: "password_too_long", Message: "La contraseña puede tener máximo 72 caracteres."},
 	{Err: domain.ErrInvalidTenantName, Status: http.StatusUnprocessableEntity, Code: "invalid_tenant_name", Message: "Escriba el nombre de la empresa (máximo 200 caracteres)."},

@@ -942,8 +942,8 @@ export interface components {
              */
             tenant_name: string;
             /**
-             * @description NIT con dígito de verificación (`890903938-8`).
-             * @example 890903938-8
+             * @description NIT con dígito de verificación (`900123456-8`).
+             * @example 900123456-8
              */
             nit: string;
             /**
@@ -1005,7 +1005,7 @@ export interface components {
             tenant_name: string;
             /**
              * @description NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
-             * @example 890903938-8
+             * @example 900123456-8
              */
             tenant_nit: string;
             /**
@@ -1043,7 +1043,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            /** @example 890903938-8 */
+            /** @example 900123456-8 */
             nit: string;
             /** @example generica */
             business_template: string;

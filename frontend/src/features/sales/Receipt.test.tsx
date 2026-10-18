@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { aSale, plain, type Sale } from '@/test/fixtures';
 import { Receipt } from './Receipt';
 
-const business = { name: 'Ferretería El Tornillo', nit: '890903938-8' };
+const business = { name: 'Ferretería El Tornillo', nit: '900123456-8' };
 
 // A sale with IVA at three rates; two lines at 19 % add up in one group.
 function aMixedSale(overrides: Partial<Sale> = {}): Sale {
@@ -102,7 +102,7 @@ describe('Receipt', () => {
     const receipt = renderReceipt();
 
     expect(receipt.getByRole('heading', { name: 'Ferretería El Tornillo' })).toBeInTheDocument();
-    expect(receipt.getByText('NIT 890903938-8')).toBeInTheDocument();
+    expect(receipt.getByText('NIT 900123456-8')).toBeInTheDocument();
     expect(receipt.getByText('Bodega principal')).toBeInTheDocument();
     expect(figure(receipt, 'Venta N.º')).toBe('42');
     expect(figure(receipt, 'Cajero')).toBe('Ana Gómez');

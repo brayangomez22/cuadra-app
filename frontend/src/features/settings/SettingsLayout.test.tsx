@@ -39,6 +39,22 @@ describe('SettingsLayout', () => {
     expect(await sections()).toEqual(['Unidades', 'Atributos']);
   });
 
+  it('lleva a la vista la sección actual, que en un celular puede quedar fuera de la fila', async () => {
+    // jsdom has no scrollIntoView: a spy stands in for it during this test.
+    const scrolled = vi.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    onTestFinished(() => {
+      Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    });
+    settingsApi(aUser('owner'));
+    renderApp('/configuracion/modulos');
+
+    const nav = await screen.findByRole('navigation', { name: 'Secciones de configuración' });
+    const current = within(nav).getByRole('link', { name: 'Módulos' });
+    await waitFor(() => expect(scrolled.mock.contexts).toContain(current));
+    expect(scrolled).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+  });
+
   it('abre la primera sección que el rol puede ver', async () => {
     settingsApi(aUser('admin'));
     const { router } = renderApp('/configuracion');

@@ -2131,10 +2131,10 @@ components:
           example: Mi Negocio
         nit:
           type: string
-          description: NIT con dígito de verificación (`890903938-8`).
+          description: NIT con dígito de verificación (`900123456-8`).
           minLength: 2
           maxLength: 20
-          example: 890903938-8
+          example: 900123456-8
         name:
           type: string
           description: Nombre del dueño.
@@ -2228,7 +2228,7 @@ components:
         tenant_nit:
           type: string
           description: NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
-          example: 890903938-8
+          example: 900123456-8
         business_template:
           type: string
           description: Plantilla de tipo de negocio con la que se registró la empresa.
@@ -2271,7 +2271,7 @@ components:
           type: string
         nit:
           type: string
-          example: 890903938-8
+          example: 900123456-8
         business_template:
           type: string
           example: generica

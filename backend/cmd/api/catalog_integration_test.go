@@ -62,7 +62,7 @@ func TestCatalogFlow(t *testing.T) {
 	}
 
 	signup := do(t, http.MethodPost, "/api/v1/auth/signup",
-		`{"tenant_name":"Ferretería El Tornillo","nit":"890903938-8","name":"Ana Gómez","email":"ana@catalogo.co","password":"clave-segura-123","business_template":"ferreteria"}`, "")
+		`{"tenant_name":"Ferretería El Tornillo","nit":"900123456-8","name":"Ana Gómez","email":"ana@catalogo.co","password":"clave-segura-123","business_template":"ferreteria"}`, "")
 	require.Equal(t, http.StatusCreated, signup.Code, signup.Body.String())
 	var session struct {
 		AccessToken string `json:"access_token"`

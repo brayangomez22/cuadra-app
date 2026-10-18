@@ -144,7 +144,7 @@ type Me struct {
 
 	// TenantNit NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
 	//
-	// Example: 890903938-8
+	// Example: 900123456-8
 	TenantNit string `json:"tenant_nit"`
 }
 
@@ -168,9 +168,9 @@ type SignUpRequest struct {
 	// Example: Ana Gómez
 	Name string `json:"name"`
 
-	// Nit NIT con dígito de verificación (`890903938-8`).
+	// Nit NIT con dígito de verificación (`900123456-8`).
 	//
-	// Example: 890903938-8
+	// Example: 900123456-8
 	Nit string `json:"nit"`
 
 	// Password Entre 8 y 72 caracteres.
@@ -199,7 +199,7 @@ type Tenant struct {
 	Id             openapi_types.UUID `json:"id"`
 	Name           string             `json:"name"`
 
-	// Nit Example: 890903938-8
+	// Nit Example: 900123456-8
 	Nit string `json:"nit"`
 }
 

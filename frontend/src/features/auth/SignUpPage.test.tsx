@@ -18,7 +18,7 @@ function signUpApi(routes: Parameters<typeof fakeApi>[0] = {}) {
 
 async function fillSignUp({ password = 'clave-segura', template = 'Ferretería' as string | null } = {}) {
   await userEvent.type(await screen.findByLabelText('Nombre de la empresa'), 'Ferretería El Tornillo');
-  await userEvent.type(screen.getByLabelText('NIT'), '890903938-7');
+  await userEvent.type(screen.getByLabelText('NIT'), '900123456-7');
   await userEvent.type(screen.getByLabelText('Su nombre'), 'Ana Gómez');
   await userEvent.type(screen.getByLabelText('Correo'), 'ana@eltornillo.co');
   await userEvent.type(screen.getByLabelText('Contraseña'), password);
@@ -115,7 +115,7 @@ describe('SignUpPage', () => {
       await waitFor(() => expect(router.state.location.pathname).toBe('/'));
       expect(await api.calls('POST /api/v1/auth/signup')[0]?.json()).toEqual({
         tenant_name: 'Ferretería El Tornillo',
-        nit: '890903938-7',
+        nit: '900123456-7',
         name: 'Ana Gómez',
         email: 'ana@eltornillo.co',
         password: 'clave-segura',

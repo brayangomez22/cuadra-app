@@ -9,6 +9,10 @@
   "properties": {
     "name": { "$ref": "#/$defs/text", "description": "Nombre que ve quien se registra." },
     "description": { "type": "string", "minLength": 1, "maxLength": 300 },
+    "fallback": {
+      "description": "Marca la plantilla para quien no encaja en ninguna otra: se lista primero.",
+      "type": "boolean"
+    },
     "modules": {
       "description": "Módulos activos desde el registro; deben estar registrados y traer sus dependencias.",
       "type": "array",

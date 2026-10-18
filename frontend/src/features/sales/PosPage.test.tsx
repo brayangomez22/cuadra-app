@@ -482,7 +482,7 @@ describe('PosPage', () => {
 
       expect(print).toHaveBeenCalledOnce();
       const receipt = within(printed());
-      expect(receipt.getByText('NIT 890903938-8')).toBeInTheDocument();
+      expect(receipt.getByText('NIT 900123456-8')).toBeInTheDocument();
       expect(receipt.getByText('Bodega principal')).toBeInTheDocument();
       expect(plain(receipt.getByText('Total', { selector: 'dt' }).nextElementSibling?.textContent)).toBe('$ 11.900');
       // The next sale is still one Enter away.
