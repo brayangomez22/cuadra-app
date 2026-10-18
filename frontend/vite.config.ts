@@ -51,8 +51,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     // Same origin as the API in development: the refresh cookie (SameSite=Strict,
     // path /api/v1/auth) reaches it and the API needs no CORS.
+    // `vite preview` uses it too. The end-to-end tests point it to their own API.
     proxy: {
-      '/api': 'http://localhost:8080',
+      '/api': process.env.API_PROXY_TARGET ?? 'http://localhost:8080',
     },
   },
   test: {

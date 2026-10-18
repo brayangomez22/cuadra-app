@@ -60,7 +60,7 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 
-P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31), P20 en `chore/P20-pos-critique`, P23 en `chore/P23-pending-ids-and-tarea-check` y P54–P56 en `chore/P54-P56-ui-fixes`.
+P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31), P20 en `chore/P20-pos-critique`, P23 en `chore/P23-pending-ids-and-tarea-check` P54–P56 en `chore/P54-P56-ui-fixes` y P57 en la rama de T25 (`feat/T25-e2e-playwright`).
 
 | | ID | Pendiente | Origen |
 |---|---|---|---|
@@ -74,7 +74,7 @@ P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31), P20 en `chore
 | [x] | P54 | En 360px las pestañas de `/configuracion` se parten en dos filas ("Ejes de variante" y "Módulos" quedan abajo): deben caber en una fila con desplazamiento horizontal propio o pasar a otro control | T24k (critique, P52) |
 | [x] | P55 | Registro: "Negocio general" (la opción para quien no se ve en la lista) queda en medio del orden alfabético de los tipos de negocio; debe ir primero o aparte. Y la ayuda del NIT usa de ejemplo `890903938-8`, un NIT real de una empresa conocida: cambiarlo por uno ficticio con dígito válido | T24k (critique, P52) |
 | [x] | P56 | POS en 1366px: la etiqueta "Descuento %" de la línea se parte en dos líneas según la fuente del sistema (pasa en Chromium de Linux); la columna no debe depender del ancho exacto del texto | T24k (critique) |
-| [ ] | P57 | `features/dev/UiCatalogPage.tsx` usa datos de ejemplo de un solo nicho ("Cemento gris 50kg", unidad "bulto"): mezclar ejemplos de al menos dos tipos de negocio, como pide la regla de neutralidad de `docs/estilos.md` | T24k |
+| [x] | P57 | `features/dev/UiCatalogPage.tsx` usa datos de ejemplo de un solo nicho ("Cemento gris 50kg", unidad "bulto"): mezclar ejemplos de al menos dos tipos de negocio, como pide la regla de neutralidad de `docs/estilos.md`. Hecho en la rama de T25: ejemplos de droguería, ferretería, papelería y calzado | T24k |
 
 ## Para validar con los pilotos
 

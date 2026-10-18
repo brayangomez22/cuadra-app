@@ -44,15 +44,17 @@ const UNITS = [
   { value: 'und', label: 'Unidad' },
   { value: 'm', label: 'Metro' },
   { value: 'kg', label: 'Kilogramo' },
-  { value: 'bulto', label: 'Bulto' },
-  { value: 'rollo', label: 'Rollo', disabled: true },
+  { value: 'par', label: 'Par' },
+  { value: 'caja', label: 'Caja', disabled: true },
 ];
 
+// Sample data from several business types (docs/estilos.md, "Neutralidad"):
+// a long name, a fractional quantity, thousands and a sold-out product.
 const STOCK = [
-  { sku: 'CEM-050', name: 'Cemento gris 50kg', unit: 'bulto', qty: '12', price: '$ 32.900', state: 'ok' },
-  { sku: 'CAB-12', name: 'Cable eléctrico 12 AWG THHN rojo, rollo por metro', unit: 'm', qty: '2,5', price: '$ 3.450', state: 'low' },
-  { sku: 'TOR-14', name: 'Tornillo drywall 6 × 1"', unit: 'und', qty: '1.240', price: '$ 90', state: 'ok' },
-  { sku: 'PEG-PVC', name: 'Soldadura PVC 1/4 galón', unit: 'und', qty: '0', price: '$ 41.200', state: 'out' },
+  { sku: 'ACE-500', name: 'Acetaminofén 500 mg × 10 tabletas', unit: 'caja', qty: '12', price: '$ 4.900', state: 'ok' },
+  { sku: 'CAB-12', name: 'Cable eléctrico 12 AWG THHN rojo, se vende por metro', unit: 'm', qty: '2,5', price: '$ 3.450', state: 'low' },
+  { sku: 'CUA-100', name: 'Cuaderno cuadriculado 100 hojas', unit: 'und', qty: '1.240', price: '$ 3.200', state: 'ok' },
+  { sku: 'TEN-38', name: 'Tenis de lona blancos (38)', unit: 'par', qty: '0', price: '$ 89.900', state: 'out' },
 ] as const;
 
 function applyTheme(theme: string) {
@@ -119,7 +121,7 @@ export function UiCatalogPage() {
       <Section title="Field, Input y Select">
         <div className={styles.form}>
           <Field label="Nombre del producto" hint="Como aparece en la tirilla">
-            <Input placeholder="Cemento gris 50kg" />
+            <Input placeholder="Cuaderno cuadriculado 100 hojas" />
           </Field>
           <Field label="Precio de venta" hint="Con IVA incluido">
             <Input inputMode="decimal" align="end" defaultValue="32.900" />
@@ -294,7 +296,7 @@ export function UiCatalogPage() {
               toast({
                 tone: 'danger',
                 title: 'No se pudo guardar la venta',
-                description: 'No hay stock suficiente de Cemento gris 50kg: quedan 3.',
+                description: 'No hay stock suficiente de Tenis de lona blancos (38): quedan 0.',
               })
             }
           >
