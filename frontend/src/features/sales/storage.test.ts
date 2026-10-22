@@ -1,4 +1,4 @@
-import { aGarment, aProduct, ids, variantId } from '@/test/fixtures';
+import { aGarment, aProduct, boxOf12, ids, unitOf, variantId, withUnits } from '@/test/fixtures';
 import { cartItem, cartReducer, emptyCart } from './cart';
 import { loadCart, saveCart } from './storage';
 
@@ -36,6 +36,21 @@ describe('carrito guardado', () => {
       sessionStorage.setItem(KEY, typeof stored === 'string' ? stored : JSON.stringify(stored));
       expect(loadCart(KEY)).toEqual(emptyCart);
     }
+  });
+
+  it('una línea en unidad alternativa se restaura con su unidad', () => {
+    const tubes = withUnits(aProduct(), [boxOf12]);
+    const cart = cartReducer(emptyCart, { type: 'add', item: cartItem(tubes), quantity: '1', unitId: unitOf('caja').id });
+
+    saveCart(KEY, cart);
+
+    expect(loadCart(KEY)).toEqual(cart);
+  });
+
+  it('un carrito de la versión 2 (sin unidades) se descarta', () => {
+    const line = { item: { ...cartItem(aProduct()), units: undefined }, quantity: '1', discount: '' };
+    sessionStorage.setItem(KEY, JSON.stringify({ version: 2, lines: [line] }));
+    expect(loadCart(KEY)).toEqual(emptyCart);
   });
 
   it('un carrito vacío no se guarda', () => {

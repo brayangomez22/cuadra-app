@@ -37,6 +37,7 @@ import {
 } from './api';
 import { AttributeFields } from './AttributeFields';
 import { VariantEditor, VariantList } from './ProductVariants';
+import { VariantUnits } from './VariantUnits';
 import { resolveRows, saveVariants, type ResolvedRow } from './saveVariants';
 import { taxRateOptions } from './taxRates';
 import {
@@ -80,6 +81,7 @@ export function ProductFormPage() {
   const auth = useAuth();
   const user = auth.status === 'authenticated' ? auth.user : undefined;
   const variantsOn = user?.modules.includes('variants') ?? false;
+  const unitsOn = user?.modules.includes('unit_conversions') ?? false;
   const product = useProduct(productId);
   const categories = useCategories();
   const units = useUnits();
@@ -114,6 +116,7 @@ export function ProductFormPage() {
       units={units.data}
       definitions={definitions.data}
       axes={variantsOn ? axes.data : undefined}
+      alternateUnits={unitsOn}
       defaultTaxRate={user?.default_tax_rate ?? '0.19'}
     />
   );
@@ -126,11 +129,13 @@ type FormProps = {
   definitions: AttributeDefinition[];
   /** The tenant's variant axes, when the module variants is on. */
   axes?: VariantAxis[];
+  /** Whether the module unit_conversions is on: the variants' alternate units are shown. */
+  alternateUnits: boolean;
   /** The IVA rate a new product starts with: the tenant's. */
   defaultTaxRate: string;
 };
 
-function ProductForm({ product, categories, units, definitions, axes, defaultTaxRate }: FormProps) {
+function ProductForm({ product, categories, units, definitions, axes, alternateUnits, defaultTaxRate }: FormProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -405,6 +410,15 @@ function ProductForm({ product, categories, units, definitions, axes, defaultTax
             ) : (
               current && <VariantList product={current} />
             )}
+          </section>
+        )}
+
+        {alternateUnits && (
+          <section className={styles.section} aria-labelledby="product-units">
+            <h2 id="product-units" className={styles.sectionTitle}>
+              Unidades de venta
+            </h2>
+            <VariantUnits product={current} units={units} />
           </section>
         )}
 

@@ -6,6 +6,7 @@ export type ProductVariant = Schemas['ProductVariant'];
 type UnitOfMeasure = Schemas['UnitOfMeasure'];
 type AttributeDefinition = Schemas['AttributeDefinition'];
 type VariantAxis = Schemas['VariantAxis'];
+export type VariantUnit = Schemas['VariantUnit'];
 export type Location = Schemas['Location'];
 export type StockLevel = Schemas['StockLevel'];
 export type StockMovement = Schemas['StockMovement'];
@@ -24,7 +25,14 @@ export const ids = {
 };
 
 // unitOf is the tenant's unit with a code, as the API embeds it in a product.
-const unitNames: Record<string, string> = { und: 'Unidad', m: 'Metro', bulto: 'Bulto' };
+const unitNames: Record<string, string> = {
+  und: 'Unidad',
+  m: 'Metro',
+  bulto: 'Bulto',
+  caja: 'Caja',
+  rollo: 'Rollo',
+  paq: 'Paquete',
+};
 
 /** The tenant's units, as GET /units answers them. */
 export const units = Object.keys(unitNames).map((code) => unitOf(code));
@@ -172,6 +180,31 @@ export function aGarment(overrides: Partial<Product> = {}): Product {
     ...overrides,
   };
 }
+
+/** An alternate unit of a variant: factor base units each, at price before IVA (19 % in price_with_tax). */
+export function aVariantUnit(code: string, factor: string, price: string, priceWithTax: string, barcode?: string): VariantUnit {
+  const unit: VariantUnit = { unit: unitOf(code), factor, price, price_with_tax: priceWithTax };
+  if (barcode !== undefined) unit.barcode = barcode;
+  return unit;
+}
+
+/** The product with the alternate units given to its variant variantId (by default, its default variant). */
+export function withUnits(product: Product, variantUnits: VariantUnit[], variantId?: string): Product {
+  const target = variantId ?? (product.variants.find((v) => v.is_default) ?? product.variants[0])!.id;
+  return {
+    ...product,
+    variants: product.variants.map((v) => (v.id === target ? { ...v, units: variantUnits } : v)),
+  };
+}
+
+/** A box of 12 tubes at 110.000 before IVA, with its own barcode. */
+export const boxOf12 = aVariantUnit('caja', '12', '110000.00', '130900.00', '7701234000129');
+
+/** A roll of 100 m of cable at 180.000 before IVA. */
+export const rollOf100 = aVariantUnit('rollo', '100', '180000.00', '214200.00', '7701234001003');
+
+/** A pack of 3 garments at 70.000 before IVA. */
+export const packOf3 = aVariantUnit('paq', '3', '70000.00', '83300.00', '7709990003003');
 
 // withoutCost is a product as the API sends it to a role without catalog:write.
 export function withoutCost(product: Product): Product {

@@ -75,6 +75,17 @@
   overflow-wrap: anywhere;
 }
 
+// Under the product, as wide as its options and never wider than the column.
+.unit {
+  align-self: stretch;
+
+  @include respond-to(md) {
+    align-self: flex-start;
+    min-inline-size: 16ch;
+    max-inline-size: 100%;
+  }
+}
+
 .meta {
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);

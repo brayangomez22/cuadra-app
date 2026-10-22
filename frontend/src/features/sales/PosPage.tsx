@@ -22,7 +22,16 @@ import {
 } from '@/shared/ui';
 import { salesKeys, useConfirmSale, useCurrentCashSession, useDiscountLimit, type Sale } from './api';
 import { CartLines } from './CartLines';
-import { cartItem, cartReducer, cartTotals, type CartAction, type DiscountLimit, type PaymentInput } from './cart';
+import {
+  cartItem,
+  cartReducer,
+  cartTotals,
+  lineKey,
+  lineUnit,
+  type CartAction,
+  type DiscountLimit,
+  type PaymentInput,
+} from './cart';
 import { CheckoutDialog } from './CheckoutDialog';
 import { PrintableReceipt } from './PrintableReceipt';
 import type { Paper } from './Receipt';
@@ -52,6 +61,7 @@ export function PosPage() {
   const user = auth.status === 'authenticated' ? auth.user : undefined;
   const cartKey = `cuadra.pos.cart.${user?.id ?? ''}`;
   const locationKey = `cuadra.pos.location.${user?.tenant_id ?? ''}`;
+  const alternateUnits = user?.modules.includes('unit_conversions') ?? false;
 
   const queryClient = useQueryClient();
   const locations = useLocations();
@@ -69,7 +79,7 @@ export function PosPage() {
   const [cashLost, setCashLost] = useState(false);
   // The product just added (or added again), to mark its line and bring it
   // into view; seq changes on every add.
-  const [added, setAdded] = useState<{ variantId: string; seq: number }>();
+  const [added, setAdded] = useState<{ key: string; seq: number }>();
   const [announcement, setAnnouncement] = useState('');
   const search = useRef<HTMLInputElement>(null);
 
@@ -133,8 +143,9 @@ export function PosPage() {
   // (only on adds, not on every edit of the cart).
   function add(action: Extract<CartAction, { type: 'add' }>) {
     change(action);
-    const mark = { variantId: action.item.variantId, seq: (added?.seq ?? 0) + 1 };
-    if (added?.variantId === mark.variantId) {
+    const key = lineKey({ variantId: action.item.variantId, unitId: action.unitId });
+    const mark = { key, seq: (added?.seq ?? 0) + 1 };
+    if (added?.key === mark.key) {
       // Scanned again while marked: take the mark off for a frame so it starts over.
       setAdded(undefined);
       requestAnimationFrame(() => setAdded(mark));
@@ -142,11 +153,11 @@ export function PosPage() {
       setAdded(mark);
     }
     const next = cartTotals(cartReducer(cart, action), discountLimit);
-    const line = next.lines.find((l) => l.line.item.variantId === action.item.variantId)?.line;
+    const line = next.lines.find((l) => lineKey({ variantId: l.line.item.variantId, unitId: l.line.unitId }) === key)?.line;
     if (line) {
       const { item } = line;
       setAnnouncement(
-        `${variantName(item.name, item.label)}: ${formatQuantity(line.quantity)} ${item.unit}. Total ${formatMoney(next.total)}`,
+        `${variantName(item.name, item.label)}: ${formatQuantity(line.quantity)} ${lineUnit(line).code}. Total ${formatMoney(next.total)}`,
       );
     }
   }
@@ -265,7 +276,12 @@ export function PosPage() {
         <div className={styles.sale}>
           <ProductSearch
             ref={search}
-            onAdd={({ product, variant }, quantity) => add({ type: 'add', item: cartItem(product, variant), quantity })}
+            // A unit's barcode sells that unit, with the module on or off: the API
+            // sells the units already defined, and a box charged as one unit
+            // would be a wrong charge (docs/decisiones.md, T26a).
+            onAdd={({ product, variant, unit }, quantity) =>
+              add({ type: 'add', item: cartItem(product, variant), quantity, unitId: unit?.unit.id })
+            }
           />
           <p className="srOnly" role="status" aria-label="Último producto agregado">
             {announcement}
@@ -276,6 +292,7 @@ export function PosPage() {
           <CartLines
             totals={totals}
             added={added}
+            alternateUnits={alternateUnits}
             dispatch={change}
             showDiscount={showDiscount}
             outOfStock={outOfStock}

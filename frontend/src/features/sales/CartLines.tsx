@@ -1,6 +1,6 @@
 import { useEffect, useRef, type Dispatch, type KeyboardEvent } from "react";
 import { variantName } from "@/features/catalog";
-import { formatMoney, isZero } from "@/shared/format";
+import { formatMoney, formatQuantity, isZero } from "@/shared/format";
 import {
   Badge,
   EmptyState,
@@ -10,8 +10,9 @@ import {
   IconCart,
   IconClose,
   Input,
+  Select,
 } from "@/shared/ui";
-import type { CartAction, CartTotals } from "./cart";
+import { lineKey, lineUnit, type CartAction, type CartLine, type CartTotals } from "./cart";
 import styles from "./CartLines.module.scss";
 
 type Props = {
@@ -21,8 +22,10 @@ type Props = {
   showDiscount: boolean;
   /** The product the API said has no stock for the sale. */
   outOfStock?: string;
-  /** The variant just added: its line is marked and scrolled into view. seq changes on every add. */
-  added?: { variantId: string; seq: number };
+  /** The line just added (its lineKey): it is marked and scrolled into view. seq changes on every add. */
+  added?: { key: string; seq: number };
+  /** Whether the module unit_conversions is on: a line of a variant with alternate units picks its unit. */
+  alternateUnits: boolean;
   /** Gives the focus back to the search, for the next product. */
   onDone: () => void;
 };
@@ -37,6 +40,7 @@ export function CartLines({
   showDiscount,
   outOfStock,
   added,
+  alternateUnits,
   onDone,
 }: Props) {
   const lines = useRef(new Map<string, HTMLLIElement>());
@@ -44,7 +48,7 @@ export function CartLines({
   // On a phone or at 200% zoom the added line can be off screen: bring it in,
   // without moving the page if it is already visible. The focus stays in the search.
   const addedSeq = added?.seq;
-  const addedId = added?.variantId;
+  const addedId = added?.key;
   useEffect(() => {
     if (addedId)
       lines.current.get(addedId)?.scrollIntoView?.({ block: "nearest" });
@@ -71,26 +75,53 @@ export function CartLines({
     <ol className={styles.root} aria-label="Productos de la venta">
       {totals.lines.map(({ line, amounts, quantityError, discountError }) => {
         const { item } = line;
-        const name = variantName(item.name, item.label);
+        const key = lineKey({ variantId: item.variantId, unitId: line.unitId });
+        const ref = { variantId: item.variantId, unitId: line.unitId };
+        const unit = lineUnit(line);
+        // A variant in two units is two lines: the alternate one says its unit.
+        const name = line.unitId
+          ? `${variantName(item.name, item.label)}, ${unit.code}`
+          : variantName(item.name, item.label);
         const forProduct = <span className="srOnly">de {name}</span>;
         const noStock = item.variantId === outOfStock;
-        const isAdded = item.variantId === added?.variantId;
+        const isAdded = key === added?.key;
         return (
           <li
-            key={item.variantId}
+            key={key}
             ref={(element) => {
-              if (element) lines.current.set(item.variantId, element);
-              else lines.current.delete(item.variantId);
+              if (element) lines.current.set(key, element);
+              else lines.current.delete(key);
             }}
             className={styles.line}
             aria-label={name}
             data-state={noStock ? "error" : isAdded ? "added" : undefined}
           >
             <div className={styles.product}>
-              <span className={styles.name}>{name}</span>
-              <span className={styles.meta}>
-                {item.sku} · {formatMoney(item.priceWithTax)} / {item.unit}
+              <span className={styles.name}>
+                {variantName(item.name, item.label)}
               </span>
+              <span className={styles.meta}>
+                {item.sku} · {formatMoney(unit.priceWithTax)} / {unit.code}
+              </span>
+              {alternateUnits && item.units.length > 0 && (
+                <Field
+                  className={styles.unit}
+                  label={<>Unidad {forProduct}</>}
+                >
+                  <Select
+                    options={unitOptions(line)}
+                    value={line.unitId ?? BASE_UNIT}
+                    onValueChange={(value) => {
+                      dispatch({
+                        type: "setUnit",
+                        ...ref,
+                        next: value === BASE_UNIT ? undefined : value,
+                      });
+                      onDone();
+                    }}
+                  />
+                </Field>
+              )}
               {noStock && (
                 <Badge
                   tone="danger"
@@ -114,7 +145,7 @@ export function CartLines({
                 onChange={(event) =>
                   dispatch({
                     type: "setQuantity",
-                    variantId: item.variantId,
+                    ...ref,
                     text: event.target.value,
                   })
                 }
@@ -141,7 +172,7 @@ export function CartLines({
                   onChange={(event) =>
                     dispatch({
                       type: "setDiscount",
-                      variantId: item.variantId,
+                      ...ref,
                       text: event.target.value,
                     })
                   }
@@ -168,7 +199,7 @@ export function CartLines({
               label={`Quitar ${name}`}
               icon={<IconClose />}
               onClick={() => {
-                dispatch({ type: "remove", variantId: item.variantId });
+                dispatch({ type: "remove", ...ref });
                 onDone();
               }}
             />
@@ -177,4 +208,19 @@ export function CartLines({
       })}
     </ol>
   );
+}
+
+// The Select's value for the product's unit: a unit id is never empty.
+const BASE_UNIT = "base";
+
+// unitOptions offers the product's unit and each alternate one with what it
+// holds: "caja (12 und)".
+function unitOptions({ item }: CartLine) {
+  return [
+    { value: BASE_UNIT, label: item.unit },
+    ...item.units.map((u) => ({
+      value: u.id,
+      label: `${u.code} (${formatQuantity(u.factor)} ${item.unit})`,
+    })),
+  ];
 }

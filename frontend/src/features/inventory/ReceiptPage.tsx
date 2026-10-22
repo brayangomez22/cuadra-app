@@ -4,7 +4,16 @@ import { useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useSearchParams } from 'react-router';
 import { z } from 'zod';
-import { defaultVariant, ProductPicker, useProduct, variantName, type Product, type Sellable } from '@/features/catalog';
+import { useAuth } from '@/features/auth';
+import {
+  defaultVariant,
+  ProductPicker,
+  suggestedUnitPrice,
+  useProduct,
+  variantName,
+  type Product,
+  type Sellable,
+} from '@/features/catalog';
 import { api } from '@/shared/api/client';
 import { describeError, unwrap } from '@/shared/api/errors';
 import { decimalField } from '@/shared/forms/decimalField';
@@ -37,6 +46,8 @@ const schema = z.object({
     empty: 'Escriba el costo unitario',
     belowMin: 'El costo no puede ser negativo',
   }),
+  /** An alternate unit of the variant (docs/decisiones.md, T26); empty is the product's unit. */
+  unit_id: z.string(),
 });
 
 type FormInput = z.input<typeof schema>;
@@ -49,7 +60,12 @@ const fieldByErrorCode: Record<string, keyof FormInput> = {
   location_inactive: 'location_id',
   invalid_quantity: 'quantity',
   invalid_unit_cost: 'unit_cost',
+  unit_not_available: 'unit_id',
+  quantity_precision: 'quantity',
 };
+
+// The Select's value for the product's unit: a unit id is never empty.
+const BASE_UNIT = 'base';
 
 /**
  * /inventario/entrada: goods that arrive at a location. ?producto= (with
@@ -121,6 +137,8 @@ type FormProps = {
 };
 
 function ReceiptForm({ locations, initialItem, initialLocation }: FormProps) {
+  const auth = useAuth();
+  const alternateUnits = auth.status === 'authenticated' && auth.user.modules.includes('unit_conversions');
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [formError, setFormError] = useState<string | null>(null);
@@ -140,10 +158,19 @@ function ReceiptForm({ locations, initialItem, initialLocation }: FormProps) {
       location_id: initialLocation,
       quantity: '',
       unit_cost: initialItem?.variant.cost ? toDecimalInput(initialItem.variant.cost) : '',
+      unit_id: '',
     },
   });
   const item = useWatch({ control, name: 'item' });
-  const unit = item?.product.unit.code;
+  const unitId = useWatch({ control, name: 'unit_id' });
+  const base = item?.product.unit.code;
+  const alternate = item?.variant.units.find((u) => u.unit.id === unitId);
+  const unit = alternate ? alternate.unit.code : base;
+  const quantityHint = alternate
+    ? `En ${alternate.unit.code} de ${formatQuantity(alternate.factor)} ${base}.`
+    : base
+      ? `En ${base}.`
+      : 'En la unidad del producto.';
 
   // Coming from the kardex, the product is already there: the quantity is next.
   useEffect(() => {
@@ -152,8 +179,19 @@ function ReceiptForm({ locations, initialItem, initialLocation }: FormProps) {
 
   function choose(next: Sellable | null) {
     setValue('item', next, { shouldValidate: Boolean(errors.item) });
-    // The last cost is a good start; only those who see costs (catalog:write) get it.
-    if (next?.variant.cost) setValue('unit_cost', toDecimalInput(next.variant.cost));
+    // A unit's barcode brings that unit, with the module on or off: the API
+    // takes the units already defined.
+    chooseUnit(next, next?.unit?.unit.id ?? '');
+  }
+
+  // The last cost is a good start, times the unit's factor; only those who
+  // see costs (catalog:write) get it.
+  function chooseUnit(sellable: Sellable | null | undefined, id: string) {
+    setValue('unit_id', id);
+    const cost = sellable?.variant.cost;
+    if (!cost) return;
+    const factor = sellable.variant.units.find((u) => u.unit.id === id)?.factor;
+    setValue('unit_cost', toDecimalInput(factor ? suggestedUnitPrice(cost, factor) : cost));
   }
 
   async function receive(values: FormValues) {
@@ -168,21 +206,28 @@ function ReceiptForm({ locations, initialItem, initialLocation }: FormProps) {
             location_id: values.location_id,
             quantity: values.quantity,
             unit_cost: values.unit_cost,
+            ...(values.unit_id && { unit_id: values.unit_id }),
           },
         }),
       );
       void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
       const productUnit = product.unit.code;
+      const received = variant.units.find((u) => u.unit.id === values.unit_id);
+      // The movement is in the base unit: an entry in boxes says both.
+      const quantity = received
+        ? `${formatQuantity(values.quantity)} ${received.unit.code} (${formatQuantity(movement.quantity)} ${productUnit})`
+        : `${formatQuantity(movement.quantity)} ${productUnit}`;
       const location = locations.find((l) => l.value === values.location_id)?.label ?? 'La sede';
       toast({
         tone: 'success',
         title: 'Entrada registrada',
-        description: `${formatQuantity(movement.quantity)} ${productUnit} de ${variantName(product.name, variant.label)}. ${location} queda con ${formatQuantity(movement.balance_after)} ${productUnit}.`,
+        description: `${quantity} de ${variantName(product.name, variant.label)}. ${location} queda con ${formatQuantity(movement.balance_after)} ${productUnit}.`,
       });
       // Ready for the next product of the same delivery, in the same location.
       resetField('item', { defaultValue: null });
       resetField('quantity', { defaultValue: '' });
       resetField('unit_cost', { defaultValue: '' });
+      resetField('unit_id', { defaultValue: '' });
     } catch (error) {
       const { code, message } = describeError(error);
       const field = fieldByErrorCode[code ?? ''];
@@ -221,8 +266,23 @@ function ReceiptForm({ locations, initialItem, initialLocation }: FormProps) {
           )}
         />
       </Field>
+      {alternateUnits && item && item.variant.units.length > 0 && (
+        <Field label="Unidad" hint="En la que llega la mercancía." error={errors.unit_id?.message}>
+          <Select
+            options={[
+              { value: BASE_UNIT, label: item.product.unit.code },
+              ...item.variant.units.map((u) => ({
+                value: u.unit.id,
+                label: `${u.unit.code} (${formatQuantity(u.factor)} ${item.product.unit.code})`,
+              })),
+            ]}
+            value={unitId || BASE_UNIT}
+            onValueChange={(value) => chooseUnit(item, value === BASE_UNIT ? '' : value)}
+          />
+        </Field>
+      )}
       <div className={styles.amounts}>
-        <Field label="Cantidad" hint={unit ? `En ${unit}.` : 'En la unidad del producto.'} error={errors.quantity?.message}>
+        <Field label="Cantidad" hint={quantityHint} error={errors.quantity?.message}>
           <Input inputMode="decimal" align="end" autoComplete="off" {...register('quantity')} />
         </Field>
         <Field

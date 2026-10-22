@@ -1,4 +1,4 @@
-import { aCement, aGarment, aProduct, ids, variantId } from '@/test/fixtures';
+import { aCement, aGarment, aProduct, boxOf12, ids, packOf3, rollOf100, unitOf, variantId, withUnits } from '@/test/fixtures';
 import { cartItem, cartReducer, cartTotals, emptyCart, settle, type Cart, type DiscountLimit } from './cart';
 
 const noDiscount: DiscountLimit = { unlimited: false, max: '0' };
@@ -58,6 +58,7 @@ describe('cartReducer', () => {
       price: '10000.00',
       priceWithTax: '11900.00',
       taxRate: '0.19',
+      units: [],
     });
   });
 
@@ -66,6 +67,79 @@ describe('cartReducer', () => {
     cart = cartReducer(cart, { type: 'setQuantity', variantId: ids.pipe, text: '' });
     cart = cartReducer(cart, { type: 'add', item: cartItem(aProduct()), quantity: '1' });
     expect(cart.lines[0]?.quantity).toBe('1');
+  });
+});
+
+describe('líneas en unidad alternativa', () => {
+  const tubes = withUnits(aProduct(), [boxOf12]);
+  const box = unitOf('caja').id;
+
+  it('la misma variante en caja y en unidad son dos líneas, y cada una suma lo suyo', () => {
+    const cart = cartWith(
+      { type: 'add', item: cartItem(tubes), quantity: '1', unitId: box },
+      { type: 'add', item: cartItem(tubes), quantity: '1' },
+      { type: 'add', item: cartItem(tubes), quantity: '1', unitId: box },
+    );
+    expect(cart.lines.map((l) => [l.unitId, l.quantity])).toEqual([
+      [box, '2'],
+      [undefined, '1'],
+    ]);
+  });
+
+  it('cambiar la unidad de la línea cambia su precio y su total', () => {
+    let cart = cartWith({ type: 'add', item: cartItem(tubes), quantity: '2' });
+    expect(cartTotals(cart, noDiscount).total).toBe('23800.00');
+    cart = cartReducer(cart, { type: 'setUnit', variantId: ids.pipe, next: box });
+    const totals = cartTotals(cart, noDiscount);
+    // 2 cajas × 110.000 = 220.000, más IVA de 41.800.
+    expect(totals.lines[0]?.amounts).toMatchObject({ gross: '220000.00', tax: '41800.00', total: '261800.00' });
+    expect(totals.total).toBe('261800.00');
+  });
+
+  it('cambiar la unidad a una que ya tiene otra línea las junta', () => {
+    let cart = cartWith(
+      { type: 'add', item: cartItem(tubes), quantity: '1', unitId: box },
+      { type: 'add', item: cartItem(tubes), quantity: '2' },
+    );
+    cart = cartReducer(cart, { type: 'setUnit', variantId: ids.pipe, next: box });
+    expect(cart.lines.map((l) => [l.unitId, l.quantity])).toEqual([[box, '3']]);
+  });
+
+  it('la línea en unidad alternativa envía unit_id, y la de la unidad base no', () => {
+    const cart = cartWith(
+      { type: 'add', item: cartItem(tubes), quantity: '1', unitId: box },
+      { type: 'add', item: cartItem(tubes), quantity: '3' },
+    );
+    expect(cartTotals(cart, noDiscount).lines.map((l) => l.input)).toEqual([
+      { variant_id: ids.pipe, quantity: '1', unit_id: box },
+      { variant_id: ids.pipe, quantity: '3' },
+    ]);
+  });
+
+  it('las ediciones de una línea no tocan la de la otra unidad', () => {
+    let cart = cartWith(
+      { type: 'add', item: cartItem(tubes), quantity: '1', unitId: box },
+      { type: 'add', item: cartItem(tubes), quantity: '1' },
+    );
+    cart = cartReducer(cart, { type: 'setQuantity', variantId: ids.pipe, unitId: box, text: '4' });
+    cart = cartReducer(cart, { type: 'remove', variantId: ids.pipe });
+    expect(cart.lines.map((l) => [l.unitId, l.quantity])).toEqual([[box, '4']]);
+  });
+
+  it('vende medio rollo de cable al precio del rollo', () => {
+    const cable = withUnits(aProduct({ name: 'Cable eléctrico 12 AWG', unitCode: 'm', price: '2000.00' }), [rollOf100]);
+    const cart = cartWith({ type: 'add', item: cartItem(cable), quantity: '0.5', unitId: unitOf('rollo').id });
+    expect(cartTotals(cart, noDiscount).lines[0]?.amounts).toMatchObject({ gross: '90000.00', total: '107100.00' });
+  });
+
+  it('vende un paquete de 3 de una variante de ropa al precio del paquete', () => {
+    const garment = aGarment();
+    const red = variantId('M', 'Rojo');
+    const packed = withUnits(garment, [packOf3], red);
+    const item = cartItem(packed, packed.variants.find((v) => v.id === red));
+    const totals = cartTotals(cartWith({ type: 'add', item, quantity: '2', unitId: unitOf('paq').id }), noDiscount);
+    expect(totals.lines[0]?.input).toEqual({ variant_id: red, quantity: '2', unit_id: unitOf('paq').id });
+    expect(totals.total).toBe('166600.00');
   });
 });
 

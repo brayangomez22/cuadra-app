@@ -9,12 +9,16 @@ import {
   anOpenCashSession,
   aProduct,
   aSale,
+  boxOf12,
   ids,
+  packOf3,
   page,
   plain,
   query,
+  unitOf,
   variantBarcode,
   variantId,
+  withUnits,
   type Product,
 } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
@@ -28,15 +32,18 @@ type Options = {
   /** The current cash session; by default the tenant sells without one. */
   cash?: { required: boolean; session?: ReturnType<typeof anOpenCashSession> };
   extra?: Parameters<typeof fakeApi>[0];
+  products?: Product[];
 };
 
 // The products answer like the API: the exact SKU or barcode of any of their
-// variants, or every word in the name.
+// variants (or of one of their alternate units), or every word in the name.
 function search(products: Product[], q: string) {
   const term = q.toLowerCase();
   return products.filter(
     (p) =>
-      p.variants.some((v) => v.barcode === q || v.sku.toLowerCase() === term) || p.name.toLowerCase().includes(term),
+      p.variants.some(
+        (v) => v.barcode === q || v.sku.toLowerCase() === term || v.units.some((u) => u.barcode === q),
+      ) || p.name.toLowerCase().includes(term),
   );
 }
 
@@ -46,8 +53,8 @@ function posApi({
   locations = [aLocation()],
   cash = { required: false },
   extra = {},
+  products = [aProduct(), aCement({ barcode: CEMENT_BARCODE }), aGarment()],
 }: Options = {}) {
-  const products = [aProduct(), aCement({ barcode: CEMENT_BARCODE }), aGarment()];
   return fakeApi({
     ...signedIn(user),
     'GET /api/v1/locations': json(200, { items: locations }),
@@ -773,11 +780,13 @@ describe('PosPage', () => {
     });
 
     it('marca la línea recién agregada y la lleva a la vista', async () => {
-      // jsdom has no scrollIntoView: a spy stands in for it during this test.
+      // jsdom has no scrollIntoView: a spy stands in for setup.ts's no-op during
+      // this test, which is put back after it (Radix Select needs it).
+      const original = Element.prototype.scrollIntoView;
       const scrolled = vi.fn();
       Element.prototype.scrollIntoView = scrolled;
       onTestFinished(() => {
-        Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+        Element.prototype.scrollIntoView = original;
       });
       posApi();
       renderApp('/vender');
@@ -888,6 +897,69 @@ describe('PosPage', () => {
       const payments = within(done.getByRole('list', { name: 'Pagos de la venta' }));
       const items = payments.getAllByRole('listitem').map((item) => plain(item.textContent));
       expect(items).toEqual(['Efectivo$ 20.000', 'Tarjeta$ 1.900']);
+    });
+  });
+
+  describe('unidades alternativas', () => {
+    const withUnitConversions = (): Me => ({ ...aUser('cashier'), modules: ['unit_conversions'] });
+    const tubes = () => withUnits(aProduct(), [boxOf12]);
+    const red = variantId('M', 'Rojo');
+    const garments = () => withUnits(aGarment(), [packOf3], red);
+
+    async function chooseUnit(line: ReturnType<typeof cartLine>, unit: string) {
+      await user().click(line.getByRole('combobox', { name: /^Unidad/ }));
+      await user().click(await screen.findByRole('option', { name: unit }));
+    }
+
+    it('escanear el código de una caja agrega una línea de 1 caja a su precio', async () => {
+      posApi({ user: withUnitConversions(), products: [tubes()] });
+      renderApp('/vender');
+
+      await scan(boxOf12.barcode!);
+
+      const line = await findCartLine(/Tubo PVC/);
+      expect(line.getByLabelText(/^Cantidad/)).toHaveValue('1');
+      expect(line.getByRole('combobox', { name: /^Unidad/ })).toHaveTextContent('caja');
+      expect(summaryValue('Total')).toBe('$ 130.900');
+    });
+
+    it('el selector de unidad cambia el precio y el total de la línea', async () => {
+      posApi({ user: withUnitConversions(), products: [tubes()] });
+      renderApp('/vender');
+
+      await scan('TUB-PVC-12');
+      const line = await findCartLine(/Tubo PVC/);
+      expect(summaryValue('Total')).toBe('$ 11.900');
+
+      await chooseUnit(line, 'caja (12 und)');
+
+      await waitFor(() => expect(summaryValue('Total')).toBe('$ 130.900'));
+      expect(plain(cartLine(/Tubo PVC/).getByText(/\/ caja/).textContent)).toMatch(/\$ 130\.900 \/ caja/);
+    });
+
+    it('una venta en unidad alternativa envía unit_id', async () => {
+      const api = posApi({ user: withUnitConversions(), products: [garments()] });
+      renderApp('/vender');
+
+      await scan(packOf3.barcode!);
+      await findCartLine(/Camiseta básica \(Rojo · M\)/);
+      await user().keyboard('{F4}');
+      await checkout();
+      await user().keyboard('{Enter}');
+
+      await waitFor(() => expect(api.calls('POST /api/v1/sales')).toHaveLength(1));
+      expect((await posted(api)).lines).toEqual([{ variant_id: red, quantity: '1', unit_id: unitOf('paq').id }]);
+    });
+
+    it('sin el módulo no aparece el selector y la línea se vende en la unidad base', async () => {
+      posApi({ products: [tubes()] });
+      renderApp('/vender');
+
+      await scan('TUB-PVC-12');
+
+      const line = await findCartLine(/Tubo PVC/);
+      expect(line.queryByRole('combobox', { name: /^Unidad/ })).not.toBeInTheDocument();
+      expect(summaryValue('Total')).toBe('$ 11.900');
     });
   });
 });

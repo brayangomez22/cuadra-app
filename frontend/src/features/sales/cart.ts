@@ -5,7 +5,7 @@
 import { parseDecimalInput, toDecimalInput } from '@/shared/format';
 import { fromUnits, fromUnitsTrimmed, mulRound2, mulTrunc2, toUnits } from '@/shared/money/decimal';
 import type { components } from '@/shared/api/schema';
-import { defaultVariant, type Product, type ProductVariant } from '@/features/catalog';
+import { defaultVariant, type Product, type ProductVariant, type VariantUnit } from '@/features/catalog';
 
 type Schemas = components['schemas'];
 export type DiscountLimit = Schemas['DiscountLimit'];
@@ -37,7 +37,12 @@ export type CartItem = {
   price: string;
   priceWithTax: string;
   taxRate: string;
+  /** The variant's alternate units (docs/decisiones.md, T26), each with its own price. */
+  units: CartUnit[];
 };
+
+/** An alternate unit the variant is sold in: factor base units at its own price. */
+export type CartUnit = { id: string; code: string; factor: string; price: string; priceWithTax: string };
 
 /** The cart's item for a variant of product; by default, its default variant. */
 export function cartItem(product: Product, variant: ProductVariant = defaultVariant(product)): CartItem {
@@ -51,52 +56,111 @@ export function cartItem(product: Product, variant: ProductVariant = defaultVari
     price: variant.price,
     priceWithTax: variant.price_with_tax,
     taxRate: product.tax_rate,
+    units: variant.units.map(cartUnit),
   };
 }
 
-/** A line as the cashier typed it: quantity and discount (a percent) are the fields' text. */
-export type CartLine = { item: CartItem; quantity: string; discount: string };
+function cartUnit(unit: VariantUnit): CartUnit {
+  return {
+    id: unit.unit.id,
+    code: unit.unit.code,
+    factor: unit.factor,
+    price: unit.price,
+    priceWithTax: unit.price_with_tax,
+  };
+}
+
+/**
+ * A line as the cashier typed it: quantity and discount (a percent) are the
+ * fields' text. unitId is the alternate unit it is sold in; without it, the
+ * product's unit.
+ */
+export type CartLine = { item: CartItem; quantity: string; discount: string; unitId?: string };
+
+/** What a line is sold in: its alternate unit, or the product's unit at the variant's price. */
+export function lineUnit(line: CartLine): { code: string; price: string; priceWithTax: string } {
+  const unit = line.unitId ? line.item.units.find((u) => u.id === line.unitId) : undefined;
+  return unit ?? { code: line.item.unit, price: line.item.price, priceWithTax: line.item.priceWithTax };
+}
+
+/** What tells two lines apart: the variant and its unit, so a box and a loose unit are two lines. */
+export function lineKey(line: { variantId: string; unitId?: string }): string {
+  return line.unitId ? `${line.variantId}:${line.unitId}` : line.variantId;
+}
 export type Cart = { lines: CartLine[] };
 
+/** The line an action is on: its variant and, if it is sold in one, its alternate unit. */
+type LineRef = { variantId: string; unitId?: string };
+
 export type CartAction =
-  /** quantity is a decimal of the API ("2.5"). */
-  | { type: 'add'; item: CartItem; quantity: string }
-  | { type: 'setQuantity'; variantId: string; text: string }
-  | { type: 'setDiscount'; variantId: string; text: string }
-  | { type: 'remove'; variantId: string }
+  /** quantity is a decimal of the API ("2.5"), in unitId if given. */
+  | { type: 'add'; item: CartItem; quantity: string; unitId?: string }
+  | ({ type: 'setQuantity'; text: string } & LineRef)
+  | ({ type: 'setDiscount'; text: string } & LineRef)
+  /** next is the alternate unit to sell the line in; without it, the product's unit. */
+  | ({ type: 'setUnit'; next?: string } & LineRef)
+  | ({ type: 'remove' } & LineRef)
   | { type: 'clear' };
 
 export const emptyCart: Cart = { lines: [] };
 
+const refOf = (line: CartLine) => lineKey({ variantId: line.item.variantId, unitId: line.unitId });
+
 /**
- * Adding a variant already in the cart adds to its line, so scanning twice
- * sells two. Two variants of a product are two lines.
+ * Adding a variant already in the cart in the same unit adds to its line, so
+ * scanning twice sells two. Two variants of a product, or a variant in two
+ * units, are two lines.
  */
 export function cartReducer(cart: Cart, action: CartAction): Cart {
   switch (action.type) {
     case 'add': {
-      const existing = cart.lines.find((l) => l.item.variantId === action.item.variantId);
+      const key = lineKey({ variantId: action.item.variantId, unitId: action.unitId });
+      const existing = cart.lines.find((l) => refOf(l) === key);
       if (!existing) {
-        const line = { item: action.item, quantity: toDecimalInput(action.quantity), discount: '' };
+        const line: CartLine = { item: action.item, quantity: toDecimalInput(action.quantity), discount: '' };
+        if (action.unitId) line.unitId = action.unitId;
         return { lines: [...cart.lines, line] };
       }
-      const current = readQuantity(existing.quantity);
-      const sum = current.value ? toUnits(current.value) + toUnits(action.quantity) : toUnits(action.quantity);
-      return update(cart, action.item.variantId, { quantity: toDecimalInput(fromUnitsTrimmed(sum)) });
+      return update(cart, key, { quantity: addQuantity(existing.quantity, action.quantity) });
     }
     case 'setQuantity':
-      return update(cart, action.variantId, { quantity: action.text });
+      return update(cart, lineKey(action), { quantity: action.text });
     case 'setDiscount':
-      return update(cart, action.variantId, { discount: action.text });
+      return update(cart, lineKey(action), { discount: action.text });
+    case 'setUnit':
+      return setUnit(cart, lineKey(action), action.next);
     case 'remove':
-      return { lines: cart.lines.filter((l) => l.item.variantId !== action.variantId) };
+      return { lines: cart.lines.filter((l) => refOf(l) !== lineKey(action)) };
     case 'clear':
       return emptyCart;
   }
 }
 
-function update(cart: Cart, variantId: string, changes: Partial<CartLine>): Cart {
-  return { lines: cart.lines.map((l) => (l.item.variantId === variantId ? { ...l, ...changes } : l)) };
+// addQuantity adds a decimal of the API to the text of a line's quantity; an
+// invalid text is replaced, so scanning again still works.
+function addQuantity(text: string, quantity: string): string {
+  const current = readQuantity(text);
+  const sum = current.value ? toUnits(current.value) + toUnits(quantity) : toUnits(quantity);
+  return toDecimalInput(fromUnitsTrimmed(sum));
+}
+
+function update(cart: Cart, key: string, changes: Partial<CartLine>): Cart {
+  return { lines: cart.lines.map((l) => (refOf(l) === key ? { ...l, ...changes } : l)) };
+}
+
+// setUnit sells the line in another unit, keeping its quantity. If the cart
+// already has the variant in that unit, the line joins it.
+function setUnit(cart: Cart, key: string, next: string | undefined): Cart {
+  const line = cart.lines.find((l) => refOf(l) === key);
+  if (!line) return cart;
+  const moved: CartLine = { ...line };
+  if (next) moved.unitId = next;
+  else delete moved.unitId;
+  const target = cart.lines.find((l) => l !== line && refOf(l) === refOf(moved));
+  if (!target) return { lines: cart.lines.map((l) => (l === line ? moved : l)) };
+  const quantity = readQuantity(line.quantity);
+  const joined = quantity.value ? addQuantity(target.quantity, quantity.value) : target.quantity;
+  return { lines: cart.lines.filter((l) => l !== line).map((l) => (l === target ? { ...l, quantity: joined } : l)) };
 }
 
 export type LineAmounts = { gross: string; discount: string; base: string; tax: string; total: string };
@@ -178,7 +242,7 @@ export function cartTotals(cart: Cart, limit: DiscountLimit): CartTotals {
     const result: LineTotals = { line, quantityError: quantity.error, discountError: discount.error };
     if (quantity.value === undefined || discount.fraction === undefined) return result;
 
-    const gross = mulRound2(toUnits(quantity.value), toUnits(line.item.price));
+    const gross = mulRound2(toUnits(quantity.value), toUnits(lineUnit(line).price));
     const discountAmount = mulTrunc2(gross, discount.fraction);
     const base = gross - discountAmount;
     const lineTax = mulRound2(base, toUnits(line.item.taxRate));
@@ -193,6 +257,7 @@ export function cartTotals(cart: Cart, limit: DiscountLimit): CartTotals {
       total: fromUnits(base + lineTax),
     };
     result.input = { variant_id: line.item.variantId, quantity: quantity.value };
+    if (line.unitId) result.input.unit_id = line.unitId;
     if (discountAmount > 0n) result.input.discount = fromUnits(discountAmount);
     return result;
   });
