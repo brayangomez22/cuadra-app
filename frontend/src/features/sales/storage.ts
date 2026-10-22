@@ -5,8 +5,9 @@ import { emptyCart, type Cart } from './cart';
 import type { Paper } from './Receipt';
 
 // CART_VERSION changes whenever the stored cart changes shape: a cart of
-// another version is discarded instead of read wrong (2: lines by variant).
-const CART_VERSION = 2;
+// another version is discarded instead of read wrong (2: lines by variant;
+// 3: lines with their alternate units).
+const CART_VERSION = 3;
 
 /**
  * The sale in progress survives a reload or a visit to another screen, in
@@ -45,6 +46,8 @@ function isStoredCart(value: unknown): value is Cart & { version: number } {
         isRecord(l) &&
         isRecord(l.item) &&
         itemFields.every((field) => typeof (l.item as Record<string, unknown>)[field] === 'string') &&
+        Array.isArray(l.item.units) &&
+        (l.unitId === undefined || typeof l.unitId === 'string') &&
         typeof l.quantity === 'string' &&
         typeof l.discount === 'string',
     )

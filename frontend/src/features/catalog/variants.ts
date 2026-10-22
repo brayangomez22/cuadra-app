@@ -1,10 +1,14 @@
 // A product groups the variants that are sold and counted (docs/decisiones.md,
 // T24a). A simple product has only its default variant, which the screens do
 // not show as a variant.
-import type { Product, ProductVariant } from './api';
+import { fromUnits, mulRound2, toUnits } from '@/shared/money/decimal';
+import type { Product, ProductVariant, VariantUnit } from './api';
 
-/** A variant of a product, as the screens that sell or count it pick it. */
-export type Sellable = { product: Product; variant: ProductVariant };
+/**
+ * A variant of a product, as the screens that sell or count it pick it; unit
+ * is the alternate unit whose barcode found it (docs/decisiones.md, T26).
+ */
+export type Sellable = { product: Product; variant: ProductVariant; unit?: VariantUnit };
 
 /** The variant created with the product. Its id is not always the product's. */
 export function defaultVariant(product: Product): ProductVariant {
@@ -28,8 +32,23 @@ export function sellables(products: Product[]): Sellable[] {
   );
 }
 
-/** The sellable variant whose barcode or SKU (in any case) is code, as a barcode reader types it. */
+/**
+ * The sellable variant whose barcode or SKU (in any case) is code, as a
+ * barcode reader types it, or one of its alternate units by its barcode: then
+ * it comes with that unit.
+ */
 export function findByCode(products: Product[], code: string): Sellable | undefined {
   const lower = code.toLowerCase();
-  return sellables(products).find(({ variant }) => variant.barcode === code || variant.sku.toLowerCase() === lower);
+  for (const sellable of sellables(products)) {
+    const { variant } = sellable;
+    if (variant.barcode === code || variant.sku.toLowerCase() === lower) return sellable;
+    const unit = variant.units.find((u) => u.barcode === code);
+    if (unit) return { ...sellable, unit };
+  }
+  return undefined;
+}
+
+/** The price of factor base units at the base unit's price, rounded half-up to cents: a hint, not a rule. */
+export function suggestedUnitPrice(price: string, factor: string): string {
+  return fromUnits(mulRound2(toUnits(price), toUnits(factor)));
 }

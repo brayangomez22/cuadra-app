@@ -12,9 +12,18 @@ export {
   type ProductVariant,
   type UnitOfMeasure,
   type VariantAxis,
+  type VariantUnit,
 } from './api';
 export { ProductFormPage } from './ProductFormPage';
 export { ProductListPage } from './ProductListPage';
 export { ProductPicker } from './ProductPicker';
-export { defaultVariant, findByCode, hasAxes, sellables, variantName, type Sellable } from './variants';
+export {
+  defaultVariant,
+  findByCode,
+  hasAxes,
+  sellables,
+  suggestedUnitPrice,
+  variantName,
+  type Sellable,
+} from './variants';
 export { taxRateOptions } from './taxRates';

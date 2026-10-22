@@ -60,6 +60,7 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P58 | Cambiar la unidad base de un producto que ya tiene stock o unidades alternativas cambia el sentido de su stock y de sus factores (100 m pasarían a ser 100 cm). T26 solo impide que la unidad base nueva sea una de sus unidades alternativas. Definir si se bloquea el cambio o se exige convertir, antes de que la importación actualice productos en masa | T26 | T29 |
 | [ ] | P59 | Una entrada en unidad alternativa queda en el kardex convertida a la unidad base, sin la unidad en que llegó ni la cantidad original. La línea de compra de T33 debe guardar la unidad de compra, su cantidad y su costo | T26 | T33 |
 | [ ] | P60 | La unicidad del código de barras entre variantes y unidades alternativas se verifica con una consulta dentro de la transacción, sin bloqueo: dos escrituras simultáneas de productos distintos podrían repetirlo. Cada tabla sí tiene su índice único. Evaluar un bloqueo consultivo por tenant o una tabla única de códigos | T26 | T38 |
+| [ ] | P61 | La línea de venta (`SaleLine`) no trae el código de la unidad base: la tirilla muestra la unidad solo cuando la línea se vendió en una alternativa ("0,5 rollo") y una línea en unidad base sigue como "2 × $…". La factura electrónica necesita la unidad de cada línea: congelar en la venta el código de la unidad base (o `unit_code` siempre) y mostrarlo en la tirilla | T26a | T36 |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 

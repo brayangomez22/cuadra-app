@@ -47,7 +47,8 @@ export function Receipt({ sale, business, location, cashier, paper, className }:
           <li key={`${line.variant_id}-${index}`} className={styles.line} aria-label={lineName(line)}>
             <span className={styles.name}>{lineName(line)}</span>
             <span>
-              {formatQuantity(line.quantity)} × {formatMoney(line.unit_price)}
+              {formatQuantity(line.quantity)}
+              {line.unit_code && ` ${line.unit_code}`} × {formatMoney(line.unit_price)}
             </span>
             <span className={styles.amount}>{formatMoney(line.gross)}</span>
             {!isZero(line.discount) && (

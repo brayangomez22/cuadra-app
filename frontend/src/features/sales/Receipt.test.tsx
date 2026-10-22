@@ -181,6 +181,37 @@ describe('Receipt', () => {
     expect(plain(item.textContent)).toBe('Camiseta básica (Rojo · M)1 × $ 10.000$ 10.000');
   });
 
+  it.each([
+    ['Cable eléctrico 12 AWG', '0.5', 'rollo', '100', '50', '180000.00', '90000.00', '0,5 rollo × $ 180.000$ 90.000'],
+    ['Medias tobilleras', '2', 'paq', '3', '6', '70000.00', '140000.00', '2 paq × $ 70.000$ 140.000'],
+  ])('muestra la unidad alternativa en que se vendió la línea: %s', (name, quantity, unit, factor, baseQuantity, price, gross, expected) => {
+    const receipt = renderReceipt(
+      aSale({
+        lines: [
+          {
+            variant_id: '01920000-0000-7000-8000-000000000131',
+            product_id: '01920000-0000-7000-8000-000000000130',
+            product_name: name,
+            quantity,
+            unit_code: unit,
+            unit_factor: factor,
+            base_quantity: baseQuantity,
+            unit_price: price,
+            price_rule: 'variant_price',
+            tax_rate: '0',
+            discount: '0.00',
+            gross,
+            base: gross,
+            tax: '0.00',
+            total: gross,
+          },
+        ],
+      }),
+    );
+
+    expect(plain(receipt.getByRole('listitem', { name }).textContent)).toBe(`${name}${expected}`);
+  });
+
   it('muestra cada medio de pago, lo recibido y el cambio', () => {
     const receipt = renderReceipt();
 

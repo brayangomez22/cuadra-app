@@ -1,5 +1,5 @@
-import { aCement, aGarment, aProduct, ids, variantBarcode, variantId } from '@/test/fixtures';
-import { defaultVariant, findByCode, hasAxes, sellables, variantName } from './variants';
+import { aCement, aGarment, aProduct, boxOf12, ids, packOf3, variantBarcode, variantId, withUnits } from '@/test/fixtures';
+import { defaultVariant, findByCode, hasAxes, sellables, suggestedUnitPrice, variantName } from './variants';
 
 describe('variantes', () => {
   it('la variante por defecto es la creada con el producto, aunque su id no sea el del producto', () => {
@@ -44,5 +44,30 @@ describe('variantes', () => {
     for (const [code, want] of tests) {
       expect(findByCode(products, code)?.variant.id, code).toBe(want);
     }
+  });
+
+  it('encuentra la unidad alternativa por su código de barras: la caja de tubos', () => {
+    const tubes = withUnits(aProduct(), [boxOf12]);
+    const found = findByCode([tubes], boxOf12.barcode!);
+    expect(found?.variant.id).toBe(ids.pipe);
+    expect(found?.unit?.unit.code).toBe('caja');
+    expect(findByCode([tubes], 'TUB-PVC-12')?.unit).toBeUndefined();
+  });
+
+  it('encuentra el paquete de una variante de ropa por su código', () => {
+    const red = variantId('M', 'Rojo');
+    const found = findByCode([withUnits(aGarment(), [packOf3], red)], packOf3.barcode!);
+    expect(found?.variant.id).toBe(red);
+    expect(found?.unit?.factor).toBe('3');
+  });
+
+  it.each([
+    ['10000.00', '12', '120000.00'],
+    ['2000.00', '100', '200000.00'],
+    ['8403.3613', '3', '25210.08'],
+    ['1234.5678', '0.5', '617.28'],
+    ['0.01', '0.5', '0.01'],
+  ])('sugiere el precio proporcional de %s × %s redondeado a centavos: %s', (price, factor, expected) => {
+    expect(suggestedUnitPrice(price, factor)).toBe(expected);
   });
 });
