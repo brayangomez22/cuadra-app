@@ -80,7 +80,7 @@ Se definen **antes** de empezar. Al final del piloto se comparan con lo medido (
 
 ## 8. Insumos de la validación
 
-Hallazgos de las visitas a ferreterías (el detalle de cada visita está en la ficha del guion). Se usan para repriorizar antes de la fase 2.
+Hallazgos de las visitas a ferreterías (el detalle de cada visita está en la ficha del guion). Las visitas se hacen con el MVP, mostrando la demo (T34), y sus hallazgos se usan para repriorizar antes de la fase 4.
 
 | Hallazgo | Veces | Cita textual | ¿Pilotos interesados? |
 |---|---|---|---|
