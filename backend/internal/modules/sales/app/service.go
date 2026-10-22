@@ -47,6 +47,17 @@ type VariantInfo struct {
 	Price       decimal.Decimal
 	TaxRate     decimal.Decimal
 	Active      bool
+	// Units are the variant's alternate units.
+	Units []UnitInfo
+}
+
+// UnitInfo is an alternate unit of a variant: a unit of the tenant, its
+// code, how many base units it holds and its price without IVA.
+type UnitInfo struct {
+	UnitID uuid.UUID
+	Code   string
+	Factor decimal.Decimal
+	Price  decimal.Decimal
 }
 
 // VariantCatalog reads variants of the catalog module.
@@ -99,11 +110,12 @@ type Service struct {
 	Deps
 	tracer trace.Tracer
 
-	confirmed        metric.Int64Counter
-	amount           metric.Float64Histogram
-	discountRejected metric.Int64Counter
-	voided           metric.Int64Counter
-	priceRules       metric.Int64Counter
+	confirmed          metric.Int64Counter
+	amount             metric.Float64Histogram
+	discountRejected   metric.Int64Counter
+	voided             metric.Int64Counter
+	priceRules         metric.Int64Counter
+	alternateUnitLines metric.Int64Counter
 
 	cashOpened          metric.Int64Counter
 	cashClosed          metric.Int64Counter
@@ -175,6 +187,11 @@ func NewService(d Deps) (*Service, error) {
 	}
 	if s.priceRules, err = meter.Int64Counter("cuadra.sales.price_rule_applied",
 		metric.WithDescription("Lines of confirmed sales priced, by the rule that gave the price (price.rule)."),
+		metric.WithUnit("{line}")); err != nil {
+		return nil, err
+	}
+	if s.alternateUnitLines, err = meter.Int64Counter("cuadra.sales.alternate_unit_lines",
+		metric.WithDescription("Lines of confirmed sales sold in an alternate unit of the variant."),
 		metric.WithUnit("{line}")); err != nil {
 		return nil, err
 	}

@@ -108,7 +108,7 @@ func TestModulesFlow(t *testing.T) {
 	}
 
 	signup := do(t, http.MethodPost, "/api/v1/auth/signup",
-		`{"tenant_name":"Moda Urbana","nit":"900123456-8","name":"Ana Gómez","email":"ana@modulos.co","password":"clave-segura-123","business_template":"generica"}`, "")
+		`{"tenant_name":"Moda Urbana","nit":"900123456-8","name":"Ana Gómez","email":"ana@modulos.co","password":"clave-segura-123","business_template":"papeleria"}`, "")
 	require.Equal(t, http.StatusCreated, signup.Code, signup.Body.String())
 	var session struct {
 		AccessToken string `json:"access_token"`
@@ -151,7 +151,8 @@ func TestModulesFlow(t *testing.T) {
 
 		rec := do(t, http.MethodGet, "/api/v1/modules", "", ownerToken)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		require.JSONEq(t, `{"items":[{"id":"variants","name":"Variantes","depends_on":[],"active":false}]}`, rec.Body.String())
+		require.JSONEq(t, `{"items":[{"id":"variants","name":"Variantes","depends_on":[],"active":false},`+
+			`{"id":"unit_conversions","name":"Unidades alternativas","depends_on":[],"active":false}]}`, rec.Body.String())
 	})
 
 	t.Run("con el módulo activo se agregan variantes y /me lo lista", func(t *testing.T) {
@@ -206,7 +207,7 @@ func TestModulesFlow(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(other.Body.Bytes(), &otherSession))
 
-		require.Empty(t, getMe(t, otherSession.AccessToken).Modules)
+		require.Equal(t, []string{"unit_conversions"}, getMe(t, otherSession.AccessToken).Modules, "los de su plantilla")
 		require.Equal(t, []string{"variants"}, getMe(t, ownerToken).Modules)
 	})
 }

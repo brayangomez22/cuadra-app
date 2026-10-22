@@ -358,6 +358,7 @@ describe('ProductFormPage', () => {
           cost: String(body.cost),
           axis_values: values,
           label: label(values),
+          units: [],
           is_default: isDefault,
           active: body.active !== false,
           created_at: '2026-10-17T15:00:00Z',

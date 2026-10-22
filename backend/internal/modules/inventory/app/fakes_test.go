@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -33,6 +34,8 @@ type store struct {
 	policies  map[uuid.UUID]domain.StockPolicy
 	// variants are the catalog's variants the fake ProductVariants knows.
 	variants map[uuid.UUID]catalogVariant
+	// units are the factors of the variants' alternate units.
+	units map[unitKey]decimal.Decimal
 	// stockFilters and kardexFilters record the filters the queries received.
 	stockFilters  []domain.StockFilter
 	kardexFilters []domain.KardexFilter
@@ -200,6 +203,21 @@ func (f fakeVariants) ProductsOf(_ context.Context, tenantID uuid.UUID, variantI
 	return out, nil
 }
 
+type unitKey struct{ variantID, unitID uuid.UUID }
+
+func (f fakeVariants) UnitFactor(_ context.Context, tenantID, variantID, unitID uuid.UUID) (decimal.Decimal, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if v, ok := f.variants[variantID]; !ok || v.tenantID != tenantID {
+		return decimal.Decimal{}, domain.ErrUnitNotAvailable
+	}
+	factor, ok := f.units[unitKey{variantID, unitID}]
+	if !ok {
+		return decimal.Decimal{}, domain.ErrUnitNotAvailable
+	}
+	return factor, nil
+}
+
 // env is a Service wired to fakes, with recorders for spans and metrics.
 type env struct {
 	svc     *app.Service
@@ -219,6 +237,7 @@ func newEnv(t *testing.T) *env {
 			levels:    map[levelKey]domain.StockLevelSnapshot{},
 			policies:  map[uuid.UUID]domain.StockPolicy{},
 			variants:  map[uuid.UUID]catalogVariant{},
+			units:     map[unitKey]decimal.Decimal{},
 		},
 		actor: app.Actor{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())},
 		spans: tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),

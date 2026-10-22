@@ -3,7 +3,7 @@ name: Negocio general
 # Se lista primero, antes que los tipos de negocio en orden alfabético.
 fallback: true
 description: Para cualquier comercio. Empieza con lo básico y se ajusta después.
-modules: []
+modules: [unit_conversions]
 # Tasa de IVA que se propone a un producto nuevo.
 default_tax_rate: "0.19"
 units:

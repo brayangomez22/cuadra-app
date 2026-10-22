@@ -39,6 +39,8 @@ type UseCases interface {
 	ActivateProduct(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Product, error)
 	AddVariant(ctx context.Context, a app.Actor, productID uuid.UUID, in app.VariantInput) (*domain.Product, error)
 	UpdateVariant(ctx context.Context, a app.Actor, productID, variantID uuid.UUID, in app.VariantUpdate) (*domain.Product, error)
+	SetVariantUnit(ctx context.Context, a app.Actor, productID, variantID, unitID uuid.UUID, in app.VariantUnitInput) (*domain.Product, error)
+	RemoveVariantUnit(ctx context.Context, a app.Actor, productID, variantID, unitID uuid.UUID) (*domain.Product, error)
 	CreateCategory(ctx context.Context, a app.Actor, name string, parentID *uuid.UUID) (*domain.Category, error)
 	UpdateCategory(ctx context.Context, a app.Actor, id uuid.UUID, name string, parentID *uuid.UUID) (*domain.Category, error)
 	ListCategories(ctx context.Context, a app.Actor) ([]*domain.Category, error)
@@ -361,6 +363,7 @@ func variantBody(v *domain.ProductVariant, rate domain.TaxRate, seesCost bool) c
 		PriceWithTax: formatMoney(v.PriceWithTax(rate)),
 		AxisValues:   v.AxisValues(),
 		Label:        v.Label(),
+		Units:        variantUnitsBody(v, rate),
 		IsDefault:    v.IsDefault(),
 		Active:       v.IsActive(),
 		CreatedAt:    v.CreatedAt(),

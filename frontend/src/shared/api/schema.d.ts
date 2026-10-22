@@ -375,6 +375,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/products/{productId}/variants/{variantId}/units/{unitId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+                variantId: components["parameters"]["VariantId"];
+                unitId: components["parameters"]["UnitId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Agregar o editar una unidad alternativa de una variante
+         * @description Permite vender y comprar la variante en otra unidad de la empresa (por ejemplo, una caja de 12 de un producto
+         *     que se cuenta por unidad), con cuántas unidades base trae y su propio precio sin IVA. Si la variante ya tiene
+         *     esa unidad, reemplaza sus datos. El stock siempre se guarda en la unidad base del producto.
+         */
+        put: operations["setVariantUnit"];
+        post?: never;
+        /**
+         * Quitar una unidad alternativa de una variante
+         * @description Las ventas anteriores conservan la unidad en la que se vendieron.
+         */
+        delete: operations["removeVariantUnit"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/categories": {
         parameters: {
             query?: never;
@@ -645,7 +675,8 @@ export interface paths {
         /**
          * Registrar una entrada de mercancía
          * @description Suma la cantidad a la existencia de la sede y recalcula el costo promedio ponderado. Sirve también para el
-         *     inventario inicial.
+         *     inventario inicial. Puede venir en una unidad alternativa de la variante (`unit_id`); el movimiento se guarda en
+         *     la unidad base.
          */
         post: operations["receiveStock"];
         delete?: never;
@@ -1273,6 +1304,29 @@ export interface components {
             active: boolean;
         };
         /**
+         * @description Cuántas unidades base trae una unidad alternativa, como decimal en string (hasta 4 decimales).
+         * @example 12
+         */
+        UnitFactor: string;
+        VariantUnitInput: {
+            factor: components["schemas"]["UnitFactor"];
+            price: components["schemas"]["Money"];
+            /** @description Opcional. No puede repetir el de otra variante ni el de otra unidad de la empresa. */
+            barcode?: string;
+        };
+        /**
+         * @description Otra unidad en la que se vende y se compra la variante: `factor` unidades base por cada una, a `price` sin IVA
+         *     (`price_with_tax` lo incluye con la tasa del producto, redondeado a 2 decimales).
+         */
+        VariantUnit: {
+            unit: components["schemas"]["UnitOfMeasure"];
+            factor: components["schemas"]["UnitFactor"];
+            price: components["schemas"]["Money"];
+            price_with_tax: components["schemas"]["Money"];
+            /** @description Se omite si la unidad no tiene. */
+            barcode?: string;
+        };
+        /**
          * @description Lo que se vende y se cuenta: el producto en una combinación de sus ejes. El precio no incluye IVA;
          *     `price_with_tax` lo incluye con la tasa del producto, redondeado a 2 decimales. `cost` y `margin_percent`
          *     solo se envían a quien puede editar el catálogo (`catalog:write`).
@@ -1298,6 +1352,8 @@ export interface components {
              * @example Rojo · M
              */
             label: string;
+            /** @description Las unidades alternativas de la variante, de menor a mayor factor. Vacío si no tiene. */
+            units: components["schemas"]["VariantUnit"][];
             /** @description La variante creada con el producto. Un producto simple solo tiene esta. */
             is_default: boolean;
             active: boolean;
@@ -1361,7 +1417,8 @@ export interface components {
             items: components["schemas"]["Category"][];
         };
         /**
-         * @description Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
+         * @description Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+         *     otra unidad (`unit_id`, `unit_code`).
          * @example 2.5
          */
         Quantity: string;
@@ -1458,6 +1515,13 @@ export interface components {
             location_id: string;
             quantity: components["schemas"]["Quantity"];
             unit_cost: components["schemas"]["Money"];
+            /**
+             * Format: uuid
+             * @description Una unidad alternativa de la variante en la que vienen `quantity` y `unit_cost` (por ejemplo, cajas). Sin
+             *     ella, vienen en la unidad base. La entrada se guarda convertida a la unidad base: cantidad × factor, a un
+             *     costo de costo ÷ factor redondeado a 4 decimales.
+             */
+            unit_id?: string;
         };
         AdjustmentInput: {
             /** Format: uuid */
@@ -1498,6 +1562,13 @@ export interface components {
             /** Format: uuid */
             variant_id: string;
             quantity: components["schemas"]["Quantity"];
+            /**
+             * Format: uuid
+             * @description Una unidad alternativa de la variante en la que se vende la línea (por ejemplo, una caja); `quantity` y el
+             *     precio son en esa unidad. Sin ella, la línea es en la unidad base. Si la variante no tiene esa unidad, la
+             *     venta se rechaza (`unit_not_available`).
+             */
+            unit_id?: string;
             discount?: components["schemas"]["Money"];
         };
         /**
@@ -1528,7 +1599,8 @@ export interface components {
         /**
          * @description Una línea vendida: una variante de un producto. `unit_price` es sin IVA, en el momento de la venta, y
          *     `price_rule` dice qué regla lo dio. `gross` = cantidad × precio redondeado a 2 decimales; `base` = `gross` −
-         *     `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales; `total` = `base` + `tax`.
+         *     `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales; `total` = `base` + `tax`. La cantidad y el
+         *     precio son en la unidad vendida: `unit_code` si fue una unidad alternativa, o la unidad base del producto.
          */
         SaleLine: {
             /** Format: uuid */
@@ -1547,6 +1619,14 @@ export interface components {
              */
             variant_label?: string;
             quantity: components["schemas"]["Quantity"];
+            /**
+             * @description El código de la unidad alternativa en que se vendió la línea, congelado en la venta. No viene si se vendió
+             *     en la unidad base del producto.
+             * @example caja
+             */
+            unit_code?: string;
+            unit_factor: components["schemas"]["UnitFactor"];
+            base_quantity: components["schemas"]["Quantity"];
             unit_price: components["schemas"]["Money"];
             /**
              * @description ID estable de la regla de precio que dio `unit_price`: `variant_price` (el precio de la variante) o el de
@@ -2555,6 +2635,112 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    setVariantUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+                variantId: components["parameters"]["VariantId"];
+                unitId: components["parameters"]["UnitId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VariantUnitInput"];
+            };
+        };
+        responses: {
+            /** @description El producto con la unidad de la variante. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Product"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /**
+             * @description El producto, la variante o la unidad no existen en la empresa (`product_not_found`, `variant_not_found`,
+             *     `unit_not_found`), o el módulo `unit_conversions` no está activo (`not_found`).
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El código de barras ya existe en la empresa (`barcode_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description Algún dato no cumple las reglas: la unidad es la unidad base del producto (`alternate_unit_is_base`), el
+             *     factor no es positivo (`invalid_unit_factor`), el precio no es positivo (`invalid_price`), el código de
+             *     barras no es válido (`invalid_barcode`) o la variante ya tiene 10 unidades alternativas
+             *     (`too_many_variant_units`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    removeVariantUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+                variantId: components["parameters"]["VariantId"];
+                unitId: components["parameters"]["UnitId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El producto sin la unidad en la variante. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Product"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /**
+             * @description El producto o la variante no existen en la empresa (`product_not_found`, `variant_not_found`), la variante
+             *     no tiene esa unidad (`variant_unit_not_found`) o el módulo `unit_conversions` no está activo (`not_found`).
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
     listCategories: {
         parameters: {
             query?: never;
@@ -3311,7 +3497,8 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             /**
              * @description Algún dato no cumple las reglas (`invalid_quantity`, `invalid_unit_cost`, `variant_not_found`,
-             *     `location_not_found`, `location_inactive`).
+             *     `location_not_found`, `location_inactive`). Con `unit_id`, la variante no tiene esa unidad
+             *     (`unit_not_available`) o la cantidad en unidad base necesita más de 4 decimales (`quantity_precision`).
              */
             422: {
                 headers: {
@@ -3504,7 +3691,9 @@ export interface operations {
             /**
              * @description Algún dato no cumple las reglas (`product_not_found` y `product_inactive`, también para una
              *     variante; `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
-             *     `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`).
+             *     `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`). Una
+             *     línea en una unidad que la variante no tiene (`unit_not_available`) o cuya cantidad en unidad base necesita
+             *     más de 4 decimales (`quantity_precision`).
              */
             422: {
                 headers: {

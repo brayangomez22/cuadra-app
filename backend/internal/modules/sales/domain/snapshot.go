@@ -21,6 +21,8 @@ type LineSnapshot struct {
 	Discount     decimal.Decimal
 	Gross        decimal.Decimal
 	Tax          decimal.Decimal
+	// Unit is the unit sold: its frozen code and factor.
+	Unit LineUnit
 }
 
 // PaymentSnapshot holds a stored payment's fields.
@@ -73,7 +75,7 @@ func (s *Sale) Snapshot() SaleSnapshot {
 		snap.Lines = append(snap.Lines, LineSnapshot{
 			VariantID: l.variantID, ProductID: l.productID, ProductName: l.productName, VariantLabel: l.variantLabel,
 			Quantity: l.quantity, UnitPrice: l.unitPrice, PriceRule: l.priceRule, TaxRate: l.taxRate,
-			Discount: l.discount, Gross: l.gross, Tax: l.tax,
+			Discount: l.discount, Gross: l.gross, Tax: l.tax, Unit: l.unit,
 		})
 	}
 	for _, p := range s.payments {
@@ -110,6 +112,7 @@ func RehydrateSale(snap SaleSnapshot) (*Sale, error) {
 		l, err := newLine(LineInput{
 			VariantID: ls.VariantID, ProductID: ls.ProductID, ProductName: ls.ProductName, VariantLabel: ls.VariantLabel,
 			Quantity: ls.Quantity, UnitPrice: ls.UnitPrice, PriceRule: ls.PriceRule, TaxRate: ls.TaxRate, Discount: ls.Discount,
+			Unit: ls.Unit,
 		}, NoDiscountLimit)
 		if err != nil {
 			return nil, err

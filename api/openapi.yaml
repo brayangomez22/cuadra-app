@@ -726,6 +726,95 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/products/{productId}/variants/{variantId}/units/{unitId}:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+      - $ref: "#/components/parameters/VariantId"
+      - $ref: "#/components/parameters/UnitId"
+    put:
+      tags: [catalog]
+      operationId: setVariantUnit
+      summary: Agregar o editar una unidad alternativa de una variante
+      description: |
+        Permite vender y comprar la variante en otra unidad de la empresa (por ejemplo, una caja de 12 de un producto
+        que se cuenta por unidad), con cuántas unidades base trae y su propio precio sin IVA. Si la variante ya tiene
+        esa unidad, reemplaza sus datos. El stock siempre se guarda en la unidad base del producto.
+      x-permission: catalog:write
+      x-module: unit_conversions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VariantUnitInput"
+      responses:
+        "200":
+          description: El producto con la unidad de la variante.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: |
+            El producto, la variante o la unidad no existen en la empresa (`product_not_found`, `variant_not_found`,
+            `unit_not_found`), o el módulo `unit_conversions` no está activo (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: El código de barras ya existe en la empresa (`barcode_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Algún dato no cumple las reglas: la unidad es la unidad base del producto (`alternate_unit_is_base`), el
+            factor no es positivo (`invalid_unit_factor`), el precio no es positivo (`invalid_price`), el código de
+            barras no es válido (`invalid_barcode`) o la variante ya tiene 10 unidades alternativas
+            (`too_many_variant_units`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [catalog]
+      operationId: removeVariantUnit
+      summary: Quitar una unidad alternativa de una variante
+      description: Las ventas anteriores conservan la unidad en la que se vendieron.
+      x-permission: catalog:write
+      x-module: unit_conversions
+      responses:
+        "200":
+          description: El producto sin la unidad en la variante.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: |
+            El producto o la variante no existen en la empresa (`product_not_found`, `variant_not_found`), la variante
+            no tiene esa unidad (`variant_unit_not_found`) o el módulo `unit_conversions` no está activo (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/v1/categories:
     get:
       tags: [catalog]
@@ -1380,7 +1469,8 @@ paths:
       summary: Registrar una entrada de mercancía
       description: |
         Suma la cantidad a la existencia de la sede y recalcula el costo promedio ponderado. Sirve también para el
-        inventario inicial.
+        inventario inicial. Puede venir en una unidad alternativa de la variante (`unit_id`); el movimiento se guarda en
+        la unidad base.
       x-permission: inventory:adjust
       requestBody:
         required: true
@@ -1404,7 +1494,8 @@ paths:
         "422":
           description: |
             Algún dato no cumple las reglas (`invalid_quantity`, `invalid_unit_cost`, `variant_not_found`,
-            `location_not_found`, `location_inactive`).
+            `location_not_found`, `location_inactive`). Con `unit_id`, la variante no tiene esa unidad
+            (`unit_not_available`) o la cantidad en unidad base necesita más de 4 decimales (`quantity_precision`).
           content:
             application/json:
               schema:
@@ -1592,7 +1683,9 @@ paths:
           description: |
             Algún dato no cumple las reglas (`product_not_found` y `product_inactive`, también para una
             variante; `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
-            `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`).
+            `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`). Una
+            línea en una unidad que la variante no tiene (`unit_not_available`) o cuya cantidad en unidad base necesita
+            más de 4 decimales (`quantity_precision`).
           content:
             application/json:
               schema:
@@ -2644,9 +2737,45 @@ components:
         active:
           type: boolean
           description: Una variante inactiva no se vende.
+    UnitFactor:
+      type: string
+      description: Cuántas unidades base trae una unidad alternativa, como decimal en string (hasta 4 decimales).
+      pattern: '^\d{1,14}(\.\d{1,4})?$'
+      example: "12"
+    VariantUnitInput:
+      type: object
+      required: [factor, price]
+      additionalProperties: false
+      properties:
+        factor:
+          $ref: "#/components/schemas/UnitFactor"
+        price:
+          $ref: "#/components/schemas/Money"
+        barcode:
+          type: string
+          maxLength: 64
+          description: Opcional. No puede repetir el de otra variante ni el de otra unidad de la empresa.
+    VariantUnit:
+      type: object
+      required: [unit, factor, price, price_with_tax]
+      description: |
+        Otra unidad en la que se vende y se compra la variante: `factor` unidades base por cada una, a `price` sin IVA
+        (`price_with_tax` lo incluye con la tasa del producto, redondeado a 2 decimales).
+      properties:
+        unit:
+          $ref: "#/components/schemas/UnitOfMeasure"
+        factor:
+          $ref: "#/components/schemas/UnitFactor"
+        price:
+          $ref: "#/components/schemas/Money"
+        price_with_tax:
+          $ref: "#/components/schemas/Money"
+        barcode:
+          type: string
+          description: Se omite si la unidad no tiene.
     ProductVariant:
       type: object
-      required: [id, sku, price, price_with_tax, axis_values, label, is_default, active, created_at]
+      required: [id, sku, price, price_with_tax, axis_values, label, units, is_default, active, created_at]
       properties:
         id:
           type: string
@@ -2674,6 +2803,11 @@ components:
             El nombre de la variante: sus valores ordenados por nombre de eje (`Rojo · M`), como lo congela una venta en
             `variant_label`. Vacío si la variante no tiene ejes.
           example: Rojo · M
+        units:
+          type: array
+          description: Las unidades alternativas de la variante, de menor a mayor factor. Vacío si no tiene.
+          items:
+            $ref: "#/components/schemas/VariantUnit"
         is_default:
           type: boolean
           description: La variante creada con el producto. Un producto simple solo tiene esta.
@@ -2778,7 +2912,9 @@ components:
             $ref: "#/components/schemas/Category"
     Quantity:
       type: string
-      description: Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
+      description: |
+        Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+        otra unidad (`unit_id`, `unit_code`).
       pattern: '^\d{1,14}(\.\d{1,4})?$'
       example: "2.5"
     SignedQuantity:
@@ -2929,6 +3065,13 @@ components:
           $ref: "#/components/schemas/Quantity"
         unit_cost:
           $ref: "#/components/schemas/Money"
+        unit_id:
+          type: string
+          format: uuid
+          description: |
+            Una unidad alternativa de la variante en la que vienen `quantity` y `unit_cost` (por ejemplo, cajas). Sin
+            ella, vienen en la unidad base. La entrada se guarda convertida a la unidad base: cantidad × factor, a un
+            costo de costo ÷ factor redondeado a 4 decimales.
     AdjustmentInput:
       type: object
       required: [variant_id, location_id, quantity, reason]
@@ -3004,6 +3147,13 @@ components:
           format: uuid
         quantity:
           $ref: "#/components/schemas/Quantity"
+        unit_id:
+          type: string
+          format: uuid
+          description: |
+            Una unidad alternativa de la variante en la que se vende la línea (por ejemplo, una caja); `quantity` y el
+            precio son en esa unidad. Sin ella, la línea es en la unidad base. Si la variante no tiene esa unidad, la
+            venta se rechaza (`unit_not_available`).
         discount:
           $ref: "#/components/schemas/Money"
     PaymentMethod:
@@ -3051,8 +3201,9 @@ components:
       description: |
         Una línea vendida: una variante de un producto. `unit_price` es sin IVA, en el momento de la venta, y
         `price_rule` dice qué regla lo dio. `gross` = cantidad × precio redondeado a 2 decimales; `base` = `gross` −
-        `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales; `total` = `base` + `tax`.
-      required: [variant_id, product_id, product_name, quantity, unit_price, price_rule, tax_rate, discount, gross, base, tax, total]
+        `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales; `total` = `base` + `tax`. La cantidad y el
+        precio son en la unidad vendida: `unit_code` si fue una unidad alternativa, o la unidad base del producto.
+      required: [variant_id, product_id, product_name, quantity, unit_factor, base_quantity, unit_price, price_rule, tax_rate, discount, gross, base, tax, total]
       properties:
         variant_id:
           type: string
@@ -3071,6 +3222,16 @@ components:
             la variante no tiene ejes, como la de un producto simple.
           example: Rojo · M
         quantity:
+          $ref: "#/components/schemas/Quantity"
+        unit_code:
+          type: string
+          description: |
+            El código de la unidad alternativa en que se vendió la línea, congelado en la venta. No viene si se vendió
+            en la unidad base del producto.
+          example: caja
+        unit_factor:
+          $ref: "#/components/schemas/UnitFactor"
+        base_quantity:
           $ref: "#/components/schemas/Quantity"
         unit_price:
           $ref: "#/components/schemas/Money"

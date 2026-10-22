@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory"
@@ -35,10 +36,16 @@ func (c salesCatalog) Variants(ctx context.Context, tenantID uuid.UUID, ids []uu
 			if !slices.Contains(ids, v.ID()) {
 				continue
 			}
-			out = append(out, salesapp.VariantInfo{
+			info := salesapp.VariantInfo{
 				ID: v.ID(), ProductID: p.ID(), ProductName: p.Name(), Label: v.Label(),
 				Price: v.Price(), TaxRate: p.TaxRate().Rate(), Active: p.IsActive() && v.IsActive(),
-			})
+			}
+			for _, u := range v.Units() {
+				info.Units = append(info.Units, salesapp.UnitInfo{
+					UnitID: u.Unit().ID, Code: u.Unit().Code, Factor: u.Factor(), Price: u.Price(),
+				})
+			}
+			out = append(out, info)
 		}
 	}
 	return out, nil
@@ -88,4 +95,26 @@ type inventoryCatalog struct{ m *catalog.Module }
 
 func (c inventoryCatalog) ProductsOf(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
 	return c.m.VariantProducts(ctx, tenantID, variantIDs)
+}
+
+// UnitFactor returns the factor of an alternate unit of the variant, from
+// the catalog. A variant that does not exist or lacks the unit is
+// inventorydomain.ErrUnitNotAvailable.
+func (c inventoryCatalog) UnitFactor(ctx context.Context, tenantID, variantID, unitID uuid.UUID) (decimal.Decimal, error) {
+	products, err := c.m.ProductsOfVariants(ctx, tenantID, []uuid.UUID{variantID})
+	if err != nil {
+		return decimal.Decimal{}, err
+	}
+	for _, p := range products {
+		v, err := p.Variant(variantID)
+		if err != nil {
+			continue
+		}
+		u, err := v.Unit(unitID)
+		if err != nil {
+			break
+		}
+		return u.Factor(), nil
+	}
+	return decimal.Decimal{}, inventorydomain.ErrUnitNotAvailable
 }

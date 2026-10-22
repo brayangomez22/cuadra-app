@@ -6,10 +6,16 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 
 ---
 
-### [ ] T26 · Unidades de medida y fraccionamiento
+### [x] T26 · Unidades de medida y fraccionamiento
 **Alcance:** Se implementa como el módulo `unit_conversions` (activado por defecto en las plantillas `ferreteria`, `tienda` y `generica`). Las conversiones son por **variante**. Por producto, unidades alternativas con factor de conversión respecto a la unidad base (rollo de 100 m → metro; caja ×12 → unidad; paca de 6 → unidad; kg → gramos), cada una con su precio y código de barras opcional. El inventario siempre se guarda en la unidad base. Se puede comprar en una unidad y vender en otra.
 **Pendientes que entran a esta tarea:** P46 y P48 (`docs/plan/pendientes.md`).
 **Tests primero:** vender 2,5 m de una variante cuyo stock es 1 rollo (100 m) deja 97,5 m; vender 3 unidades de una caja ×12 deja 9 unidades de esa caja; el precio por unidad alternativa se respeta; la conversión no pierde precisión con factores no enteros.
+**Hecho (backend y contrato):** unidades alternativas por variante (`variant_units`, factor, precio y código de barras), rutas detrás de `unit_conversions`, ventas y entradas en unidad alternativa, migración 00020 (P46). El frontend pasó a T26a.
+
+### [ ] T26a · Frontend de unidades alternativas
+**Depende de:** T26.
+**Alcance:** con el módulo `unit_conversions` activo (`modules` de `/me`): en el formulario de producto, una sección "Unidades de venta" por variante (unidad del tenant, "1 caja = 12 und", precio sin IVA con la sugerencia proporcional al precio de la base y código de barras opcional) con `PUT`/`DELETE …/variants/{variantId}/units/{unitId}`; en el POS, un selector de unidad en la línea del carrito cuando la variante tiene unidades alternativas, el precio y el total de la unidad elegida, y el escaneo del código de barras de una unidad agrega la línea en esa unidad (`unit_id`); la tirilla y el detalle de la venta muestran `unit_code` (o la unidad base); la pantalla de entradas de inventario permite elegir la unidad. Sin el módulo, nada de esto aparece y las líneas se venden en la unidad base.
+**Tests primero:** el selector cambia el precio y el total de la línea; escanear el código de una caja agrega una línea de 1 caja; una venta en unidad alternativa envía `unit_id`; la sección de unidades no aparece sin el módulo; la tirilla muestra "0,5 rollo"; casos de ferretería (caja, rollo) y de almacén de ropa (paquete).
 
 ### [ ] T27 · Escáner de códigos con la cámara
 **Alcance:** componente reutilizable en `shared/ui` que lee códigos de barras (EAN-13, EAN-8, Code 128, UPC) y QR con la cámara del celular o la tablet. Usa la API nativa `BarcodeDetector` cuando existe y una librería de respaldo cuando no (proponer cuál y confirmar antes de agregarla). Linterna, vibración o sonido al leer, y prevención de lecturas duplicadas en ráfaga. Se usa en el POS (agrega al carrito) y en la toma de inventario (T30). Requiere HTTPS.
@@ -22,7 +28,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T29 · Importación inicial desde Excel/CSV
 **Depende de:** T18 (River).
 **Alcance:** asistente para cargar productos, categorías, precios e inventario inicial desde una plantilla descargable. Previsualización, validación fila por fila con errores claros ("fila 154: el precio no es un número"), importación en un trabajo en segundo plano (River) y reporte final. **Crítico para el piloto:** nadie va a digitar 8.000 referencias a mano. La plantilla de Excel se genera según la configuración del tenant: incluye columnas para sus atributos de producto, sus unidades y, si el módulo `variants` está activo, una fila por variante (con columnas de ejes) agrupada por producto.
-**Pendientes que entran a esta tarea:** P49 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P49 y P58 (`docs/plan/pendientes.md`).
 **Tests primero:** filas inválidas se reportan sin importar las válidas a medias (todo o nada por lote); un SKU duplicado actualiza en vez de duplicar (configurable); 10.000 filas se procesan sin agotar memoria; un archivo con variantes crea un producto con sus N variantes; un atributo obligatorio vacío se reporta como error de la fila.
 
 ### [ ] T30 · Toma física de inventario
@@ -41,7 +47,8 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Tests primero:** una venta que excede el cupo se rechaza sin autorización; un abono reduce el saldo y nunca lo deja negativo; las edades de cartera se calculan con la fecha de vencimiento en `America/Bogota`.
 
 ### [ ] T33 · Proveedores y registro de compras
-**Alcance:** proveedores (NIT, contacto, plazo de pago); registro de una compra (factura del proveedor) con líneas (que referencian `variant_id`) en cualquier unidad de compra, que genera las entradas de inventario y actualiza el costo promedio; compras de contado o a crédito (saldo por pagar básico). (Órdenes de compra y cuentas por pagar completas en V2.)
+**Alcance:** proveedores (NIT, contacto, plazo de pago); registro de una compra (factura del proveedor) con líneas (que referencian `variant_id`) en cualquier unidad de compra (las unidades alternativas de T26; la conversión es `inventory/domain.ToBaseUnit`), que genera las entradas de inventario y actualiza el costo promedio; compras de contado o a crédito (saldo por pagar básico). (Órdenes de compra y cuentas por pagar completas en V2.)
+**Pendientes que entran a esta tarea:** P59 (`docs/plan/pendientes.md`).
 **Tests primero:** registrar una compra genera un movimiento de entrada por línea con el costo convertido a la unidad base; no se puede registrar dos veces el mismo número de factura del mismo proveedor.
 
 ### [ ] T34 · Tenant de demostración y datos semilla

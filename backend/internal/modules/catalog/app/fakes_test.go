@@ -42,6 +42,7 @@ func cloneProduct(p *domain.Product) *domain.Product {
 		variants = append(variants, domain.VariantSnapshot{
 			ID: v.ID(), SKU: v.SKU(), Barcode: v.Barcode(), Cost: v.Cost(), Price: v.Price(),
 			AxisValues: v.AxisValues(), IsDefault: v.IsDefault(), Active: v.IsActive(), CreatedAt: v.CreatedAt(),
+			Units: unitParams(v),
 		})
 	}
 	c, err := domain.RehydrateProduct(domain.ProductSnapshot{
@@ -54,6 +55,30 @@ func cloneProduct(p *domain.Product) *domain.Product {
 		panic(err)
 	}
 	return c
+}
+
+func unitParams(v *domain.ProductVariant) []domain.VariantUnitParams {
+	var out []domain.VariantUnitParams
+	for _, u := range v.Units() {
+		out = append(out, domain.VariantUnitParams{Unit: u.Unit(), Factor: u.Factor(), Price: u.Price(), Barcode: u.Barcode()})
+	}
+	return out
+}
+
+// barcodes returns every barcode of p: its variants' and their units'.
+func barcodes(p *domain.Product) []string {
+	var out []string
+	for _, v := range p.Variants() {
+		if v.Barcode() != "" {
+			out = append(out, v.Barcode())
+		}
+		for _, u := range v.Units() {
+			if u.Barcode() != "" {
+				out = append(out, u.Barcode())
+			}
+		}
+	}
+	return out
 }
 
 func cloneCategory(c *domain.Category) *domain.Category {
@@ -90,9 +115,11 @@ func (f fakeProducts) check(p *domain.Product) error {
 				if ov.SKU() == v.SKU() {
 					return domain.ErrSKUTaken
 				}
-				if v.Barcode() != "" && ov.Barcode() == v.Barcode() {
-					return domain.ErrBarcodeTaken
-				}
+			}
+		}
+		for _, code := range barcodes(p) {
+			if slices.Contains(barcodes(other), code) {
+				return domain.ErrBarcodeTaken
 			}
 		}
 	}

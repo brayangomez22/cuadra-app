@@ -324,6 +324,9 @@ type ProductVariant struct {
 	// Example: 12500.00
 	PriceWithTax Money  `json:"price_with_tax"`
 	Sku          string `json:"sku"`
+
+	// Units Las unidades alternativas de la variante, de menor a mayor factor. Vacío si no tiene.
+	Units []VariantUnit `json:"units"`
 }
 
 // ProductVariantInput defines model for ProductVariantInput.
@@ -387,6 +390,11 @@ type ProductVariantUpdate struct {
 //
 // Example: 0.19
 type TaxRate = string
+
+// UnitFactor Cuántas unidades base trae una unidad alternativa, como decimal en string (hasta 4 decimales).
+//
+// Example: 12
+type UnitFactor = string
 
 // UnitInput defines model for UnitInput.
 type UnitInput struct {
@@ -455,6 +463,47 @@ type VariantAxisUpdate struct {
 
 // VariantAxisValues Al menos un valor, sin repetir (sin importar las mayúsculas).
 type VariantAxisValues = []string
+
+// VariantUnit Otra unidad en la que se vende y se compra la variante: `factor` unidades base por cada una, a `price` sin IVA
+// (`price_with_tax` lo incluye con la tasa del producto, redondeado a 2 decimales).
+type VariantUnit struct {
+	// Barcode Se omite si la unidad no tiene.
+	Barcode *string `json:"barcode,omitempty"`
+
+	// Factor Cuántas unidades base trae una unidad alternativa, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12
+	Factor UnitFactor `json:"factor"`
+
+	// Price Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Price Money `json:"price"`
+
+	// PriceWithTax Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	PriceWithTax Money `json:"price_with_tax"`
+
+	// Unit Una unidad de medida de la empresa, en la que se cuentan y se venden sus productos.
+	Unit UnitOfMeasure `json:"unit"`
+}
+
+// VariantUnitInput defines model for VariantUnitInput.
+type VariantUnitInput struct {
+	// Barcode Opcional. No puede repetir el de otra variante ni el de otra unidad de la empresa.
+	Barcode *string `json:"barcode,omitempty"`
+
+	// Factor Cuántas unidades base trae una unidad alternativa, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12
+	Factor UnitFactor `json:"factor"`
+
+	// Price Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Price Money `json:"price"`
+}
 
 // AttributeId defines model for AttributeId.
 type AttributeId = openapi_types.UUID
@@ -556,6 +605,9 @@ type AddProductVariantJSONRequestBody = ProductVariantInput
 // UpdateProductVariantJSONRequestBody defines body for UpdateProductVariant for application/json ContentType.
 type UpdateProductVariantJSONRequestBody = ProductVariantUpdate
 
+// SetVariantUnitJSONRequestBody defines body for SetVariantUnit for application/json ContentType.
+type SetVariantUnitJSONRequestBody = VariantUnitInput
+
 // CreateUnitJSONRequestBody defines body for CreateUnit for application/json ContentType.
 type CreateUnitJSONRequestBody = UnitInput
 
@@ -618,6 +670,12 @@ type ServerInterface interface {
 	// UpdateProductVariant Editar una variante
 	// (PUT /api/v1/products/{productId}/variants/{variantId})
 	UpdateProductVariant(w http.ResponseWriter, r *http.Request, productId ProductId, variantId VariantId)
+	// RemoveVariantUnit Quitar una unidad alternativa de una variante
+	// (DELETE /api/v1/products/{productId}/variants/{variantId}/units/{unitId})
+	RemoveVariantUnit(w http.ResponseWriter, r *http.Request, productId ProductId, variantId VariantId, unitId UnitId)
+	// SetVariantUnit Agregar o editar una unidad alternativa de una variante
+	// (PUT /api/v1/products/{productId}/variants/{variantId}/units/{unitId})
+	SetVariantUnit(w http.ResponseWriter, r *http.Request, productId ProductId, variantId VariantId, unitId UnitId)
 	// ListUnits Listar unidades de medida
 	// (GET /api/v1/units)
 	ListUnits(w http.ResponseWriter, r *http.Request)
@@ -1090,6 +1148,94 @@ func (siw *ServerInterfaceWrapper) UpdateProductVariant(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// RemoveVariantUnit operation middleware
+func (siw *ServerInterfaceWrapper) RemoveVariantUnit(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "productId" -------------
+	var productId ProductId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "productId", r.PathValue("productId"), &productId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "productId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "variantId" -------------
+	var variantId VariantId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "variantId", r.PathValue("variantId"), &variantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variantId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "unitId" -------------
+	var unitId UnitId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "unitId", r.PathValue("unitId"), &unitId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "unitId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveVariantUnit(w, r, productId, variantId, unitId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetVariantUnit operation middleware
+func (siw *ServerInterfaceWrapper) SetVariantUnit(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "productId" -------------
+	var productId ProductId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "productId", r.PathValue("productId"), &productId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "productId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "variantId" -------------
+	var variantId VariantId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "variantId", r.PathValue("variantId"), &variantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variantId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "unitId" -------------
+	var unitId UnitId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "unitId", r.PathValue("unitId"), &unitId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "unitId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetVariantUnit(w, r, productId, variantId, unitId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListUnits operation middleware
 func (siw *ServerInterfaceWrapper) ListUnits(w http.ResponseWriter, r *http.Request) {
 
@@ -1378,6 +1524,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/products/{productId}/activate", wrapper.ActivateProduct)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/products/{productId}/variants", wrapper.AddProductVariant)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/products/{productId}/variants/{variantId}", wrapper.UpdateProductVariant)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/products/{productId}/variants/{variantId}/units/{unitId}", wrapper.RemoveVariantUnit)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/products/{productId}/variants/{variantId}/units/{unitId}", wrapper.SetVariantUnit)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/categories", wrapper.ListCategories)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/categories", wrapper.CreateCategory)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/categories/{categoryId}", wrapper.DeleteCategory)
@@ -2984,6 +3132,209 @@ func (response UpdateProductVariant500JSONResponse) VisitUpdateProductVariantRes
 	return err
 }
 
+type RemoveVariantUnitRequestObject struct {
+	ProductId ProductId `json:"productId"`
+	VariantId VariantId `json:"variantId"`
+	UnitId    UnitId    `json:"unitId"`
+}
+
+type RemoveVariantUnitResponseObject interface {
+	VisitRemoveVariantUnitResponse(w http.ResponseWriter) error
+}
+
+type RemoveVariantUnit200JSONResponse Product
+
+func (response RemoveVariantUnit200JSONResponse) VisitRemoveVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveVariantUnit401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveVariantUnit401JSONResponse) VisitRemoveVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveVariantUnit403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RemoveVariantUnit403JSONResponse) VisitRemoveVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveVariantUnit404JSONResponse Error
+
+func (response RemoveVariantUnit404JSONResponse) VisitRemoveVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveVariantUnit500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RemoveVariantUnit500JSONResponse) VisitRemoveVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetVariantUnitRequestObject struct {
+	ProductId ProductId `json:"productId"`
+	VariantId VariantId `json:"variantId"`
+	UnitId    UnitId    `json:"unitId"`
+	Body      *SetVariantUnitJSONRequestBody
+}
+
+type SetVariantUnitResponseObject interface {
+	VisitSetVariantUnitResponse(w http.ResponseWriter) error
+}
+
+type SetVariantUnit200JSONResponse Product
+
+func (response SetVariantUnit200JSONResponse) VisitSetVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetVariantUnit400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SetVariantUnit400JSONResponse) VisitSetVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetVariantUnit401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SetVariantUnit401JSONResponse) VisitSetVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetVariantUnit403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SetVariantUnit403JSONResponse) VisitSetVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetVariantUnit404JSONResponse Error
+
+func (response SetVariantUnit404JSONResponse) VisitSetVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetVariantUnit409JSONResponse Error
+
+func (response SetVariantUnit409JSONResponse) VisitSetVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetVariantUnit422JSONResponse Error
+
+func (response SetVariantUnit422JSONResponse) VisitSetVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetVariantUnit500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SetVariantUnit500JSONResponse) VisitSetVariantUnitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListUnitsRequestObject struct {
 }
 
@@ -3814,6 +4165,12 @@ type StrictServerInterface interface {
 	// UpdateProductVariant Editar una variante
 	// (PUT /api/v1/products/{productId}/variants/{variantId})
 	UpdateProductVariant(ctx context.Context, request UpdateProductVariantRequestObject) (UpdateProductVariantResponseObject, error)
+	// RemoveVariantUnit Quitar una unidad alternativa de una variante
+	// (DELETE /api/v1/products/{productId}/variants/{variantId}/units/{unitId})
+	RemoveVariantUnit(ctx context.Context, request RemoveVariantUnitRequestObject) (RemoveVariantUnitResponseObject, error)
+	// SetVariantUnit Agregar o editar una unidad alternativa de una variante
+	// (PUT /api/v1/products/{productId}/variants/{variantId}/units/{unitId})
+	SetVariantUnit(ctx context.Context, request SetVariantUnitRequestObject) (SetVariantUnitResponseObject, error)
 	// ListUnits Listar unidades de medida
 	// (GET /api/v1/units)
 	ListUnits(ctx context.Context, request ListUnitsRequestObject) (ListUnitsResponseObject, error)
@@ -4335,6 +4692,69 @@ func (sh *strictHandler) UpdateProductVariant(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateProductVariantResponseObject); ok {
 		if err := validResponse.VisitUpdateProductVariantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveVariantUnit operation middleware
+func (sh *strictHandler) RemoveVariantUnit(w http.ResponseWriter, r *http.Request, productId ProductId, variantId VariantId, unitId UnitId) {
+	var request RemoveVariantUnitRequestObject
+
+	request.ProductId = productId
+	request.VariantId = variantId
+	request.UnitId = unitId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveVariantUnit(ctx, request.(RemoveVariantUnitRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveVariantUnit")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveVariantUnitResponseObject); ok {
+		if err := validResponse.VisitRemoveVariantUnitResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetVariantUnit operation middleware
+func (sh *strictHandler) SetVariantUnit(w http.ResponseWriter, r *http.Request, productId ProductId, variantId VariantId, unitId UnitId) {
+	var request SetVariantUnitRequestObject
+
+	request.ProductId = productId
+	request.VariantId = variantId
+	request.UnitId = unitId
+
+	var body SetVariantUnitJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetVariantUnit(ctx, request.(SetVariantUnitRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetVariantUnit")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetVariantUnitResponseObject); ok {
+		if err := validResponse.VisitSetVariantUnitResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

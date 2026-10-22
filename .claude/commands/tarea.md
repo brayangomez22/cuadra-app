@@ -17,6 +17,9 @@ Sigue este flujo sin saltarte pasos.
    - **Si ya estás en una rama `feat/$ARGUMENTS-...`**: estamos retomando la tarea. Continúa en ella y salta al paso 1.
    - **Si hay cambios sin commit** en otra rama: detente y avísame. No los muevas, no hagas stash ni los descartes.
    - Lee la sección "Para trabajar ahora" de `docs/plan/pendientes.md`. Si hay alguno en `[ ]`, **detente**: lístalos y propón resolverlos primero en una rama `chore/`. Solo sigue con la tarea si Brayan lo decide explícitamente (y en ese caso, anótalo en el plan).
+   - **PR anterior con auto-merge:** busca tus PRs abiertos con `gh pr list --author @me --state open --json number,title,headRefName,autoMergeRequest,mergeStateStatus`. Para cada uno con `autoMergeRequest` activo:
+     - si sus checks siguen corriendo, avísame y espera con `gh pr checks <n> --watch --fail-fast`; luego confirma con `gh pr view <n> --json state` que quedó `MERGED` (el merge puede tardar unos segundos después del último check);
+     - si algún check falló, o `mergeStateStatus` es `BEHIND` (`main` avanzó y la protección exige la rama al día), o `DIRTY` (conflictos), **detente** y explícame la causa. Para `BEHIND` propón `gh pr update-branch <n>`.
    - **Si no:** cambia a `main`, actualízala con `git pull --ff-only` y crea la rama `feat/$ARGUMENTS-<nombre-corto-en-inglés-kebab-case>` a partir del título de la tarea (por ejemplo, `feat/T02-observability`). Si `git pull` falla, detente y avísame.
 1. **Contexto:**
    - De `docs/plan/README.md` lee la fase activa y su alcance. En el archivo de fase, lee solo la sección de $ARGUMENTS (`grep -n '### .* $ARGUMENTS ' docs/plan/fase-*.md`), la introducción del bloque si la tarea es parte de uno y las secciones de sus **Depende de** si necesitas saber qué dejaron.

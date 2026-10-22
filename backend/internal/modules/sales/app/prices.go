@@ -12,8 +12,9 @@ import (
 )
 
 // PriceQuery is what a price rule knows of a line of the cart: who sells,
-// where and to whom, the variant, its own price (BasePrice, without IVA) and
-// how much of it the line takes.
+// where and to whom, the variant, the unit it is sold in, its own price in
+// that unit (BasePrice, without IVA) and how many of that unit the line
+// takes. The price a rule gives is per unit of the line too.
 type PriceQuery struct {
 	TenantID   uuid.UUID
 	LocationID uuid.UUID
@@ -22,6 +23,11 @@ type PriceQuery struct {
 	ProductID  uuid.UUID
 	BasePrice  decimal.Decimal
 	Quantity   decimal.Decimal
+	// UnitID is the alternate unit of the line, or nil for the base unit.
+	UnitID *uuid.UUID
+	// UnitFactor is how many base units one unit of the line holds: 1 for
+	// the base unit.
+	UnitFactor decimal.Decimal
 }
 
 // ResolvedPrice is a line's unit price without IVA and the rule that gave

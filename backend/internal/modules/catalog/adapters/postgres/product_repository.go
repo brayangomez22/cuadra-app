@@ -60,13 +60,17 @@ func (r *ProductRepository) Create(ctx context.Context, p *domain.Product) error
 func (r *ProductRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*domain.Product, error) {
 	var row sqlcgen.GetProductRow
 	var variants []sqlcgen.ListVariantsRow
+	var units []sqlcgen.ListVariantUnitsRow
 	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
 		var err error
 		if row, err = q.GetProduct(ctx, id); err != nil {
 			return err
 		}
-		variants, err = q.ListVariants(ctx, []uuid.UUID{id})
+		if variants, err = q.ListVariants(ctx, []uuid.UUID{id}); err != nil {
+			return err
+		}
+		units, err = q.ListVariantUnits(ctx, variantIDs(variants))
 		return err
 	})
 	switch {
@@ -75,7 +79,7 @@ func (r *ProductRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID)
 	case err != nil:
 		return nil, fmt.Errorf("catalog: get product: %w", err)
 	}
-	return productFromRows(row, variants)
+	return productFromRows(row, variants, unitsByVariant(units))
 }
 
 // Update stores every field of the product and of its variants but their
@@ -106,7 +110,7 @@ func (r *ProductRepository) Update(ctx context.Context, p *domain.Product) error
 		}
 		return saveVariants(ctx, q, p)
 	})
-	if errors.Is(err, domain.ErrProductNotFound) {
+	if errors.Is(err, domain.ErrProductNotFound) || errors.Is(err, domain.ErrBarcodeTaken) {
 		return err
 	}
 	if err := productWriteError(err); err != nil {
@@ -115,11 +119,13 @@ func (r *ProductRepository) Update(ctx context.Context, p *domain.Product) error
 	return nil
 }
 
-// saveVariants inserts or updates each variant of p. Updating one that
-// belongs to another product changes no row and is reported as
-// domain.ErrVariantNotFound.
+// saveVariants inserts or updates each variant of p and stores again their
+// alternate units. Updating a variant that belongs to another product
+// changes no row and is reported as domain.ErrVariantNotFound.
 func saveVariants(ctx context.Context, q *sqlcgen.Queries, p *domain.Product) error {
+	ids := make([]uuid.UUID, 0, len(p.Variants()))
 	for _, v := range p.Variants() {
+		ids = append(ids, v.ID())
 		axes, err := json.Marshal(v.AxisValues())
 		if err != nil {
 			return err
@@ -144,6 +150,45 @@ func saveVariants(ctx context.Context, q *sqlcgen.Queries, p *domain.Product) er
 			return domain.ErrVariantNotFound
 		}
 	}
+	return saveUnits(ctx, q, p, ids)
+}
+
+// saveUnits replaces the alternate units of the variants ids of p with the
+// ones p has, and checks their barcodes against the other table: a unique
+// key cannot span product_variants and variant_units.
+func saveUnits(ctx context.Context, q *sqlcgen.Queries, p *domain.Product, ids []uuid.UUID) error {
+	if err := q.DeleteVariantUnits(ctx, ids); err != nil {
+		return err
+	}
+	var variantCodes, unitCodes []string
+	for _, v := range p.Variants() {
+		if v.Barcode() != "" {
+			variantCodes = append(variantCodes, v.Barcode())
+		}
+		for _, u := range v.Units() {
+			if err := q.CreateVariantUnit(ctx, sqlcgen.CreateVariantUnitParams{
+				TenantID: p.TenantID(), VariantID: v.ID(), UnitID: u.Unit().ID,
+				Factor: u.Factor(), Price: u.Price(), Barcode: nullable(u.Barcode()),
+			}); err != nil {
+				return err
+			}
+			if u.Barcode() != "" {
+				unitCodes = append(unitCodes, u.Barcode())
+			}
+		}
+	}
+	if len(variantCodes) == 0 && len(unitCodes) == 0 {
+		return nil
+	}
+	taken, err := q.BarcodeTakenElsewhere(ctx, sqlcgen.BarcodeTakenElsewhereParams{
+		ProductID: p.ID(), VariantBarcodes: variantCodes, UnitBarcodes: unitCodes,
+	})
+	if err != nil {
+		return err
+	}
+	if taken != nil && *taken {
+		return domain.ErrBarcodeTaken
+	}
 	return nil
 }
 
@@ -152,13 +197,13 @@ func productWriteError(err error) error {
 	switch {
 	case violates(err, uniqueViolation, variantsSKUKey):
 		return domain.ErrSKUTaken
-	case violates(err, uniqueViolation, variantsBarcodeKey):
+	case violates(err, uniqueViolation, variantsBarcodeKey), violates(err, uniqueViolation, variantUnitsBarcodeKey):
 		return domain.ErrBarcodeTaken
 	case violates(err, uniqueViolation, variantsAxisValuesKey):
 		return domain.ErrDuplicateVariant
 	case violates(err, foreignKeyViolation, productsCategoryFKey):
 		return domain.ErrCategoryNotFound
-	case violates(err, foreignKeyViolation, productsBaseUnitFKey):
+	case violates(err, foreignKeyViolation, productsBaseUnitFKey), violates(err, foreignKeyViolation, variantUnitsUnitFKey):
 		return domain.ErrUnitNotFound
 	}
 	return err
@@ -169,6 +214,7 @@ func productWriteError(err error) error {
 func (r *ProductRepository) Search(ctx context.Context, tenantID uuid.UUID, f domain.ProductFilter) (domain.ProductPage, error) {
 	var rows []sqlcgen.GetProductRow
 	var variants []sqlcgen.ListVariantsRow
+	var units []sqlcgen.ListVariantUnitsRow
 	var total int64
 	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
@@ -185,7 +231,10 @@ func (r *ProductRepository) Search(ctx context.Context, tenantID uuid.UUID, f do
 		for _, row := range rows {
 			ids = append(ids, row.ID)
 		}
-		variants, err = q.ListVariants(ctx, ids)
+		if variants, err = q.ListVariants(ctx, ids); err != nil {
+			return err
+		}
+		units, err = q.ListVariantUnits(ctx, variantIDs(variants))
 		return err
 	})
 	if err != nil {
@@ -195,9 +244,10 @@ func (r *ProductRepository) Search(ctx context.Context, tenantID uuid.UUID, f do
 	for _, v := range variants {
 		byProduct[v.ProductID] = append(byProduct[v.ProductID], v)
 	}
+	byVariant := unitsByVariant(units)
 	page := domain.ProductPage{Items: make([]*domain.Product, 0, len(rows)), Total: int(total)}
 	for _, row := range rows {
-		p, err := productFromRows(row, byProduct[row.ID])
+		p, err := productFromRows(row, byProduct[row.ID], byVariant)
 		if err != nil {
 			return domain.ProductPage{}, err
 		}
@@ -278,8 +328,34 @@ func searchTerms(text string) []string {
 	return words
 }
 
-// productFromRows rebuilds a product from its row and its variants' rows.
-func productFromRows(row sqlcgen.GetProductRow, variantRows []sqlcgen.ListVariantsRow) (*domain.Product, error) {
+// variantIDs returns the ids of the variants' rows.
+func variantIDs(rows []sqlcgen.ListVariantsRow) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, v := range rows {
+		ids = append(ids, v.ID)
+	}
+	return ids
+}
+
+// unitsByVariant groups the alternate units' rows by variant.
+func unitsByVariant(rows []sqlcgen.ListVariantUnitsRow) map[uuid.UUID][]domain.VariantUnitParams {
+	out := map[uuid.UUID][]domain.VariantUnitParams{}
+	for _, u := range rows {
+		var barcode string
+		if u.Barcode != nil {
+			barcode = *u.Barcode
+		}
+		out[u.VariantID] = append(out[u.VariantID], domain.VariantUnitParams{
+			Unit:   domain.UnitRef{ID: u.UnitID, Code: u.UnitCode, Name: u.UnitName},
+			Factor: u.Factor, Price: u.Price, Barcode: barcode,
+		})
+	}
+	return out
+}
+
+// productFromRows rebuilds a product from its row, its variants' rows and
+// the alternate units of its variants.
+func productFromRows(row sqlcgen.GetProductRow, variantRows []sqlcgen.ListVariantsRow, units map[uuid.UUID][]domain.VariantUnitParams) (*domain.Product, error) {
 	unit := domain.UnitRef{ID: row.BaseUnitID, Code: row.UnitCode, Name: row.UnitName}
 	rate, err := domain.ParseTaxRate(row.TaxRate)
 	if err != nil {
@@ -309,6 +385,7 @@ func productFromRows(row sqlcgen.GetProductRow, variantRows []sqlcgen.ListVarian
 			IsDefault:  v.IsDefault,
 			Active:     v.Active,
 			CreatedAt:  v.CreatedAt,
+			Units:      units[v.ID],
 		})
 	}
 	p, err := domain.RehydrateProduct(domain.ProductSnapshot{

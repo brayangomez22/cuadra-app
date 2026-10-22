@@ -35,6 +35,7 @@ type ProductVariant struct {
 	cost       decimal.Decimal
 	price      decimal.Decimal
 	axisValues map[string]string
+	units      []VariantUnit
 	isDefault  bool
 	active     bool
 	createdAt  time.Time
@@ -72,6 +73,8 @@ type VariantSnapshot struct {
 	IsDefault  bool
 	Active     bool
 	CreatedAt  time.Time
+	// Units are the variant's alternate units.
+	Units []VariantUnitParams
 }
 
 // newVariant checks a variant's own invariants; the ones involving the other
@@ -98,6 +101,10 @@ func newVariant(productID uuid.UUID, s VariantSnapshot) (*ProductVariant, error)
 	if err != nil {
 		return nil, err
 	}
+	units, err := newVariantUnits(s.Units)
+	if err != nil {
+		return nil, err
+	}
 	return &ProductVariant{
 		id:         s.ID,
 		productID:  productID,
@@ -106,6 +113,7 @@ func newVariant(productID uuid.UUID, s VariantSnapshot) (*ProductVariant, error)
 		cost:       s.Cost,
 		price:      s.Price,
 		axisValues: axes,
+		units:      units,
 		isDefault:  s.IsDefault,
 		active:     s.Active,
 		createdAt:  s.CreatedAt.UTC(),
@@ -246,5 +254,14 @@ func (v *ProductVariant) snapshot() VariantSnapshot {
 	return VariantSnapshot{
 		ID: v.id, SKU: v.sku, Barcode: v.barcode, Cost: v.cost, Price: v.price,
 		AxisValues: v.axisValues, IsDefault: v.isDefault, Active: v.active, CreatedAt: v.createdAt,
+		Units: v.unitParams(),
 	}
+}
+
+func (v *ProductVariant) unitParams() []VariantUnitParams {
+	out := make([]VariantUnitParams, 0, len(v.units))
+	for _, u := range v.units {
+		out = append(out, u.params())
+	}
+	return out
 }

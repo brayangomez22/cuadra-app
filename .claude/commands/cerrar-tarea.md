@@ -1,10 +1,10 @@
 ---
-description: Cierra la tarea actual — verifica, hace commit, push, abre el PR, espera el CI y, si pasa completo, hace merge y vuelve a main
+description: Cierra la tarea actual — verifica, hace commit, push, abre el PR con auto-merge (GitHub hace el merge cuando el CI pasa completo) y vuelve a main
 argument-hint: (opcional) mensaje de commit si quieres reemplazar el propuesto
-allowed-tools: Read(.git/cierre-tarea.md), Bash(git status:*), Bash(git diff:*), Bash(git branch:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Bash(git push -u origin:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh run view:*), Bash(gh pr merge --squash --delete-branch), Bash(git switch main), Bash(git pull), Bash(make check), Bash(npm run lint:*), Bash(npm test:*), Bash(rm .git/cierre-tarea.md)
+allowed-tools: Read(.git/cierre-tarea.md), Bash(git status:*), Bash(git diff:*), Bash(git branch:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Bash(git push -u origin:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh run view:*), Bash(gh pr merge --auto --squash --delete-branch), Bash(git switch main), Bash(git pull), Bash(make check), Bash(npm run lint:*), Bash(npm test:*), Bash(rm .git/cierre-tarea.md)
 ---
 
-Brayan ya revisó el diff y quiere cerrar la tarea actual. Esta es la autorización explícita para hacer commit, push, abrir el PR y, **solo si el CI pasa completo**, hacer merge del PR de esta tarea.
+Brayan ya revisó el diff y quiere cerrar la tarea actual. Esta es la autorización explícita para hacer commit, push, abrir el PR y activarle el **auto-merge**: GitHub hace el merge (squash) solo cuando pasan los checks requeridos de `main`, que son los 5 jobs del CI. No se espera el CI en esta sesión.
 
 **Fuente del cierre:** normalmente esta conversación empieza limpia (después de `/clear`). El resumen de la tarea está en `.git/cierre-tarea.md`, que dejó `/tarea`: léelo primero y úsalo para el commit y el PR. **No leas el código ni los documentos del plan** para armar el PR. Si el archivo no existe, arma el resumen con `git diff --stat main...HEAD`, la sección de la tarea en su archivo de fase y `git diff main -- docs/plan/pendientes.md`, y avísale a Brayan que faltaba. Limita las salidas largas de `make check` y de los tests (`| tail -30`).
 
@@ -27,15 +27,14 @@ Brayan ya revisó el diff y quiere cerrar la tarea actual. Esta es la autorizaci
      - `## Revisar con lupa` → la lista de `.git/cierre-tarea.md`
      - `## Pendientes` → los que el PR resolvió y los que agregó a `docs/plan/pendientes.md` (ID, texto y destino); "Ninguno" si no hay
      - `## Checklist` → `- [x] make check en verde`, `- [x] Tests escritos primero`, `- [ ] OpenAPI actualizado (si aplica)`, `- [ ] Spans y métricas (si aplica)`, `- [ ] docs/decisiones.md (si aplica)`; marca las que se cumplen.
-6. **CI:** ejecuta `gh pr checks --watch` y espera el resultado.
-   - **Si pasa completo** (todos los checks en `pass`; ninguno en `fail`, `pending` o `cancelled`): sigue al paso 7.
-   - **Si falla:** obtén el detalle con `gh run view --log-failed`, explica la causa y propón la corrección. **No** hagas más commits hasta que Brayan lo apruebe. Si lo aprueba, corrige, verifica con `make check`, haz un commit nuevo (`fix(...)`), push y vuelve a esperar el CI.
-7. **Merge** (solo si el paso 6 terminó con el CI completo en verde):
-   - Ejecuta `gh pr merge --squash --delete-branch && git switch main && git pull`.
-   - Nunca uses `--admin` ni saltes protecciones de rama, y nunca hagas merge de otro PR que no sea el de esta tarea.
-   - Si el merge falla (conflictos, revisión requerida, protección de rama), **detente** y explica la causa; no intentes forzarlo.
-   - Verifica que quedaste en `main`, al día con `origin/main` y con el árbol limpio (`git status --porcelain`).
-   - Borra el resumen de la tarea cerrada: `rm .git/cierre-tarea.md`.
+6. **Auto-merge:** `gh pr merge --auto --squash --delete-branch`.
+   - Nunca uses `--admin`, nunca hagas merge sin `--auto` y nunca actives el auto-merge de otro PR que no sea el de esta tarea.
+   - Si falla (por ejemplo, el repo no permite auto-merge o hay conflictos), **detente** y explica la causa; no intentes forzarlo.
+7. **Volver a `main`:**
+   - Ejecuta `git switch main && git pull`. `main` todavía no tiene esta tarea: entra cuando GitHub haga el merge.
+   - Verifica que el árbol quedó limpio (`git status --porcelain`).
+   - Borra el resumen de la tarea: `rm .git/cierre-tarea.md` (ya quedó en el cuerpo del PR).
 8. **Resumen final:**
-   - enlace del PR, estado del CI y confirmación del merge (o la causa si no se hizo),
-   - y el recordatorio: "Ejecuta `/clear` antes de empezar la siguiente tarea."
+   - enlace del PR y confirmación de que el auto-merge quedó activo,
+   - qué hacer si el CI falla: GitHub no hace el merge y avisa; se vuelve a la rama (`git switch <rama>`), se corrige con un commit nuevo (`fix(...)`) y push, y el auto-merge sigue activo,
+   - y el recordatorio: "Ejecuta `/clear` y puedes empezar la siguiente tarea; `/tarea` espera el merge de este PR antes de crear la rama."
