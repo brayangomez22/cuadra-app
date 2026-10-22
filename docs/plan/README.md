@@ -78,7 +78,7 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
 - Auditoría y métricas de control (T38, T42, T43) → los ajustes de la toma física, las ventas que exceden el cupo con autorización y los cambios de precio guardan quién y cuándo, para que T38 los registre en `audit_events`.
 - Tablero del dueño (T43) → las alertas de reposición (T28) se consultan por sede y sin lógica en la UI.
 - Órdenes de compra y cuentas por pagar (V2-2) → una compra puede quedar con saldo por pagar y referenciar un documento de origen opcional.
-- Listas de precios y precio por cantidad (V2-3, V2-13) → el precio de una unidad alternativa (T26) entra como regla del `PriceResolver`, no como un camino aparte.
+- Listas de precios y precio por cantidad (V2-3, V2-13) → el `PriceQuery` lleva la unidad de la línea (`UnitID`, `UnitFactor`) y el precio que da una regla es por esa unidad, como el de la unidad alternativa (T26).
 - Lotes y vencimientos (V2-12) → compras, conteos y ajustes llevan `lot_id` opcional.
 - Multi-sede (V2-4) → stock mínimo, conteos y compras siempre referencian una `Location`.
 - Modo sin internet (V2-5) → los IDs son UUID v7 y las operaciones de escritura deben poder hacerse idempotentes.

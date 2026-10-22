@@ -1,7 +1,7 @@
 # Ferretería: las unidades son las que tenía el catálogo fijo antes de T24d.
 name: Ferretería
 description: Herramientas, materiales de construcción, eléctricos, plomería y pinturas.
-modules: []
+modules: [unit_conversions]
 # Tasa de IVA que se propone a un producto nuevo.
 default_tax_rate: "0.19"
 units:

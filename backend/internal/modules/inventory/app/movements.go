@@ -16,8 +16,13 @@ import (
 type ReceiptInput struct {
 	VariantID  uuid.UUID
 	LocationID uuid.UUID
-	Quantity   decimal.Decimal
-	UnitCost   decimal.Decimal
+	// Quantity and UnitCost are in UnitID, or in the product's base unit
+	// when UnitID is nil.
+	Quantity decimal.Decimal
+	UnitCost decimal.Decimal
+	// UnitID is an alternate unit of the variant (a unit of the tenant), or
+	// nil for the base unit. The movement is stored in the base unit.
+	UnitID *uuid.UUID
 }
 
 // AdjustmentInput is a correction of a variant's stock at a location;
@@ -38,13 +43,24 @@ type TransferInput struct {
 }
 
 // ReceiveStock registers an entry of goods (purchase_in) and updates the
-// weighted average cost.
+// weighted average cost. An entry in an alternate unit is converted to the
+// base unit first.
 func (s *Service) ReceiveStock(ctx context.Context, a Actor, in ReceiptInput) (_ *domain.StockMovement, err error) {
-	ctx, span := s.startSpan(ctx, "ReceiveStock", a, locationAttr(in.LocationID), variantAttr(in.VariantID))
+	ctx, span := s.startSpan(ctx, "ReceiveStock", a, locationAttr(in.LocationID), variantAttr(in.VariantID),
+		attribute.Bool("unit.alternate", in.UnitID != nil))
 	defer func() { endSpan(span, err) }()
 
 	if err := s.requireActiveLocation(ctx, a, in.LocationID); err != nil {
 		return nil, err
+	}
+	if in.UnitID != nil {
+		factor, err := s.Variants.UnitFactor(ctx, a.TenantID, in.VariantID, *in.UnitID)
+		if err != nil {
+			return nil, err
+		}
+		if in.Quantity, in.UnitCost, err = domain.ToBaseUnit(in.Quantity, in.UnitCost, factor); err != nil {
+			return nil, err
+		}
 	}
 	var m *domain.StockMovement
 	err = s.Stock.Apply(ctx, a.TenantID, in.VariantID, []uuid.UUID{in.LocationID},

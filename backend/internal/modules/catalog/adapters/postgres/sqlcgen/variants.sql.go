@@ -13,6 +13,121 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const barcodeTakenElsewhere = `-- name: BarcodeTakenElsewhere :one
+SELECT EXISTS (
+           SELECT 1
+           FROM variant_units vu
+           JOIN product_variants v ON v.tenant_id = vu.tenant_id AND v.id = vu.variant_id
+           WHERE v.product_id <> $1 AND vu.barcode = ANY($2::text[]))
+    OR EXISTS (
+           SELECT 1
+           FROM product_variants v
+           WHERE v.product_id <> $1 AND v.barcode = ANY($3::text[]))
+`
+
+type BarcodeTakenElsewhereParams struct {
+	ProductID       uuid.UUID
+	VariantBarcodes []string
+	UnitBarcodes    []string
+}
+
+// BarcodeTakenElsewhere reports whether a barcode of a product is used in
+// the other table by another product of the tenant: one of its variants'
+// by an alternate unit, or one of its units' by a variant. Each table's
+// unique key covers the rest.
+func (q *Queries) BarcodeTakenElsewhere(ctx context.Context, arg BarcodeTakenElsewhereParams) (*bool, error) {
+	row := q.db.QueryRow(ctx, barcodeTakenElsewhere, arg.ProductID, arg.VariantBarcodes, arg.UnitBarcodes)
+	var column_1 *bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const createVariantUnit = `-- name: CreateVariantUnit :exec
+INSERT INTO variant_units (tenant_id, variant_id, unit_id, factor, price, barcode)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type CreateVariantUnitParams struct {
+	TenantID  uuid.UUID
+	VariantID uuid.UUID
+	UnitID    uuid.UUID
+	Factor    decimal.Decimal
+	Price     decimal.Decimal
+	Barcode   *string
+}
+
+func (q *Queries) CreateVariantUnit(ctx context.Context, arg CreateVariantUnitParams) error {
+	_, err := q.db.Exec(ctx, createVariantUnit,
+		arg.TenantID,
+		arg.VariantID,
+		arg.UnitID,
+		arg.Factor,
+		arg.Price,
+		arg.Barcode,
+	)
+	return err
+}
+
+const deleteVariantUnits = `-- name: DeleteVariantUnits :exec
+DELETE FROM variant_units
+WHERE variant_id = ANY($1::uuid[])
+`
+
+// DeleteVariantUnits removes the alternate units of the given variants, so
+// a product write stores them again as the product has them.
+func (q *Queries) DeleteVariantUnits(ctx context.Context, variantIds []uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteVariantUnits, variantIds)
+	return err
+}
+
+const listVariantUnits = `-- name: ListVariantUnits :many
+SELECT vu.variant_id, vu.unit_id, u.code AS unit_code, u.name AS unit_name, vu.factor, vu.price, vu.barcode
+FROM variant_units vu
+JOIN units_of_measure u ON u.tenant_id = vu.tenant_id AND u.id = vu.unit_id
+WHERE vu.variant_id = ANY($1::uuid[])
+ORDER BY vu.variant_id, vu.factor, u.code
+`
+
+type ListVariantUnitsRow struct {
+	VariantID uuid.UUID
+	UnitID    uuid.UUID
+	UnitCode  string
+	UnitName  string
+	Factor    decimal.Decimal
+	Price     decimal.Decimal
+	Barcode   *string
+}
+
+// ListVariantUnits returns the alternate units of the given variants with
+// the code and name of each unit.
+func (q *Queries) ListVariantUnits(ctx context.Context, variantIds []uuid.UUID) ([]ListVariantUnitsRow, error) {
+	rows, err := q.db.Query(ctx, listVariantUnits, variantIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListVariantUnitsRow
+	for rows.Next() {
+		var i ListVariantUnitsRow
+		if err := rows.Scan(
+			&i.VariantID,
+			&i.UnitID,
+			&i.UnitCode,
+			&i.UnitName,
+			&i.Factor,
+			&i.Price,
+			&i.Barcode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listVariants = `-- name: ListVariants :many
 SELECT id, product_id, sku, barcode, cost, price, axis_values, is_default, active, created_at
 FROM product_variants

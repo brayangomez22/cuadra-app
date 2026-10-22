@@ -101,7 +101,7 @@ func (h *Handler) ConfirmSale(ctx context.Context, req salesapi.ConfirmSaleReque
 			}
 		}
 		in.Lines = append(in.Lines, app.LineRequest{
-			VariantID: l.VariantId, Quantity: qty, Discount: discount,
+			VariantID: l.VariantId, Quantity: qty, Discount: discount, UnitID: l.UnitId,
 		})
 	}
 	for _, p := range req.Body.Payments {
@@ -195,12 +195,16 @@ func saleBody(s *domain.Sale) salesapi.Sale {
 	for _, l := range s.Lines() {
 		line := salesapi.SaleLine{
 			VariantId: l.VariantID(), ProductId: l.ProductID(), ProductName: l.ProductName(), Quantity: formatDecimal(l.Quantity()),
+			UnitFactor: formatDecimal(l.Unit().Factor), BaseQuantity: formatDecimal(l.BaseQuantity()),
 			UnitPrice: formatMoney(l.UnitPrice()), PriceRule: string(l.PriceRule()), TaxRate: formatDecimal(l.TaxRate()),
 			Discount: formatMoney(l.Discount()), Gross: formatMoney(l.Gross()), Base: formatMoney(l.Base()),
 			Tax: formatMoney(l.Tax()), Total: formatMoney(l.Total()),
 		}
 		if label := l.VariantLabel(); label != "" {
 			line.VariantLabel = &label
+		}
+		if u := l.Unit(); !u.IsBase() {
+			line.UnitCode = &u.Code
 		}
 		body.Lines = append(body.Lines, line)
 	}

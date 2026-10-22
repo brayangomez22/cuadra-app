@@ -115,10 +115,11 @@ func (q *Queries) InsertSale(ctx context.Context, arg InsertSaleParams) error {
 
 const insertSaleLine = `-- name: InsertSaleLine :exec
 INSERT INTO sale_lines (tenant_id, sale_id, position, variant_id, product_id, product_name, variant_label,
-                        quantity, unit_price, price_rule, tax_rate, discount, gross, tax)
+                        quantity, unit_price, price_rule, tax_rate, discount, gross, tax, unit_code, unit_factor)
 VALUES ($1, $2, $3, $4, $5,
         $6, $7, $8, $9,
-        $10, $11, $12, $13, $14)
+        $10, $11, $12, $13, $14,
+        $15, $16)
 `
 
 type InsertSaleLineParams struct {
@@ -136,6 +137,8 @@ type InsertSaleLineParams struct {
 	Discount     decimal.Decimal
 	Gross        decimal.Decimal
 	Tax          decimal.Decimal
+	UnitCode     *string
+	UnitFactor   decimal.Decimal
 }
 
 func (q *Queries) InsertSaleLine(ctx context.Context, arg InsertSaleLineParams) error {
@@ -154,6 +157,8 @@ func (q *Queries) InsertSaleLine(ctx context.Context, arg InsertSaleLineParams) 
 		arg.Discount,
 		arg.Gross,
 		arg.Tax,
+		arg.UnitCode,
+		arg.UnitFactor,
 	)
 	return err
 }
@@ -183,7 +188,7 @@ func (q *Queries) InsertSalePayment(ctx context.Context, arg InsertSalePaymentPa
 }
 
 const listSaleLines = `-- name: ListSaleLines :many
-SELECT tenant_id, sale_id, position, product_id, product_name, quantity, unit_price, tax_rate, discount, gross, tax, variant_id, variant_label, price_rule FROM sale_lines WHERE sale_id = $1 ORDER BY position
+SELECT tenant_id, sale_id, position, product_id, product_name, quantity, unit_price, tax_rate, discount, gross, tax, variant_id, variant_label, price_rule, unit_code, unit_factor FROM sale_lines WHERE sale_id = $1 ORDER BY position
 `
 
 func (q *Queries) ListSaleLines(ctx context.Context, saleID uuid.UUID) ([]SaleLine, error) {
@@ -210,6 +215,8 @@ func (q *Queries) ListSaleLines(ctx context.Context, saleID uuid.UUID) ([]SaleLi
 			&i.VariantID,
 			&i.VariantLabel,
 			&i.PriceRule,
+			&i.UnitCode,
+			&i.UnitFactor,
 		); err != nil {
 			return nil, err
 		}

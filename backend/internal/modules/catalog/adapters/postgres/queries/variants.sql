@@ -22,3 +22,37 @@ WHERE product_variants.product_id = EXCLUDED.product_id;
 SELECT id, product_id
 FROM product_variants
 WHERE id = ANY(sqlc.arg(variant_ids)::uuid[]);
+
+-- ListVariantUnits returns the alternate units of the given variants with
+-- the code and name of each unit.
+-- name: ListVariantUnits :many
+SELECT vu.variant_id, vu.unit_id, u.code AS unit_code, u.name AS unit_name, vu.factor, vu.price, vu.barcode
+FROM variant_units vu
+JOIN units_of_measure u ON u.tenant_id = vu.tenant_id AND u.id = vu.unit_id
+WHERE vu.variant_id = ANY(sqlc.arg(variant_ids)::uuid[])
+ORDER BY vu.variant_id, vu.factor, u.code;
+
+-- DeleteVariantUnits removes the alternate units of the given variants, so
+-- a product write stores them again as the product has them.
+-- name: DeleteVariantUnits :exec
+DELETE FROM variant_units
+WHERE variant_id = ANY(sqlc.arg(variant_ids)::uuid[]);
+
+-- name: CreateVariantUnit :exec
+INSERT INTO variant_units (tenant_id, variant_id, unit_id, factor, price, barcode)
+VALUES ($1, $2, $3, $4, $5, $6);
+
+-- BarcodeTakenElsewhere reports whether a barcode of a product is used in
+-- the other table by another product of the tenant: one of its variants'
+-- by an alternate unit, or one of its units' by a variant. Each table's
+-- unique key covers the rest.
+-- name: BarcodeTakenElsewhere :one
+SELECT EXISTS (
+           SELECT 1
+           FROM variant_units vu
+           JOIN product_variants v ON v.tenant_id = vu.tenant_id AND v.id = vu.variant_id
+           WHERE v.product_id <> sqlc.arg(product_id) AND vu.barcode = ANY(sqlc.arg(variant_barcodes)::text[]))
+    OR EXISTS (
+           SELECT 1
+           FROM product_variants v
+           WHERE v.product_id <> sqlc.arg(product_id) AND v.barcode = ANY(sqlc.arg(unit_barcodes)::text[]));

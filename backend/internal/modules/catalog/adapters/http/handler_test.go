@@ -31,6 +31,8 @@ type stubUseCases struct {
 	filter    domain.ProductFilter
 	id        uuid.UUID
 	variantID uuid.UUID
+	unitID    uuid.UUID
+	unitInput app.VariantUnitInput
 	name      string
 	parentID  *uuid.UUID
 
@@ -89,6 +91,16 @@ func (s *stubUseCases) AddVariant(_ context.Context, a app.Actor, productID uuid
 
 func (s *stubUseCases) UpdateVariant(_ context.Context, a app.Actor, productID, variantID uuid.UUID, in app.VariantUpdate) (*domain.Product, error) {
 	s.actor, s.id, s.variantID, s.variant = a, productID, variantID, in
+	return s.product, s.err
+}
+
+func (s *stubUseCases) SetVariantUnit(_ context.Context, a app.Actor, productID, variantID, unitID uuid.UUID, in app.VariantUnitInput) (*domain.Product, error) {
+	s.actor, s.id, s.variantID, s.unitID, s.unitInput = a, productID, variantID, unitID, in
+	return s.product, s.err
+}
+
+func (s *stubUseCases) RemoveVariantUnit(_ context.Context, a app.Actor, productID, variantID, unitID uuid.UUID) (*domain.Product, error) {
+	s.actor, s.id, s.variantID, s.unitID = a, productID, variantID, unitID
 	return s.product, s.err
 }
 

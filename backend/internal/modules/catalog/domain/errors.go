@@ -26,10 +26,15 @@ var (
 	ErrInvalidAxisValues     = errors.New("catalog: invalid variant axis values")
 	// ErrInvalidVariants reports a stored product without exactly one
 	// default variant.
-	ErrInvalidVariants     = errors.New("catalog: a product needs exactly one default variant")
-	ErrVariantAxesMismatch = errors.New("catalog: every variant of a product must name the same axes")
-	ErrDuplicateVariant    = errors.New("catalog: another variant of the product has the same axis values")
-	ErrVariantNotFound     = errors.New("catalog: variant not found")
+	ErrInvalidVariants      = errors.New("catalog: a product needs exactly one default variant")
+	ErrVariantAxesMismatch  = errors.New("catalog: every variant of a product must name the same axes")
+	ErrDuplicateVariant     = errors.New("catalog: another variant of the product has the same axis values")
+	ErrVariantNotFound      = errors.New("catalog: variant not found")
+	ErrInvalidUnitFactor    = errors.New("catalog: invalid unit factor")
+	ErrAlternateUnitIsBase  = errors.New("catalog: the alternate unit is the product's base unit")
+	ErrDuplicateVariantUnit = errors.New("catalog: the variant already has the alternate unit")
+	ErrVariantUnitNotFound  = errors.New("catalog: the variant does not have the alternate unit")
+	ErrTooManyVariantUnits  = errors.New("catalog: a variant has at most 10 alternate units")
 
 	ErrInvalidAttributeID      = errors.New("catalog: invalid attribute id")
 	ErrInvalidAttributeKey     = errors.New("catalog: invalid attribute key")

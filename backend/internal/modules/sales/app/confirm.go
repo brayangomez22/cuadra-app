@@ -19,8 +19,13 @@ import (
 // the IVA from the catalog, never from the request.
 type LineRequest struct {
 	VariantID uuid.UUID
-	Quantity  decimal.Decimal
-	Discount  decimal.Decimal
+	// Quantity is in UnitID, or in the product's base unit when UnitID is
+	// nil.
+	Quantity decimal.Decimal
+	Discount decimal.Decimal
+	// UnitID is an alternate unit of the variant (a unit of the tenant), or
+	// nil for the base unit.
+	UnitID *uuid.UUID
 }
 
 // PaymentRequest is a payment of the cart; Method is a domain.PaymentMethod
@@ -72,7 +77,11 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	if err != nil {
 		return nil, err
 	}
-	prices, err := s.resolvePrices(ctx, a, in, variants)
+	units, err := lineUnits(in.Lines, variants)
+	if err != nil {
+		return nil, err
+	}
+	prices, err := s.resolvePrices(ctx, a, in, variants, units)
 	if err != nil {
 		return nil, err
 	}
@@ -95,11 +104,17 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	if err != nil {
 		return nil, err
 	}
+	alternate := 0
 	for i, l := range in.Lines {
 		v := variants[l.VariantID]
+		unit := domain.BaseUnit
+		if u := units[i]; u != nil {
+			unit = domain.LineUnit{Code: u.Code, Factor: u.Factor}
+			alternate++
+		}
 		err := sale.AddLine(domain.LineInput{
 			VariantID: v.ID, ProductID: v.ProductID, ProductName: v.ProductName, VariantLabel: v.Label,
-			Quantity: l.Quantity, UnitPrice: prices[i].UnitPrice, PriceRule: prices[i].Rule,
+			Quantity: l.Quantity, Unit: unit, UnitPrice: prices[i].UnitPrice, PriceRule: prices[i].Rule,
 			TaxRate: v.TaxRate, Discount: l.Discount,
 		}, limit)
 		if errors.Is(err, domain.ErrDiscountExceedsLimit) {
@@ -134,6 +149,7 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	}
 	span.SetAttributes(attribute.Int64("sale.number", sale.Number()))
 	s.confirmed.Add(ctx, 1)
+	s.alternateUnitLines.Add(ctx, int64(alternate))
 	s.amount.Record(ctx, sale.Totals().Total.InexactFloat64())
 	for _, p := range prices {
 		s.priceRules.Add(ctx, 1, metric.WithAttributes(attribute.String("price.rule", string(p.Rule))))
@@ -172,19 +188,43 @@ func (s *Service) variants(ctx context.Context, tenantID uuid.UUID, lines []Line
 	return byID, nil
 }
 
+// lineUnits returns the alternate unit of each line of the cart, in order,
+// or nil for a line in the base unit. A unit the variant does not have is
+// ErrUnitNotAvailable.
+func lineUnits(lines []LineRequest, variants map[uuid.UUID]VariantInfo) ([]*UnitInfo, error) {
+	units := make([]*UnitInfo, len(lines))
+	for i, l := range lines {
+		if l.UnitID == nil {
+			continue
+		}
+		v := variants[l.VariantID]
+		j := slices.IndexFunc(v.Units, func(u UnitInfo) bool { return u.UnitID == *l.UnitID })
+		if j < 0 {
+			return nil, domain.ErrUnitNotAvailable
+		}
+		units[i] = &v.Units[j]
+	}
+	return units, nil
+}
+
 // resolvePrices asks the PriceResolver the unit price of each line of the
-// cart, in order.
-func (s *Service) resolvePrices(ctx context.Context, a Actor, in ConfirmSaleInput, variants map[uuid.UUID]VariantInfo) (_ []ResolvedPrice, err error) {
+// cart, in order: the price of one unit of the line, base or alternate.
+func (s *Service) resolvePrices(ctx context.Context, a Actor, in ConfirmSaleInput, variants map[uuid.UUID]VariantInfo, units []*UnitInfo) (_ []ResolvedPrice, err error) {
 	ctx, span := s.tracer.Start(ctx, "sales.ResolvePrices", trace.WithAttributes(attribute.Int("sale.lines", len(in.Lines))))
 	defer func() { endSpan(span, err) }()
 
 	prices := make([]ResolvedPrice, len(in.Lines))
 	for i, l := range in.Lines {
 		v := variants[l.VariantID]
-		prices[i], err = s.Prices.Resolve(ctx, PriceQuery{
+		q := PriceQuery{
 			TenantID: a.TenantID, LocationID: in.LocationID, CustomerID: in.CustomerID,
 			VariantID: v.ID, ProductID: v.ProductID, BasePrice: v.Price, Quantity: l.Quantity,
-		})
+			UnitFactor: domain.BaseUnit.Factor,
+		}
+		if u := units[i]; u != nil {
+			q.UnitID, q.UnitFactor, q.BasePrice = &u.UnitID, u.Factor, u.Price
+		}
+		prices[i], err = s.Prices.Resolve(ctx, q)
 		if err != nil {
 			return nil, err
 		}
@@ -228,18 +268,18 @@ func parsePayments(in []PaymentRequest) ([]domain.Payment, error) {
 	return payments, nil
 }
 
-// stockLines adds up the sale's quantities by variant, in the order each
-// variant first appears.
+// stockLines adds up the sale's quantities by variant, in the base unit, in
+// the order each variant first appears.
 func stockLines(sale *domain.Sale) []StockLine {
 	var out []StockLine
 	index := map[uuid.UUID]int{}
 	for _, l := range sale.Lines() {
 		if i, ok := index[l.VariantID()]; ok {
-			out[i].Quantity = out[i].Quantity.Add(l.Quantity())
+			out[i].Quantity = out[i].Quantity.Add(l.BaseQuantity())
 			continue
 		}
 		index[l.VariantID()] = len(out)
-		out = append(out, StockLine{VariantID: l.VariantID(), Quantity: l.Quantity()})
+		out = append(out, StockLine{VariantID: l.VariantID(), Quantity: l.BaseQuantity()})
 	}
 	return out
 }

@@ -153,6 +153,7 @@ func TestConfirmSalePrices(t *testing.T) {
 		require.Equal(t, app.PriceQuery{
 			TenantID: e.actor.TenantID, LocationID: location, CustomerID: &customer,
 			VariantID: listed, ProductID: e.productOf(listed), BasePrice: dec("10000"), Quantity: dec("2"),
+			UnitFactor: domain.BaseUnit.Factor,
 		}, seen[0])
 	})
 

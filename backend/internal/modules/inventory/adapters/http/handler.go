@@ -207,6 +207,7 @@ func (h *Handler) ReceiveStock(ctx context.Context, req inventoryapi.ReceiveStoc
 	}
 	m, err := h.uc.ReceiveStock(ctx, actor(ctx), app.ReceiptInput{
 		VariantID: req.Body.VariantId, LocationID: req.Body.LocationId, Quantity: qty, UnitCost: cost,
+		UnitID: req.Body.UnitId,
 	})
 	if err != nil {
 		return nil, err

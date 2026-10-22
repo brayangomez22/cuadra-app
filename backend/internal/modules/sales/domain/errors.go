@@ -63,6 +63,10 @@ var (
 	ErrLocationNotFound  = errors.New("sales: location not found")
 	ErrLocationInactive  = errors.New("sales: location is inactive")
 	ErrInsufficientStock = errors.New("sales: insufficient stock")
+	ErrQuantityPrecision = errors.New("sales: quantity in the base unit needs more than four decimals")
+	ErrInvalidUnitFactor = errors.New("sales: invalid unit factor")
+	ErrInvalidUnitCode   = errors.New("sales: invalid unit code")
+	ErrUnitNotAvailable  = errors.New("sales: the variant is not sold in that unit")
 )
 
 // InsufficientStockError is ErrInsufficientStock for one variant of the

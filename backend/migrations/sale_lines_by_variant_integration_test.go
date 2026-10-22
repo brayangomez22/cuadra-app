@@ -195,7 +195,10 @@ func TestSaleLinesByVariantMigration(t *testing.T) {
 			}
 		}
 
-		// The repository rebuilds every sale with the amounts it had.
+		// The repository rebuilds every sale with the amounts it had. It reads
+		// the current schema, so the later migrations run first: none of them
+		// changes what a migrated line says.
+		s.MigrateTo(t, variantUnitsAdded)
 		repo := postgres.NewSaleRepository(dbtest.Open(t, s.AppURL))
 		for tenant, sales := range seed.sales {
 			for _, want := range sales {

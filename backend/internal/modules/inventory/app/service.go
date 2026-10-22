@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
@@ -48,6 +49,10 @@ type ProductVariants interface {
 	// ProductsOf returns the product of each of variantIDs that exists in
 	// tenantID; the others are left out.
 	ProductsOf(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
+	// UnitFactor returns how many base units one unitID of the variant
+	// holds; domain.ErrUnitNotAvailable if the variant does not exist in
+	// tenantID or has no such alternate unit.
+	UnitFactor(ctx context.Context, tenantID, variantID, unitID uuid.UUID) (decimal.Decimal, error)
 }
 
 // Service runs the inventory use cases.

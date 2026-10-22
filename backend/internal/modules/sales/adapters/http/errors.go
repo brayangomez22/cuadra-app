@@ -29,6 +29,8 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrInsufficientPayment, Status: http.StatusUnprocessableEntity, Code: "insufficient_payment", Message: "Los pagos no alcanzan para cubrir el total."},
 	{Err: domain.ErrNonCashOverpayment, Status: http.StatusUnprocessableEntity, Code: "non_cash_overpayment", Message: "Solo el efectivo da cambio: los demás pagos no pueden superar el total."},
 	{Err: domain.ErrSaleWithoutLines, Status: http.StatusUnprocessableEntity, Code: "sale_without_lines", Message: "Agregue al menos un producto a la venta."},
+	{Err: domain.ErrUnitNotAvailable, Status: http.StatusUnprocessableEntity, Code: "unit_not_available", Message: "El producto no se vende en esa unidad."},
+	{Err: domain.ErrQuantityPrecision, Status: http.StatusUnprocessableEntity, Code: "quantity_precision", Message: "La cantidad es demasiado pequeña para esa unidad: en la unidad base tendría más de 4 decimales."},
 	{Err: domain.ErrInvalidQuantity, Status: http.StatusUnprocessableEntity, Code: "invalid_quantity", Message: "La cantidad debe ser mayor que cero y tener máximo 4 decimales."},
 	{Err: domain.ErrInvalidDiscount, Status: http.StatusUnprocessableEntity, Code: "invalid_discount", Message: "El descuento no puede ser negativo, tiene máximo 2 decimales y no puede superar el valor de la línea."},
 	{Err: domain.ErrInvalidPaymentAmount, Status: http.StatusUnprocessableEntity, Code: "invalid_payment_amount", Message: "Cada pago debe ser mayor que cero y tener máximo 2 decimales."},

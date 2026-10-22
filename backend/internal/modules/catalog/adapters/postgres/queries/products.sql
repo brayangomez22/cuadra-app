@@ -36,7 +36,7 @@ WHERE (sqlc.narg(active)::boolean IS NULL OR active = sqlc.narg(active))
   AND (sqlc.narg(ids)::uuid[] IS NULL OR id = ANY(sqlc.narg(ids)::uuid[]));
 
 -- SearchProducts matches the exact SKU or barcode of any of a product's
--- variants, or names containing every term (case- and accent-insensitive).
+-- variants (or the barcode of one of their alternate units), or names containing every term (case- and accent-insensitive).
 -- Terms arrive with LIKE wildcards escaped. Exact codes come first, then the
 -- names most similar (pg_trgm) to the whole text.
 -- name: SearchProducts :many
@@ -47,7 +47,9 @@ JOIN units_of_measure u ON u.tenant_id = p.tenant_id AND u.id = p.base_unit_id
 CROSS JOIN LATERAL (
     SELECT EXISTS (
         SELECT 1 FROM product_variants v
-        WHERE v.product_id = p.id AND (v.sku = sqlc.arg(sku) OR v.barcode = sqlc.arg(barcode))
+        WHERE v.product_id = p.id AND (v.sku = sqlc.arg(sku) OR v.barcode = sqlc.arg(barcode)
+                                       OR EXISTS (SELECT 1 FROM variant_units vu
+                                                  WHERE vu.variant_id = v.id AND vu.barcode = sqlc.arg(barcode)))
     ) AS by_code
 ) code
 WHERE (sqlc.narg(active)::boolean IS NULL OR p.active = sqlc.narg(active))
@@ -68,5 +70,7 @@ WHERE (sqlc.narg(active)::boolean IS NULL OR p.active = sqlc.narg(active))
   AND (sqlc.narg(ids)::uuid[] IS NULL OR p.id = ANY(sqlc.narg(ids)::uuid[]))
   AND (EXISTS (
            SELECT 1 FROM product_variants v
-           WHERE v.product_id = p.id AND (v.sku = sqlc.arg(sku) OR v.barcode = sqlc.arg(barcode)))
+           WHERE v.product_id = p.id AND (v.sku = sqlc.arg(sku) OR v.barcode = sqlc.arg(barcode)
+                                          OR EXISTS (SELECT 1 FROM variant_units vu
+                                                     WHERE vu.variant_id = v.id AND vu.barcode = sqlc.arg(barcode))))
        OR p.search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest(sqlc.arg(terms)::text[]) AS term));

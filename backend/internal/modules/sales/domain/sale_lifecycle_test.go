@@ -128,7 +128,7 @@ func snapshotOf(s *domain.Sale) domain.SaleSnapshot {
 		snap.Lines = append(snap.Lines, domain.LineSnapshot{
 			ProductID: l.ProductID(), VariantID: l.VariantID(), ProductName: l.ProductName(),
 			VariantLabel: l.VariantLabel(), Quantity: l.Quantity(), UnitPrice: l.UnitPrice(), TaxRate: l.TaxRate(),
-			Discount: l.Discount(), Gross: l.Gross(), Tax: l.Tax(), PriceRule: l.PriceRule(),
+			Discount: l.Discount(), Gross: l.Gross(), Tax: l.Tax(), PriceRule: l.PriceRule(), Unit: l.Unit(),
 		})
 	}
 	for _, p := range s.Payments() {

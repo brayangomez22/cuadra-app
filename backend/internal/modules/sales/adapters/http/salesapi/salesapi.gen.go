@@ -334,7 +334,8 @@ type PaymentInput struct {
 // PaymentMethod Medio de pago. Solo el efectivo (`cash`) da cambio.
 type PaymentMethod string
 
-// Quantity Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
+// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+// otra unidad (`unit_id`, `unit_code`).
 //
 // Example: 2.5
 type Quantity = string
@@ -375,12 +376,20 @@ type Sale struct {
 
 // SaleLine Una línea vendida: una variante de un producto. `unit_price` es sin IVA, en el momento de la venta, y
 // `price_rule` dice qué regla lo dio. `gross` = cantidad × precio redondeado a 2 decimales; `base` = `gross` −
-// `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales; `total` = `base` + `tax`.
+// `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales; `total` = `base` + `tax`. La cantidad y el
+// precio son en la unidad vendida: `unit_code` si fue una unidad alternativa, o la unidad base del producto.
 type SaleLine struct {
 	// Base Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
 	Base Money `json:"base"`
+
+	// BaseQuantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	BaseQuantity Quantity `json:"base_quantity"`
 
 	// Discount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
@@ -405,7 +414,9 @@ type SaleLine struct {
 	// ProductName Nombre del producto en el momento de la venta.
 	ProductName string `json:"product_name"`
 
-	// Quantity Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
+	// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
 	//
 	// Example: 2.5
 	Quantity Quantity `json:"quantity"`
@@ -424,6 +435,18 @@ type SaleLine struct {
 	//
 	// Example: 12500.00
 	Total Money `json:"total"`
+
+	// UnitCode El código de la unidad alternativa en que se vendió la línea, congelado en la venta. No viene si se vendió
+	// en la unidad base del producto.
+	//
+	//
+	// Example: caja
+	UnitCode *string `json:"unit_code,omitempty"`
+
+	// UnitFactor Cuántas unidades base trae una unidad alternativa, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12
+	UnitFactor UnitFactor `json:"unit_factor"`
 
 	// UnitPrice Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
@@ -447,11 +470,18 @@ type SaleLineInput struct {
 	// Example: 12500.00
 	Discount *Money `json:"discount,omitempty"`
 
-	// Quantity Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
+	// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
 	//
 	// Example: 2.5
-	Quantity  Quantity           `json:"quantity"`
-	VariantId openapi_types.UUID `json:"variant_id"`
+	Quantity Quantity `json:"quantity"`
+
+	// UnitId Una unidad alternativa de la variante en la que se vende la línea (por ejemplo, una caja); `quantity` y el
+	// precio son en esa unidad. Sin ella, la línea es en la unidad base. Si la variante no tiene esa unidad, la
+	// venta se rechaza (`unit_not_available`).
+	UnitId    *openapi_types.UUID `json:"unit_id,omitempty"`
+	VariantId openapi_types.UUID  `json:"variant_id"`
 }
 
 // SalePage defines model for SalePage.
@@ -555,6 +585,11 @@ type TaxBreakdown struct {
 //
 // Example: 0.19
 type TaxRate = string
+
+// UnitFactor Cuántas unidades base trae una unidad alternativa, como decimal en string (hasta 4 decimales).
+//
+// Example: 12
+type UnitFactor = string
 
 // VoidSaleInput defines model for VoidSaleInput.
 type VoidSaleInput struct {

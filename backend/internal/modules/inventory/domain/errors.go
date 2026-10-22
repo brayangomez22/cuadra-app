@@ -28,4 +28,7 @@ var (
 	ErrLocationNotFound  = errors.New("inventory: location not found")
 	ErrLocationNameTaken = errors.New("inventory: location name taken")
 	ErrVariantNotFound   = errors.New("inventory: variant not found")
+	ErrInvalidUnitFactor = errors.New("inventory: invalid unit factor")
+	ErrQuantityPrecision = errors.New("inventory: quantity in the base unit needs more than four decimals")
+	ErrUnitNotAvailable  = errors.New("inventory: the variant has no such alternate unit")
 )

@@ -25,9 +25,12 @@ type LineInput struct {
 	// VariantLabel names the variant ("Rojo · M"); empty for a variant
 	// without axes, as a simple product's.
 	VariantLabel string
-	// Quantity is in the product's base unit; it can be fractional (2.5 m).
+	// Quantity is in Unit; it can be fractional (2.5 m).
 	Quantity decimal.Decimal
-	// UnitPrice is without IVA. A price rule may give it with more than four
+	// Unit is the unit sold: the product's base unit (the zero value) or an
+	// alternate one, whose quantity in the base unit must fit four decimals.
+	Unit LineUnit
+	// UnitPrice is the price of one Unit, without IVA. A price rule may give it with more than four
 	// decimals: the line rounds it, half-up, to the four it stores.
 	UnitPrice decimal.Decimal
 	// PriceRule is the rule that gave UnitPrice.
@@ -53,6 +56,7 @@ type SaleLine struct {
 	productName  string
 	variantLabel string
 	priceRule    PriceRuleID
+	unit         LineUnit
 	quantity     decimal.Decimal
 	unitPrice    decimal.Decimal
 	taxRate      decimal.Decimal
@@ -85,6 +89,13 @@ func newLine(in LineInput, limit DiscountLimit) (SaleLine, error) {
 	if !in.Quantity.IsPositive() || !fitsStorage(in.Quantity) {
 		return SaleLine{}, ErrInvalidQuantity
 	}
+	unit, err := newLineUnit(in.Unit)
+	if err != nil {
+		return SaleLine{}, err
+	}
+	if !fitsStorage(in.Quantity.Mul(unit.Factor)) {
+		return SaleLine{}, ErrQuantityPrecision
+	}
 	unitPrice := in.UnitPrice.Round(amountScale)
 	if !unitPrice.IsPositive() || !fitsStorage(unitPrice) {
 		return SaleLine{}, ErrInvalidUnitPrice
@@ -109,6 +120,7 @@ func newLine(in LineInput, limit DiscountLimit) (SaleLine, error) {
 		productName:  name,
 		variantLabel: label,
 		priceRule:    rule,
+		unit:         unit,
 		quantity:     in.Quantity,
 		unitPrice:    unitPrice,
 		taxRate:      in.TaxRate,
@@ -134,10 +146,10 @@ func (l SaleLine) VariantLabel() string { return l.variantLabel }
 // PriceRule returns the rule that gave the line's unit price.
 func (l SaleLine) PriceRule() PriceRuleID { return l.priceRule }
 
-// Quantity returns the quantity sold, in the product's base unit.
+// Quantity returns the quantity sold, in the line's Unit.
 func (l SaleLine) Quantity() decimal.Decimal { return l.quantity }
 
-// UnitPrice returns the price per unit without IVA.
+// UnitPrice returns the price of one Unit without IVA.
 func (l SaleLine) UnitPrice() decimal.Decimal { return l.unitPrice }
 
 // TaxRate returns the IVA rate as a fraction.

@@ -1,7 +1,7 @@
 # Tienda o minimercado: víveres, bebidas y aseo, muchos por peso.
 name: Tienda o minimercado
 description: Víveres, bebidas, lácteos, aseo y productos de consumo diario.
-modules: []
+modules: [unit_conversions]
 # Tasa de IVA que se propone a un producto nuevo.
 default_tax_rate: "0.19"
 units:

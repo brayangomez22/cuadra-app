@@ -134,7 +134,8 @@ type LocationList struct {
 // Example: 12500.00
 type Money = string
 
-// Quantity Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
+// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+// otra unidad (`unit_id`, `unit_code`).
 //
 // Example: 2.5
 type Quantity = string
@@ -143,7 +144,9 @@ type Quantity = string
 type ReceiptInput struct {
 	LocationId openapi_types.UUID `json:"location_id"`
 
-	// Quantity Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
+	// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
 	//
 	// Example: 2.5
 	Quantity Quantity `json:"quantity"`
@@ -151,8 +154,13 @@ type ReceiptInput struct {
 	// UnitCost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
-	UnitCost  Money              `json:"unit_cost"`
-	VariantId openapi_types.UUID `json:"variant_id"`
+	UnitCost Money `json:"unit_cost"`
+
+	// UnitId Una unidad alternativa de la variante en la que vienen `quantity` y `unit_cost` (por ejemplo, cajas). Sin
+	// ella, vienen en la unidad base. La entrada se guarda convertida a la unidad base: cantidad × factor, a un
+	// costo de costo ÷ factor redondeado a 4 decimales.
+	UnitId    *openapi_types.UUID `json:"unit_id,omitempty"`
+	VariantId openapi_types.UUID  `json:"variant_id"`
 }
 
 // SignedQuantity Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).
@@ -241,7 +249,9 @@ type StockMovementPage struct {
 type TransferInput struct {
 	FromLocationId openapi_types.UUID `json:"from_location_id"`
 
-	// Quantity Cantidad en la unidad base del producto, como decimal en string (hasta 4 decimales).
+	// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
 	//
 	// Example: 2.5
 	Quantity     Quantity           `json:"quantity"`

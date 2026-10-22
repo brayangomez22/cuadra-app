@@ -106,6 +106,9 @@ func newProduct(s ProductSnapshot) (*Product, error) {
 	if err := checkVariants(variants); err != nil {
 		return nil, err
 	}
+	if err := checkUnits(p.baseUnit, variants); err != nil {
+		return nil, err
+	}
 	p.variants = variants
 	return p, nil
 }
@@ -247,6 +250,9 @@ func (p *Product) replaceVariant(i int, v *ProductVariant) error {
 	if err := checkVariants(variants); err != nil {
 		return err
 	}
+	if err := checkUnits(p.baseUnit, variants); err != nil {
+		return err
+	}
 	p.variants = variants
 	return nil
 }
@@ -269,6 +275,9 @@ func (p *Product) AddVariant(params VariantParams, now time.Time) (*ProductVaria
 	}
 	variants := append(slices.Clone(p.variants), v)
 	if err := checkVariants(variants); err != nil {
+		return nil, err
+	}
+	if err := checkUnits(p.baseUnit, variants); err != nil {
 		return nil, err
 	}
 	p.variants = variants
@@ -377,6 +386,9 @@ func (p *Product) UpdateDetails(d ProductDetails) error {
 		CreatedAt:   p.createdAt,
 	})
 	if err != nil {
+		return err
+	}
+	if err := checkUnits(updated.baseUnit, p.variants); err != nil {
 		return err
 	}
 	updated.variants = p.variants

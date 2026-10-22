@@ -25,6 +25,8 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrAdjustmentReasonRequired, Status: http.StatusUnprocessableEntity, Code: "adjustment_reason_required", Message: "Escriba el motivo del ajuste."},
 	{Err: domain.ErrAdjustmentReasonTooLong, Status: http.StatusUnprocessableEntity, Code: "adjustment_reason_too_long", Message: "El motivo del ajuste puede tener máximo 500 caracteres."},
 	{Err: domain.ErrSameLocationTransfer, Status: http.StatusUnprocessableEntity, Code: "same_location_transfer", Message: "La sede de origen y la de destino deben ser distintas."},
+	{Err: domain.ErrUnitNotAvailable, Status: http.StatusUnprocessableEntity, Code: "unit_not_available", Message: "El producto no tiene esa unidad."},
+	{Err: domain.ErrQuantityPrecision, Status: http.StatusUnprocessableEntity, Code: "quantity_precision", Message: "La cantidad es demasiado pequeña para esa unidad: en la unidad base tendría más de 4 decimales."},
 	{Err: domain.ErrInvalidQuantity, Status: http.StatusUnprocessableEntity, Code: "invalid_quantity", Message: "La cantidad no es válida: distinta de cero y con máximo 4 decimales."},
 	{Err: domain.ErrInvalidUnitCost, Status: http.StatusUnprocessableEntity, Code: "invalid_unit_cost", Message: "El costo no puede ser negativo y tiene máximo 4 decimales."},
 	{Err: domain.ErrInvalidLocationName, Status: http.StatusUnprocessableEntity, Code: "invalid_location_name", Message: "Escriba el nombre de la sede (máximo 100 caracteres)."},

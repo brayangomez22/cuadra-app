@@ -272,6 +272,8 @@ type SaleLine struct {
 	VariantID    uuid.UUID
 	VariantLabel *string
 	PriceRule    string
+	UnitCode     *string
+	UnitFactor   decimal.Decimal
 }
 
 type SaleLinesBefore struct {
@@ -381,4 +383,13 @@ type VariantAx struct {
 	Name          string
 	AllowedValues []string
 	CreatedAt     time.Time
+}
+
+type VariantUnit struct {
+	TenantID  uuid.UUID
+	VariantID uuid.UUID
+	UnitID    uuid.UUID
+	Factor    decimal.Decimal
+	Price     decimal.Decimal
+	Barcode   *string
 }

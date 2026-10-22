@@ -77,6 +77,7 @@ func insertSale(ctx context.Context, q *sqlcgen.Queries, snap domain.SaleSnapsho
 			VariantID: l.VariantID, ProductID: l.ProductID, ProductName: l.ProductName, VariantLabel: nonEmpty(l.VariantLabel),
 			Quantity: l.Quantity, UnitPrice: l.UnitPrice, PriceRule: string(l.PriceRule),
 			TaxRate: l.TaxRate, Discount: l.Discount, Gross: l.Gross, Tax: l.Tax,
+			UnitCode: nonEmpty(l.Unit.Code), UnitFactor: l.Unit.Factor,
 		}); err != nil {
 			return err
 		}
@@ -183,6 +184,7 @@ func readSale(ctx context.Context, q *sqlcgen.Queries, row sqlcgen.Sale) (*domai
 			VariantID: l.VariantID, ProductID: l.ProductID, ProductName: l.ProductName, VariantLabel: valueOf(l.VariantLabel),
 			Quantity: l.Quantity, UnitPrice: l.UnitPrice, PriceRule: domain.PriceRuleID(l.PriceRule),
 			TaxRate: l.TaxRate, Discount: l.Discount, Gross: l.Gross, Tax: l.Tax,
+			Unit: domain.LineUnit{Code: valueOf(l.UnitCode), Factor: l.UnitFactor},
 		})
 	}
 	for _, p := range payments {
