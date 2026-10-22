@@ -86,14 +86,15 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
 ## Cómo se trabaja
 
 - Una tarea = una rama (`feat/T05-identity-domain`) = un PR con CI en verde.
+- No se espera el CI: el PR entra solo por auto-merge, y la siguiente `/tarea` espera ese merge antes de crear su rama. Un cambio que solo toca docs del plan viaja en el PR de la tarea siguiente, no en uno aparte.
 - El ciclo de cada tarea:
   ```
   /tarea TXX       → crea la rama, plan, apruebas, tests en rojo, implementación, verificación;
                      deja el resumen del cierre en .git/cierre-tarea.md
   git diff         → revisas tú
   /clear           → el cierre no necesita el contexto de la implementación
-  /cerrar-tarea    → make check, commit, push, PR (desde .git/cierre-tarea.md), espera el CI y,
-                     si pasa completo, merge con squash, borra la rama y vuelve a main actualizada
+  /cerrar-tarea    → make check, commit, push, PR (desde .git/cierre-tarea.md) con auto-merge y
+                     vuelve a main; GitHub hace el merge con squash cuando el CI pasa completo
   /clear           → contexto limpio para la siguiente tarea
   ```
 - **Contexto y uso:** cada paso de Claude Code vuelve a enviar toda la conversación, así que una tarea cuesta más o menos sus pasos multiplicados por el tamaño del contexto. `/tarea` lee por rangos y nunca `docs/decisiones.md` completo; en una tarea larga, `/compact` después de aprobar el plan o con los tests en verde.
