@@ -1,0 +1,51 @@
+@use '@/styles/abstracts' as *;
+
+// The total across, then received and change: the figures the cashier reads aloud.
+.root {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+
+  &:first-child {
+    grid-column: 1 / -1;
+  }
+
+  dd {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    white-space: nowrap;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-default);
+
+    @include numeric;
+  }
+
+  // Not enough yet: warning text on the surface (6.3:1), and the word says it.
+  &[data-tone='missing'] dd {
+    color: var(--color-feedback-warning);
+  }
+
+  &[data-tone='change'] {
+    border-color: var(--color-border-accent);
+    background: var(--color-bg-subtle);
+  }
+}
+
+.figure dd.total {
+  font-size: var(--font-size-3xl);
+}
+
+.figure dd.change {
+  font-size: var(--font-size-2xl);
+}

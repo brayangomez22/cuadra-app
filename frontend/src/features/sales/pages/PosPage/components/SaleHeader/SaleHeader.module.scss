@@ -1,0 +1,9 @@
+@use '@/styles/abstracts' as *;
+
+.location {
+  min-inline-size: min(100%, 16rem);
+}
+
+.cash {
+  color: var(--color-text-muted);
+}

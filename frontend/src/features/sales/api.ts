@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
 import { unwrap } from '@/shared/api/errors';
 import type { components } from '@/shared/api/schema';
+import { inventoryKeys } from '@/features/inventory';
 
 export type Sale = components['schemas']['Sale'];
 export type ConfirmSaleInput = components['schemas']['ConfirmSaleInput'];
@@ -26,8 +27,12 @@ export function useDiscountLimit() {
 }
 
 export function useConfirmSale() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: ConfirmSaleInput) => unwrap(await api.POST('/api/v1/sales', { body })),
+    // The sale took stock: the inventory screens read it again. Not awaited:
+    // the cashier sees the change without waiting for that refetch.
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: inventoryKeys.all }),
   });
 }
 
@@ -37,6 +42,12 @@ export function useCurrentCashSession() {
     queryKey: salesKeys.currentCash,
     queryFn: async () => unwrap(await api.GET('/api/v1/cash-sessions/current')),
   });
+}
+
+/** Reads the user's open cash session again: the POS calls it when the API says the drawer is gone. */
+export function useRefreshCurrentCash() {
+  const queryClient = useQueryClient();
+  return () => void queryClient.invalidateQueries({ queryKey: salesKeys.currentCash });
 }
 
 export function useCashSession(id: string) {

@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { formatDateTime, formatMoney, isZero } from '@/shared/format';
 import type { CashSession } from './api';
 import { movementLabels, resultLabels } from './cash';
-import { methodLabels } from './cart';
+import { methodLabels } from './model/paymentMethods';
 import type { Paper } from './Receipt';
 import styles from './CashReport.module.scss';
 

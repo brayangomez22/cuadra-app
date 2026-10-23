@@ -3,12 +3,7 @@
 // Modules over cuadra/max-lines before the rule existed. Each task of the
 // T26b–T26j block removes the ones of its feature; T26j deletes the list.
 // A file never enters it: split the module instead.
-const legacyLongModules = [
-  'src/features/sales/CartLines.module.scss',
-  'src/features/sales/CheckoutDialog.module.scss',
-  'src/features/sales/PosPage.module.scss',
-  'src/features/sales/Receipt.module.scss',
-];
+const legacyLongModules = ['src/features/sales/Receipt.module.scss'];
 
 /** @type {import('stylelint').Config} */
 export default {

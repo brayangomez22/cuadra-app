@@ -1,0 +1,19 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  gap: var(--space-4);
+}
+
+// Up to a wide screen, one column with the total and "Cobrar" fixed at the
+// bottom. From xl up (the 1366×768 counter monitor), the summary sits on the
+// side and "Cobrar" is always in view.
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+
+  @include respond-to(xl) {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}

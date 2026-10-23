@@ -1,0 +1,12 @@
+@use '@/styles/abstracts' as *;
+
+// Under the product, as wide as its options and never wider than the column.
+.root {
+  align-self: stretch;
+
+  @include respond-to(md) {
+    align-self: flex-start;
+    min-inline-size: 16ch;
+    max-inline-size: 100%;
+  }
+}

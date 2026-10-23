@@ -19,12 +19,6 @@ export const legacy = {
     'max-lines-per-function',
   ],
   'src/features/inventory/StockPage.tsx': ['complexity', 'max-lines', 'max-lines-per-function'],
-  'src/features/sales/CartLines.tsx': [
-    '@typescript-eslint/no-unnecessary-condition',
-    'complexity',
-    'max-lines',
-    'max-lines-per-function',
-  ],
   'src/features/sales/CashPage.test.tsx': ['max-lines'],
   'src/features/sales/CashPage.tsx': [
     '@typescript-eslint/no-misused-promises',
@@ -38,30 +32,9 @@ export const legacy = {
     'complexity',
     'max-lines-per-function',
   ],
-  'src/features/sales/CheckoutDialog.tsx': ['@typescript-eslint/no-deprecated', 'max-lines', 'max-lines-per-function'],
   'src/features/sales/CloseCashPage.tsx': ['@typescript-eslint/no-deprecated', 'max-lines', 'max-lines-per-function'],
-  'src/features/sales/PosPage.test.tsx': [
-    '@typescript-eslint/no-unsafe-member-access',
-    '@typescript-eslint/no-unsafe-return',
-    '@typescript-eslint/unbound-method',
-    'max-lines',
-  ],
-  'src/features/sales/PosPage.tsx': [
-    '@typescript-eslint/no-unnecessary-condition',
-    'complexity',
-    'max-lines',
-    'max-lines-per-function',
-  ],
-  'src/features/sales/ProductSearch.tsx': [
-    '@typescript-eslint/no-deprecated',
-    'complexity',
-    'max-lines',
-    'max-lines-per-function',
-  ],
   'src/features/sales/Receipt.test.tsx': ['max-lines', 'max-params'],
   'src/features/sales/Receipt.tsx': ['max-lines-per-function'],
-  'src/features/sales/cart.test.ts': ['max-lines'],
-  'src/features/sales/cart.ts': ['complexity', 'max-lines'],
   'src/features/settings/AttributesSettings.test.tsx': [
     '@typescript-eslint/no-unsafe-argument',
     '@typescript-eslint/no-unsafe-call',
