@@ -21,7 +21,11 @@ describe('VariantAxesSettings', () => {
 
   it('crea un eje con sus valores, uno por línea', async () => {
     // Droguería: la presentación; papelería usaría el calibre.
-    const created = { id: '01920000-0000-7000-8000-000000000709', name: 'presentación', values: ['Caja x 10', 'Caja x 30'] };
+    const created = {
+      id: '01920000-0000-7000-8000-000000000709',
+      name: 'presentación',
+      values: ['Caja x 10', 'Caja x 30'],
+    };
     const api = axesApi({ 'POST /api/v1/variant-axes': json(201, created) });
     renderApp('/configuracion/ejes');
 
@@ -77,7 +81,9 @@ describe('VariantAxesSettings', () => {
 
     const row = within((await screen.findByRole('cell', { name: 'color' })).closest('tr')!);
     await userEvent.click(row.getByRole('button', { name: 'Borrar color' }));
-    await userEvent.click(within(screen.getByRole('dialog', { name: '¿Borrar el eje color?' })).getByRole('button', { name: 'Borrar' }));
+    await userEvent.click(
+      within(screen.getByRole('dialog', { name: '¿Borrar el eje color?' })).getByRole('button', { name: 'Borrar' }),
+    );
 
     await waitFor(() => expect(api.calls(`DELETE /api/v1/variant-axes/${color.id}`)).toHaveLength(1));
   });

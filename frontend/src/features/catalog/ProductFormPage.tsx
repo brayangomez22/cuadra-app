@@ -51,12 +51,16 @@ import {
 import { skuPrefix } from './variantMatrix';
 import { defaultVariant, hasAxes } from './variants';
 import styles from './ProductFormPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 type VariantField = 'sku' | 'barcode' | 'cost' | 'price';
 
 // Error codes of the API (api/openapi.yaml) that belong to one field. The
 // ones of the default variant go to its row when the product has variants.
-const fieldByErrorCode: Record<string, VariantField | 'name' | 'description' | 'category_id' | 'base_unit_id' | 'tax_rate'> = {
+const fieldByErrorCode: Record<
+  string,
+  VariantField | 'name' | 'description' | 'category_id' | 'base_unit_id' | 'tax_rate'
+> = {
   invalid_sku: 'sku',
   sku_taken: 'sku',
   invalid_barcode: 'barcode',
@@ -168,7 +172,8 @@ function ProductForm({ product, categories, units, definitions, axes, alternateU
       void queryClient.invalidateQueries({ queryKey: catalogKeys.lists });
       toast({ tone: 'success', title: updated.active ? 'Producto activado' : 'Producto desactivado' });
     },
-    onError: (error) => toast({ tone: 'danger', title: 'No pudimos cambiar el estado', description: describeError(error).message }),
+    onError: (error) =>
+      toast({ tone: 'danger', title: 'No pudimos cambiar el estado', description: describeError(error).message }),
   });
 
   // After (de)activating, the page re-renders with the product from the cache.
@@ -248,7 +253,7 @@ function ProductForm({ product, categories, units, definitions, axes, alternateU
     queryClient.setQueryData(catalogKeys.product(saved.id), saved);
     void queryClient.invalidateQueries({ queryKey: catalogKeys.lists });
     toast({ tone: 'success', title: 'Producto guardado', description: saved.name });
-    void navigate('/productos');
+    void navigate(paths.products.list());
   }
 
   return (
@@ -423,7 +428,7 @@ function ProductForm({ product, categories, units, definitions, axes, alternateU
         )}
 
         <div className={styles.footer}>
-          <ButtonLink to="/productos" variant="ghost">
+          <ButtonLink to={paths.products.list()} variant="ghost">
             Cancelar
           </ButtonLink>
           <Button type="submit" size="lg" loading={isSubmitting}>
@@ -464,20 +469,21 @@ function defaults({ product, units, definitions, axes, defaultTaxRate }: Default
     cost: main?.cost ? toDecimalInput(main.cost) : '',
     price: main ? toDecimalInput(main.price) : '',
     attributes: Object.fromEntries(
-      definitions.map((definition) => [definition.key, attributeDefault(definition, product?.attributes[definition.key])]),
+      definitions.map((definition) => [
+        definition.key,
+        attributeDefault(definition, product?.attributes[definition.key]),
+      ]),
     ),
     variants: matrix
-      ? product.variants.map(
-          (variant): VariantRow => ({
-            variantId: variant.id,
-            values: variant.axis_values,
-            sku: variant.sku,
-            barcode: variant.barcode ?? '',
-            cost: variant.cost ? toDecimalInput(variant.cost) : '',
-            price: toDecimalInput(variant.price),
-            active: variant.active,
-          }),
-        )
+      ? product.variants.map((variant): VariantRow => ({
+          variantId: variant.id,
+          values: variant.axis_values,
+          sku: variant.sku,
+          barcode: variant.barcode ?? '',
+          cost: variant.cost ? toDecimalInput(variant.cost) : '',
+          price: toDecimalInput(variant.price),
+          active: variant.active,
+        }))
       : [],
   };
 }

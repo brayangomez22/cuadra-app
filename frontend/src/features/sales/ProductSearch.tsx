@@ -186,7 +186,13 @@ export function ProductSearch({ onAdd, ref }: Props) {
           <p className={styles.message}>No encontramos «{term}» entre los productos activos.</p>
         ) : null}
         {/* The listbox stays in the DOM: aria-controls points to it. */}
-        <ul id={listId} role="listbox" aria-label="Productos encontrados" className={styles.list} hidden={!results?.length}>
+        <ul
+          id={listId}
+          role="listbox"
+          aria-label="Productos encontrados"
+          className={styles.list}
+          hidden={!results?.length}
+        >
           {results?.map(({ product, variant }, index) => (
             <li
               key={variant.id}

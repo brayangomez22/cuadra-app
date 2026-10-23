@@ -4,7 +4,6 @@ import { aUser, fakeApi, json, signedIn } from '@/test/fakeApi';
 import { aCement, aGarment, aProduct, page, plain, query, withoutCost } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 
-
 // Types without pauses between keys, like a fast typist: the debounce sees one word.
 const typeFast = (element: HTMLElement, text: string) => userEvent.setup({ delay: null }).type(element, text);
 
@@ -37,7 +36,10 @@ describe('ProductListPage', () => {
     await typeFast(screen.getByRole('searchbox', { name: 'Buscar' }), 'tubo');
 
     await waitFor(() => expect(screen.queryByRole('row', { name: /Cemento/ })).not.toBeInTheDocument());
-    const searched = api.calls('GET /api/v1/products').map((r) => query(r).get('q')).filter(Boolean);
+    const searched = api
+      .calls('GET /api/v1/products')
+      .map((r) => query(r).get('q'))
+      .filter(Boolean);
     expect(searched).toEqual(['tubo']);
   });
 

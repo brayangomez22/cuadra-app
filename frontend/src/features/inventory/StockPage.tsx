@@ -27,6 +27,7 @@ import {
 import { PAGE_SIZE, useLocations, useStock, type Location, type StockLevel } from './api';
 import { CreateLocationDialog } from './CreateLocationDialog';
 import styles from './StockPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 /** /inventario: the stock of one location (sede), chosen in the URL (?sede=). */
 export function StockPage() {
@@ -34,8 +35,7 @@ export function StockPage() {
   const [params, setParams] = useSearchParams();
   const locations = useLocations();
   const list = locations.data ?? [];
-  const location =
-    list.find((l) => l.id === params.get('sede')) ?? list.find((l) => l.active) ?? list[0];
+  const location = list.find((l) => l.id === params.get('sede')) ?? list.find((l) => l.active) ?? list[0];
   const pageNumber = Math.max(Number(params.get('pagina')) || 1, 1);
   const offset = (pageNumber - 1) * PAGE_SIZE;
 
@@ -46,7 +46,7 @@ export function StockPage() {
   const actions = (
     <>
       {canReceive && location && (
-        <ButtonLink to={`/inventario/entrada?sede=${location.id}`} icon={<IconPlus />}>
+        <ButtonLink to={paths.inventory.receipt({ sede: location.id })} icon={<IconPlus />}>
           Registrar entrada
         </ButtonLink>
       )}
@@ -155,7 +155,7 @@ function LocationStock({ location, offset, canSeeCost, canReceive, onOffsetChang
         description="Cuando registre una entrada de mercancía, aquí verá cuánto hay de cada producto."
         action={
           canReceive && (
-            <ButtonLink to={`/inventario/entrada?sede=${location.id}`} icon={<IconPlus />}>
+            <ButtonLink to={paths.inventory.receipt({ sede: location.id })} icon={<IconPlus />}>
               Registrar entrada
             </ButtonLink>
           )
@@ -203,17 +203,21 @@ function LocationStock({ location, offset, canSeeCost, canReceive, onOffsetChang
 type RowProps = { level: StockLevel; product?: Product; loading: boolean; canSeeCost: boolean };
 
 function StockRow({ level, product, loading, canSeeCost }: RowProps) {
-  const kardex = `/productos/${level.product_id}/kardex?variante=${level.variant_id}&sede=${level.location_id}`;
+  const kardex = paths.inventory.kardex(level.product_id, { variante: level.variant_id, sede: level.location_id });
   const variant = product?.variants.find((v) => v.id === level.variant_id);
   return (
     <TableRow>
       <TableCell>
         {product && variant ? (
-          <TextLink tone="quiet" to={kardex}>{variantName(product.name, variant.label)}</TextLink>
+          <TextLink tone="quiet" to={kardex}>
+            {variantName(product.name, variant.label)}
+          </TextLink>
         ) : loading ? (
           <Skeleton className={styles.nameSkeleton} />
         ) : (
-          <TextLink tone="quiet" to={kardex}>Ver kardex</TextLink>
+          <TextLink tone="quiet" to={kardex}>
+            Ver kardex
+          </TextLink>
         )}
         {variant && <span className={styles.sku}>{variant.sku}</span>}
       </TableCell>

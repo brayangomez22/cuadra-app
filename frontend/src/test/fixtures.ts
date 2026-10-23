@@ -109,7 +109,14 @@ export const axes: VariantAxis[] = [
 
 // The tenant's product attributes, as GET /product-attributes answers them.
 export const attributes: AttributeDefinition[] = [
-  { id: '01920000-0000-7000-8000-000000000801', key: 'marca', label: 'Marca', type: 'text', options: [], required: true },
+  {
+    id: '01920000-0000-7000-8000-000000000801',
+    key: 'marca',
+    label: 'Marca',
+    type: 'text',
+    options: [],
+    required: true,
+  },
   {
     id: '01920000-0000-7000-8000-000000000802',
     key: 'material',
@@ -118,7 +125,14 @@ export const attributes: AttributeDefinition[] = [
     options: ['Algodón', 'PVC'],
     required: false,
   },
-  { id: '01920000-0000-7000-8000-000000000803', key: 'peso', label: 'Peso', type: 'number', options: [], required: false },
+  {
+    id: '01920000-0000-7000-8000-000000000803',
+    key: 'peso',
+    label: 'Peso',
+    type: 'number',
+    options: [],
+    required: false,
+  },
   {
     id: '01920000-0000-7000-8000-000000000804',
     key: 'importado',
@@ -182,7 +196,13 @@ export function aGarment(overrides: Partial<Product> = {}): Product {
 }
 
 /** An alternate unit of a variant: factor base units each, at price before IVA (19 % in price_with_tax). */
-export function aVariantUnit(code: string, factor: string, price: string, priceWithTax: string, barcode?: string): VariantUnit {
+export function aVariantUnit(
+  code: string,
+  factor: string,
+  price: string,
+  priceWithTax: string,
+  barcode?: string,
+): VariantUnit {
   const unit: VariantUnit = { unit: unitOf(code), factor, price, price_with_tax: priceWithTax };
   if (barcode !== undefined) unit.barcode = barcode;
   return unit;

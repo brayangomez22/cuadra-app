@@ -10,6 +10,7 @@ import { BusinessTypeField } from './BusinessTypeField';
 import { signUpSchema, type SignUpValues } from './schemas';
 import { useAuth } from './useAuth';
 import styles from './SignUpPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 // The field each 422 code of POST /auth/signup belongs to (api/openapi.yaml).
 const fieldByErrorCode: Record<string, keyof SignUpValues> = {
@@ -62,7 +63,7 @@ export function SignUpPage() {
       footer={
         <>
           ¿Ya tiene cuenta?{' '}
-          <AuthLink to="/ingresar" state={location.state}>
+          <AuthLink to={paths.login()} state={location.state}>
             Ingrese
           </AuthLink>
         </>

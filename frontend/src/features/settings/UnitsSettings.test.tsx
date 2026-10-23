@@ -86,7 +86,9 @@ describe('UnitsSettings', () => {
 
     await userEvent.click((await row('Bulto')).getByRole('button', { name: 'Borrar Bulto' }));
     expect(api.calls(`DELETE /api/v1/units/${bulto.id}`)).toHaveLength(0);
-    await userEvent.click(within(screen.getByRole('dialog', { name: '¿Borrar la unidad Bulto?' })).getByRole('button', { name: 'Borrar' }));
+    await userEvent.click(
+      within(screen.getByRole('dialog', { name: '¿Borrar la unidad Bulto?' })).getByRole('button', { name: 'Borrar' }),
+    );
 
     await waitFor(() => expect(api.calls(`DELETE /api/v1/units/${bulto.id}`)).toHaveLength(1));
   });

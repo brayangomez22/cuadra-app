@@ -182,6 +182,11 @@ describe('tokens de diseño', () => {
 
   it('la tabla de contraste de docs/estilos.md coincide con los tokens', async () => {
     const doc = await readFile(estilosMd, 'utf8');
-    expect(doc).toContain(contrastTable([['claro', light], ['oscuro', dark]]));
+    expect(doc).toContain(
+      contrastTable([
+        ['claro', light],
+        ['oscuro', dark],
+      ]),
+    );
   });
 });

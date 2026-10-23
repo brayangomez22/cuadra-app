@@ -117,10 +117,7 @@ describe('authFetch', () => {
   });
 
   it('sin token en memoria, si el refresh falla igual cierra la sesión', async () => {
-    const { onEnd, authFetch } = setup(
-      { '/api/v1/me': unauthorized, [REFRESH_PATH]: unauthorized },
-      null,
-    );
+    const { onEnd, authFetch } = setup({ '/api/v1/me': unauthorized, [REFRESH_PATH]: unauthorized }, null);
 
     await authFetch(new Request(`${BASE}/api/v1/me`));
 
@@ -134,10 +131,7 @@ describe('authFetch', () => {
       [REFRESH_PATH]: unauthorized,
     });
 
-    await Promise.all([
-      authFetch(new Request(`${BASE}/api/v1/me`)),
-      authFetch(new Request(`${BASE}/api/v1/products`)),
-    ]);
+    await Promise.all([authFetch(new Request(`${BASE}/api/v1/me`)), authFetch(new Request(`${BASE}/api/v1/products`))]);
 
     expect(onEnd).toHaveBeenCalledOnce();
   });

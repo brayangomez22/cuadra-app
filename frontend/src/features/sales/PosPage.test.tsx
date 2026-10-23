@@ -41,9 +41,8 @@ function search(products: Product[], q: string) {
   const term = q.toLowerCase();
   return products.filter(
     (p) =>
-      p.variants.some(
-        (v) => v.barcode === q || v.sku.toLowerCase() === term || v.units.some((u) => u.barcode === q),
-      ) || p.name.toLowerCase().includes(term),
+      p.variants.some((v) => v.barcode === q || v.sku.toLowerCase() === term || v.units.some((u) => u.barcode === q)) ||
+      p.name.toLowerCase().includes(term),
   );
 }
 
@@ -174,9 +173,7 @@ describe('PosPage', () => {
       await scan(variantBarcode('M', 'Azul'));
 
       expect((await findCartLine('Camiseta básica (Rojo · L)')).getByLabelText(/^Cantidad/)).toHaveValue('1');
-      await waitFor(() =>
-        expect(cartLine('Camiseta básica (Azul · M)').getByLabelText(/^Cantidad/)).toHaveValue('2'),
-      );
+      await waitFor(() => expect(cartLine('Camiseta básica (Azul · M)').getByLabelText(/^Cantidad/)).toHaveValue('2'));
       // 2 × 29.750 + 32.130
       expect(summaryValue('Total')).toBe('$ 91.630');
     });
@@ -209,17 +206,24 @@ describe('PosPage', () => {
 
       await scan(variantBarcode('M', 'Azul'));
 
-      expect(await screen.findByText(new RegExp(`No encontramos «${variantBarcode('M', 'Azul')}»`))).toBeInTheDocument();
+      expect(
+        await screen.findByText(new RegExp(`No encontramos «${variantBarcode('M', 'Azul')}»`)),
+      ).toBeInTheDocument();
       expect(screen.queryByRole('listitem', { name: /Camiseta/ })).not.toBeInTheDocument();
     });
 
     it('insufficient_stock marca la línea de la variante, no las demás del producto', async () => {
       posApi({
         extra: {
-          'POST /api/v1/sales': apiError(409, 'insufficient_stock', 'No hay stock suficiente de Camiseta básica (Azul · M).', {
-            variant_id: variantId('M', 'Azul'),
-            product_id: ids.garment,
-          }),
+          'POST /api/v1/sales': apiError(
+            409,
+            'insufficient_stock',
+            'No hay stock suficiente de Camiseta básica (Azul · M).',
+            {
+              variant_id: variantId('M', 'Azul'),
+              product_id: ids.garment,
+            },
+          ),
         },
       });
       renderApp('/vender');
@@ -388,9 +392,7 @@ describe('PosPage', () => {
       await user().keyboard('{Enter}');
 
       await screen.findByRole('dialog', { name: 'Venta N.º 15' });
-      expect((await posted(api)).payments).toEqual([
-        { method: 'cash', amount: '11900.00' },
-      ]);
+      expect((await posted(api)).payments).toEqual([{ method: 'cash', amount: '11900.00' }]);
     });
 
     it('pago mixto calcula el cambio solo con el efectivo', async () => {
@@ -654,9 +656,7 @@ describe('PosPage', () => {
       await checkout();
       await user().keyboard('{Enter}');
       await screen.findByRole('dialog', { name: 'Venta N.º 15' });
-      expect((await posted(api)).lines).toEqual([
-        { variant_id: ids.pipe, quantity: '1', discount: '5000.00' },
-      ]);
+      expect((await posted(api)).lines).toEqual([{ variant_id: ids.pipe, quantity: '1', discount: '5000.00' }]);
     });
   });
 
@@ -747,7 +747,11 @@ describe('PosPage', () => {
           'GET /api/v1/cash-sessions/current': () => json(200, current),
           'POST /api/v1/sales': () => {
             current = { required: true };
-            return apiError(409, 'cash_session_closed', 'La caja ya está cerrada. Para seguir vendiendo, abra una nueva.');
+            return apiError(
+              409,
+              'cash_session_closed',
+              'La caja ya está cerrada. Para seguir vendiendo, abra una nueva.',
+            );
           },
         },
       });
@@ -859,7 +863,14 @@ describe('PosPage', () => {
     });
 
     it('un pago exacto dice que no hay cambio', async () => {
-      posApi({ extra: { 'POST /api/v1/sales': json(201, aSale({ paid: '11900.00', change: '0.00', payments: [{ method: 'cash', amount: '11900.00' }] })) } });
+      posApi({
+        extra: {
+          'POST /api/v1/sales': json(
+            201,
+            aSale({ paid: '11900.00', change: '0.00', payments: [{ method: 'cash', amount: '11900.00' }] }),
+          ),
+        },
+      });
       renderApp('/vender');
       await scan('TUB-PVC-12');
       await findCartLine(/Tubo PVC/);

@@ -17,7 +17,18 @@ const TEXT_RULES: [RegExp, string][] = [
 ];
 
 // Substrings of keys whose values are never sent.
-const SENSITIVE_KEYS = ['password', 'passwd', 'secret', 'token', 'authorization', 'cookie', 'dsn', 'apikey', 'api_key', 'email'];
+const SENSITIVE_KEYS = [
+  'password',
+  'passwd',
+  'secret',
+  'token',
+  'authorization',
+  'cookie',
+  'dsn',
+  'apikey',
+  'api_key',
+  'email',
+];
 
 // The only request headers kept; the rest may carry credentials or personal data.
 const ALLOWED_HEADERS = new Set(['User-Agent', 'Content-Type', 'Accept']);
@@ -43,9 +54,7 @@ function scrubValue(value: unknown): unknown {
   if (typeof value === 'string') return scrubText(stripQuery(value));
   if (Array.isArray(value)) return value.map(scrubValue);
   if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [k, isSensitiveKey(k) ? FILTERED : scrubValue(v)]),
-    );
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, isSensitiveKey(k) ? FILTERED : scrubValue(v)]));
   }
   return value;
 }

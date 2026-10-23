@@ -72,7 +72,12 @@ export function VariantUnits({ product, units }: Props) {
         {product.variants.map((variant) => {
           const label = byAxes ? variant.label : '';
           return (
-            <div key={variant.id} className={styles.variant} role={byAxes ? 'group' : undefined} aria-label={label || undefined}>
+            <div
+              key={variant.id}
+              className={styles.variant}
+              role={byAxes ? 'group' : undefined}
+              aria-label={label || undefined}
+            >
               {byAxes && <span className={styles.variantLabel}>{label}</span>}
               {variant.units.length === 0 ? (
                 <p className={styles.hint}>Sin unidades de venta: se vende solo por {base}.</p>
@@ -271,7 +276,11 @@ function UnitDialog({ product, variant, unit, units, onClose }: DialogProps) {
             )}
           />
         </Field>
-        <Field label={`Cuántas ${base} trae cada una`} hint="Puede tener decimales: 0,5 o 2,5." error={errors.factor?.message}>
+        <Field
+          label={`Cuántas ${base} trae cada una`}
+          hint="Puede tener decimales: 0,5 o 2,5."
+          error={errors.factor?.message}
+        >
           <Input inputMode="decimal" align="end" autoComplete="off" {...register('factor')} />
         </Field>
         <Field

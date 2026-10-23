@@ -1,8 +1,7 @@
 import type { Breadcrumb, ErrorEvent } from '@sentry/react';
 import { scrubBreadcrumb, scrubEvent } from './scrub';
 
-const jwt =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTkyIn0.Sfl-KxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTkyIn0.Sfl-KxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
 const refreshToken = '0192f0a1-1234-7abc-8def-0123456789ab.q3J0Zm9vYmFyYmF6cXV4cXV1eGNvcmdlZ3JhdWx0YWJj';
 
 // expectGone fails if any of the values survived anywhere in the scrubbed object.
@@ -83,7 +82,12 @@ describe('scrubEvent', () => {
   it('deja user.id pero borra email, username e IP', () => {
     const event = scrubEvent({
       type: undefined,
-      user: { id: '0192f0a1-1234-7abc-8def-0123456789ab', email: 'ana@correo.com', username: 'ana', ip_address: '181.50.10.20' },
+      user: {
+        id: '0192f0a1-1234-7abc-8def-0123456789ab',
+        email: 'ana@correo.com',
+        username: 'ana',
+        ip_address: '181.50.10.20',
+      },
     });
 
     expect(event.user).toEqual({ id: '0192f0a1-1234-7abc-8def-0123456789ab' });
@@ -92,7 +96,9 @@ describe('scrubEvent', () => {
   it('filtra los breadcrumbs que vienen dentro del evento', () => {
     const event = scrubEvent({
       type: undefined,
-      breadcrumbs: [{ message: 'login de ana@correo.com', data: { url: `/api/v1/me?access=${jwt}`, status_code: 401 } }],
+      breadcrumbs: [
+        { message: 'login de ana@correo.com', data: { url: `/api/v1/me?access=${jwt}`, status_code: 401 } },
+      ],
     });
 
     expectGone(event, ['ana@correo.com', jwt]);

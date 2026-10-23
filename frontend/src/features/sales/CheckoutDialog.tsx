@@ -100,11 +100,12 @@ export function CheckoutDialog({
       description={sale ? 'La venta quedó registrada.' : 'Con un solo pago en efectivo vacío se cobra el valor exacto.'}
     >
       {/* Mounted per opening: every charge starts with one empty cash payment. */}
-      {open && (sale ? (
-        <SaleDone sale={sale} onNewSale={onNewSale} paper={paper} onPaperChange={onPaperChange} onPrint={onPrint} />
-      ) : (
-        <PaymentsForm total={total} onConfirm={onConfirm} pending={pending} error={error} />
-      ))}
+      {open &&
+        (sale ? (
+          <SaleDone sale={sale} onNewSale={onNewSale} paper={paper} onPaperChange={onPaperChange} onPrint={onPrint} />
+        ) : (
+          <PaymentsForm total={total} onConfirm={onConfirm} pending={pending} error={error} />
+        ))}
     </Dialog>
   );
 }
@@ -173,7 +174,14 @@ function PaymentsForm({ total, onConfirm, pending, error }: Pick<Props, 'total' 
           const n = index + 1;
           return (
             <div key={row.key} className={styles.payment}>
-              <Field className={styles.method} label={<>Medio de pago <span className="srOnly">{n}</span></>}>
+              <Field
+                className={styles.method}
+                label={
+                  <>
+                    Medio de pago <span className="srOnly">{n}</span>
+                  </>
+                }
+              >
                 <Select
                   options={methodOptions}
                   value={row.method}
@@ -182,7 +190,11 @@ function PaymentsForm({ total, onConfirm, pending, error }: Pick<Props, 'total' 
               </Field>
               <Field
                 className={styles.amount}
-                label={<>Valor <span className="srOnly">del pago {n}</span></>}
+                label={
+                  <>
+                    Valor <span className="srOnly">del pago {n}</span>
+                  </>
+                }
                 error={submitted ? read[index]?.error : undefined}
               >
                 <Input

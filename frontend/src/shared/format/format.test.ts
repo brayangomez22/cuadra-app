@@ -1,5 +1,12 @@
 import { plain } from '@/test/fixtures';
-import { formatDateTime, formatMoney, formatPercent, formatQuantity, parseDecimalInput, parseMoneyInput } from './format';
+import {
+  formatDateTime,
+  formatMoney,
+  formatPercent,
+  formatQuantity,
+  parseDecimalInput,
+  parseMoneyInput,
+} from './format';
 
 describe('formatMoney', () => {
   it.each([

@@ -34,7 +34,11 @@ export function Button({
       aria-busy={loading || undefined}
       {...rest}
     >
-      {loading ? <Spinner size="sm" decorative className={styles.icon} /> : icon && <span className={styles.icon}>{icon}</span>}
+      {loading ? (
+        <Spinner size="sm" decorative className={styles.icon} />
+      ) : (
+        icon && <span className={styles.icon}>{icon}</span>
+      )}
       <span className={styles.label}>{children}</span>
     </button>
   );

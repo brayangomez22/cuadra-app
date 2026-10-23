@@ -52,7 +52,14 @@ const UNITS = [
 // a long name, a fractional quantity, thousands and a sold-out product.
 const STOCK = [
   { sku: 'ACE-500', name: 'Acetaminofén 500 mg × 10 tabletas', unit: 'caja', qty: '12', price: '$ 4.900', state: 'ok' },
-  { sku: 'CAB-12', name: 'Cable eléctrico 12 AWG THHN rojo, se vende por metro', unit: 'm', qty: '2,5', price: '$ 3.450', state: 'low' },
+  {
+    sku: 'CAB-12',
+    name: 'Cable eléctrico 12 AWG THHN rojo, se vende por metro',
+    unit: 'm',
+    qty: '2,5',
+    price: '$ 3.450',
+    state: 'low',
+  },
   { sku: 'CUA-100', name: 'Cuaderno cuadriculado 100 hojas', unit: 'und', qty: '1.240', price: '$ 3.200', state: 'ok' },
   { sku: 'TEN-38', name: 'Tenis de lona blancos (38)', unit: 'par', qty: '0', price: '$ 89.900', state: 'out' },
 ] as const;
@@ -73,7 +80,9 @@ export function UiCatalogPage() {
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Componentes base</h1>
-          <p className={styles.lead}>Catálogo interno de <code>shared/ui</code>. Solo existe en desarrollo.</p>
+          <p className={styles.lead}>
+            Catálogo interno de <code>shared/ui</code>. Solo existe en desarrollo.
+          </p>
         </div>
         <Field label="Tema" className={styles.theme}>
           <Select
@@ -167,11 +176,7 @@ export function UiCatalogPage() {
           </TableHead>
           <TableBody>
             {STOCK.map((item) => (
-              <TableRow
-                key={item.sku}
-                selected={item.sku === selectedSku}
-                onClick={() => setSelectedSku(item.sku)}
-              >
+              <TableRow key={item.sku} selected={item.sku === selectedSku} onClick={() => setSelectedSku(item.sku)}>
                 <TableCell>{item.sku}</TableCell>
                 <TableCell>{item.name}</TableCell>
                 <TableCell>{item.unit}</TableCell>
@@ -286,7 +291,9 @@ export function UiCatalogPage() {
         <Row>
           <Button
             variant="secondary"
-            onClick={() => toast({ tone: 'success', title: 'Venta guardada', description: 'Factura FE-1024 por $ 128.400' })}
+            onClick={() =>
+              toast({ tone: 'success', title: 'Venta guardada', description: 'Factura FE-1024 por $ 128.400' })
+            }
           >
             Éxito
           </Button>
@@ -304,7 +311,13 @@ export function UiCatalogPage() {
           </Button>
           <Button
             variant="secondary"
-            onClick={() => toast({ tone: 'warning', title: 'Sin conexión', description: 'La venta se enviará al volver la conexión.' })}
+            onClick={() =>
+              toast({
+                tone: 'warning',
+                title: 'Sin conexión',
+                description: 'La venta se enviará al volver la conexión.',
+              })
+            }
           >
             Advertencia
           </Button>

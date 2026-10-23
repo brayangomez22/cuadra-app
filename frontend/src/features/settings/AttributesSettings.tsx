@@ -61,7 +61,8 @@ const schema = z
   .superRefine((values, ctx) => {
     if (values.type !== 'list') return;
     const options = parseLines(values.options);
-    if (options.length === 0) ctx.addIssue({ code: 'custom', path: ['options'], message: 'Escriba al menos una opción' });
+    if (options.length === 0)
+      ctx.addIssue({ code: 'custom', path: ['options'], message: 'Escriba al menos una opción' });
     else if (options.length > 100) ctx.addIssue({ code: 'custom', path: ['options'], message: 'Máximo 100 opciones' });
     else if (options.some((option) => option.length > 100)) {
       ctx.addIssue({ code: 'custom', path: ['options'], message: 'Cada opción puede tener máximo 100 caracteres' });
@@ -253,7 +254,9 @@ function AttributeDialog({ attribute, onClose }: DialogProps) {
         </Field>
         <Field
           label="Clave"
-          hint={editing ? undefined : 'Minúsculas, sin tildes ni espacios: principio_activo. No se puede cambiar después.'}
+          hint={
+            editing ? undefined : 'Minúsculas, sin tildes ni espacios: principio_activo. No se puede cambiar después.'
+          }
           error={errors.key?.message}
         >
           <Input autoComplete="off" spellCheck={false} readOnly={Boolean(editing)} {...register('key')} />

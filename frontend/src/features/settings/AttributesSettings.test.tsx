@@ -94,7 +94,10 @@ describe('AttributesSettings', () => {
   it('al editar, la clave y el tipo no cambian y se envían la etiqueta, las opciones y si es obligatorio', async () => {
     const material = attributes[1]!;
     const api = attributesApi({
-      [`PUT /api/v1/product-attributes/${material.id}`]: json(200, { ...material, options: ['Algodón', 'PVC', 'Cobre'] }),
+      [`PUT /api/v1/product-attributes/${material.id}`]: json(200, {
+        ...material,
+        options: ['Algodón', 'PVC', 'Cobre'],
+      }),
     });
     renderApp('/configuracion/atributos');
 
@@ -137,12 +140,16 @@ describe('AttributesSettings', () => {
 
   it('borra un atributo después de confirmar', async () => {
     const weight = attributes[2]!;
-    const api = attributesApi({ [`DELETE /api/v1/product-attributes/${weight.id}`]: new Response(null, { status: 204 }) });
+    const api = attributesApi({
+      [`DELETE /api/v1/product-attributes/${weight.id}`]: new Response(null, { status: 204 }),
+    });
     renderApp('/configuracion/atributos');
 
     const row = within((await screen.findByRole('cell', { name: 'Peso' })).closest('tr')!);
     await userEvent.click(row.getByRole('button', { name: 'Borrar Peso' }));
-    await userEvent.click(within(screen.getByRole('dialog', { name: '¿Borrar el atributo Peso?' })).getByRole('button', { name: 'Borrar' }));
+    await userEvent.click(
+      within(screen.getByRole('dialog', { name: '¿Borrar el atributo Peso?' })).getByRole('button', { name: 'Borrar' }),
+    );
 
     await waitFor(() => expect(api.calls(`DELETE /api/v1/product-attributes/${weight.id}`)).toHaveLength(1));
   });

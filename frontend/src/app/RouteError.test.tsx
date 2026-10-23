@@ -42,7 +42,9 @@ describe('RouteError', () => {
     renderBroken();
 
     await screen.findByRole('heading', { name: 'Algo salió mal' });
-    expect(Sentry.captureException).toHaveBeenCalledWith(expect.objectContaining({ message: 'Cannot read properties of undefined' }));
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Cannot read properties of undefined' }),
+    );
   });
 
   it('una dirección que no existe muestra que no se encontró y no la reporta', async () => {

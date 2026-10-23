@@ -18,7 +18,10 @@ export function SettingsLayout() {
   }, [pathname]);
 
   return (
-    <Page title="Configuración" description="Cómo trabaja su negocio en Cuadra: unidades, campos de producto y módulos.">
+    <Page
+      title="Configuración"
+      description="Cómo trabaja su negocio en Cuadra: unidades, campos de producto y módulos."
+    >
       <div className={styles.root}>
         <nav ref={nav} aria-label="Secciones de configuración" className={styles.nav}>
           <ul className={styles.list}>

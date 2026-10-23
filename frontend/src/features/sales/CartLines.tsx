@@ -1,19 +1,9 @@
-import { useEffect, useRef, type Dispatch, type KeyboardEvent } from "react";
-import { variantName } from "@/features/catalog";
-import { formatMoney, formatQuantity, isZero } from "@/shared/format";
-import {
-  Badge,
-  EmptyState,
-  Field,
-  IconAlert,
-  IconButton,
-  IconCart,
-  IconClose,
-  Input,
-  Select,
-} from "@/shared/ui";
-import { lineKey, lineUnit, type CartAction, type CartLine, type CartTotals } from "./cart";
-import styles from "./CartLines.module.scss";
+import { useEffect, useRef, type Dispatch, type KeyboardEvent } from 'react';
+import { variantName } from '@/features/catalog';
+import { formatMoney, formatQuantity, isZero } from '@/shared/format';
+import { Badge, EmptyState, Field, IconAlert, IconButton, IconCart, IconClose, Input, Select } from '@/shared/ui';
+import { lineKey, lineUnit, type CartAction, type CartLine, type CartTotals } from './cart';
+import styles from './CartLines.module.scss';
 
 type Props = {
   totals: CartTotals;
@@ -34,15 +24,7 @@ type Props = {
  * The lines of the sale in progress, the newest last. Quantity and discount
  * are edited in place; Enter in either goes back to the search.
  */
-export function CartLines({
-  totals,
-  dispatch,
-  showDiscount,
-  outOfStock,
-  added,
-  alternateUnits,
-  onDone,
-}: Props) {
+export function CartLines({ totals, dispatch, showDiscount, outOfStock, added, alternateUnits, onDone }: Props) {
   const lines = useRef(new Map<string, HTMLLIElement>());
 
   // On a phone or at 200% zoom the added line can be off screen: bring it in,
@@ -50,8 +32,7 @@ export function CartLines({
   const addedSeq = added?.seq;
   const addedId = added?.key;
   useEffect(() => {
-    if (addedId)
-      lines.current.get(addedId)?.scrollIntoView?.({ block: "nearest" });
+    if (addedId) lines.current.get(addedId)?.scrollIntoView?.({ block: 'nearest' });
   }, [addedId, addedSeq]);
 
   if (totals.lines.length === 0) {
@@ -66,7 +47,7 @@ export function CartLines({
   }
 
   const backToSearch = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== "Enter") return;
+    if (event.key !== 'Enter') return;
     event.preventDefault();
     onDone();
   };
@@ -94,26 +75,21 @@ export function CartLines({
             }}
             className={styles.line}
             aria-label={name}
-            data-state={noStock ? "error" : isAdded ? "added" : undefined}
+            data-state={noStock ? 'error' : isAdded ? 'added' : undefined}
           >
             <div className={styles.product}>
-              <span className={styles.name}>
-                {variantName(item.name, item.label)}
-              </span>
+              <span className={styles.name}>{variantName(item.name, item.label)}</span>
               <span className={styles.meta}>
                 {item.sku} · {formatMoney(unit.priceWithTax)} / {unit.code}
               </span>
               {alternateUnits && item.units.length > 0 && (
-                <Field
-                  className={styles.unit}
-                  label={<>Unidad {forProduct}</>}
-                >
+                <Field className={styles.unit} label={<>Unidad {forProduct}</>}>
                   <Select
                     options={unitOptions(line)}
                     value={line.unitId ?? BASE_UNIT}
                     onValueChange={(value) => {
                       dispatch({
-                        type: "setUnit",
+                        type: 'setUnit',
                         ...ref,
                         next: value === BASE_UNIT ? undefined : value,
                       });
@@ -123,20 +99,12 @@ export function CartLines({
                 </Field>
               )}
               {noStock && (
-                <Badge
-                  tone="danger"
-                  icon={<IconAlert />}
-                  className={styles.badge}
-                >
+                <Badge tone="danger" icon={<IconAlert />} className={styles.badge}>
                   Sin stock suficiente
                 </Badge>
               )}
             </div>
-            <Field
-              className={styles.quantity}
-              label={<>Cantidad {forProduct}</>}
-              error={quantityError}
-            >
+            <Field className={styles.quantity} label={<>Cantidad {forProduct}</>} error={quantityError}>
               <Input
                 align="end"
                 inputMode="decimal"
@@ -144,7 +112,7 @@ export function CartLines({
                 value={line.quantity}
                 onChange={(event) =>
                   dispatch({
-                    type: "setQuantity",
+                    type: 'setQuantity',
                     ...ref,
                     text: event.target.value,
                   })
@@ -157,8 +125,7 @@ export function CartLines({
                 className={styles.discount}
                 label={
                   <>
-                    <span className={styles.discountLabel}>Descuento %</span>{" "}
-                    {forProduct}
+                    <span className={styles.discountLabel}>Descuento %</span> {forProduct}
                   </>
                 }
                 error={discountError}
@@ -171,7 +138,7 @@ export function CartLines({
                   value={line.discount}
                   onChange={(event) =>
                     dispatch({
-                      type: "setDiscount",
+                      type: 'setDiscount',
                       ...ref,
                       text: event.target.value,
                     })
@@ -182,16 +149,12 @@ export function CartLines({
             )}
             <div className={styles.amount}>
               {amounts ? (
-                <span className={styles.total}>
-                  {formatMoney(amounts.total)}
-                </span>
+                <span className={styles.total}>{formatMoney(amounts.total)}</span>
               ) : (
                 <span className={styles.meta}>Sin total</span>
               )}
               {amounts && !isZero(amounts.discount) && (
-                <span className={styles.meta}>
-                  −{formatMoney(amounts.discount)} antes de IVA
-                </span>
+                <span className={styles.meta}>−{formatMoney(amounts.discount)} antes de IVA</span>
               )}
             </div>
             <IconButton
@@ -199,7 +162,7 @@ export function CartLines({
               label={`Quitar ${name}`}
               icon={<IconClose />}
               onClick={() => {
-                dispatch({ type: "remove", ...ref });
+                dispatch({ type: 'remove', ...ref });
                 onDone();
               }}
             />
@@ -211,7 +174,7 @@ export function CartLines({
 }
 
 // The Select's value for the product's unit: a unit id is never empty.
-const BASE_UNIT = "base";
+const BASE_UNIT = 'base';
 
 // unitOptions offers the product's unit and each alternate one with what it
 // holds: "caja (12 und)".

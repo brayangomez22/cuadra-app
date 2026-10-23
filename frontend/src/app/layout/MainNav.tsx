@@ -2,6 +2,7 @@ import { NavLink } from 'react-router';
 import { visibleItems, type Access } from '@/features/auth';
 import { navItems } from './navItems';
 import styles from './MainNav.module.scss';
+import { paths } from '../routes/paths';
 
 type Props = {
   access: Access;
@@ -17,7 +18,7 @@ export function MainNav({ access, onNavigate }: Props) {
         {items.map(({ to, label, icon: Icon }) => (
           <li key={to}>
             {/* NavLink marks the current page with aria-current="page". */}
-            <NavLink to={to} end={to === '/'} className={styles.link} onClick={onNavigate}>
+            <NavLink to={to} end={to === paths.home()} className={styles.link} onClick={onNavigate}>
               <Icon className={styles.icon} />
               <span className={styles.label}>{label}</span>
             </NavLink>

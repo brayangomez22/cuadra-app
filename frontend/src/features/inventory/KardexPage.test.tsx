@@ -16,7 +16,6 @@ import {
 } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 
-
 const movements = [
   aMovement({
     id: '01920000-0000-7000-8000-000000000403',
@@ -90,10 +89,7 @@ describe('KardexPage', () => {
     kardexApi({
       ...signedIn(aUser('warehouse')),
       [`GET /api/v1/products/${ids.pipe}`]: json(200, withoutCost(aProduct())),
-      [`GET /api/v1/variants/${ids.pipe}/kardex`]: json(
-        200,
-        page(movements.map(withoutCosts)),
-      ),
+      [`GET /api/v1/variants/${ids.pipe}/kardex`]: json(200, page(movements.map(withoutCosts))),
     });
     renderApp(`/productos/${ids.pipe}/kardex`);
 
@@ -131,7 +127,10 @@ describe('KardexPage', () => {
     function garmentApi() {
       return kardexApi({
         [`GET /api/v1/products/${ids.garment}`]: json(200, aGarment()),
-        [`GET /api/v1/variants/${variantId('M', 'Azul')}/kardex`]: json(200, page([aMovement({ variant_id: variantId('M', 'Azul') })])),
+        [`GET /api/v1/variants/${variantId('M', 'Azul')}/kardex`]: json(
+          200,
+          page([aMovement({ variant_id: variantId('M', 'Azul') })]),
+        ),
         [`GET /api/v1/variants/${variantId('L', 'Rojo')}/kardex`]: json(200, page([])),
       });
     }
@@ -143,7 +142,9 @@ describe('KardexPage', () => {
       expect(await screen.findByRole('heading', { level: 1, name: 'Camiseta básica (Azul · M)' })).toBeInTheDocument();
       await screen.findByRole('table', { name: 'Movimientos de Camiseta básica (Azul · M)' });
       expect(screen.getByRole('combobox', { name: 'Variante' })).toHaveTextContent('Azul · M');
-      expect(query(api.calls(`GET /api/v1/variants/${variantId('M', 'Azul')}/kardex`)[0]!).get('location_id')).toBe(ids.main);
+      expect(query(api.calls(`GET /api/v1/variants/${variantId('M', 'Azul')}/kardex`)[0]!).get('location_id')).toBe(
+        ids.main,
+      );
       expect(screen.getByRole('link', { name: 'Registrar entrada' })).toHaveAttribute(
         'href',
         `/inventario/entrada?producto=${ids.garment}&variante=${variantId('M', 'Azul')}&sede=${ids.main}`,
@@ -170,7 +171,9 @@ describe('KardexPage', () => {
       await userEvent.click(screen.getByRole('combobox', { name: 'Variante' }));
       await userEvent.click(await screen.findByRole('option', { name: 'Rojo · L' }));
 
-      expect(await screen.findByRole('heading', { name: 'Esta variante aún no tiene movimientos' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Esta variante aún no tiene movimientos' }),
+      ).toBeInTheDocument();
       expect(api.calls(`GET /api/v1/variants/${variantId('L', 'Rojo')}/kardex`)).toHaveLength(1);
       expect(router.state.location.search).toBe(`?variante=${variantId('L', 'Rojo')}`);
     });

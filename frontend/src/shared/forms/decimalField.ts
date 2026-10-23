@@ -29,10 +29,7 @@ export function readDecimal(
   if (text.trim() === '') return { error: messages.empty };
   const parsed = parseDecimalInput(text);
   if (!parsed.ok) return { error: reasons[parsed.reason](text) };
-  if (
-    (min !== 'any' && isNegative(parsed.value)) ||
-    (min === 'positive' && isZero(parsed.value))
-  ) {
+  if ((min !== 'any' && isNegative(parsed.value)) || (min === 'positive' && isZero(parsed.value))) {
     return { error: messages.belowMin };
   }
   return { value: parsed.value };

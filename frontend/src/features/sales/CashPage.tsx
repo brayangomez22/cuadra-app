@@ -28,6 +28,7 @@ import { useCurrentCashSession, useOpenCashSession, type CashSession } from './a
 import { moneyField, movementLabels, type CashMovementKind } from './cash';
 import { CashMovementDialog } from './CashMovementDialog';
 import styles from './CashPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 const title = 'Caja';
 
@@ -110,7 +111,7 @@ function OpenForm({ locations }: { locations: { value: string; label: string }[]
     setFormError(undefined);
     open.mutate(values, {
       // Opening the drawer is the step before selling.
-      onSuccess: () => navigate('/vender'),
+      onSuccess: () => navigate(paths.sales.pos()),
       onError: (error) => setFormError(describeError(error).message),
     });
   }
@@ -159,7 +160,7 @@ function OpenSession({ session, locationName }: { session: CashSession; location
       title={title}
       description="Registre aquí el efectivo que entra o sale del cajón sin ser una venta."
       actions={
-        <ButtonLink to="/caja/cerrar" size="lg">
+        <ButtonLink to={paths.sales.closeCash()} size="lg">
           Cerrar caja
         </ButtonLink>
       }

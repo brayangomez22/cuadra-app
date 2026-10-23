@@ -12,7 +12,12 @@ type TableProps = ComponentProps<'table'> & {
 // The container is focusable so keyboard users can scroll it too.
 export function Table({ caption, showCaption = false, className, children, ...rest }: TableProps) {
   return (
-    <div className={clsx(styles.root, className)} tabIndex={0} role="group" aria-label={typeof caption === 'string' ? caption : undefined}>
+    <div
+      className={clsx(styles.root, className)}
+      tabIndex={0}
+      role="group"
+      aria-label={typeof caption === 'string' ? caption : undefined}
+    >
       <table className={styles.table} {...rest}>
         <caption className={showCaption ? styles.caption : 'srOnly'}>{caption}</caption>
         {children}
@@ -39,7 +44,9 @@ export function TableRow({ selected, className, ...rest }: RowProps) {
 type CellProps<T> = T & { numeric?: boolean };
 
 export function TableHeaderCell({ numeric, scope = 'col', className, ...rest }: CellProps<ComponentProps<'th'>>) {
-  return <th scope={scope} className={clsx(styles.headerCell, className)} data-numeric={numeric || undefined} {...rest} />;
+  return (
+    <th scope={scope} className={clsx(styles.headerCell, className)} data-numeric={numeric || undefined} {...rest} />
+  );
 }
 
 export function TableCell({ numeric, className, ...rest }: CellProps<ComponentProps<'td'>>) {

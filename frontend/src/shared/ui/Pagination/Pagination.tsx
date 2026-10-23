@@ -30,7 +30,11 @@ export function Pagination({ label, total, limit, offset, onOffsetChange, classN
       </p>
       {!single && (
         <div className={styles.buttons}>
-          <Button variant="secondary" disabled={offset === 0} onClick={() => onOffsetChange(Math.max(offset - limit, 0))}>
+          <Button
+            variant="secondary"
+            disabled={offset === 0}
+            onClick={() => onOffsetChange(Math.max(offset - limit, 0))}
+          >
             Anterior
           </Button>
           <Button variant="secondary" disabled={last >= total} onClick={() => onOffsetChange(offset + limit)}>

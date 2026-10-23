@@ -1,4 +1,5 @@
 import type { Gated } from '@/features/auth';
+import { paths } from '@/app/routes/paths';
 
 export type Section = Gated & { to: string; label: string };
 
@@ -6,9 +7,9 @@ export type Section = Gated & { to: string; label: string };
 // its modules are the owner's (tenant:manage); the catalog's, of whoever
 // edits it (catalog:write). The variant axes belong to the variants module.
 export const sections: Section[] = [
-  { to: '/configuracion/general', label: 'General', permission: 'tenant:manage' },
-  { to: '/configuracion/unidades', label: 'Unidades', permission: 'catalog:write' },
-  { to: '/configuracion/atributos', label: 'Atributos', permission: 'catalog:write' },
-  { to: '/configuracion/ejes', label: 'Ejes de variante', permission: 'catalog:write', module: 'variants' },
-  { to: '/configuracion/modulos', label: 'Módulos', permission: 'tenant:manage' },
+  { to: paths.settings.general(), label: 'General', permission: 'tenant:manage' },
+  { to: paths.settings.units(), label: 'Unidades', permission: 'catalog:write' },
+  { to: paths.settings.attributes(), label: 'Atributos', permission: 'catalog:write' },
+  { to: paths.settings.variantAxes(), label: 'Ejes de variante', permission: 'catalog:write', module: 'variants' },
+  { to: paths.settings.modules(), label: 'Módulos', permission: 'tenant:manage' },
 ];

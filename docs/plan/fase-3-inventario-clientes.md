@@ -17,6 +17,96 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Alcance:** con el módulo `unit_conversions` activo (`modules` de `/me`): en el formulario de producto, una sección "Unidades de venta" por variante (unidad del tenant, "1 caja = 12 und", precio sin IVA con la sugerencia proporcional al precio de la base y código de barras opcional) con `PUT`/`DELETE …/variants/{variantId}/units/{unitId}`; en el POS, un selector de unidad en la línea del carrito cuando la variante tiene unidades alternativas, el precio y el total de la unidad elegida, y el escaneo del código de barras de una unidad agrega la línea en esa unidad (`unit_id`); la tirilla y el detalle de la venta muestran `unit_code` (o la unidad base); la pantalla de entradas de inventario permite elegir la unidad. Sin el módulo, nada de esto aparece y las líneas se venden en la unidad base.
 **Tests primero:** el selector cambia el precio y el total de la línea; escanear el código de una caja agrega una línea de 1 caja; una venta en unidad alternativa envía `unit_id`; la sección de unidades no aparece sin el módulo; la tirilla muestra "0,5 rollo"; casos de ferretería (caja, rollo) y de almacén de ropa (paquete).
 
+### Bloque T26b–T26j · Refactor del frontend: archivos pequeños, legibles y lógica reutilizable
+
+Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos en el mismo nivel, `ProductFormPage.tsx` tiene 533 líneas y `PosPage.test.tsx` 965, y la misma lógica se repite pantalla por pantalla (errores de la API a campos del formulario, estados de carga, error y vacío, secciones de configuración casi idénticas). El bloque reorganiza todo antes de seguir construyendo pantallas (decisión del 2026-10-23).
+
+**Reglas de todo el bloque**
+- **No cambian el comportamiento ni la apariencia.** Los tests existentes son la red de seguridad: se mueven y se dividen, pero sus aserciones no cambian en el mismo PR. Si un test tiene que cambiar, el plan de la tarea lo justifica.
+- Lo nuevo y reutilizable (hooks, utilidades, componentes) se escribe con tests primero. Una abstracción se extrae solo cuando hay al menos dos usos reales.
+- Lo mejorable que no sea reorganizar (bugs, UX, copy) va a `pendientes.md` y no se arregla aquí.
+- Definición de terminado: `npm test`, `npm run lint`, `npm run lint:styles`, los E2E de Playwright y `make check` en verde. Cada tarea borra de la lista de excepciones de ESLint los archivos de su feature, mueve sus fixtures y mocks de la API a su `testing/` (con helpers como `catalogApi.products([...])`) y adopta el kit de T26c (incluidos `Stack` e `Inline`) donde aplique.
+
+### [x] T26b · Convención del frontend y guardas
+**Alcance:**
+1. **`docs/frontend.md`**, la convención, con un ejemplo real del antes y el después. Se resume en `CLAUDE.md` (sección "Frontend: estructura y tamaño", junto a "UI y estilos"):
+   ```
+   features/<feature>/
+     README.md            # qué hace la feature, sus páginas y su API pública (≤ 30 líneas)
+     index.ts             # API pública: lo único que importan otras features y el router
+     api/                 # keys.ts, types.ts y un archivo por recurso (queries y mutations)
+     model/               # lógica pura sin React, con sus tests (cart/, variantMatrix.ts...)
+     hooks/               # hooks compartidos dentro de la feature
+     components/<Nombre>/ # componentes compartidos dentro de la feature
+     pages/<NombrePage>/
+       NombrePage.tsx               # carga datos y compone; no decide reglas
+       NombrePage.module.scss
+       NombrePage.<escenario>.test.tsx
+       components/<Sección>/        # piezas que solo usa esa página (tsx + module.scss + test)
+       hooks/                       # useXxx con el estado y los efectos de la página
+     testing/             # fixtures, builders y mocks de la API de la feature
+   ```
+   - Nombres: componentes en `PascalCase/PascalCase.tsx`, hooks `useCamelCase.ts`, lógica pura `camelCase.ts`. Una carpeta por componente y un componente exportado por archivo. Nada de `utils.ts` o `helpers.ts` genéricos: el archivo se llama por lo que hace (`lineTotals.ts`, `toProductInput.ts`).
+   - **Las páginas no tocan la caché:** toda invalidación y todo `setQueryData` viven en los hooks de `api/`, y todas las llaves en `api/keys.ts`.
+   - **Qué se prueba y dónde:** `model/` con tests unitarios; los hooks con lógica con `renderHook`; las páginas con tests de integración por escenario (`renderApp`); un componente que solo se separó para leerlo mejor no lleva test propio.
+   - **Comentarios:** explican el *por qué*, no el *qué*. JSDoc en la API pública de cada feature y de `shared/`.
+2. **Guardas en ESLint** (reglas que ya traen ESLint y `typescript-eslint`, sin dependencias nuevas), en **error** desde ya:
+   - `max-lines`: 120 por archivo de código y 200 por test (sin líneas en blanco ni comentarios).
+   - `max-lines-per-function`: 50 (no aplica a los `describe` de los tests).
+   - `complexity`: 8 · `max-depth`: 3 · `max-params`: 3 · `max-nested-callbacks`: 3 en código.
+   - `no-restricted-imports`: una feature importa de otra solo por su `index.ts` (`@/features/x`, nunca `@/features/x/...`); `shared/` no importa de `features/` ni de `app/`.
+   - **Lint con tipos:** `strictTypeChecked` y `stylisticTypeChecked` de `typescript-eslint` (promesas sin manejar, condiciones innecesarias, casts sobrantes).
+   - Los archivos que hoy no cumplen quedan en una **lista temporal de excepciones** (`eslint.legacy.js`). Cada tarea del bloque la recorta y T26j la borra. Un archivo nuevo no puede entrar a la lista.
+   - Si se puede sin dependencias nuevas, una regla propia en `frontend/stylelint/` que limite un `.module.scss` a 100 líneas. Si no, queda solo como convención.
+3. **Prettier** (dependencia aprobada el 2026-10-23): `.prettierrc` con el estilo actual (comillas simples, 120 columnas), `npm run format` y `format:check`, que corre en CI. El primer formateo va en un commit aparte para que el diff de la tarea se pueda leer.
+4. **Rutas tipadas:** `app/routes/paths.ts` con constructores (`paths.products.edit(id)`, `paths.inventory.kardex(id, { variante })`). El router, el menú, las secciones de configuración y los `navigate` y `to` del código los usan. Los tests siguen usando la URL literal, a propósito: verifican la dirección real.
+5. **`fakeApi` tipado contra el OpenAPI:** las llaves salen de `paths` de `schema.d.ts` (`'GET /api/v1/products/{productId}'`, con los parámetros de ruta resueltos al comparar) y los cuerpos de respuesta se tipan con el esquema. Un mock desactualizado falla en `tsc` cuando cambia el contrato.
+6. `/tarea` (`.claude/commands/tarea.md`) revisa en su verificación que la tarea no agregue excepciones ni archivos fuera de la estructura.
+**Tests primero:** `paths` arma las URLs con parámetros y query; `fakeApi` resuelve `/api/v1/products/{productId}` para un ID concreto y responde 404 a una ruta sin mock.
+
+### [ ] T26c · Kit compartido y generador
+**Depende de:** T26b.
+**Alcance:** lo que ya se repite en varias pantallas, con tests primero. Cada pieza se adopta en las tareas por feature, no aquí (salvo un uso de ejemplo):
+- `shared/forms/useApiFormErrors`: lleva el `code` de un error de la API al campo del formulario (`{ code → campo }`), pone el foco en el primero y devuelve el mensaje general si ningún campo aplica. Hoy está copiado en `ProductFormPage`, `ReceiptPage`, `UnitsSettings`, `AttributesSettings`, `VariantAxesSettings` y `SignUpPage`.
+- `shared/query/QueryState`: un componente para una o varias queries que muestra el cargando (`Spinner` o `Skeleton`), el error (`Alert` con `describeError`) o el vacío (`EmptyState`), y si no, sus hijos. Hoy se repite en más de 20 pantallas.
+- `shared/hooks/useSearchParamsState`: el estado tipado en la URL (página, filtros, sede), que hoy Kardex, Existencias y Productos escriben a mano.
+- `shared/hooks/useMutationToast` (o `meta` de la mutación): el toast de éxito o error de una mutación con el mensaje de la API.
+- **`Stack` e `Inline` en `shared/ui`:** layout vertical y horizontal con `data-gap` y `data-align` (tokens de espacio). Reemplazan las clases que solo hacen `display: flex/grid` + `gap` (39 de 205 en los módulos de las features). Se documentan en `docs/estilos.md` (sección 6) y en el catálogo de UI.
+- **`frontend/scripts/new.ts`** (`npm run new -- component catalog/pages/ProductFormPage/components/PriceSection`): crea la carpeta con el `.tsx`, el `.module.scss` con `.root` y el test, según la convención. Corre con Node, sin dependencias nuevas.
+**Pendientes que entran a esta tarea:** P64 (`docs/plan/pendientes.md`).
+**Tests primero:** `useApiFormErrors` pone el error en el campo de `sku_taken` y enfoca solo el primero; un código sin campo devuelve el mensaje general; `QueryState` muestra el error de la query que falló aunque otra siga cargando; `useSearchParamsState` lee y escribe la página como número y quita el parámetro cuando vuelve al valor por defecto; `Stack` aplica el gap pedido.
+
+### [ ] T26d · Refactor de `auth` (piloto de la convención)
+**Depende de:** T26c.
+**Alcance:** `pages/LoginPage`, `pages/SignUpPage` (con `BusinessTypeField` en sus `components/`), `guards/` (`RequireAuth`, `RequirePermission`, `GuestOnly`), `session/` (`AuthProvider`, `useAuth`, `useCan`, `access`, `redirect`), `model/schemas.ts` y `testing/`. `SignUpPage` usa `useApiFormErrors`. Esta feature es la más simple y sirve para ajustar `docs/frontend.md` antes de aplicarlo a las grandes; los ajustes quedan en el mismo PR.
+
+### [ ] T26e · Refactor de `catalog`
+**Depende de:** T26d.
+**Alcance:** `ProductFormPage` pasa a `pages/ProductFormPage/` con secciones (`GeneralSection`, `PriceSection`, `AttributesSection`, `VariantsSection`, `UnitsSection`), hooks (`useProductFormData` para cargar listas y producto, `useSaveProduct` con el guardado y la reconciliación de variantes que hoy hace `saveVariants.ts`, `useProductStatus`) y lógica pura en `model/` (`productDefaults`, `toProductInput`, `productErrorFields`, `variantMatrix`, `variants`, `taxRates`). `VariantUnits` se divide en la lista, la fila y el diálogo. `ProductListPage` usa `useSearchParamsState` y `QueryState`. `api.ts` se divide por recurso (productos, unidades, atributos, ejes). `ProductFormPage.test.tsx` (734 líneas) se divide por escenario (crear, editar, variantes, unidades, atributos, errores).
+
+### [ ] T26f · Refactor de `sales`: POS
+**Depende de:** T26e.
+**Alcance:** `pages/PosPage/` con `ProductSearch`, `CartLines` (lista, línea, selector de unidad), `CheckoutDialog` (métodos de pago, cambio) y el estado en hooks (`useCart`, `useCheckout`, `useCashSessionGuard`, `useAddedMark`). `cart.ts` (301 líneas) pasa a `model/cart/` (`cartItem`, `cartReducer`, `lineTotals`, `cartTotals`, `settlement`, `discount`), cada uno con su test. `storage.ts` queda en `model/`. `PosPage.test.tsx` (965 líneas) se divide por escenario (buscar y agregar, unidades, descuentos, cobrar, caja obligatoria, errores de stock).
+
+### [ ] T26g · Refactor de `sales`: caja y tirilla
+**Depende de:** T26f.
+**Alcance:** `pages/CashPage`, `pages/CloseCashPage`, `pages/CashReportPage`; `components/CashReport`, `components/Receipt` y `components/Printable` (los usan el POS y la caja); `CashMovementDialog`; `model/cash.ts` dividido si pasa el límite. `api.ts` se divide en ventas y caja. `CashPage.test.tsx` y `Receipt.test.tsx` se dividen por escenario.
+
+### [ ] T26h · Refactor de `inventory`
+**Depende de:** T26g.
+**Alcance:** `pages/StockPage`, `pages/KardexPage` y `pages/ReceiptPage` (con el formulario de entrada dividido en producto, unidad y cantidad, y sus hooks), `components/CreateLocationDialog`, `model/movements.ts`. Kardex y Existencias usan `useSearchParamsState` y `QueryState`; `ReceiptPage` usa `useApiFormErrors`.
+**Pendientes que entran a esta tarea:** P63 (`docs/plan/pendientes.md`).
+
+### [ ] T26i · Refactor de `settings`
+**Depende de:** T26h.
+**Alcance:** una carpeta por sección en `pages/` (`UnitsSettings`, `AttributesSettings`, `VariantAxesSettings`, `ModulesSettings`, `GeneralSettings`) y el layout (`SettingsLayout`, `SettingsSection`, `SectionGate`). Unidades, atributos y ejes repiten la misma forma (lista, diálogo de crear o editar, confirmar borrado y toast): se extrae a `components/` y `hooks/` de la feature (`useEditDialog`, `useDeleteConfirmation`, `RowActions`, `ConfirmDeleteDialog`) y cada sección solo declara sus campos y columnas. Si una pieza la necesita otra feature, pasa a `shared/ui`.
+
+### [ ] T26j · Refactor de `app/` y `dev/`, y cierre del bloque
+**Depende de:** T26i.
+**Alcance:** `UiCatalogPage` (362 líneas) dividido en una sección por grupo de componentes; `router.tsx` con las rutas agrupadas por feature (`routes.ts` en cada `index.ts` o un archivo por área); `src/test/fixtures.ts` repartido en el `testing/` de cada feature (lo compartido queda en `src/test/`); se borra `eslint.legacy.js` y toda excepción. Se revisa `docs/frontend.md` contra el código final y cada feature tiene su `README.md`.
+**Pendientes que entran a esta tarea:** P65 y P66 (`docs/plan/pendientes.md`).
+**Verificación final:** `npm run lint` sin excepciones; ningún archivo de `src/` pasa de los límites (salvo el generado `schema.d.ts`); un reporte en el PR con las líneas por archivo antes y después.
+
 ### [ ] T27 · Escáner de códigos con la cámara
 **Alcance:** componente reutilizable en `shared/ui` que lee códigos de barras (EAN-13, EAN-8, Code 128, UPC) y QR con la cámara del celular o la tablet. Usa la API nativa `BarcodeDetector` cuando existe y una librería de respaldo cuando no (proponer cuál y confirmar antes de agregarla). Linterna, vibración o sonido al leer, y prevención de lecturas duplicadas en ráfaga. Se usa en el POS (agrega al carrito) y en la toma de inventario (T30). Requiere HTTPS.
 **Tests primero:** con un detector simulado, una lectura dispara `onScan` una sola vez aunque el código siga en cámara; si el usuario niega el permiso de cámara se muestra un mensaje claro y la alternativa de digitar el código.

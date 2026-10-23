@@ -27,7 +27,9 @@ function attributeField(definition: AttributeDefinition) {
           const read = readDecimal(text, 'any', { empty: REQUIRED_ATTRIBUTE, belowMin: '' });
           if (read.error) ctx.addIssue({ code: 'custom', message: read.error });
         })
-        .transform((text) => (text.trim() === '' ? '' : (readDecimal(text, 'any', { empty: '', belowMin: '' }).value ?? text)));
+        .transform((text) =>
+          text.trim() === '' ? '' : (readDecimal(text, 'any', { empty: '', belowMin: '' }).value ?? text),
+        );
     case 'list':
       return z
         .string()
