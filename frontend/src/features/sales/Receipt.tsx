@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { formatDateTime, formatMoney, formatPercent, formatQuantity, isZero } from '@/shared/format';
 import type { Sale } from './api';
-import { methodLabels } from './cart';
+import { methodLabels } from './model/paymentMethods';
 import styles from './Receipt.module.scss';
 
 export type Paper = '58' | '80';

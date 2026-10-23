@@ -8,7 +8,7 @@ import { useCashSession } from './api';
 import { resultLabels, type CashResult } from './cash';
 import { CashReport } from './CashReport';
 import { Printable } from './Printable';
-import { loadPaper } from './storage';
+import { loadPaper } from './model/storage';
 import styles from './CashReportPage.module.scss';
 import { paths } from '@/app/routes/paths';
 

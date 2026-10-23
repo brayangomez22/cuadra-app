@@ -84,13 +84,13 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 **Depende de:** T26d.
 **Alcance:** `ProductFormPage` pasa a `pages/ProductFormPage/` con secciones (`GeneralSection`, `PriceSection`, `AttributesSection`, `VariantsSection`, `UnitsSection`), hooks (`useProductFormData` para cargar listas y producto, `useSaveProduct` con el guardado y la reconciliación de variantes que hoy hace `saveVariants.ts`, `useProductStatus`) y lógica pura en `model/` (`productDefaults`, `toProductInput`, `productErrorFields`, `variantMatrix`, `variants`, `taxRates`). `VariantUnits` se divide en la lista, la fila y el diálogo. `ProductListPage` usa `useSearchParamsState` y `QueryState`. `api.ts` se divide por recurso (productos, unidades, atributos, ejes). `ProductFormPage.test.tsx` (734 líneas) se divide por escenario (crear, editar, variantes, unidades, atributos, errores).
 
-### [ ] T26f · Refactor de `sales`: POS
+### [x] T26f · Refactor de `sales`: POS
 **Depende de:** T26e.
 **Alcance:** `pages/PosPage/` con `ProductSearch`, `CartLines` (lista, línea, selector de unidad), `CheckoutDialog` (métodos de pago, cambio) y el estado en hooks (`useCart`, `useCheckout`, `useCashSessionGuard`, `useAddedMark`). `cart.ts` (301 líneas) pasa a `model/cart/` (`cartItem`, `cartReducer`, `lineTotals`, `cartTotals`, `settlement`, `discount`), cada uno con su test. `storage.ts` queda en `model/`. `PosPage.test.tsx` (965 líneas) se divide por escenario (buscar y agregar, unidades, descuentos, cobrar, caja obligatoria, errores de stock).
 
 ### [ ] T26g · Refactor de `sales`: caja y tirilla
 **Depende de:** T26f.
-**Alcance:** `pages/CashPage`, `pages/CloseCashPage`, `pages/CashReportPage`; `components/CashReport`, `components/Receipt` y `components/Printable` (los usan el POS y la caja); `CashMovementDialog`; `model/cash.ts` dividido si pasa el límite. `api.ts` se divide en ventas y caja. `CashPage.test.tsx` y `Receipt.test.tsx` se dividen por escenario.
+**Alcance:** `pages/CashPage`, `pages/CloseCashPage`, `pages/CashReportPage`; `components/CashReport`, `components/Receipt` y `components/Printable` (los usan el POS y la caja); `CashMovementDialog`; `model/cash.ts` dividido si pasa el límite. `api.ts` se divide en ventas y caja. `CashPage.test.tsx` y `Receipt.test.tsx` se dividen por escenario. Decide `sales/pages.ts` y dónde viven los fixtures de venta y caja (P70).
 
 ### [ ] T26h · Refactor de `inventory`
 **Depende de:** T26g.
@@ -104,7 +104,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 ### [ ] T26j · Refactor de `app/` y `dev/`, y cierre del bloque
 **Depende de:** T26i.
 **Alcance:** `UiCatalogPage` (362 líneas) dividido en una sección por grupo de componentes; `router.tsx` con las rutas agrupadas por feature (`routes.ts` en cada `index.ts` o un archivo por área); `src/test/fixtures.ts` repartido en el `testing/` de cada feature (lo compartido queda en `src/test/`); se borra `eslint.legacy.js` y toda excepción. Se revisa `docs/frontend.md` contra el código final y cada feature tiene su `README.md`.
-**Pendientes que entran a esta tarea:** P65, P66 y P67 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P65, P66, P67 y P69 (`docs/plan/pendientes.md`).
 **Verificación final:** `npm run lint` sin excepciones; ningún archivo de `src/` pasa de los límites (salvo el generado `schema.d.ts`); un reporte en el PR con las líneas por archivo antes y después.
 
 ### [ ] T27 · Escáner de códigos con la cámara
