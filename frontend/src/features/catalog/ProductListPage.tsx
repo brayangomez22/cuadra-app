@@ -30,6 +30,7 @@ import { toUnits } from '@/shared/money/decimal';
 import { PAGE_SIZE, useProducts, type Product, type ProductStatus, type ProductVariant } from './api';
 import { defaultVariant, hasAxes } from './variants';
 import styles from './ProductListPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 // The filter of status as it shows in the URL, which the user sees.
 const statusByParam: Record<string, ProductStatus> = { inactivos: 'inactive', todos: 'all' };
@@ -84,7 +85,7 @@ export function ProductListPage() {
       description="Su catálogo: precios, IVA y unidades."
       actions={
         canWrite && (
-          <ButtonLink to="/productos/nuevo" icon={<IconPlus />}>
+          <ButtonLink to={paths.products.new()} icon={<IconPlus />}>
             Nuevo producto
           </ButtonLink>
         )
@@ -196,12 +197,12 @@ function ProductTable({ products, canWrite, canSeeStock }: TableProps) {
               <TableCell>
                 <span className={styles.actions}>
                   {canSeeStock && (
-                    <TextLink tone="quiet" className={styles.action} to={`/productos/${product.id}/kardex`}>
+                    <TextLink tone="quiet" className={styles.action} to={paths.inventory.kardex(product.id)}>
                       Kardex <span className="srOnly">de {product.name}</span>
                     </TextLink>
                   )}
                   {canWrite && (
-                    <TextLink tone="quiet" className={styles.action} to={`/productos/${product.id}/editar`}>
+                    <TextLink tone="quiet" className={styles.action} to={paths.products.edit(product.id)}>
                       Editar <span className="srOnly">{product.name}</span>
                     </TextLink>
                   )}
@@ -235,7 +236,7 @@ function NoProducts({ q, status, canWrite }: { q: string; status: ProductStatus;
       description="Cree los productos que vende para usarlos en el inventario y en las ventas."
       action={
         canWrite && (
-          <ButtonLink to="/productos/nuevo" icon={<IconPlus />}>
+          <ButtonLink to={paths.products.new()} icon={<IconPlus />}>
             Nuevo producto
           </ButtonLink>
         )

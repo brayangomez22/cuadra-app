@@ -26,6 +26,14 @@ describe('stylelint', () => {
     expect(await ruleViolations('LoosePx.module.scss')).toEqual(['unit-disallowed-list']);
   });
 
+  it('rechaza un módulo de más de 100 líneas', async () => {
+    expect(await ruleViolations('TooLong.module.scss')).toEqual(['cuadra/max-lines']);
+  });
+
+  it('no cuenta líneas vacías ni comentarios', async () => {
+    expect(await ruleViolations('AtLimit.module.scss')).toEqual([]);
+  });
+
   it('acepta un módulo que solo usa tokens', async () => {
     expect(await ruleViolations('Valid.module.scss')).toEqual([]);
   });

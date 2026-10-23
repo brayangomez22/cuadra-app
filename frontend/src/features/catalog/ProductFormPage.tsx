@@ -51,6 +51,7 @@ import {
 import { skuPrefix } from './variantMatrix';
 import { defaultVariant, hasAxes } from './variants';
 import styles from './ProductFormPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 type VariantField = 'sku' | 'barcode' | 'cost' | 'price';
 
@@ -252,7 +253,7 @@ function ProductForm({ product, categories, units, definitions, axes, alternateU
     queryClient.setQueryData(catalogKeys.product(saved.id), saved);
     void queryClient.invalidateQueries({ queryKey: catalogKeys.lists });
     toast({ tone: 'success', title: 'Producto guardado', description: saved.name });
-    void navigate('/productos');
+    void navigate(paths.products.list());
   }
 
   return (
@@ -427,7 +428,7 @@ function ProductForm({ product, categories, units, definitions, axes, alternateU
         )}
 
         <div className={styles.footer}>
-          <ButtonLink to="/productos" variant="ghost">
+          <ButtonLink to={paths.products.list()} variant="ghost">
             Cancelar
           </ButtonLink>
           <Button type="submit" size="lg" loading={isSubmitting}>

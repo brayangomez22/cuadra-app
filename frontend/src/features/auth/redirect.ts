@@ -1,4 +1,5 @@
 import type { Location } from 'react-router';
+import { paths } from '@/app/routes/paths';
 
 // The page a visitor asked for before being sent to the login, kept in the
 // location state by RequireAuth.
@@ -11,5 +12,5 @@ export function redirectTarget(state: unknown): string {
       return from.pathname + (from.search ?? '');
     }
   }
-  return '/';
+  return paths.home();
 }

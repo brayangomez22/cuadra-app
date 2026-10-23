@@ -1,46 +1,97 @@
 import type { components } from '@/shared/api/schema';
+import type { ResolveKey, ResponseBody } from './routeKeys';
 
-type Handler = (request: Request) => Response | Promise<Response>;
+declare const body: unique symbol;
 
-// Routes are keyed by "METHOD /path", e.g. "POST /api/v1/auth/login".
-type Routes = Record<string, Handler | Response>;
+/** A Response that carries the type of its JSON body, so tsc checks it against the contract. */
+export type Reply<B> = Response & { readonly [body]?: B };
+
+type Stub<B> = Reply<B> | ((request: Request) => Reply<B> | Promise<Reply<B>>);
+
+// Checked gives each key the stub its operation allows: never for a key the
+// contract does not have. A computed key (`GET /api/v1/products/${id}`) is a
+// plain string to tsc and takes any reply: use the template key with a
+// handler when the body matters more than the ID.
+type Checked<R> = {
+  [K in keyof R]: K extends string
+    ? string extends K
+      ? Stub<unknown>
+      : [ResolveKey<K>] extends [never]
+        ? never
+        : Stub<ResponseBody<ResolveKey<K>>>
+    : never;
+};
 
 export type Me = components['schemas']['Me'];
 
-// fakeApi replaces the global fetch the API client uses. A route without a
-// handler answers 404 so a missing stub shows up as a failing assertion.
-export function fakeApi(routes: Routes) {
+const keyOf = (request: Request) => `${request.method} ${new URL(request.url).pathname}`;
+
+// A template key ("GET /api/v1/products/{productId}") answers any concrete ID.
+function templateMatcher(key: string) {
+  const source = key.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{[^}]+\}/g, '[^/]+');
+  return new RegExp(`^${source}$`);
+}
+
+// fakeApi replaces the global fetch the API client uses. Keys are "METHOD /path",
+// with a concrete path or the contract's template; the exact key wins. A route
+// without a stub answers 404 so a missing stub shows up as a failing assertion.
+export function fakeApi<const R extends Record<string, Stub<unknown>>>(routes: R & Checked<R>) {
   const requests: Request[] = [];
+  const stubs = routes as Record<string, Stub<unknown> | undefined>;
+  const templates = Object.keys(stubs)
+    .filter((key) => key.includes('{'))
+    .map((key) => ({ key, pattern: templateMatcher(key) }));
 
   vi.stubGlobal('fetch', async (request: Request) => {
     requests.push(request.clone());
-    const route = routes[`${request.method} ${new URL(request.url).pathname}`];
+    const key = keyOf(request);
+    const route = stubs[key] ?? stubs[templates.find((t) => t.pattern.test(key))?.key ?? ''];
     if (!route) return json(404, { error: { code: 'not_found', message: 'No existe' } });
     return typeof route === 'function' ? route(request) : route.clone();
   });
 
   return {
     // calls lists the requests sent to a route, in order.
-    calls: (key: string) => requests.filter((r) => `${r.method} ${new URL(r.url).pathname}` === key),
+    calls: (key: string) => requests.filter((r) => keyOf(r) === key),
   };
 }
 
-export function json(status: number, body: unknown) {
+export function json<B>(status: number, body: B): Reply<B> {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-export function apiError(status: number, code: string, message: string, details?: Record<string, string>) {
+export function apiError(
+  status: number,
+  code: string,
+  message: string,
+  details?: Record<string, string>,
+): Reply<components['schemas']['Error']> {
   return json(status, { error: { code, message, details } });
 }
 
 const permissionsByRole: Record<Me['role'], string[]> = {
   owner: [
-    'catalog:read', 'catalog:write', 'inventory:read', 'inventory:adjust',
-    'sales:create', 'sales:discount', 'sales:read', 'sales:void', 'users:manage', 'tenant:manage',
+    'catalog:read',
+    'catalog:write',
+    'inventory:read',
+    'inventory:adjust',
+    'sales:create',
+    'sales:discount',
+    'sales:read',
+    'sales:void',
+    'users:manage',
+    'tenant:manage',
   ],
   admin: [
-    'catalog:read', 'catalog:write', 'inventory:read', 'inventory:adjust',
-    'sales:create', 'sales:discount', 'sales:read', 'sales:void', 'users:manage',
+    'catalog:read',
+    'catalog:write',
+    'inventory:read',
+    'inventory:adjust',
+    'sales:create',
+    'sales:discount',
+    'sales:read',
+    'sales:void',
+    'users:manage',
   ],
   cashier: ['catalog:read', 'inventory:read', 'sales:create', 'sales:read'],
   warehouse: ['catalog:read', 'inventory:read', 'inventory:adjust'],
@@ -62,17 +113,17 @@ export function aUser(role: Me['role'] = 'owner'): Me {
   };
 }
 
-export function anAuthSession(user = aUser()) {
+export function anAuthSession(user = aUser()): components['schemas']['AuthSession'] {
   return { access_token: 'access-token', token_type: 'Bearer', expires_in: 900, user };
 }
 
 // signedIn stubs a session restored from the refresh cookie (GET /me answers the user).
-export function signedIn(user = aUser()): Routes {
+export function signedIn(user = aUser()) {
   return { 'GET /api/v1/me': json(200, user) };
 }
 
 // signedOut stubs a visitor without a session: /me and the refresh both answer 401.
-export function signedOut(): Routes {
+export function signedOut() {
   return {
     'GET /api/v1/me': apiError(401, 'unauthorized', 'Inicie sesión'),
     'POST /api/v1/auth/refresh': apiError(401, 'invalid_session', 'La sesión venció'),

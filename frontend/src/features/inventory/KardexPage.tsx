@@ -25,6 +25,7 @@ import {
 import { PAGE_SIZE, useKardex, useLocations } from './api';
 import { movementLabels } from './movements';
 import styles from './KardexPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 const ALL_LOCATIONS = 'all';
 
@@ -82,7 +83,7 @@ export function KardexPage() {
   const name = variantName(product.data.name, shown.label);
   const canSeeCost = can('catalog:write');
   const locationName = new Map((locations.data ?? []).map((l) => [l.id, l.name]));
-  const receiptLink = `/inventario/entrada?producto=${productId}&variante=${shown.id}${locationId ? `&sede=${locationId}` : ''}`;
+  const receiptLink = paths.inventory.receipt({ producto: productId, variante: shown.id, sede: locationId });
   const locationOptions = [
     { value: ALL_LOCATIONS, label: 'Todas las sedes' },
     ...(locations.data ?? []).map((l) => ({ value: l.id, label: l.name })),

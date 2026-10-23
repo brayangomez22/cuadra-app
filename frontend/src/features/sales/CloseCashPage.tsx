@@ -7,6 +7,7 @@ import { Alert, Button, Dialog, DialogClose, Field, Input, Page, Spinner, Textar
 import { salesKeys, useCloseCashSession, useCurrentCashSession, type CashSession } from './api';
 import { countedTotal, denominationLabel, denominations, parseCount, type DenominationCount } from './cash';
 import styles from './CloseCashPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 const title = 'Cerrar caja';
 const description =
@@ -23,7 +24,7 @@ export function CloseCashPage() {
   const [closedId, setClosedId] = useState<string>();
 
   // Once closed, the user has no open session: go to the report, not to /caja.
-  if (closedId) return <Navigate to={`/caja/${closedId}`} replace />;
+  if (closedId) return <Navigate to={paths.sales.cashReport(closedId)} replace />;
   if (current.isPending) {
     return (
       <Page title={title}>
@@ -41,7 +42,7 @@ export function CloseCashPage() {
     );
   }
   const session = current.data.session;
-  if (!session) return <Navigate to="/caja" replace />;
+  if (!session) return <Navigate to={paths.sales.cash()} replace />;
   return (
     <Page title={title} description={description}>
       <CountForm

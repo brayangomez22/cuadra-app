@@ -27,6 +27,7 @@ import {
 import { PAGE_SIZE, useLocations, useStock, type Location, type StockLevel } from './api';
 import { CreateLocationDialog } from './CreateLocationDialog';
 import styles from './StockPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 /** /inventario: the stock of one location (sede), chosen in the URL (?sede=). */
 export function StockPage() {
@@ -45,7 +46,7 @@ export function StockPage() {
   const actions = (
     <>
       {canReceive && location && (
-        <ButtonLink to={`/inventario/entrada?sede=${location.id}`} icon={<IconPlus />}>
+        <ButtonLink to={paths.inventory.receipt({ sede: location.id })} icon={<IconPlus />}>
           Registrar entrada
         </ButtonLink>
       )}
@@ -154,7 +155,7 @@ function LocationStock({ location, offset, canSeeCost, canReceive, onOffsetChang
         description="Cuando registre una entrada de mercancía, aquí verá cuánto hay de cada producto."
         action={
           canReceive && (
-            <ButtonLink to={`/inventario/entrada?sede=${location.id}`} icon={<IconPlus />}>
+            <ButtonLink to={paths.inventory.receipt({ sede: location.id })} icon={<IconPlus />}>
               Registrar entrada
             </ButtonLink>
           )
@@ -202,7 +203,7 @@ function LocationStock({ location, offset, canSeeCost, canReceive, onOffsetChang
 type RowProps = { level: StockLevel; product?: Product; loading: boolean; canSeeCost: boolean };
 
 function StockRow({ level, product, loading, canSeeCost }: RowProps) {
-  const kardex = `/productos/${level.product_id}/kardex?variante=${level.variant_id}&sede=${level.location_id}`;
+  const kardex = paths.inventory.kardex(level.product_id, { variante: level.variant_id, sede: level.location_id });
   const variant = product?.variants.find((v) => v.id === level.variant_id);
   return (
     <TableRow>

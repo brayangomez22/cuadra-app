@@ -38,6 +38,7 @@ import type { Paper } from './Receipt';
 import { ProductSearch } from './ProductSearch';
 import { loadCart, loadLocation, loadPaper, saveCart, saveLocation, savePaper } from './storage';
 import styles from './PosPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 // Until the API answers, nobody discounts: the safe default (docs/decisiones.md).
 const noDiscount: DiscountLimit = { unlimited: false, max: '0' };
@@ -227,7 +228,7 @@ export function PosPage() {
           icon={<IconCash />}
           title="Abra la caja para vender"
           description="Cuente el efectivo del cajón y abra la caja. La venta en curso no se pierde."
-          action={<ButtonLink to="/caja">Abrir caja</ButtonLink>}
+          action={<ButtonLink to={paths.sales.cash()}>Abrir caja</ButtonLink>}
         />
       </Page>
     );
@@ -253,7 +254,7 @@ export function PosPage() {
           <p className={styles.cash}>
             Caja abierta en {locations.data.find((l) => l.id === session.location_id)?.name}
             {' · '}
-            <TextLink to="/caja">Ver caja</TextLink>
+            <TextLink to={paths.sales.cash()}>Ver caja</TextLink>
           </p>
         ) : (
           activeLocations.length > 1 && (

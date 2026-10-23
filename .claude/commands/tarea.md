@@ -38,7 +38,8 @@ Sigue este flujo sin saltarte pasos.
    Luego **detente y espera mi aprobación**.
 3. **Tests en rojo:** escribe solo los tests. Córrelos y muéstrame que fallan por la razón esperada (no por errores de compilación sin relación).
 4. **Implementación:** escribe lo mínimo para que pasen y luego refactoriza, respetando las reglas de `CLAUDE.md` (arquitectura, multi-tenant, dinero, observabilidad, estilos).
-5. **Verificación:** corre `make check` (y `npm run lint && npm run lint:styles && npm test` si tocaste el frontend). Si algo falla, arréglalo; nunca saltes ni desactives un test.
+5. **Verificación:** corre `make check` (y `npm run format:check && npm run lint && npm run lint:styles && npm test` si tocaste el frontend). Si algo falla, arréglalo; nunca saltes ni desactives un test.
+   - Si tocaste el frontend, revisa con `git diff main -- frontend/eslint.legacy.js frontend/stylelint.config.mjs` que la tarea **no agregue** archivos ni reglas a las listas de excepciones (solo puede quitarlos), y con `git diff main --name-status --diff-filter=A -- frontend/src` que los archivos nuevos sigan la estructura y los nombres de `docs/frontend.md`.
 6. **Cierre:**
    - resumen de lo que cambió,
    - lista concreta de lo que debo revisar yo con lupa (dinero, stock, permisos, tenant, seguridad, datos sensibles en logs o spans),

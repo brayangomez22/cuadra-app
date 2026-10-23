@@ -10,6 +10,7 @@ import { AuthLink, AuthPage } from './AuthPage';
 import { loginSchema, type LoginValues } from './schemas';
 import { useAuth } from './useAuth';
 import styles from './LoginPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 type TenantOption = components['schemas']['TenantOption'];
 
@@ -97,7 +98,7 @@ export function LoginPage() {
       footer={
         <>
           ¿Su negocio aún no usa Cuadra?{' '}
-          <AuthLink to="/registro" state={location.state}>
+          <AuthLink to={paths.signUp()} state={location.state}>
             Cree una cuenta
           </AuthLink>
         </>

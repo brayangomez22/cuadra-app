@@ -4,6 +4,7 @@ import type { FromState } from './redirect';
 import { redirectTarget } from './redirect';
 import { useAuth } from './useAuth';
 import styles from './RequireAuth.module.scss';
+import { paths } from '@/app/routes/paths';
 
 // RequireAuth guards the app routes: without a session it sends the visitor to
 // the login, remembering where they wanted to go. Hiding a screen is only for
@@ -16,7 +17,7 @@ export function RequireAuth() {
   if (auth.status === 'error') return <SessionError retry={auth.retry} />;
   if (auth.status === 'anonymous') {
     const state: FromState = { from: { pathname: location.pathname, search: location.search } };
-    return <Navigate to="/ingresar" replace state={state} />;
+    return <Navigate to={paths.login()} replace state={state} />;
   }
   return <Outlet />;
 }

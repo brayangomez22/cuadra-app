@@ -1,9 +1,20 @@
 // Conventions in docs/estilos.md. stylelint/stylelint.test.ts checks the key rules.
 
+// Modules over cuadra/max-lines before the rule existed. Each task of the
+// T26b–T26j block removes the ones of its feature; T26j deletes the list.
+// A file never enters it: split the module instead.
+const legacyLongModules = [
+  'src/features/sales/CartLines.module.scss',
+  'src/features/sales/CheckoutDialog.module.scss',
+  'src/features/sales/PosPage.module.scss',
+  'src/features/sales/Receipt.module.scss',
+  'src/shared/ui/Toast/Toast.module.scss',
+];
+
 /** @type {import('stylelint').Config} */
 export default {
   extends: ['stylelint-config-standard-scss'],
-  plugins: ['stylelint-declaration-strict-value'],
+  plugins: ['stylelint-declaration-strict-value', './stylelint/maxLines.mjs'],
   rules: {
     // Class names in camelCase: the module exposes them as styles.priceCell.
     'selector-class-pattern': [
@@ -34,7 +45,10 @@ export default {
         ],
         // Loose px are not allowed: only 1px borders and outlines.
         'unit-disallowed-list': [['px'], { ignoreProperties: { px: ['/^border/', '/^outline/'] } }],
+        // One piece per module, like a component (docs/frontend.md).
+        'cuadra/max-lines': 100,
       },
     },
+    { files: legacyLongModules, rules: { 'cuadra/max-lines': null } },
   ],
 };

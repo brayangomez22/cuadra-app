@@ -1,5 +1,6 @@
 import { Button, ButtonLink, EmptyState, IconAlert, IconHome } from '@/shared/ui';
 import styles from './ErrorPage.module.scss';
+import { paths } from './routes/paths';
 
 // CrashPage replaces the whole app after an unexpected error. It needs no router
 // or providers: it is also the fallback when those fail.
@@ -27,7 +28,7 @@ export function NotFoundPage() {
         title="No encontramos esta página"
         description="Puede que la dirección esté mal escrita o que la página ya no exista."
         action={
-          <ButtonLink to="/" icon={<IconHome />}>
+          <ButtonLink to={paths.home()} icon={<IconHome />}>
             Ir al inicio
           </ButtonLink>
         }

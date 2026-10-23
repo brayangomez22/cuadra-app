@@ -33,6 +33,7 @@ import {
 } from '@/shared/ui';
 import { inventoryKeys, useLocations } from './api';
 import styles from './ReceiptPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 // Same limits as ReceiptInput in api/openapi.yaml.
 const schema = z.object({
@@ -105,7 +106,7 @@ export function ReceiptPage() {
           title="Aún no hay sedes activas"
           description="Para registrar mercancía primero debe existir una sede o bodega."
           action={
-            <ButtonLink to="/inventario" variant="secondary">
+            <ButtonLink to={paths.inventory.stock()} variant="secondary">
               Ir a inventario
             </ButtonLink>
           }

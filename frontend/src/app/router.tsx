@@ -4,6 +4,7 @@ import { GuestOnly, RequireAuth, RequirePermission, type Gated } from '@/feature
 import { Spinner } from '@/shared/ui';
 import { AppLayout } from './layout/AppLayout';
 import { HomePage } from './pages/HomePage';
+import { paths } from './routes/paths';
 import { RouteError } from './RouteError';
 
 // Each screen loads with its first visit, in the chunk of its feature: a
@@ -33,7 +34,7 @@ function gate(access: Gated): Pick<RouteObject, 'lazy'> {
 const devRoutes: RouteObject[] = import.meta.env.DEV
   ? [
       {
-        path: '/dev/ui',
+        path: paths.dev.ui.pattern,
         lazy: async () => ({ Component: (await import('@/features/dev/UiCatalogPage')).UiCatalogPage }),
         // Shown while the lazy page loads on a first visit to /dev/ui.
         HydrateFallback: () => null,
@@ -50,8 +51,8 @@ export const routes: RouteObject[] = [
       {
         element: <GuestOnly />,
         children: [
-          { path: '/ingresar', ...page(async () => (await import('@/features/auth/pages')).LoginPage) },
-          { path: '/registro', ...page(async () => (await import('@/features/auth/pages')).SignUpPage) },
+          { path: paths.login.pattern, ...page(async () => (await import('@/features/auth/pages')).LoginPage) },
+          { path: paths.signUp.pattern, ...page(async () => (await import('@/features/auth/pages')).SignUpPage) },
         ],
       },
       {
@@ -60,23 +61,26 @@ export const routes: RouteObject[] = [
           {
             element: <AppLayout />,
             children: [
-              { path: '/', element: <HomePage /> },
+              { path: paths.home.pattern, element: <HomePage /> },
               // Each section checks the permission of its API (x-permission in api/openapi.yaml).
               {
                 element: <RequirePermission permission="catalog:read" />,
                 children: [
-                  { path: '/productos', ...page(async () => (await import('@/features/catalog')).ProductListPage) },
+                  {
+                    path: paths.products.list.pattern,
+                    ...page(async () => (await import('@/features/catalog')).ProductListPage),
+                  },
                 ],
               },
               {
                 element: <RequirePermission permission="catalog:write" />,
                 children: [
                   {
-                    path: '/productos/nuevo',
+                    path: paths.products.new.pattern,
                     ...page(async () => (await import('@/features/catalog')).ProductFormPage),
                   },
                   {
-                    path: '/productos/:productId/editar',
+                    path: paths.products.edit.pattern,
                     ...page(async () => (await import('@/features/catalog')).ProductFormPage),
                   },
                 ],
@@ -84,9 +88,12 @@ export const routes: RouteObject[] = [
               {
                 element: <RequirePermission permission="inventory:read" />,
                 children: [
-                  { path: '/inventario', ...page(async () => (await import('@/features/inventory')).StockPage) },
                   {
-                    path: '/productos/:productId/kardex',
+                    path: paths.inventory.stock.pattern,
+                    ...page(async () => (await import('@/features/inventory')).StockPage),
+                  },
+                  {
+                    path: paths.inventory.kardex.pattern,
                     ...page(async () => (await import('@/features/inventory')).KardexPage),
                   },
                 ],
@@ -94,15 +101,21 @@ export const routes: RouteObject[] = [
               {
                 element: <RequirePermission permission="sales:create" />,
                 children: [
-                  { path: '/vender', ...page(async () => (await import('@/features/sales')).PosPage) },
-                  { path: '/caja', ...page(async () => (await import('@/features/sales')).CashPage) },
-                  { path: '/caja/cerrar', ...page(async () => (await import('@/features/sales')).CloseCashPage) },
+                  { path: paths.sales.pos.pattern, ...page(async () => (await import('@/features/sales')).PosPage) },
+                  { path: paths.sales.cash.pattern, ...page(async () => (await import('@/features/sales')).CashPage) },
+                  {
+                    path: paths.sales.closeCash.pattern,
+                    ...page(async () => (await import('@/features/sales')).CloseCashPage),
+                  },
                 ],
               },
               {
                 element: <RequirePermission permission="sales:read" />,
                 children: [
-                  { path: '/caja/:sessionId', ...page(async () => (await import('@/features/sales')).CashReportPage) },
+                  {
+                    path: paths.sales.cashReport.pattern,
+                    ...page(async () => (await import('@/features/sales')).CashReportPage),
+                  },
                 ],
               },
               // Settings: owners and admins (catalog:write); each group of
@@ -111,23 +124,23 @@ export const routes: RouteObject[] = [
                 element: <RequirePermission permission="catalog:write" />,
                 children: [
                   {
-                    path: '/configuracion',
+                    path: paths.settings.home.pattern,
                     ...page(async () => (await import('@/features/settings')).SettingsLayout),
                     children: [
                       { index: true, ...page(async () => (await import('@/features/settings')).SettingsHome) },
                       {
-                        path: 'unidades',
+                        path: paths.settings.units.pattern,
                         ...page(async () => (await import('@/features/settings')).UnitsSettings),
                       },
                       {
-                        path: 'atributos',
+                        path: paths.settings.attributes.pattern,
                         ...page(async () => (await import('@/features/settings')).AttributesSettings),
                       },
                       {
                         ...gate({ module: 'variants' }),
                         children: [
                           {
-                            path: 'ejes',
+                            path: paths.settings.variantAxes.pattern,
                             ...page(async () => (await import('@/features/settings')).VariantAxesSettings),
                           },
                         ],
@@ -136,11 +149,11 @@ export const routes: RouteObject[] = [
                         ...gate({ permission: 'tenant:manage' }),
                         children: [
                           {
-                            path: 'general',
+                            path: paths.settings.general.pattern,
                             ...page(async () => (await import('@/features/settings')).GeneralSettings),
                           },
                           {
-                            path: 'modulos',
+                            path: paths.settings.modules.pattern,
                             ...page(async () => (await import('@/features/settings')).ModulesSettings),
                           },
                         ],
@@ -153,7 +166,7 @@ export const routes: RouteObject[] = [
                 element: <RequirePermission permission="inventory:adjust" />,
                 children: [
                   {
-                    path: '/inventario/entrada',
+                    path: paths.inventory.receipt.pattern,
                     ...page(async () => (await import('@/features/inventory')).ReceiptPage),
                   },
                 ],

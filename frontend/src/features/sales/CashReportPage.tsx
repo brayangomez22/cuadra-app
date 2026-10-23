@@ -10,6 +10,7 @@ import { CashReport } from './CashReport';
 import { Printable } from './Printable';
 import { loadPaper } from './storage';
 import styles from './CashReportPage.module.scss';
+import { paths } from '@/app/routes/paths';
 
 const title = 'Cierre de caja';
 
@@ -54,7 +55,7 @@ export function CashReportPage() {
           title="La caja sigue abierta"
           description="El reporte aparece cuando quien la abrió la cierra con el conteo del efectivo."
           action={
-            <ButtonLink to="/caja" variant="secondary">
+            <ButtonLink to={paths.sales.cash()} variant="secondary">
               Ir a la caja
             </ButtonLink>
           }
