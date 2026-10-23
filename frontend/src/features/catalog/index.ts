@@ -1,22 +1,22 @@
-export {
-  catalogKeys,
-  fetchProducts,
-  useAttributeDefinitions,
-  useProduct,
-  useProducts,
-  useUnits,
-  useVariantAxes,
-  type AttributeDefinition,
-  type Product,
-  type ProductQuery,
-  type ProductVariant,
-  type UnitOfMeasure,
-  type VariantAxis,
-  type VariantUnit,
-} from './api';
-export { ProductFormPage } from './ProductFormPage';
-export { ProductListPage } from './ProductListPage';
-export { ProductPicker } from './ProductPicker';
+// The public API of catalog: its products and variants, the tenant's lists
+// (units, attributes, axes) and the picker other screens sell and count with.
+// The pages go in pages.ts, which the router loads lazily.
+export { catalogKeys } from './api/keys';
+export { useAttributeDefinitions } from './api/attributes';
+export { fetchProducts, useProduct, useProducts } from './api/products';
+export { useUnits } from './api/units';
+export { useVariantAxes } from './api/variantAxes';
+export type {
+  AttributeDefinition,
+  Product,
+  ProductQuery,
+  ProductVariant,
+  UnitOfMeasure,
+  VariantAxis,
+  VariantUnit,
+} from './api/types';
+export { ProductPicker } from './components/ProductPicker/ProductPicker';
+export { taxRateOptions } from './model/taxRates';
 export {
   defaultVariant,
   findByCode,
@@ -25,5 +25,4 @@ export {
   suggestedUnitPrice,
   variantName,
   type Sellable,
-} from './variants';
-export { taxRateOptions } from './taxRates';
+} from './model/variants';

@@ -122,31 +122,33 @@ features/catalog/
   saveVariants.ts  variants.ts  variantMatrix.ts  api.ts  schemas.ts ...
 ```
 
-**Después** (lo hace T26e), cada pieza en su lugar y ninguna de más de 120 líneas:
+**Después** (T26e), cada pieza en su lugar y ninguna de más de 120 líneas:
 
 ```
 features/catalog/
+  index.ts  pages.ts           # la API pública; las páginas van aparte para cargarlas en diferido
   api/
-    keys.ts                    # catalogKeys
-    products.ts                # useProduct, useSaveProduct (aquí viven setQueryData e invalidate)
+    keys.ts  types.ts
+    products.ts                # useProduct, saveProduct, useStoreProduct (aquí viven setQueryData e invalidate)
+    variants.ts                # el ciclo de peticiones de la matriz de variantes
+    variantUnits.ts  units.ts  categories.ts  attributes.ts  variantAxes.ts
   model/
-    productDefaults.ts         # defaults, attributeDefault, defaultRow (+ test)
-    toProductInput.ts          # toInput (+ test)
-    variantMatrix.ts
+    productDefaults.ts         # valores iniciales del formulario (+ test)
+    toProductInput.ts          # cuerpo de POST y PUT /products (+ test)
+    productErrorFields.ts      # código de error → campo, según haya matriz (+ test)
+    resolveRows.ts  variantTarget.ts  variantChoice.ts  variantMatrix.ts ...
   pages/ProductFormPage/
-    ProductFormPage.tsx        # carga producto, categorías, unidades y ejes; compone las secciones
-    ProductFormPage.module.scss
-    ProductFormPage.create.test.tsx
-    ProductFormPage.edit.test.tsx
-    ProductFormPage.variants.test.tsx
+    ProductFormPage.tsx        # carga con useProductFormData y QueryState; compone ProductForm
+    ProductFormPage.{create,edit,errors,attributes,variants,units}.test.tsx
     components/
-      IdentitySection/  AttributesSection/  PriceSection/  VariantsSection/  UnitsSection/
+      ProductForm/             # useForm + FormProvider; la página solo compone
+      GeneralSection/  AttributesSection/  PriceSection/  VariantsSection/  UnitsSection/ ...
     hooks/
-      useProductForm.ts        # react-hook-form, schema y envío
-  index.ts                     # exporta ProductFormPage, ProductListPage, ProductPicker...
+      useProductFormData.ts  useProductForm.ts  useSaveProduct.ts  useSaveMatrix.ts  useProductStatus.ts ...
+  testing/                     # productFormApi, garmentServer, sentBody
 ```
 
-El mapeo de errores de la API a campos pasa a `useApiFormErrors` de `shared/` (T26c), porque lo repiten los formularios de inventario y configuración.
+Las secciones leen el formulario con `useFormContext` y sus errores con `useFieldError` (que se suscribe solo a su parte con `useFormState`), en vez de recibir `register`, `control` y `errors` por props. El mapeo de errores de la API a campos pasa a `useApiFormErrors` de `shared/` (T26c), con el mapa que arma `productErrorFields`.
 
 ## 10. Kit compartido y generador
 

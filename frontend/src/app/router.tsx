@@ -68,7 +68,7 @@ export const routes: RouteObject[] = [
                 children: [
                   {
                     path: paths.products.list.pattern,
-                    ...page(async () => (await import('@/features/catalog')).ProductListPage),
+                    ...page(async () => (await import('@/features/catalog/pages')).ProductListPage),
                   },
                 ],
               },
@@ -77,11 +77,11 @@ export const routes: RouteObject[] = [
                 children: [
                   {
                     path: paths.products.new.pattern,
-                    ...page(async () => (await import('@/features/catalog')).ProductFormPage),
+                    ...page(async () => (await import('@/features/catalog/pages')).ProductFormPage),
                   },
                   {
                     path: paths.products.edit.pattern,
-                    ...page(async () => (await import('@/features/catalog')).ProductFormPage),
+                    ...page(async () => (await import('@/features/catalog/pages')).ProductFormPage),
                   },
                 ],
               },
