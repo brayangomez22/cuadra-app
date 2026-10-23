@@ -1,4 +1,14 @@
-import { aCement, aGarment, aProduct, boxOf12, ids, packOf3, variantBarcode, variantId, withUnits } from '@/test/fixtures';
+import {
+  aCement,
+  aGarment,
+  aProduct,
+  boxOf12,
+  ids,
+  packOf3,
+  variantBarcode,
+  variantId,
+  withUnits,
+} from '@/test/fixtures';
 import { defaultVariant, findByCode, hasAxes, sellables, suggestedUnitPrice, variantName } from './variants';
 
 describe('variantes', () => {

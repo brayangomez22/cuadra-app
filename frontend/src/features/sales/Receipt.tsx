@@ -91,7 +91,11 @@ export function Receipt({ sale, business, location, cashier, paper, className }:
 
       <dl className={styles.figures}>
         {sale.payments.map((payment, index) => (
-          <Figure key={`${payment.method}-${index}`} term={methodLabels[payment.method]} value={formatMoney(payment.amount)} />
+          <Figure
+            key={`${payment.method}-${index}`}
+            term={methodLabels[payment.method]}
+            value={formatMoney(payment.amount)}
+          />
         ))}
         <Figure term="Recibido" value={formatMoney(sale.paid)} />
         {!isZero(sale.change) && <Figure term="Cambio" value={formatMoney(sale.change)} strong />}

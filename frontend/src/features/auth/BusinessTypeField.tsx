@@ -31,7 +31,9 @@ export function BusinessTypeField({ error, className, ...radio }: Props) {
       <p id={labelId} className={styles.label}>
         Tipo de negocio
       </p>
-      <p className={styles.hint}>Prepara sus unidades, categorías y campos de producto. Después puede cambiarlo todo.</p>
+      <p className={styles.hint}>
+        Prepara sus unidades, categorías y campos de producto. Después puede cambiarlo todo.
+      </p>
       {templates.isPending && (
         <div className={styles.options} aria-busy="true">
           {[0, 1, 2].map((i) => (

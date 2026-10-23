@@ -25,7 +25,9 @@ export function AttributeFields({ definitions, register, control, errors, classN
         const optional = !definition.required;
         switch (definition.type) {
           case 'boolean':
-            return <Checkbox key={definition.key} label={definition.label} className={wideClassName} {...register(name)} />;
+            return (
+              <Checkbox key={definition.key} label={definition.label} className={wideClassName} {...register(name)} />
+            );
           case 'list':
             return (
               <Field key={definition.key} label={definition.label} optional={optional} error={error}>

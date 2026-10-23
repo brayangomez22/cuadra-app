@@ -34,8 +34,7 @@ export function StockPage() {
   const [params, setParams] = useSearchParams();
   const locations = useLocations();
   const list = locations.data ?? [];
-  const location =
-    list.find((l) => l.id === params.get('sede')) ?? list.find((l) => l.active) ?? list[0];
+  const location = list.find((l) => l.id === params.get('sede')) ?? list.find((l) => l.active) ?? list[0];
   const pageNumber = Math.max(Number(params.get('pagina')) || 1, 1);
   const offset = (pageNumber - 1) * PAGE_SIZE;
 
@@ -209,11 +208,15 @@ function StockRow({ level, product, loading, canSeeCost }: RowProps) {
     <TableRow>
       <TableCell>
         {product && variant ? (
-          <TextLink tone="quiet" to={kardex}>{variantName(product.name, variant.label)}</TextLink>
+          <TextLink tone="quiet" to={kardex}>
+            {variantName(product.name, variant.label)}
+          </TextLink>
         ) : loading ? (
           <Skeleton className={styles.nameSkeleton} />
         ) : (
-          <TextLink tone="quiet" to={kardex}>Ver kardex</TextLink>
+          <TextLink tone="quiet" to={kardex}>
+            Ver kardex
+          </TextLink>
         )}
         {variant && <span className={styles.sku}>{variant.sku}</span>}
       </TableCell>

@@ -15,7 +15,6 @@ import {
 } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 
-
 const locations = {
   items: [aLocation(), aLocation({ id: ids.north, name: 'Sede norte' })],
 };
@@ -31,7 +30,10 @@ function stockApi(extra: Parameters<typeof fakeApi>[0] = {}) {
         aStockLevel({ variant_id: ids.cement, product_id: ids.cement, quantity: '2.5', average_cost: '28000.00' }),
       ]),
     ),
-    [`GET /api/v1/locations/${ids.north}/stock`]: json(200, page([aStockLevel({ location_id: ids.north, quantity: '7' })])),
+    [`GET /api/v1/locations/${ids.north}/stock`]: json(
+      200,
+      page([aStockLevel({ location_id: ids.north, quantity: '7' })]),
+    ),
     'GET /api/v1/products': json(200, page([aProduct(), aCement()])),
     ...extra,
   });
@@ -123,7 +125,9 @@ describe('StockPage', () => {
     stockApi({ [`GET /api/v1/locations/${ids.main}/stock`]: json(200, page([])) });
     renderApp('/inventario');
 
-    expect(await screen.findByRole('heading', { name: 'Bodega principal aún no tiene existencias' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Bodega principal aún no tiene existencias' }),
+    ).toBeInTheDocument();
   });
 
   it('sin sedes, el dueño crea la primera y ve sus existencias', async () => {

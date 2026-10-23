@@ -295,7 +295,10 @@ describe('ProductFormPage', () => {
       await save();
 
       await waitFor(() => expect(api.calls('POST /api/v1/products')).toHaveLength(1));
-      expect((await api.calls('POST /api/v1/products')[0]!.json()).attributes).toEqual({ marca: 'Acme', importado: false });
+      expect((await api.calls('POST /api/v1/products')[0]!.json()).attributes).toEqual({
+        marca: 'Acme',
+        importado: false,
+      });
     });
 
     it('no envía el producto sin un atributo obligatorio ni con un número inválido', async () => {
@@ -306,7 +309,9 @@ describe('ProductFormPage', () => {
       await userEvent.type(screen.getByLabelText('Peso (opcional)'), 'dos');
       await save();
 
-      expect(screen.getByLabelText('Marca')).toHaveAccessibleDescription(expect.stringContaining('Este dato es obligatorio'));
+      expect(screen.getByLabelText('Marca')).toHaveAccessibleDescription(
+        expect.stringContaining('Este dato es obligatorio'),
+      );
       expect(screen.getByLabelText('Peso (opcional)')).toHaveAccessibleDescription(
         expect.stringContaining('Escriba un número'),
       );
@@ -453,9 +458,15 @@ describe('ProductFormPage', () => {
         cost: '15000',
         price: '25000',
       });
-      expect(await api.calls(`PUT /api/v1/products/${ids.garment}/variants/${variantId('S', 'Rojo')}`)[0]?.json()).toEqual(
-        { sku: 'CAM-S-ROJO', cost: '15000', price: '25000', axis_values: { talla: 'S', color: 'Rojo' }, active: true },
-      );
+      expect(
+        await api.calls(`PUT /api/v1/products/${ids.garment}/variants/${variantId('S', 'Rojo')}`)[0]?.json(),
+      ).toEqual({
+        sku: 'CAM-S-ROJO',
+        cost: '15000',
+        price: '25000',
+        axis_values: { talla: 'S', color: 'Rojo' },
+        active: true,
+      });
       const added = await Promise.all(api.calls(`POST /api/v1/products/${ids.garment}/variants`).map((r) => r.json()));
       expect(added).toEqual([
         { sku: 'CAM-S-AZUL', cost: '15000', price: '25000', axis_values: { talla: 'S', color: 'Azul' } },
@@ -496,7 +507,10 @@ describe('ProductFormPage', () => {
       expect(api.calls(`PUT /api/v1/products/${ids.garment}/variants/${variantId('S', 'Rojo')}`)).toHaveLength(1);
       const posts = api.calls(`POST /api/v1/products/${ids.garment}/variants`);
       expect(posts).toHaveLength(6);
-      expect(await posts.at(-1)!.json()).toMatchObject({ sku: 'CAM-M-AZUL-2', axis_values: { talla: 'M', color: 'Azul' } });
+      expect(await posts.at(-1)!.json()).toMatchObject({
+        sku: 'CAM-M-AZUL-2',
+        axis_values: { talla: 'M', color: 'Azul' },
+      });
     });
 
     it('al editar, solo envía las variantes que cambian', async () => {
@@ -521,7 +535,9 @@ describe('ProductFormPage', () => {
       await save();
 
       await waitFor(() => expect(router.state.location.pathname).toBe('/productos'));
-      expect(await api.calls(`PUT /api/v1/products/${ids.garment}/variants/${variantId('L', 'Rojo')}`)[0]?.json()).toEqual({
+      expect(
+        await api.calls(`PUT /api/v1/products/${ids.garment}/variants/${variantId('L', 'Rojo')}`)[0]?.json(),
+      ).toEqual({
         sku: 'CAM-L-ROJO',
         barcode: '770999000605',
         cost: '15000.00',

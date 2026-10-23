@@ -185,7 +185,11 @@ function ProductTable({ products, canWrite, canSeeStock }: TableProps) {
             {canWrite && <TableCell numeric>{amount(product, (v) => v.cost, formatMoney)}</TableCell>}
             {canWrite && (
               <TableCell numeric>
-                {amount(product, (v) => v.margin_percent, (m) => formatPercent(m, 'percent'))}
+                {amount(
+                  product,
+                  (v) => v.margin_percent,
+                  (m) => formatPercent(m, 'percent'),
+                )}
               </TableCell>
             )}
             {hasActions && (
@@ -193,14 +197,12 @@ function ProductTable({ products, canWrite, canSeeStock }: TableProps) {
                 <span className={styles.actions}>
                   {canSeeStock && (
                     <TextLink tone="quiet" className={styles.action} to={`/productos/${product.id}/kardex`}>
-                      Kardex{' '}
-                      <span className="srOnly">de {product.name}</span>
+                      Kardex <span className="srOnly">de {product.name}</span>
                     </TextLink>
                   )}
                   {canWrite && (
                     <TextLink tone="quiet" className={styles.action} to={`/productos/${product.id}/editar`}>
-                      Editar{' '}
-                      <span className="srOnly">{product.name}</span>
+                      Editar <span className="srOnly">{product.name}</span>
                     </TextLink>
                   )}
                 </span>
@@ -253,7 +255,5 @@ function amount(product: Product, of: (v: ProductVariant) => string | undefined,
   const known = values.filter((value): value is string => value !== undefined);
   if (known.length === 0) return '—';
   const smallest = known.reduce((min, value) => (toUnits(value) < toUnits(min) ? value : min));
-  return known.every((value) => toUnits(value) === toUnits(smallest))
-    ? format(smallest)
-    : `Desde ${format(smallest)}`;
+  return known.every((value) => toUnits(value) === toUnits(smallest)) ? format(smallest) : `Desde ${format(smallest)}`;
 }

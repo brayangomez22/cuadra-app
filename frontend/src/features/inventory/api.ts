@@ -46,7 +46,10 @@ export function useKardex(variantId: string | undefined, locationId: string | un
     queryFn: async () =>
       unwrap(
         await api.GET('/api/v1/variants/{variantId}/kardex', {
-          params: { path: { variantId: variantId ?? '' }, query: { location_id: locationId, limit: PAGE_SIZE, offset } },
+          params: {
+            path: { variantId: variantId ?? '' },
+            query: { location_id: locationId, limit: PAGE_SIZE, offset },
+          },
         }),
       ),
     enabled: Boolean(variantId),

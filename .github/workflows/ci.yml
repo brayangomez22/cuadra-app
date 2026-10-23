@@ -58,6 +58,7 @@ jobs:
           git diff --exit-code
           untracked="$(git status --porcelain --untracked-files=all)"
           if [ -n "$untracked" ]; then echo "Generated files not committed:"; echo "$untracked"; exit 1; fi
+      - run: npm run format:check
       - run: npm run lint
       - run: npm run lint:styles
       - run: npm test

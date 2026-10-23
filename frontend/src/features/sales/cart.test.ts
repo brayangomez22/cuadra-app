@@ -1,4 +1,15 @@
-import { aCement, aGarment, aProduct, boxOf12, ids, packOf3, rollOf100, unitOf, variantId, withUnits } from '@/test/fixtures';
+import {
+  aCement,
+  aGarment,
+  aProduct,
+  boxOf12,
+  ids,
+  packOf3,
+  rollOf100,
+  unitOf,
+  variantId,
+  withUnits,
+} from '@/test/fixtures';
 import { cartItem, cartReducer, cartTotals, emptyCart, settle, type Cart, type DiscountLimit } from './cart';
 
 const noDiscount: DiscountLimit = { unlimited: false, max: '0' };
@@ -136,7 +147,10 @@ describe('líneas en unidad alternativa', () => {
     const garment = aGarment();
     const red = variantId('M', 'Rojo');
     const packed = withUnits(garment, [packOf3], red);
-    const item = cartItem(packed, packed.variants.find((v) => v.id === red));
+    const item = cartItem(
+      packed,
+      packed.variants.find((v) => v.id === red),
+    );
     const totals = cartTotals(cartWith({ type: 'add', item, quantity: '2', unitId: unitOf('paq').id }), noDiscount);
     expect(totals.lines[0]?.input).toEqual({ variant_id: red, quantity: '2', unit_id: unitOf('paq').id });
     expect(totals.total).toBe('166600.00');
@@ -181,7 +195,11 @@ describe('cartTotals', () => {
       { type: 'setDiscount', variantId: ids.pipe, text: '10' },
     );
     // 10 % de 99.99 = 9.999 → 9.99 (truncado: nunca pasa del tope).
-    expect(cartTotals(cart, tenPercent).lines[0]?.amounts).toMatchObject({ discount: '9.99', base: '90.00', tax: '17.10' });
+    expect(cartTotals(cart, tenPercent).lines[0]?.amounts).toMatchObject({
+      discount: '9.99',
+      base: '90.00',
+      tax: '17.10',
+    });
   });
 
   it.each([

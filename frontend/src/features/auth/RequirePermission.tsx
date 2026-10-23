@@ -13,7 +13,11 @@ export function RequirePermission({ permission }: { permission: string }) {
         icon={<IconAlert />}
         title="No tiene permiso para ver esta sección"
         description="Si la necesita para su trabajo, pídale al dueño o al administrador que cambie su rol."
-        action={<ButtonLink to="/" variant="secondary">Ir al inicio</ButtonLink>}
+        action={
+          <ButtonLink to="/" variant="secondary">
+            Ir al inicio
+          </ButtonLink>
+        }
       />
     </Page>
   );

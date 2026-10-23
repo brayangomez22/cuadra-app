@@ -6,7 +6,9 @@ import { renderApp } from '@/test/renderApp';
 describe('GeneralSettings', () => {
   it('muestra el IVA por defecto de la empresa', async () => {
     // Droguería: medicamentos excluidos, 0 %.
-    fakeApi({ 'GET /api/v1/me': json(200, { ...aUser('owner'), business_template: 'drogueria', default_tax_rate: '0' }) });
+    fakeApi({
+      'GET /api/v1/me': json(200, { ...aUser('owner'), business_template: 'drogueria', default_tax_rate: '0' }),
+    });
     renderApp('/configuracion/general');
 
     expect(await screen.findByRole('combobox', { name: 'IVA por defecto' })).toHaveTextContent(/^0\s%$/);

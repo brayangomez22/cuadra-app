@@ -40,7 +40,12 @@ describe('carrito guardado', () => {
 
   it('una línea en unidad alternativa se restaura con su unidad', () => {
     const tubes = withUnits(aProduct(), [boxOf12]);
-    const cart = cartReducer(emptyCart, { type: 'add', item: cartItem(tubes), quantity: '1', unitId: unitOf('caja').id });
+    const cart = cartReducer(emptyCart, {
+      type: 'add',
+      item: cartItem(tubes),
+      quantity: '1',
+      unitId: unitOf('caja').id,
+    });
 
     saveCart(KEY, cart);
 

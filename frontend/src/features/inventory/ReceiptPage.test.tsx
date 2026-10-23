@@ -86,7 +86,9 @@ describe('ReceiptPage', () => {
     await pickLocation('Bodega principal');
 
     await register();
-    expect(screen.getByLabelText('Cantidad')).toHaveAccessibleDescription(expect.stringContaining('Escriba la cantidad'));
+    expect(screen.getByLabelText('Cantidad')).toHaveAccessibleDescription(
+      expect.stringContaining('Escriba la cantidad'),
+    );
 
     await userEvent.type(screen.getByLabelText('Cantidad'), '0');
     await register();
@@ -165,7 +167,10 @@ describe('ReceiptPage', () => {
       receiptApi();
       renderApp('/inventario/entrada');
 
-      await userEvent.type(await screen.findByRole('searchbox', { name: 'Producto' }), `${variantBarcode('L', 'Azul')}{Enter}`);
+      await userEvent.type(
+        await screen.findByRole('searchbox', { name: 'Producto' }),
+        `${variantBarcode('L', 'Azul')}{Enter}`,
+      );
 
       const chosen = await screen.findByRole('group', { name: 'Producto elegido' });
       expect(within(chosen).getByText('Camiseta básica (Azul · L)')).toBeInTheDocument();
@@ -247,7 +252,9 @@ describe('ReceiptPage', () => {
       await pickLocation('Bodega principal');
       await userEvent.click(screen.getByRole('combobox', { name: 'Unidad' }));
       await userEvent.click(await screen.findByRole('option', { name: 'caja (12 und)' }));
-      expect(screen.getByLabelText('Cantidad')).toHaveAccessibleDescription(expect.stringContaining('En caja de 12 und.'));
+      expect(screen.getByLabelText('Cantidad')).toHaveAccessibleDescription(
+        expect.stringContaining('En caja de 12 und.'),
+      );
       // The suggested cost is the base unit's times the factor: 8.333,33 × 12.
       expect(screen.getByLabelText('Costo unitario')).toHaveValue('99999,96');
       await userEvent.type(screen.getByLabelText('Cantidad'), '2');

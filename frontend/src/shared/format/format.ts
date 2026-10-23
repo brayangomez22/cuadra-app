@@ -66,8 +66,7 @@ export function formatDateTime(iso: string): string {
 }
 
 export type DecimalInput =
-  | { ok: true; value: string }
-  | { ok: false; reason: 'invalid' | 'thousands' | 'decimals' | 'too_large' };
+  { ok: true; value: string } | { ok: false; reason: 'invalid' | 'thousands' | 'decimals' | 'too_large' };
 
 // "12.500" or "1.250.000": a dot followed by groups of three digits reads as a
 // thousands separator in Colombia, so it is ambiguous with a decimal dot.

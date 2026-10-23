@@ -52,7 +52,9 @@ describe('ModulesSettings', () => {
 
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Variantes' }));
 
-    expect(await screen.findByText('No se puede desactivar Variantes: el módulo Lotes depende de él.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('No se puede desactivar Variantes: el módulo Lotes depende de él.'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Variantes' })).toBeChecked();
   });
 

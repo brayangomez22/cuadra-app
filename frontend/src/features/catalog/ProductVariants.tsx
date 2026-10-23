@@ -56,7 +56,10 @@ export function VariantEditor({ axes, control, register, errors, inactive }: Edi
 
   function toggle(axis: string, value: string) {
     const current = chosen[axis] ?? [];
-    const next = { ...chosen, [axis]: current.includes(value) ? current.filter((v) => v !== value) : [...current, value] };
+    const next = {
+      ...chosen,
+      [axis]: current.includes(value) ? current.filter((v) => v !== value) : [...current, value],
+    };
     const combos = combinations(allAxes, next);
     if (combos.length > MAX_COMBINATIONS) {
       setTooMany(true);
@@ -106,7 +109,9 @@ export function VariantEditor({ axes, control, register, errors, inactive }: Edi
         </p>
       )}
       {tooMany && (
-        <Alert tone="warning">Son más de {MAX_COMBINATIONS} variantes. Elija menos valores y agregue el resto después.</Alert>
+        <Alert tone="warning">
+          Son más de {MAX_COMBINATIONS} variantes. Elija menos valores y agregue el resto después.
+        </Alert>
       )}
 
       {fields.length > 0 && (
@@ -145,7 +150,11 @@ export function VariantEditor({ axes, control, register, errors, inactive }: Edi
                       </Field>
                     </TableCell>
                     <TableCell>
-                      <Field label={hidden('Código de barras')} error={rowErrors?.barcode?.message} className={styles.cell}>
+                      <Field
+                        label={hidden('Código de barras')}
+                        error={rowErrors?.barcode?.message}
+                        className={styles.cell}
+                      >
                         <Input autoComplete="off" spellCheck={false} {...register(`variants.${index}.barcode`)} />
                       </Field>
                     </TableCell>

@@ -111,7 +111,6 @@ export function PosPage() {
     return () => clearTimeout(timer);
   }, [added]);
 
-
   const focusSearch = () => requestAnimationFrame(() => search.current?.focus());
 
   // The screen's shortcuts. Open dialogs handle their own keys (Escape closes them).
@@ -153,7 +152,9 @@ export function PosPage() {
       setAdded(mark);
     }
     const next = cartTotals(cartReducer(cart, action), discountLimit);
-    const line = next.lines.find((l) => lineKey({ variantId: l.line.item.variantId, unitId: l.line.unitId }) === key)?.line;
+    const line = next.lines.find(
+      (l) => lineKey({ variantId: l.line.item.variantId, unitId: l.line.unitId }) === key,
+    )?.line;
     if (line) {
       const { item } = line;
       setAnnouncement(
@@ -327,8 +328,17 @@ export function PosPage() {
               Corrija {invalidLines === 1 ? '1 línea' : `${invalidLines} líneas`} para cobrar.
             </p>
           )}
-          <Button size="lg" className={styles.charge} disabled={!canCharge} onClick={openCheckout} aria-keyshortcuts="F4">
-            Cobrar <kbd className={styles.key} aria-hidden="true">F4</kbd>
+          <Button
+            size="lg"
+            className={styles.charge}
+            disabled={!canCharge}
+            onClick={openCheckout}
+            aria-keyshortcuts="F4"
+          >
+            Cobrar{' '}
+            <kbd className={styles.key} aria-hidden="true">
+              F4
+            </kbd>
           </Button>
           <p className={styles.shortcuts} aria-hidden="true">
             <kbd>F2</kbd> buscar · <kbd>F4</kbd> cobrar · <kbd>Esc</kbd> cancelar
