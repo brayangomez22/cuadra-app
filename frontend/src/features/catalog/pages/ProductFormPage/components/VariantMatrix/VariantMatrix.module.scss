@@ -1,0 +1,4 @@
+// The table scrolls inside its own container on a narrow screen, never the page.
+.root {
+  min-inline-size: 0;
+}

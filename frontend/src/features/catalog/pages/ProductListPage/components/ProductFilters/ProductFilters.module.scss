@@ -1,0 +1,20 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+
+  @include respond-to(sm) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 12rem);
+    align-items: end;
+  }
+}
+
+.search {
+  min-inline-size: 0;
+}
+
+.status {
+  min-inline-size: 0;
+}

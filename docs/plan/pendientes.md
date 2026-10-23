@@ -67,6 +67,7 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P65 | Prettier formatea solo `frontend/`: `e2e/` (TypeScript de Playwright) y `loadtest/` (k6) son paquetes aparte sin formateador. Decidir si comparten `.prettierrc` y un `format:check` en CI | T26b | T26j |
 | [ ] | P66 | `no-restricted-imports` vigila los alias (`@/features/x/...`) pero no un import relativo que cruce de una feature a otra (`../catalog/api`); hoy no hay ninguno. Agregar el patrón cuando las features tengan su estructura final | T26b | T26j |
 | [ ] | P67 | El `as` de `Stack` e `Inline` no tipa los props propios del elemento (`noValidate` de un `form`, `htmlFor`...): hoy hay que envolverlos en el elemento nativo (`docs/frontend.md`, sección 10). Tiparlos como componente polimórfico si los formularios de T26e–T26i lo repiten | T26d | T26j |
+| [ ] | P68 | `catalog` creó `SelectController` (un `Select` atado a react-hook-form) y `useFieldError` (el mensaje de un campo por su ruta, suscrito solo a esa parte): si el formulario de entrada de inventario (o los diálogos de configuración en T26i) los necesitan, pasarlos a `shared/forms/` en vez de copiarlos | T26e | T26h |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 

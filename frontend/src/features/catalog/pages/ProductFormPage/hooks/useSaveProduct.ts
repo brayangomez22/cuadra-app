@@ -1,0 +1,78 @@
+import { useMemo } from 'react';
+import { useNavigate } from 'react-router';
+import { paths } from '@/app/routes/paths';
+import { describeError } from '@/shared/api/errors';
+import { useApiFormErrors } from '@/shared/forms/useApiFormErrors';
+import { useToast } from '@/shared/ui';
+import { saveProduct, useStoreProduct } from '../../../api/products';
+import type { AttributeDefinition, Product } from '../../../api/types';
+import { defaultRow } from '../../../model/productDefaults';
+import { attributeErrorField, productErrorFields } from '../../../model/productErrorFields';
+import type { ProductFormValues, VariantRow } from '../../../model/productSchema';
+import { resolveRows, type ResolvedRow } from '../../../model/resolveRows';
+import { defaultVariantInput, toProductInput } from '../../../model/toProductInput';
+import { defaultVariant } from '../../../model/variants';
+import type { ProductFormApi } from './useProductForm';
+import { useSaveMatrix } from './useSaveMatrix';
+
+type Input = {
+  form: ProductFormApi;
+  /** The saved product, if any: saving updates it. */
+  current?: Product;
+  definitions: AttributeDefinition[];
+  /** The rows of the variant matrix as typed; empty without it. */
+  rows: VariantRow[];
+  onPartial: (product: Product) => void;
+};
+
+/**
+ * Saves the form: the product, then the rows of the variant matrix. When it
+ * is all saved, it goes back to the list; when the API rejects something, it
+ * marks it on its field and stays.
+ */
+export function useSaveProduct({ form, current, definitions, rows, onPartial }: Input) {
+  const navigate = useNavigate();
+  const store = useStoreProduct();
+  const { toast } = useToast();
+  const matrix = rows.length > 0;
+  const defaultIndex = defaultRow(rows, current);
+  const fields = useMemo(() => productErrorFields({ matrix, defaultIndex }), [matrix, defaultIndex]);
+  const { formError, handleError, clearFormError } = useApiFormErrors(form.setError, fields);
+  const { saveMatrix, markRows, failedVariants, clearFailed } = useSaveMatrix({ form, onPartial });
+
+  function showError(error: unknown) {
+    const attribute = attributeErrorField(error, definitions);
+    if (attribute) form.setError(attribute, { message: describeError(error).message }, { shouldFocus: true });
+    else handleError(error);
+  }
+
+  // saveAll saves the product and its matrix: the product, or undefined when something failed (it is marked).
+  async function saveAll(values: ProductFormValues, rows: ResolvedRow[] | undefined) {
+    const keptPrice = current?.active === false ? defaultVariant(current).price : undefined;
+    const body = toProductInput(values, defaultVariantInput(values, rows?.[defaultIndex], keptPrice));
+    try {
+      const saved = await saveProduct(current, body);
+      return rows ? await saveMatrix(saved, rows, defaultIndex) : saved;
+    } catch (error) {
+      showError(error);
+      return undefined;
+    }
+  }
+
+  async function save(values: ProductFormValues) {
+    clearFormError();
+    clearFailed();
+    const resolved = matrix ? resolveRows(values.variants, values) : undefined;
+    if (resolved && resolved.errors.length > 0) {
+      markRows(resolved.errors);
+      return;
+    }
+    const saved = await saveAll(values, resolved?.rows);
+    if (!saved) return;
+    store(saved);
+    toast({ tone: 'success', title: 'Producto guardado', description: saved.name });
+    void navigate(paths.products.list());
+  }
+
+  return { submit: form.handleSubmit(save), formError, failedVariants };
+}

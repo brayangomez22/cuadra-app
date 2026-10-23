@@ -80,7 +80,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 **Depende de:** T26c.
 **Alcance:** `pages/LoginPage`, `pages/SignUpPage` (con `BusinessTypeField` en sus `components/`), `guards/` (`RequireAuth`, `RequirePermission`, `GuestOnly`), `session/` (`AuthProvider`, `useAuth`, `useCan`, `access`, `redirect`), `model/schemas.ts` y `testing/`. `SignUpPage` usa `useApiFormErrors`. Esta feature es la más simple y sirve para ajustar `docs/frontend.md` antes de aplicarlo a las grandes; los ajustes quedan en el mismo PR.
 
-### [ ] T26e · Refactor de `catalog`
+### [x] T26e · Refactor de `catalog`
 **Depende de:** T26d.
 **Alcance:** `ProductFormPage` pasa a `pages/ProductFormPage/` con secciones (`GeneralSection`, `PriceSection`, `AttributesSection`, `VariantsSection`, `UnitsSection`), hooks (`useProductFormData` para cargar listas y producto, `useSaveProduct` con el guardado y la reconciliación de variantes que hoy hace `saveVariants.ts`, `useProductStatus`) y lógica pura en `model/` (`productDefaults`, `toProductInput`, `productErrorFields`, `variantMatrix`, `variants`, `taxRates`). `VariantUnits` se divide en la lista, la fila y el diálogo. `ProductListPage` usa `useSearchParamsState` y `QueryState`. `api.ts` se divide por recurso (productos, unidades, atributos, ejes). `ProductFormPage.test.tsx` (734 líneas) se divide por escenario (crear, editar, variantes, unidades, atributos, errores).
 
@@ -95,7 +95,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 ### [ ] T26h · Refactor de `inventory`
 **Depende de:** T26g.
 **Alcance:** `pages/StockPage`, `pages/KardexPage` y `pages/ReceiptPage` (con el formulario de entrada dividido en producto, unidad y cantidad, y sus hooks), `components/CreateLocationDialog`, `model/movements.ts`. Kardex y Existencias usan `useSearchParamsState` y `QueryState`; `ReceiptPage` usa `useApiFormErrors`.
-**Pendientes que entran a esta tarea:** P63 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P63 y P68 (`docs/plan/pendientes.md`).
 
 ### [ ] T26i · Refactor de `settings`
 **Depende de:** T26h.

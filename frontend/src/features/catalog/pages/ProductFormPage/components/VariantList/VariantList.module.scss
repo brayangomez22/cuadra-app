@@ -1,0 +1,25 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+// The table scrolls inside its own container on a narrow screen, never the page.
+.table {
+  min-inline-size: 0;
+}
+
+.label {
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.sku {
+  min-inline-size: 12ch;
+  font-family: var(--font-family-mono);
+}

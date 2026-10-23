@@ -8,28 +8,6 @@
 // rule: split the file or fix the code instead (docs/frontend.md).
 export const legacy = {
   'src/app/router.tsx': ['max-lines', 'no-restricted-syntax'],
-  'src/features/catalog/ProductFormPage.test.tsx': [
-    '@typescript-eslint/no-unsafe-argument',
-    '@typescript-eslint/no-unsafe-assignment',
-    '@typescript-eslint/no-unsafe-member-access',
-    'max-lines',
-  ],
-  'src/features/catalog/ProductFormPage.tsx': [
-    '@typescript-eslint/no-unnecessary-condition',
-    'complexity',
-    'max-lines',
-    'max-lines-per-function',
-  ],
-  'src/features/catalog/ProductListPage.tsx': ['complexity', 'max-lines', 'max-lines-per-function'],
-  'src/features/catalog/ProductPicker.tsx': [
-    '@typescript-eslint/no-deprecated',
-    'complexity',
-    'max-lines-per-function',
-  ],
-  'src/features/catalog/ProductVariants.tsx': ['complexity', 'max-lines', 'max-lines-per-function'],
-  'src/features/catalog/VariantUnits.tsx': ['complexity', 'max-lines', 'max-lines-per-function'],
-  'src/features/catalog/saveVariants.ts': ['complexity', 'max-lines'],
-  'src/features/catalog/variants.ts': ['@typescript-eslint/non-nullable-type-assertion-style'],
   'src/features/dev/UiCatalogPage.tsx': ['max-lines', 'max-lines-per-function'],
   'src/features/inventory/CreateLocationDialog.tsx': ['max-lines-per-function'],
   'src/features/inventory/KardexPage.tsx': ['complexity', 'max-lines', 'max-lines-per-function'],

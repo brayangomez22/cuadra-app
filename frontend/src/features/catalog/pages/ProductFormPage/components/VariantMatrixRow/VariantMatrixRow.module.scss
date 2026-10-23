@@ -1,0 +1,18 @@
+.label {
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+// The label of each cell is for screen readers only: no space above the input.
+.cell {
+  gap: 0;
+}
+
+.sku {
+  min-inline-size: 12ch;
+  font-family: var(--font-family-mono);
+}
+
+.amount {
+  min-inline-size: 10ch;
+}
