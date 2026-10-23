@@ -92,7 +92,7 @@ Cuadra sirve a muchos tipos de comercio. El **core** (identidad, catálogo, inve
    - El core **nunca** importa un módulo. Los módulos se conectan al core por puertos y eventos de dominio.
 9. **Plantillas de tipo de negocio como datos, no código** (`backend/templates/business/*.yaml`): módulos activos, unidades, categorías iniciales, atributos de producto, segmentos de cliente, impuestos por defecto y etiquetas de la UI. El tenant elige una plantilla al registrarse y después puede cambiar todo. Plantillas iniciales: `generica`, `ferreteria`, `tienda`, `drogueria`, `papeleria` y `ropa_calzado`.
 10. **Módulos ≠ feature flags.** Un módulo es una capacidad del producto que el tenant tiene activada (y luego, contratada según su plan). Un feature flag (T39) sirve para lanzamientos graduales y para apagar algo en una emergencia.
-11. **Neutralidad verificable:** los nombres, textos y ejemplos del core son neutros (producto, cliente, unidad). Los tests table-driven del core incluyen casos de **al menos dos tipos de negocio** (por ejemplo, ferretería y almacén de ropa). `make lint-neutral` (en CI) falla si aparecen términos de un nicho en el core (excluye `*_test.go`, `*.test.ts(x)`, `testdata/` y fixtures).
+11. **Neutralidad verificable:** los nombres, textos y ejemplos del core son neutros (producto, cliente, unidad). Los tests table-driven del core incluyen casos de **al menos dos tipos de negocio** (por ejemplo, ferretería y almacén de ropa). `make lint-neutral` (en CI) falla si aparecen términos de un nicho en el core (excluye `*_test.go`, `*.test.ts(x)`, `testdata/`, fixtures y el `testing/` de cada feature del frontend).
 
 ## Multi-tenant (crítico)
 

@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router';
 import { ButtonLink, EmptyState, IconAlert, Page } from '@/shared/ui';
-import { useCan } from './useCan';
+import { useCan } from '../../session/useCan';
 import { paths } from '@/app/routes/paths';
 
 // RequirePermission guards the routes of a section the role cannot use, for

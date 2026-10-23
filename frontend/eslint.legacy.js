@@ -8,15 +8,6 @@
 // rule: split the file or fix the code instead (docs/frontend.md).
 export const legacy = {
   'src/app/router.tsx': ['max-lines', 'no-restricted-syntax'],
-  'src/features/auth/BusinessTypeField.tsx': ['max-lines-per-function'],
-  'src/features/auth/LoginPage.tsx': [
-    '@typescript-eslint/no-unnecessary-condition',
-    '@typescript-eslint/no-unsafe-assignment',
-    'max-lines-per-function',
-  ],
-  'src/features/auth/SignUpPage.test.tsx': ['@typescript-eslint/no-unnecessary-type-assertion'],
-  'src/features/auth/SignUpPage.tsx': ['@typescript-eslint/no-unsafe-assignment', 'max-lines-per-function'],
-  'src/features/auth/redirect.ts': ['@typescript-eslint/no-unnecessary-condition'],
   'src/features/catalog/ProductFormPage.test.tsx': [
     '@typescript-eslint/no-unsafe-argument',
     '@typescript-eslint/no-unsafe-assignment',

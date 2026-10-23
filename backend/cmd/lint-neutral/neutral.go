@@ -70,7 +70,7 @@ func DefaultRules() Rules {
 		},
 		Extensions:      []string{".go", ".sql", ".yaml", ".yml", ".json", ".ts", ".tsx", ".scss", ".css", ".html"},
 		ExcludeSuffixes: []string{"_test.go", ".test.ts", ".test.tsx"},
-		ExcludeDirs:     []string{"testdata", "fixtures"},
+		ExcludeDirs:     []string{"testdata", "fixtures", "testing"}, // testing/: the fixtures of a frontend feature (docs/frontend.md)
 		ExcludePaths: []string{
 			"frontend/src/test/",         // test fixtures and the fake API
 			"frontend/src/features/dev/", // UI catalog: sample data, only in development

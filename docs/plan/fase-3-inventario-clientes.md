@@ -76,7 +76,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 **Pendientes que entran a esta tarea:** P64 (`docs/plan/pendientes.md`).
 **Tests primero:** `useApiFormErrors` pone el error en el campo de `sku_taken` y enfoca solo el primero; un código sin campo devuelve el mensaje general; `QueryState` muestra el error de la query que falló aunque otra siga cargando; `useSearchParamsState` lee y escribe la página como número y quita el parámetro cuando vuelve al valor por defecto; `Stack` aplica el gap pedido.
 
-### [ ] T26d · Refactor de `auth` (piloto de la convención)
+### [x] T26d · Refactor de `auth` (piloto de la convención)
 **Depende de:** T26c.
 **Alcance:** `pages/LoginPage`, `pages/SignUpPage` (con `BusinessTypeField` en sus `components/`), `guards/` (`RequireAuth`, `RequirePermission`, `GuestOnly`), `session/` (`AuthProvider`, `useAuth`, `useCan`, `access`, `redirect`), `model/schemas.ts` y `testing/`. `SignUpPage` usa `useApiFormErrors`. Esta feature es la más simple y sirve para ajustar `docs/frontend.md` antes de aplicarlo a las grandes; los ajustes quedan en el mismo PR.
 
@@ -104,7 +104,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 ### [ ] T26j · Refactor de `app/` y `dev/`, y cierre del bloque
 **Depende de:** T26i.
 **Alcance:** `UiCatalogPage` (362 líneas) dividido en una sección por grupo de componentes; `router.tsx` con las rutas agrupadas por feature (`routes.ts` en cada `index.ts` o un archivo por área); `src/test/fixtures.ts` repartido en el `testing/` de cada feature (lo compartido queda en `src/test/`); se borra `eslint.legacy.js` y toda excepción. Se revisa `docs/frontend.md` contra el código final y cada feature tiene su `README.md`.
-**Pendientes que entran a esta tarea:** P65 y P66 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P65, P66 y P67 (`docs/plan/pendientes.md`).
 **Verificación final:** `npm run lint` sin excepciones; ningún archivo de `src/` pasa de los límites (salvo el generado `schema.d.ts`); un reporte en el PR con las líneas por archivo antes y después.
 
 ### [ ] T27 · Escáner de códigos con la cámara

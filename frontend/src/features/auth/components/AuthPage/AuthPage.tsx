@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
+import { Stack } from '@/shared/ui';
 import styles from './AuthPage.module.scss';
 
 type Props = {
@@ -17,24 +18,26 @@ type Props = {
 export function AuthPage({ title, description, children, footer, size = 'md' }: Props) {
   return (
     <main className={styles.root}>
-      <div className={styles.column} data-size={size}>
+      <Stack gap="4" className={styles.column} data-size={size}>
         <p className={styles.brand}>Cuadra</p>
         <section className={styles.card} aria-labelledby="auth-title">
-          <header className={styles.header}>
+          <Stack as="header" gap="2">
             <h1 id="auth-title" className={styles.title}>
               {title}
             </h1>
             {description && <p className={styles.description}>{description}</p>}
-          </header>
+          </Stack>
           {children}
         </section>
         {footer && <p className={styles.footer}>{footer}</p>}
-      </div>
+      </Stack>
     </main>
   );
 }
 
 /** A link between the auth screens, keeping the page asked for before the login. */
-export function AuthLink(props: ComponentProps<typeof Link>) {
-  return <Link className={styles.link} {...props} />;
+export function AuthLink(props: Omit<ComponentProps<typeof Link>, 'state'>) {
+  // RequireAuth keeps that page in the location state (redirect.ts).
+  const state: unknown = useLocation().state;
+  return <Link className={styles.link} state={state} {...props} />;
 }

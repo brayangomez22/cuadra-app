@@ -1,6 +1,10 @@
-export { canSee, useAccess, visibleItems, type Access, type Gated } from './access';
-export { AuthProvider } from './AuthProvider';
-export { GuestOnly, RequireAuth } from './RequireAuth';
-export { RequirePermission } from './RequirePermission';
-export { meQueryKey, useAuth, type Me } from './useAuth';
-export { useCan } from './useCan';
+// The public API of auth: the session, the route guards and what the user may see.
+export type { Me } from './api/types';
+export { meQueryKey } from './api/keys';
+export { GuestOnly } from './guards/GuestOnly/GuestOnly';
+export { RequireAuth } from './guards/RequireAuth/RequireAuth';
+export { RequirePermission } from './guards/RequirePermission/RequirePermission';
+export { canSee, useAccess, visibleItems, type Access, type Gated } from './session/access';
+export { AuthProvider } from './session/AuthProvider';
+export { useAuth } from './session/useAuth';
+export { useCan } from './session/useCan';

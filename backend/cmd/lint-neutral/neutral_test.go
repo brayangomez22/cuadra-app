@@ -180,12 +180,13 @@ func TestDefaultRules(t *testing.T) {
 		require.Empty(t, result.Findings)
 	})
 
-	t.Run("no marca testdata, fixtures ni el catálogo de UI de desarrollo", func(t *testing.T) {
+	t.Run("no marca testdata, fixtures, el testing de una feature ni el catálogo de UI de desarrollo", func(t *testing.T) {
 		fsys := withAllowed(fstest.MapFS{
 			"backend/internal/platform/templates/testdata/ferreteria.yaml": file("name: Ferretería\n"),
 			"frontend/src/test/fixtures.ts":                                file("'Tubo PVC'; 'bulto'\n"),
 			"frontend/src/test/fakeApi.ts":                                 file("'Ferretería El Tornillo'\n"),
 			"frontend/src/features/dev/UiCatalogPage.tsx":                  file("'Cemento gris 50kg'\n"),
+			"frontend/src/features/auth/testing/authApi.ts":                file("'Ropa y calzado'; 'Ferretería'\n"),
 		})
 
 		result := scan(t, fsys, DefaultRules())
