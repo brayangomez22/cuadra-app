@@ -1,0 +1,12 @@
+// The same error and loading layout the screens wrote by hand (StockPage, KardexPage...).
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.loading {
+  align-self: center;
+  padding-block: var(--space-8);
+}

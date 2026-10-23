@@ -84,6 +84,11 @@ export function parseDecimalInput(text: string): DecimalInput {
   const match = decimalText.exec(trimmed);
   if (!match) return { ok: false, reason: 'invalid' };
   const [, sign = '', whole = '', fraction] = match;
+  return checkDigits(sign, whole, fraction);
+}
+
+// NUMERIC(18,4): at most 4 decimals and 14 whole digits.
+function checkDigits(sign: string, whole: string, fraction: string | undefined): DecimalInput {
   if (fraction !== undefined && fraction.length > 4) return { ok: false, reason: 'decimals' };
   if (whole.replace(/^0+(?=\d)/, '').length > 14) return { ok: false, reason: 'too_large' };
   return { ok: true, value: fraction === undefined ? `${sign}${whole}` : `${sign}${whole}.${fraction}` };

@@ -8,15 +8,24 @@ configure({ asyncUtilTimeout: 3000 });
 
 // jsdom lacks APIs that Radix Select and its popper use in the browser. The
 // stylelint and styles-check tests run in Node, without a DOM.
+// The types say they always exist, so the check is by name.
+function polyfill(target: object, key: string, value: unknown) {
+  if (!(key in target)) Object.defineProperty(target, key, { value, configurable: true, writable: true });
+}
+
 if (typeof Element !== 'undefined') {
-  Element.prototype.hasPointerCapture ??= () => false;
-  Element.prototype.releasePointerCapture ??= () => {};
-  Element.prototype.scrollIntoView ??= () => {};
-  globalThis.ResizeObserver ??= class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
+  polyfill(Element.prototype, 'hasPointerCapture', () => false);
+  polyfill(Element.prototype, 'releasePointerCapture', () => undefined);
+  polyfill(Element.prototype, 'scrollIntoView', () => undefined);
+  polyfill(
+    globalThis,
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
 }
 
 // fakeApi stubs the global fetch; each test starts with the real one.

@@ -41,12 +41,11 @@ describe('ModulesSettings', () => {
     fakeApi({
       'GET /api/v1/me': json(200, { ...aUser('owner'), modules: ['variants'] }),
       'GET /api/v1/modules': json(200, { items: [{ ...variants, active: true }] }),
-      'PUT /api/v1/modules/variants': apiError(
-        409,
-        'module_required_by',
-        'No se puede desactivar Variantes: el módulo Lotes depende de él.',
-        { module: 'lots_expiry' },
-      ),
+      'PUT /api/v1/modules/variants': apiError(409, {
+        code: 'module_required_by',
+        message: 'No se puede desactivar Variantes: el módulo Lotes depende de él.',
+        details: { module: 'lots_expiry' },
+      }),
     });
     renderApp('/configuracion/modulos');
 

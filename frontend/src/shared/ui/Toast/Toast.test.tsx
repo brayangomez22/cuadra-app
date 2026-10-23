@@ -49,7 +49,9 @@ describe('Toast', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
       expect(within(region()).getByText('Venta guardada')).toBeInTheDocument();
 
-      act(() => vi.advanceTimersByTime(60_000));
+      act(() => {
+        vi.advanceTimersByTime(60_000);
+      });
 
       expect(within(region()).queryByText('Venta guardada')).not.toBeInTheDocument();
     });
@@ -58,7 +60,9 @@ describe('Toast', () => {
       const { region } = renderWithToasts('danger');
       fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
-      act(() => vi.advanceTimersByTime(10 * 60_000));
+      act(() => {
+        vi.advanceTimersByTime(10 * 60_000);
+      });
 
       expect(within(region()).getByText('Venta guardada')).toBeInTheDocument();
     });

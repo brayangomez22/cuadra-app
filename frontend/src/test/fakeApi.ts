@@ -60,13 +60,12 @@ export function json<B>(status: number, body: B): Reply<B> {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
+/** An API error reply: apiError(409, { code: 'sku_taken', message: '…', details }). */
 export function apiError(
   status: number,
-  code: string,
-  message: string,
-  details?: Record<string, string>,
+  error: components['schemas']['Error']['error'],
 ): Reply<components['schemas']['Error']> {
-  return json(status, { error: { code, message, details } });
+  return json(status, { error });
 }
 
 const permissionsByRole: Record<Me['role'], string[]> = {
@@ -125,7 +124,7 @@ export function signedIn(user = aUser()) {
 // signedOut stubs a visitor without a session: /me and the refresh both answer 401.
 export function signedOut() {
   return {
-    'GET /api/v1/me': apiError(401, 'unauthorized', 'Inicie sesión'),
-    'POST /api/v1/auth/refresh': apiError(401, 'invalid_session', 'La sesión venció'),
+    'GET /api/v1/me': apiError(401, { code: 'unauthorized', message: 'Inicie sesión' }),
+    'POST /api/v1/auth/refresh': apiError(401, { code: 'invalid_session', message: 'La sesión venció' }),
   };
 }

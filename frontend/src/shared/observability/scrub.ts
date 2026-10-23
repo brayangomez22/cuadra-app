@@ -67,27 +67,31 @@ function scrubRecord<T extends Record<string, unknown>>(record: T | undefined): 
 // event before it leaves the browser. It keeps only the user's opaque ID, and of
 // the request only its method, path and harmless headers.
 export function scrubEvent(event: ErrorEvent): ErrorEvent {
-  if (event.message) event.message = scrubText(event.message);
-  for (const exception of event.exception?.values ?? []) {
-    if (exception.value) exception.value = scrubText(exception.value);
-  }
+  scrubMessages(event);
   event.tags = scrubRecord(event.tags);
   event.extra = scrubRecord(event.extra);
   if (event.contexts) event.contexts = scrubValue(event.contexts) as ErrorEvent['contexts'];
   event.breadcrumbs = event.breadcrumbs?.map((b) => scrubBreadcrumb(b) ?? b);
   if (event.user) event.user = event.user.id === undefined ? {} : { id: event.user.id };
-
-  const request = event.request;
-  if (request) {
-    event.request = {
-      ...(request.url && { url: stripQuery(request.url) }),
-      ...(request.method && { method: request.method }),
-      ...(request.headers && {
-        headers: Object.fromEntries(Object.entries(request.headers).filter(([k]) => ALLOWED_HEADERS.has(k))),
-      }),
-    };
-  }
+  if (event.request) event.request = scrubRequest(event.request);
   return event;
+}
+
+function scrubMessages(event: ErrorEvent): void {
+  if (event.message) event.message = scrubText(event.message);
+  for (const exception of event.exception?.values ?? []) {
+    if (exception.value) exception.value = scrubText(exception.value);
+  }
+}
+
+function scrubRequest(request: NonNullable<ErrorEvent['request']>): ErrorEvent['request'] {
+  return {
+    ...(request.url && { url: stripQuery(request.url) }),
+    ...(request.method && { method: request.method }),
+    ...(request.headers && {
+      headers: Object.fromEntries(Object.entries(request.headers).filter(([k]) => ALLOWED_HEADERS.has(k))),
+    }),
+  };
 }
 
 // scrubBreadcrumb is the beforeBreadcrumb hook: fetch and navigation breadcrumbs

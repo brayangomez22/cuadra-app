@@ -142,3 +142,17 @@ features/catalog/
 ```
 
 El mapeo de errores de la API a campos pasa a `useApiFormErrors` de `shared/` (T26c), porque lo repiten los formularios de inventario y configuración.
+
+## 10. Kit compartido y generador
+
+Lo que se repetía en varias pantallas vive en `shared/` (T26c). Cada feature lo adopta en su tarea del bloque.
+
+| Pieza | Para qué | Uso |
+|---|---|---|
+| `useApiFormErrors` (`@/shared/forms/useApiFormErrors`) | Lleva el `code` de un error de la API a sus campos (enfoca el primero) o, si ningún campo aplica, al mensaje general del formulario, incluido el de sin conexión | `const { formError, handleError } = useApiFormErrors(setError, { sku_taken: 'sku', barcode_taken: ['barcode'] })` y `catch (error) { handleError(error) }` |
+| `QueryState` (`@/shared/query`) | Cargando, error (con «Reintentar» de las queries que fallaron) y vacío de una o varias queries; el error gana sobre el cargando | `<QueryState queries={[stock, products]} errorTitle="No pudimos cargar las existencias" isEmpty={levels.length === 0} empty={<EmptyState … />}>{() => <StockTable … />}</QueryState>` |
+| `useSearchParamsState` (`@/shared/hooks/useSearchParamsState`) | Estado tipado en la URL; el valor por defecto no deja parámetro | `const [page, setPage] = useSearchParamsState('pagina', pageParam)`; `useSearchParamsState('estado', enumParam(['activos', 'todos'], 'activos'), { reset: ['pagina'] })` |
+| `useMutationToast` (`@/shared/hooks/useMutationToast`) | Toasts de éxito y error de una mutación; el error lleva el mensaje de la API | `useMutation({ mutationFn, ...useMutationToast({ success: (unit) => ({ title: 'Unidad guardada', description: unit.name }), error: 'No se pudo guardar la unidad' }) })` |
+| `Stack` e `Inline` (`@/shared/ui`) | Layout vertical y horizontal con `gap` de la escala de espacios; reemplazan las clases que solo hacen `display: flex` + `gap` | `docs/estilos.md`, sección 6 |
+
+**Generador.** `npm run new -- component <ruta>/<Nombre>` crea la carpeta con `Nombre.tsx`, `Nombre.module.scss` (con `.root`) y `Nombre.test.tsx`. `npm run new -- hook <ruta>/useNombre` crea el hook y su test. La ruta es relativa a `src/features/`, salvo que empiece por `shared/` o `app/`. Si algo ya existe, no escribe nada. Un componente que solo se separó para leerlo mejor no lleva test propio (sección 6): borra el que se generó.

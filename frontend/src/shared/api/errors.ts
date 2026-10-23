@@ -4,17 +4,13 @@
 
 type ApiErrorBody = { error: { code: string; message: string; details?: Record<string, string> } };
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 function isApiError(body: unknown): body is ApiErrorBody {
-  if (typeof body !== 'object' || body === null || !('error' in body)) return false;
-  const { error } = body;
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof error.code === 'string' &&
-    'message' in error &&
-    typeof error.message === 'string'
-  );
+  if (!isObject(body) || !isObject(body.error)) return false;
+  return typeof body.error.code === 'string' && typeof body.error.message === 'string';
 }
 
 // errorCode returns the code of an API error body, or undefined if it is not one.
@@ -42,7 +38,7 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     this.status = status;
     this.code = errorCode(body);
-    this.details = (isApiError(body) && body.error.details) || {};
+    this.details = (isApiError(body) ? body.error.details : undefined) ?? {};
   }
 }
 

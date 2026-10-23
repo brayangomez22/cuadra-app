@@ -8,7 +8,6 @@ const legacyLongModules = [
   'src/features/sales/CheckoutDialog.module.scss',
   'src/features/sales/PosPage.module.scss',
   'src/features/sales/Receipt.module.scss',
-  'src/shared/ui/Toast/Toast.module.scss',
 ];
 
 /** @type {import('stylelint').Config} */

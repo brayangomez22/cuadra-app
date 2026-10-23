@@ -200,7 +200,10 @@ describe('ReceiptPage', () => {
 
   it('muestra en el campo el error de sede inactiva', async () => {
     receiptApi({
-      'POST /api/v1/inventory/receipts': apiError(422, 'location_inactive', 'La sede Bodega principal está inactiva'),
+      'POST /api/v1/inventory/receipts': apiError(422, {
+        code: 'location_inactive',
+        message: 'La sede Bodega principal está inactiva',
+      }),
     });
     renderApp('/inventario/entrada');
     await pickProduct('tubo', 'Tubo PVC presión 1/2 pulgada');

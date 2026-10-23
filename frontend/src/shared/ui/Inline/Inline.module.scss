@@ -1,0 +1,43 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  @include gap-steps;
+
+  &[data-align='start'] {
+    align-items: flex-start;
+  }
+
+  &[data-align='end'] {
+    align-items: flex-end;
+  }
+
+  &[data-align='baseline'] {
+    align-items: baseline;
+  }
+
+  &[data-align='stretch'] {
+    align-items: stretch;
+  }
+
+  &[data-justify='center'] {
+    justify-content: center;
+  }
+
+  &[data-justify='end'] {
+    justify-content: flex-end;
+  }
+
+  &[data-justify='between'] {
+    justify-content: space-between;
+  }
+
+  &[data-wrap='true'] {
+    flex-wrap: wrap;
+  }
+}

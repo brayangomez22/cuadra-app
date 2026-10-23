@@ -75,7 +75,7 @@ describe('SignUpPage', () => {
     signUpApi({
       'GET /api/v1/business-templates': () => {
         attempts += 1;
-        return attempts === 1 ? apiError(500, 'internal', 'Error') : json(200, templates);
+        return attempts === 1 ? apiError(500, { code: 'internal', message: 'Error' }) : json(200, templates);
       },
     });
     renderApp('/registro');
@@ -87,11 +87,10 @@ describe('SignUpPage', () => {
 
   it('muestra en el campo NIT el error de dígito de verificación que devuelve la API', async () => {
     signUpApi({
-      'POST /api/v1/auth/signup': apiError(
-        422,
-        'invalid_nit_check_digit',
-        'El dígito de verificación del NIT no coincide.',
-      ),
+      'POST /api/v1/auth/signup': apiError(422, {
+        code: 'invalid_nit_check_digit',
+        message: 'El dígito de verificación del NIT no coincide.',
+      }),
     });
     renderApp('/registro');
 

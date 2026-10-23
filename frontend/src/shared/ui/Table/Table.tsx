@@ -37,7 +37,7 @@ export function TableBody({ className, ...rest }: ComponentProps<'tbody'>) {
 type RowProps = ComponentProps<'tr'> & { selected?: boolean };
 
 export function TableRow({ selected, className, ...rest }: RowProps) {
-  return <tr className={clsx(styles.row, className)} aria-selected={selected || undefined} {...rest} />;
+  return <tr className={clsx(styles.row, className)} aria-selected={selected ? true : undefined} {...rest} />;
 }
 
 /** numeric: prices and quantities, right-aligned with tabular figures. */
@@ -45,10 +45,15 @@ type CellProps<T> = T & { numeric?: boolean };
 
 export function TableHeaderCell({ numeric, scope = 'col', className, ...rest }: CellProps<ComponentProps<'th'>>) {
   return (
-    <th scope={scope} className={clsx(styles.headerCell, className)} data-numeric={numeric || undefined} {...rest} />
+    <th
+      scope={scope}
+      className={clsx(styles.headerCell, className)}
+      data-numeric={numeric ? true : undefined}
+      {...rest}
+    />
   );
 }
 
 export function TableCell({ numeric, className, ...rest }: CellProps<ComponentProps<'td'>>) {
-  return <td className={clsx(styles.cell, className)} data-numeric={numeric || undefined} {...rest} />;
+  return <td className={clsx(styles.cell, className)} data-numeric={numeric ? true : undefined} {...rest} />;
 }

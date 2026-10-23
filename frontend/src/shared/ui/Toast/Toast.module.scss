@@ -32,6 +32,7 @@
   padding-inline: var(--space-4) var(--space-1);
   border: 1px solid var(--color-border-default);
   border-inline-start-width: var(--space-1);
+  border-inline-start-color: var(--toast-tone, var(--color-border-default));
   border-radius: var(--radius-md);
   color: var(--color-text-default);
   background: var(--color-bg-surface);
@@ -55,20 +56,21 @@
     transform: translateX(var(--radix-toast-swipe-end-x));
   }
 
+  // One color per tone, for the left bar and the icon.
   &[data-tone='success'] {
-    border-inline-start-color: var(--color-feedback-success);
+    --toast-tone: var(--color-feedback-success);
   }
 
   &[data-tone='danger'] {
-    border-inline-start-color: var(--color-feedback-danger);
+    --toast-tone: var(--color-feedback-danger);
   }
 
   &[data-tone='warning'] {
-    border-inline-start-color: var(--color-feedback-warning);
+    --toast-tone: var(--color-feedback-warning);
   }
 
   &[data-tone='info'] {
-    border-inline-start-color: var(--color-feedback-info);
+    --toast-tone: var(--color-feedback-info);
   }
 }
 
@@ -76,22 +78,7 @@
   flex-shrink: 0;
   margin-block-start: var(--space-3);
   font-size: var(--font-size-xl);
-
-  .root[data-tone='success'] & {
-    color: var(--color-feedback-success);
-  }
-
-  .root[data-tone='danger'] & {
-    color: var(--color-feedback-danger);
-  }
-
-  .root[data-tone='warning'] & {
-    color: var(--color-feedback-warning);
-  }
-
-  .root[data-tone='info'] & {
-    color: var(--color-feedback-info);
-  }
+  color: var(--toast-tone, currentcolor);
 }
 
 .content {
