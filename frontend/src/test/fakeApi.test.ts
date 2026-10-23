@@ -40,7 +40,9 @@ describe('fakeApi', () => {
   });
 
   it('calls lista las peticiones de una ruta', async () => {
-    const api = fakeApi({ [`GET /api/v1/products/${productId}`]: apiError(404, 'not_found', 'No existe') });
+    const api = fakeApi({
+      [`GET /api/v1/products/${productId}`]: apiError(404, { code: 'not_found', message: 'No existe' }),
+    });
 
     await get(`/api/v1/products/${productId}`);
     await get('/api/v1/products');

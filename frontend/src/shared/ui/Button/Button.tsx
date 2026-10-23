@@ -18,7 +18,7 @@ export function Button({
   size = 'md',
   loading = false,
   icon,
-  disabled,
+  disabled = false,
   type = 'button',
   className,
   children,
@@ -31,15 +31,17 @@ export function Button({
       data-variant={variant}
       data-size={size}
       disabled={disabled || loading}
-      aria-busy={loading || undefined}
+      aria-busy={loading ? true : undefined}
       {...rest}
     >
-      {loading ? (
-        <Spinner size="sm" decorative className={styles.icon} />
-      ) : (
-        icon && <span className={styles.icon}>{icon}</span>
-      )}
+      <ButtonIcon loading={loading} icon={icon} />
       <span className={styles.label}>{children}</span>
     </button>
   );
+}
+
+// While loading, the spinner takes the place of the icon.
+function ButtonIcon({ loading, icon }: { loading: boolean; icon: ReactNode }) {
+  if (loading) return <Spinner size="sm" decorative className={styles.icon} />;
+  return icon && <span className={styles.icon}>{icon}</span>;
 }

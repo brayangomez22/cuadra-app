@@ -170,6 +170,7 @@ La UI es una prioridad del producto, no un detalle. **Antes de tocar cualquier `
 - La página carga datos y compone; las reglas van en `model/`, y la caché (`invalidateQueries`, `setQueryData`, llaves) solo en `api/`. Nada de `utils.ts` genéricos.
 - Las URLs salen de `@/app/routes/paths` (`paths.products.edit(id)`); los tests usan la URL literal. `fakeApi` está tipado contra el OpenAPI.
 - Prettier formatea el frontend (`npm run format`; `format:check` en CI).
+- Antes de escribir a mano, usa el kit de `shared/` (`useApiFormErrors`, `QueryState`, `useSearchParamsState`, `useMutationToast`, `Stack` e `Inline`) y crea componentes y hooks con `npm run new -- component|hook <ruta>` (`docs/frontend.md`, sección 10).
 
 ## Glosario del dominio
 

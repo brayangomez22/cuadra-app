@@ -47,7 +47,9 @@ describe('UnitsSettings', () => {
   });
 
   it('muestra en su campo un código repetido', async () => {
-    unitsApi({ 'POST /api/v1/units': apiError(409, 'unit_code_taken', 'Ya existe una unidad con ese código.') });
+    unitsApi({
+      'POST /api/v1/units': apiError(409, { code: 'unit_code_taken', message: 'Ya existe una unidad con ese código.' }),
+    });
     renderApp('/configuracion/unidades');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Agregar unidad' }));
@@ -96,7 +98,10 @@ describe('UnitsSettings', () => {
   it('una unidad en uso no se borra y explica por qué', async () => {
     const meters = unitOf('m');
     unitsApi({
-      [`DELETE /api/v1/units/${meters.id}`]: apiError(409, 'unit_in_use', 'Hay productos que usan esta unidad.'),
+      [`DELETE /api/v1/units/${meters.id}`]: apiError(409, {
+        code: 'unit_in_use',
+        message: 'Hay productos que usan esta unidad.',
+      }),
     });
     renderApp('/configuracion/unidades');
 

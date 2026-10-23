@@ -58,7 +58,10 @@ describe('VariantAxesSettings', () => {
   it('al editar, el nombre no cambia y quitar un valor en uso muestra el error de la API', async () => {
     const size = axes[0]!;
     const api = axesApi({
-      [`PUT /api/v1/variant-axes/${size.id}`]: apiError(409, 'axis_value_in_use', 'Hay variantes con la talla L.'),
+      [`PUT /api/v1/variant-axes/${size.id}`]: apiError(409, {
+        code: 'axis_value_in_use',
+        message: 'Hay variantes con la talla L.',
+      }),
     });
     renderApp('/configuracion/ejes');
 

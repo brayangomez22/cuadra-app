@@ -43,7 +43,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['*.{js,mjs,ts}', 'stylelint/**/*.ts', 'styles-check/**/*.ts'],
+    files: ['*.{js,mjs,ts}', 'stylelint/**/*.ts', 'styles-check/**/*.ts', 'scripts/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
   {

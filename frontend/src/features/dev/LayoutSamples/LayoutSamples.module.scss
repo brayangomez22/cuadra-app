@@ -1,0 +1,27 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  min-inline-size: 0;
+}
+
+.caption {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.box {
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border: 1px dashed var(--color-border-default);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-subtle);
+}
+
+.wide {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+}

@@ -64,7 +64,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 6. `/tarea` (`.claude/commands/tarea.md`) revisa en su verificación que la tarea no agregue excepciones ni archivos fuera de la estructura.
 **Tests primero:** `paths` arma las URLs con parámetros y query; `fakeApi` resuelve `/api/v1/products/{productId}` para un ID concreto y responde 404 a una ruta sin mock.
 
-### [ ] T26c · Kit compartido y generador
+### [x] T26c · Kit compartido y generador
 **Depende de:** T26b.
 **Alcance:** lo que ya se repite en varias pantallas, con tests primero. Cada pieza se adopta en las tareas por feature, no aquí (salvo un uso de ejemplo):
 - `shared/forms/useApiFormErrors`: lleva el `code` de un error de la API al campo del formulario (`{ code → campo }`), pone el foco en el primero y devuelve el mensaje general si ningún campo aplica. Hoy está copiado en `ProductFormPage`, `ReceiptPage`, `UnitsSettings`, `AttributesSettings`, `VariantAxesSettings` y `SignUpPage`.

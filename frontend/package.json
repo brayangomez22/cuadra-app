@@ -16,6 +16,7 @@
     "lint:styles": "stylelint \"src/**/*.scss\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "new": "node scripts/new.ts",
     "gen:api": "openapi-typescript ../api/openapi.yaml -o src/shared/api/schema.d.ts"
   },
   "dependencies": {

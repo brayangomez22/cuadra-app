@@ -2,6 +2,7 @@
 @use 'sass:string';
 @use '../tokens/breakpoints' as bp;
 @use '../tokens/sizes';
+@use '../tokens/spacing';
 
 // Mobile-first: styles inside apply from the breakpoint up.
 @mixin respond-to($name) {
@@ -74,5 +75,18 @@
 @mixin reduced-motion-safe {
   @media (prefers-reduced-motion: no-preference) {
     @content;
+  }
+}
+
+// One rule per step of the spacing scale for [data-gap] (Stack and Inline).
+@mixin gap-steps {
+  &[data-gap='0'] {
+    gap: 0;
+  }
+
+  @each $step, $value in spacing.$scale {
+    &[data-gap='#{$step}'] {
+      gap: var(--space-#{$step});
+    }
   }
 }

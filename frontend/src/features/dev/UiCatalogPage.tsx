@@ -29,6 +29,7 @@ import {
   TableRow,
   useToast,
 } from '@/shared/ui';
+import { LayoutSamples } from './LayoutSamples/LayoutSamples';
 import styles from './UiCatalogPage.module.scss';
 
 // Internal catalog of shared/ui in all its states. Only in development
@@ -353,6 +354,10 @@ export function UiCatalogPage() {
             <Skeleton shape="block" />
           </div>
         </div>
+      </Section>
+
+      <Section title="Stack e Inline">
+        <LayoutSamples />
       </Section>
     </main>
   );

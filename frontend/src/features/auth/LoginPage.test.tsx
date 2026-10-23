@@ -52,7 +52,10 @@ describe('LoginPage', () => {
   it('muestra el mensaje de credenciales incorrectas ante un 401', async () => {
     fakeApi({
       ...signedOut(),
-      'POST /api/v1/auth/login': apiError(401, 'invalid_credentials', 'Correo o contraseña incorrectos.'),
+      'POST /api/v1/auth/login': apiError(401, {
+        code: 'invalid_credentials',
+        message: 'Correo o contraseña incorrectos.',
+      }),
     });
     renderApp('/ingresar');
 
@@ -94,7 +97,10 @@ describe('LoginPage', () => {
   it('muestra el aviso de demasiados intentos ante un 429', async () => {
     fakeApi({
       ...signedOut(),
-      'POST /api/v1/auth/login': apiError(429, 'too_many_requests', 'Demasiados intentos. Espere un minuto.'),
+      'POST /api/v1/auth/login': apiError(429, {
+        code: 'too_many_requests',
+        message: 'Demasiados intentos. Espere un minuto.',
+      }),
     });
     renderApp('/ingresar');
 

@@ -120,11 +120,10 @@ describe('AttributesSettings', () => {
   it('quitar una opción en uso muestra el error de la API', async () => {
     const material = attributes[1]!;
     attributesApi({
-      [`PUT /api/v1/product-attributes/${material.id}`]: apiError(
-        409,
-        'attribute_option_in_use',
-        'Hay productos con la opción PVC del atributo Material.',
-      ),
+      [`PUT /api/v1/product-attributes/${material.id}`]: apiError(409, {
+        code: 'attribute_option_in_use',
+        message: 'Hay productos con la opción PVC del atributo Material.',
+      }),
     });
     renderApp('/configuracion/atributos');
 

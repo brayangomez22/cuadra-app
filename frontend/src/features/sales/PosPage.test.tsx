@@ -215,15 +215,14 @@ describe('PosPage', () => {
     it('insufficient_stock marca la línea de la variante, no las demás del producto', async () => {
       posApi({
         extra: {
-          'POST /api/v1/sales': apiError(
-            409,
-            'insufficient_stock',
-            'No hay stock suficiente de Camiseta básica (Azul · M).',
-            {
+          'POST /api/v1/sales': apiError(409, {
+            code: 'insufficient_stock',
+            message: 'No hay stock suficiente de Camiseta básica (Azul · M).',
+            details: {
               variant_id: variantId('M', 'Azul'),
               product_id: ids.garment,
             },
-          ),
+          }),
         },
       });
       renderApp('/vender');
@@ -442,9 +441,13 @@ describe('PosPage', () => {
     it('marca la línea sin stock cuando la API responde insufficient_stock', async () => {
       posApi({
         extra: {
-          'POST /api/v1/sales': apiError(409, 'insufficient_stock', 'No hay stock suficiente de Cemento gris 50kg.', {
-            variant_id: ids.cement,
-            product_id: ids.cement,
+          'POST /api/v1/sales': apiError(409, {
+            code: 'insufficient_stock',
+            message: 'No hay stock suficiente de Cemento gris 50kg.',
+            details: {
+              variant_id: ids.cement,
+              product_id: ids.cement,
+            },
           }),
         },
       });
@@ -747,11 +750,10 @@ describe('PosPage', () => {
           'GET /api/v1/cash-sessions/current': () => json(200, current),
           'POST /api/v1/sales': () => {
             current = { required: true };
-            return apiError(
-              409,
-              'cash_session_closed',
-              'La caja ya está cerrada. Para seguir vendiendo, abra una nueva.',
-            );
+            return apiError(409, {
+              code: 'cash_session_closed',
+              message: 'La caja ya está cerrada. Para seguir vendiendo, abra una nueva.',
+            });
           },
         },
       });

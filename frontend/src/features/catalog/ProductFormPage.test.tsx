@@ -156,7 +156,10 @@ describe('ProductFormPage', () => {
 
   it('muestra el SKU repetido en su campo', async () => {
     catalogApi({
-      'POST /api/v1/products': apiError(409, 'sku_taken', 'Ya existe un producto con el SKU TUB-PVC-12'),
+      'POST /api/v1/products': apiError(409, {
+        code: 'sku_taken',
+        message: 'Ya existe un producto con el SKU TUB-PVC-12',
+      }),
     });
     renderApp('/productos/nuevo');
 
@@ -320,8 +323,12 @@ describe('ProductFormPage', () => {
 
     it('muestra el error de la API en el atributo que nombra details.attribute', async () => {
       attributesApi({
-        'POST /api/v1/products': apiError(422, 'invalid_attribute_value', 'El peso debe ser un número', {
-          attribute: 'peso',
+        'POST /api/v1/products': apiError(422, {
+          code: 'invalid_attribute_value',
+          message: 'El peso debe ser un número',
+          details: {
+            attribute: 'peso',
+          },
         }),
       });
       renderApp('/productos/nuevo');
@@ -401,7 +408,8 @@ describe('ProductFormPage', () => {
         },
         [`POST /api/v1/products/${ids.garment}/variants`]: async (request) => {
           const body = await request.json();
-          if (body.sku === failSku) return apiError(409, 'sku_taken', `Ya existe un producto con el SKU ${failSku}`);
+          if (body.sku === failSku)
+            return apiError(409, { code: 'sku_taken', message: `Ya existe un producto con el SKU ${failSku}` });
           const values = body.axis_values as Record<string, string>;
           const variant = fromBody(body, variantId(values.talla!, values.color!), false);
           product = { ...product!, variants: [...product!.variants, variant] };
@@ -658,7 +666,10 @@ describe('ProductFormPage', () => {
       catalogApi(
         {
           [`GET /api/v1/products/${ids.pipe}`]: json(200, aProduct()),
-          [`PUT ${unitPath(box.id)}`]: apiError(409, 'barcode_taken', 'El código de barras ya existe.'),
+          [`PUT ${unitPath(box.id)}`]: apiError(409, {
+            code: 'barcode_taken',
+            message: 'El código de barras ya existe.',
+          }),
         },
         withUnitConversions(),
       );

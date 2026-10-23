@@ -227,11 +227,10 @@ describe('CloseCashPage', () => {
 
   it('muestra el error de la API si la caja ya estaba cerrada', async () => {
     closeApi({
-      [closeKey]: apiError(
-        409,
-        'cash_session_closed',
-        'La caja ya está cerrada. Para seguir vendiendo, abra una nueva.',
-      ),
+      [closeKey]: apiError(409, {
+        code: 'cash_session_closed',
+        message: 'La caja ya está cerrada. Para seguir vendiendo, abra una nueva.',
+      }),
     });
     renderApp('/caja/cerrar');
 

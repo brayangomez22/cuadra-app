@@ -153,7 +153,10 @@ describe('StockPage', () => {
 
   it('muestra en el campo un nombre de sede repetido', async () => {
     stockApi({
-      'POST /api/v1/locations': apiError(409, 'location_name_taken', 'Ya existe una sede con ese nombre'),
+      'POST /api/v1/locations': apiError(409, {
+        code: 'location_name_taken',
+        message: 'Ya existe una sede con ese nombre',
+      }),
     });
     renderApp('/inventario');
 

@@ -60,25 +60,32 @@ export function Select({
           <IconChevronDown />
         </RadixSelect.Icon>
       </RadixSelect.Trigger>
-      <RadixSelect.Portal>
-        <RadixSelect.Content className={styles.content} position="popper" sideOffset={4}>
-          <RadixSelect.Viewport className={styles.viewport}>
-            {options.map((option) => (
-              <RadixSelect.Item
-                key={option.value}
-                value={option.value}
-                disabled={option.disabled}
-                className={styles.item}
-              >
-                <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
-                <RadixSelect.ItemIndicator className={styles.indicator}>
-                  <IconCheck />
-                </RadixSelect.ItemIndicator>
-              </RadixSelect.Item>
-            ))}
-          </RadixSelect.Viewport>
-        </RadixSelect.Content>
-      </RadixSelect.Portal>
+      <SelectOptions options={options} />
     </RadixSelect.Root>
+  );
+}
+
+// The open list, in a portal so no container clips it.
+function SelectOptions({ options }: { options: SelectOption[] }) {
+  return (
+    <RadixSelect.Portal>
+      <RadixSelect.Content className={styles.content} position="popper" sideOffset={4}>
+        <RadixSelect.Viewport className={styles.viewport}>
+          {options.map((option) => (
+            <RadixSelect.Item
+              key={option.value}
+              value={option.value}
+              disabled={option.disabled}
+              className={styles.item}
+            >
+              <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
+              <RadixSelect.ItemIndicator className={styles.indicator}>
+                <IconCheck />
+              </RadixSelect.ItemIndicator>
+            </RadixSelect.Item>
+          ))}
+        </RadixSelect.Viewport>
+      </RadixSelect.Content>
+    </RadixSelect.Portal>
   );
 }
