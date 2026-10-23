@@ -66,6 +66,7 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [x] | P64 | Las entradas de `src/shared/` y `src/test/` en `frontend/eslint.legacy.js` (`api/errors.ts`, `format/format.ts`, `observability/scrub.ts`, `ui/Button`, `ui/Select`, `ui/Table`, `Toast.test.tsx`, `test/setup.ts`, `test/fakeApi.ts` por los 4 parámetros de `apiError`) y `Toast.module.scss` en la lista de stylelint: no son de ninguna feature, así que las recorta el kit compartido (`fixtures.ts` queda para T26j) Hecho en T26c: solo queda `src/test/fixtures.ts` para T26j | T26b | T26c |
 | [ ] | P65 | Prettier formatea solo `frontend/`: `e2e/` (TypeScript de Playwright) y `loadtest/` (k6) son paquetes aparte sin formateador. Decidir si comparten `.prettierrc` y un `format:check` en CI | T26b | T26j |
 | [ ] | P66 | `no-restricted-imports` vigila los alias (`@/features/x/...`) pero no un import relativo que cruce de una feature a otra (`../catalog/api`); hoy no hay ninguno. Agregar el patrón cuando las features tengan su estructura final | T26b | T26j |
+| [ ] | P67 | El `as` de `Stack` e `Inline` no tipa los props propios del elemento (`noValidate` de un `form`, `htmlFor`...): hoy hay que envolverlos en el elemento nativo (`docs/frontend.md`, sección 10). Tiparlos como componente polimórfico si los formularios de T26e–T26i lo repiten | T26d | T26j |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 

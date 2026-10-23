@@ -1,0 +1,10 @@
+@use '@/styles/abstracts' as *;
+
+.tenant {
+  justify-content: flex-start;
+  inline-size: 100%;
+}
+
+.back {
+  align-self: flex-start;
+}

@@ -26,6 +26,10 @@ features/<feature>/
   testing/             # fixtures, builders y mocks de la API de la feature
 ```
 
+Una feature puede tener otras carpetas cuando su nombre dice el rol de lo que contienen y no encaja en las de arriba. Por ejemplo, `auth` tiene `session/` (el estado de la sesión y el acceso) y `guards/` (los elementos de ruta que protegen pantallas). Lo que no tiene rol propio va en `components/`, `hooks/` o `model/`.
+
+`NombrePage.module.scss` existe solo si la página tiene estilos propios. Cuando un formulario lleva su `useForm`, sus campos y su hook, va en `components/<Nombre>Form/` y la página solo compone (`SignUpPage` → `SignUpForm`).
+
 Fuera de las features:
 
 - `src/app/`: el armado de la app (router, layout, menú, `QueryClient`). `app/routes/paths.ts` tiene las URLs (sección 5).
@@ -45,9 +49,9 @@ Dentro de una feature, los imports son relativos.
 ## 2. Nombres
 
 - Componentes en `PascalCase/PascalCase.tsx`; hooks `useCamelCase.ts`; lógica pura `camelCase.ts`.
-- Una carpeta por componente y un componente exportado por archivo.
+- Una carpeta por componente y un componente exportado por archivo. Excepción: piezas hermanas pequeñas que comparten la hoja de estilos del componente, como su esqueleto (`BusinessTypeOptionsSkeleton`) o su enlace (`AuthLink`).
 - Nada de `utils.ts` ni `helpers.ts` genéricos: el archivo se llama por lo que hace (`lineTotals.ts`, `toProductInput.ts`).
-- Los tests de una página se dividen por escenario: `PosPage.checkout.test.tsx`, `PosPage.scanner.test.tsx`. No hay carpetas `__tests__/`.
+- Los tests de una página van en `NombrePage.test.tsx` mientras quepan en el límite de 200 líneas. Cuando lo pasan, se dividen por escenario: `PosPage.checkout.test.tsx`, `PosPage.scanner.test.tsx`. No hay carpetas `__tests__/`.
 
 ## 3. Tamaño y complejidad (ESLint, en error)
 
@@ -70,6 +74,7 @@ Además, **lint con tipos** (`strictTypeChecked` y `stylisticTypeChecked` de `ty
 ## 4. Responsabilidades
 
 - **La página carga datos y compone.** Las reglas (totales, validaciones, qué variante aplica) viven en `model/`. El estado y los efectos de la página, en sus `hooks/`. Los formularios largos se dividen en secciones (`components/<Sección>/`) que reciben el `control` de react-hook-form.
+- **Las llamadas de `api/` lanzan `ApiError`** (con `unwrap`, o `new ApiError(status, error)` cuando una respuesta de error trae datos que la pantalla usa, como la lista de empresas del login). Así `useApiFormErrors` y TanStack Query manejan igual cualquier falla.
 - **Las páginas no tocan la caché.** Todo `invalidateQueries` y todo `setQueryData` viven en los hooks de `api/`, y todas las llaves en `api/keys.ts`. Una página llama `useUpdateProduct()` y no sabe qué listas se refrescan.
 - **Una abstracción se extrae cuando hay al menos dos usos reales.** Lo que se repite entre features va a `shared/` (por ejemplo `useApiFormErrors` y `QueryState`, de T26c).
 
@@ -96,7 +101,7 @@ Los parámetros van en el orden del patrón y la query es un último argumento o
 
 **`fakeApi` está tipado contra el contrato.** Las llaves (`'GET /api/v1/products/{productId}'` o con un ID concreto) salen de los `paths` del cliente generado y los cuerpos de `json(...)` se revisan contra el esquema de la respuesta. Un mock de una ruta o de un cuerpo que el contrato ya no tiene falla en `tsc`. Una llave calculada (`` `GET /api/v1/products/${id}` ``) es un `string` para `tsc` y no se revisa: si el cuerpo importa más que el ID, usa la llave de plantilla.
 
-Los fixtures, builders y mocks de una feature viven en su `testing/` (por ejemplo `catalogApi.products([...])`). `src/test/` queda para lo transversal.
+Los fixtures, builders y mocks de una feature viven en su `testing/` (por ejemplo `catalogApi.products([...])`). `src/test/` queda para lo transversal, como los usuarios y las sesiones (`aUser`, `signedIn`), que usan todas las features.
 
 ## 7. Comentarios
 
@@ -153,6 +158,6 @@ Lo que se repetía en varias pantallas vive en `shared/` (T26c). Cada feature lo
 | `QueryState` (`@/shared/query`) | Cargando, error (con «Reintentar» de las queries que fallaron) y vacío de una o varias queries; el error gana sobre el cargando | `<QueryState queries={[stock, products]} errorTitle="No pudimos cargar las existencias" isEmpty={levels.length === 0} empty={<EmptyState … />}>{() => <StockTable … />}</QueryState>` |
 | `useSearchParamsState` (`@/shared/hooks/useSearchParamsState`) | Estado tipado en la URL; el valor por defecto no deja parámetro | `const [page, setPage] = useSearchParamsState('pagina', pageParam)`; `useSearchParamsState('estado', enumParam(['activos', 'todos'], 'activos'), { reset: ['pagina'] })` |
 | `useMutationToast` (`@/shared/hooks/useMutationToast`) | Toasts de éxito y error de una mutación; el error lleva el mensaje de la API | `useMutation({ mutationFn, ...useMutationToast({ success: (unit) => ({ title: 'Unidad guardada', description: unit.name }), error: 'No se pudo guardar la unidad' }) })` |
-| `Stack` e `Inline` (`@/shared/ui`) | Layout vertical y horizontal con `gap` de la escala de espacios; reemplazan las clases que solo hacen `display: flex` + `gap` | `docs/estilos.md`, sección 6 |
+| `Stack` e `Inline` (`@/shared/ui`) | Layout vertical y horizontal con `gap` de la escala de espacios; reemplazan las clases que solo hacen `display: flex` + `gap` | `docs/estilos.md`, sección 6. No los uses en un elemento que tiene más estilos (`padding`, `border`): ponen `margin` y `padding` en `0`, y el resultado dependería del orden de carga del CSS. Su `as` no tipa los props propios del elemento (`noValidate` de un `form`): envuelve el `Stack` en el elemento nativo |
 
 **Generador.** `npm run new -- component <ruta>/<Nombre>` crea la carpeta con `Nombre.tsx`, `Nombre.module.scss` (con `.root`) y `Nombre.test.tsx`. `npm run new -- hook <ruta>/useNombre` crea el hook y su test. La ruta es relativa a `src/features/`, salvo que empiece por `shared/` o `app/`. Si algo ya existe, no escribe nada. Un componente que solo se separó para leerlo mejor no lleva test propio (sección 6): borra el que se generó.

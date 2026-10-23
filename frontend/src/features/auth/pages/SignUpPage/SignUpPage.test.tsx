@@ -1,22 +1,13 @@
 import { cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { anAuthSession, apiError, fakeApi, json, signedOut } from '@/test/fakeApi';
+import { anAuthSession, apiError, json } from '@/test/fakeApi';
 import { renderApp } from '@/test/renderApp';
+import { businessTemplates as templates, signUpApi } from '../../testing/authApi';
 
-// The templates GET /business-templates answers, in the order they are shown.
-const templates = {
-  items: [
-    { id: 'generica', name: 'Negocio general', description: 'Cualquier comercio.' },
-    { id: 'ferreteria', name: 'Ferretería', description: 'Herramientas, construcción y acabados.' },
-    { id: 'ropa_calzado', name: 'Ropa y calzado', description: 'Prendas y zapatos por talla y color.' },
-  ],
-};
-
-function signUpApi(routes: Parameters<typeof fakeApi>[0] = {}) {
-  return fakeApi({ ...signedOut(), 'GET /api/v1/business-templates': json(200, templates), ...routes });
-}
-
-async function fillSignUp({ password = 'clave-segura', template = 'Ferretería' as string | null } = {}) {
+async function fillSignUp({
+  password = 'clave-segura',
+  template = 'Ferretería',
+}: { password?: string; template?: string | null } = {}) {
   await userEvent.type(await screen.findByLabelText('Nombre de la empresa'), 'Ferretería El Tornillo');
   await userEvent.type(screen.getByLabelText('NIT'), '900123456-7');
   await userEvent.type(screen.getByLabelText('Su nombre'), 'Ana Gómez');
