@@ -19,6 +19,8 @@ type Props = {
   /** Actions, the main one last. Wrap the cancel button in DialogClose. */
   footer?: ReactNode;
   size?: 'sm' | 'md';
+  /** Where the focus goes on close; by default, back to the trigger. preventDefault to move it elsewhere. */
+  onCloseAutoFocus?: (event: Event) => void;
   className?: string;
 };
 
@@ -33,6 +35,7 @@ export function Dialog({
   children,
   footer,
   size = 'sm',
+  onCloseAutoFocus,
   className,
 }: Props) {
   return (
@@ -40,7 +43,11 @@ export function Dialog({
       {trigger && <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger>}
       <RadixDialog.Portal>
         <RadixDialog.Overlay className={styles.overlay} />
-        <RadixDialog.Content className={clsx(styles.root, className)} data-size={size}>
+        <RadixDialog.Content
+          className={clsx(styles.root, className)}
+          data-size={size}
+          onCloseAutoFocus={onCloseAutoFocus}
+        >
           <header className={styles.header}>
             <div className={styles.heading}>
               <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>

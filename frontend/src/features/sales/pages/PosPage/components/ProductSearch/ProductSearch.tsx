@@ -1,12 +1,15 @@
 import { useId, type KeyboardEvent, type Ref } from 'react';
 import { Field, Input } from '@/shared/ui';
 import { usePosSearch, type OnAdd, type PosSearch } from '../../hooks/usePosSearch';
+import { CameraScan } from '../CameraScan/CameraScan';
 import { SearchResults } from '../SearchResults/SearchResults';
 import styles from './ProductSearch.module.scss';
 
 type Props = {
   onAdd: OnAdd;
   ref?: Ref<HTMLInputElement>;
+  /** Puts the focus back in the search, after the camera closes. */
+  onDone: () => void;
 };
 
 /**
@@ -14,9 +17,10 @@ type Props = {
  * reader types the code and Enter, and the variant with that exact SKU or
  * barcode (or a single result) goes straight to the sale. The results are
  * variants: a product with variants shows one option for each. With several,
- * the arrows choose and Enter adds. Escape clears the text.
+ * the arrows choose and Enter adds. Escape clears the text. On a phone or
+ * tablet, the camera button reads the codes as the reader does.
  */
-export function ProductSearch({ onAdd, ref }: Props) {
+export function ProductSearch({ onAdd, ref, onDone }: Props) {
   const listId = useId();
   const search = usePosSearch(onAdd);
   const { text, term, products, results, active } = search;
@@ -33,23 +37,26 @@ export function ProductSearch({ onAdd, ref }: Props) {
           </>
         }
       >
-        <Input
-          ref={ref}
-          role="combobox"
-          aria-expanded={open}
-          aria-controls={listId}
-          aria-autocomplete="list"
-          aria-activedescendant={activeId}
-          aria-keyshortcuts="F2"
-          className={styles.input}
-          value={text}
-          onChange={(event) => search.edit(event.target.value)}
-          onKeyDown={(event) => searchKeys[event.key]?.(event, search)}
-          autoComplete="off"
-          spellCheck={false}
-          enterKeyHint="search"
-          autoFocus
-        />
+        <div className={styles.control}>
+          <Input
+            ref={ref}
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={listId}
+            aria-autocomplete="list"
+            aria-activedescendant={activeId}
+            aria-keyshortcuts="F2"
+            className={styles.input}
+            value={text}
+            onChange={(event) => search.edit(event.target.value)}
+            onKeyDown={(event) => searchKeys[event.key]?.(event, search)}
+            autoComplete="off"
+            spellCheck={false}
+            enterKeyHint="search"
+            autoFocus
+          />
+          <CameraScan onScan={search.scan} onClose={onDone} />
+        </div>
       </Field>
       <SearchResults listId={listId} search={search} />
     </div>
