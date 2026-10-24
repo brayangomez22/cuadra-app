@@ -1,17 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import { aUser, fakeApi, json, signedIn, type Me } from '@/test/fakeApi';
-import { attributes, axes, page, units } from '@/test/fixtures';
+import { aUser } from '@/test/fakeApi';
 import { renderApp } from '@/test/renderApp';
-
-function settingsApi(user: Me) {
-  return fakeApi({
-    ...signedIn(user),
-    'GET /api/v1/units': json(200, page(units)),
-    'GET /api/v1/product-attributes': json(200, page(attributes)),
-    'GET /api/v1/variant-axes': json(200, page(axes)),
-    'GET /api/v1/modules': json(200, { items: [] }),
-  });
-}
+import { settingsApi } from '../../testing/settingsApi';
 
 async function sections() {
   const nav = await screen.findByRole('navigation', { name: 'Secciones de configuración' });
@@ -40,12 +30,9 @@ describe('SettingsLayout', () => {
   });
 
   it('lleva a la vista la sección actual, que en un celular puede quedar fuera de la fila', async () => {
-    // jsdom has no scrollIntoView: a spy stands in for it during this test.
-    const scrolled = vi.fn();
-    Element.prototype.scrollIntoView = scrolled;
-    onTestFinished(() => {
-      Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
-    });
+    // jsdom has no scrollIntoView (src/test/setup.ts stubs it): a spy watches it during this test.
+    const scrolled = vi.spyOn(Element.prototype, 'scrollIntoView');
+    onTestFinished(() => scrolled.mockRestore());
     settingsApi(aUser('owner'));
     renderApp('/configuracion/modulos');
 

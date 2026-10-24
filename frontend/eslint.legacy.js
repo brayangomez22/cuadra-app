@@ -9,14 +9,5 @@
 export const legacy = {
   'src/app/router.tsx': ['max-lines', 'no-restricted-syntax'],
   'src/features/dev/UiCatalogPage.tsx': ['max-lines', 'max-lines-per-function'],
-  'src/features/settings/AttributesSettings.test.tsx': [
-    '@typescript-eslint/no-unsafe-argument',
-    '@typescript-eslint/no-unsafe-call',
-    '@typescript-eslint/no-unsafe-member-access',
-  ],
-  'src/features/settings/AttributesSettings.tsx': ['complexity', 'max-lines', 'max-lines-per-function'],
-  'src/features/settings/SettingsLayout.tsx': ['@typescript-eslint/no-unnecessary-condition'],
-  'src/features/settings/UnitsSettings.tsx': ['complexity', 'max-lines', 'max-lines-per-function'],
-  'src/features/settings/VariantAxesSettings.tsx': ['complexity', 'max-lines', 'max-lines-per-function'],
   'src/test/fixtures.ts': ['complexity', 'max-lines', 'max-params'],
 };

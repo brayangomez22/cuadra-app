@@ -97,7 +97,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 **Alcance:** `pages/StockPage`, `pages/KardexPage` y `pages/ReceiptPage` (con el formulario de entrada dividido en producto, unidad y cantidad, y sus hooks), `components/CreateLocationDialog`, `model/movements.ts`. Kardex y Existencias usan `useSearchParamsState` y `QueryState`; `ReceiptPage` usa `useApiFormErrors`.
 **Pendientes que entran a esta tarea:** P63 y P68 (`docs/plan/pendientes.md`).
 
-### [ ] T26i · Refactor de `settings`
+### [x] T26i · Refactor de `settings`
 **Depende de:** T26h.
 **Alcance:** una carpeta por sección en `pages/` (`UnitsSettings`, `AttributesSettings`, `VariantAxesSettings`, `ModulesSettings`, `GeneralSettings`) y el layout (`SettingsLayout`, `SettingsSection`, `SectionGate`). Unidades, atributos y ejes repiten la misma forma (lista, diálogo de crear o editar, confirmar borrado y toast): se extrae a `components/` y `hooks/` de la feature (`useEditDialog`, `useDeleteConfirmation`, `RowActions`, `ConfirmDeleteDialog`) y cada sección solo declara sus campos y columnas. Si una pieza la necesita otra feature, pasa a `shared/ui`.
 

@@ -1,12 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { apiError, fakeApi, json, signedIn } from '@/test/fakeApi';
+import { apiError, json } from '@/test/fakeApi';
 import { page, unitOf, units } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
-
-function unitsApi(routes: Parameters<typeof fakeApi>[0] = {}) {
-  return fakeApi({ ...signedIn(), 'GET /api/v1/units': json(200, page(units)), ...routes });
-}
+import { unitsApi } from '../../testing/settingsApi';
 
 async function row(name: string) {
   return within((await screen.findByRole('cell', { name })).closest('tr')!);
