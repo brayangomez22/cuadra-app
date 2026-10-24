@@ -1,6 +1,7 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import { apiError, json } from '@/test/fakeApi';
-import { aLocation, anOpenCashSession, ids } from '@/test/fixtures';
+import { aLocation, ids } from '@/test/fixtures';
+import { anOpenCashSession } from '../../testing/fixtures';
 import { posApi } from '../../testing/posApi';
 import { checkout, clearPosStorage, findCartLine, posted, scan, user } from '../../testing/posSteps';
 import { renderApp } from '@/test/renderApp';

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/features/auth';
 import { useLocations, type Location } from '@/features/inventory';
-import { useCurrentCashSession } from '../../../api';
+import { useCurrentCashSession } from '../../../api/cashSessions';
 import { loadLocation, saveLocation } from '../../../model/storage';
 
 /** loading covers a failure too: QueryState shows it. */

@@ -1,0 +1,29 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-block-start: var(--space-2);
+  padding-inline: 0;
+  border-block-start: 1px dashed currentcolor;
+  list-style: none;
+}
+
+// The name across, then quantity × price on the left and the amount on the right.
+.line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-2);
+}
+
+.name {
+  grid-column: 1 / -1;
+}
+
+.amount {
+  text-align: end;
+
+  @include numeric;
+}

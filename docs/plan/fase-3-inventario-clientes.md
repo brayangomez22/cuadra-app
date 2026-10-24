@@ -88,7 +88,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 **Depende de:** T26e.
 **Alcance:** `pages/PosPage/` con `ProductSearch`, `CartLines` (lista, línea, selector de unidad), `CheckoutDialog` (métodos de pago, cambio) y el estado en hooks (`useCart`, `useCheckout`, `useCashSessionGuard`, `useAddedMark`). `cart.ts` (301 líneas) pasa a `model/cart/` (`cartItem`, `cartReducer`, `lineTotals`, `cartTotals`, `settlement`, `discount`), cada uno con su test. `storage.ts` queda en `model/`. `PosPage.test.tsx` (965 líneas) se divide por escenario (buscar y agregar, unidades, descuentos, cobrar, caja obligatoria, errores de stock).
 
-### [ ] T26g · Refactor de `sales`: caja y tirilla
+### [x] T26g · Refactor de `sales`: caja y tirilla
 **Depende de:** T26f.
 **Alcance:** `pages/CashPage`, `pages/CloseCashPage`, `pages/CashReportPage`; `components/CashReport`, `components/Receipt` y `components/Printable` (los usan el POS y la caja); `CashMovementDialog`; `model/cash.ts` dividido si pasa el límite. `api.ts` se divide en ventas y caja. `CashPage.test.tsx` y `Receipt.test.tsx` se dividen por escenario. Decide `sales/pages.ts` y dónde viven los fixtures de venta y caja (P70).
 

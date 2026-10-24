@@ -1,6 +1,6 @@
 import { QueryState } from '@/shared/query';
 import { Page, Spinner } from '@/shared/ui';
-import { useDiscountLimit } from '../../api';
+import { useDiscountLimit } from '../../api/sales';
 import type { DiscountLimit } from '../../model/cart/discount';
 import { PosUnavailable } from './components/PosUnavailable/PosUnavailable';
 import { PosWorkspace } from './components/PosWorkspace/PosWorkspace';

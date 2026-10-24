@@ -19,22 +19,6 @@ export const legacy = {
     'max-lines-per-function',
   ],
   'src/features/inventory/StockPage.tsx': ['complexity', 'max-lines', 'max-lines-per-function'],
-  'src/features/sales/CashPage.test.tsx': ['max-lines'],
-  'src/features/sales/CashPage.tsx': [
-    '@typescript-eslint/no-misused-promises',
-    'complexity',
-    'max-lines',
-    'max-lines-per-function',
-  ],
-  'src/features/sales/CashReport.tsx': ['max-lines-per-function'],
-  'src/features/sales/CashReportPage.tsx': [
-    '@typescript-eslint/prefer-optional-chain',
-    'complexity',
-    'max-lines-per-function',
-  ],
-  'src/features/sales/CloseCashPage.tsx': ['@typescript-eslint/no-deprecated', 'max-lines', 'max-lines-per-function'],
-  'src/features/sales/Receipt.test.tsx': ['max-lines', 'max-params'],
-  'src/features/sales/Receipt.tsx': ['max-lines-per-function'],
   'src/features/settings/AttributesSettings.test.tsx': [
     '@typescript-eslint/no-unsafe-argument',
     '@typescript-eslint/no-unsafe-call',

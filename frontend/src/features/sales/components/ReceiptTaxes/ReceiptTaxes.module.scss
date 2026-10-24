@@ -1,0 +1,26 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  width: 100%;
+  border-block-start: 1px dashed currentcolor;
+  border-spacing: 0;
+
+  th,
+  td {
+    padding: 0;
+    text-align: end;
+    font-weight: var(--font-weight-regular);
+
+    @include numeric;
+
+    &:first-child {
+      text-align: start;
+    }
+  }
+
+  // A table ignores its own padding: the header row keeps the gap below the rule.
+  th {
+    padding-block-start: var(--space-2);
+    font-weight: var(--font-weight-bold);
+  }
+}

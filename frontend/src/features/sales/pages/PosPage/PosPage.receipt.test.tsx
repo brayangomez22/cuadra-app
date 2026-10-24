@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { json } from '@/test/fakeApi';
-import { aSale, plain } from '@/test/fixtures';
+import { plain } from '@/test/fixtures';
+import { aSale } from '../../testing/fixtures';
 import { posApi } from '../../testing/posApi';
 import { checkout, clearPosStorage, findCartLine, scan, searchBox, user } from '../../testing/posSteps';
 import { renderApp } from '@/test/renderApp';

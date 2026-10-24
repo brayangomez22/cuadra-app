@@ -1,0 +1,87 @@
+@use '@/styles/abstracts' as *;
+
+// A thermal receipt: one narrow column in monospace, black on white, with
+// dashed rules between the blocks as the printed ones have.
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: var(--size-receipt-80);
+  padding-block: var(--space-2);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-default);
+  overflow-wrap: anywhere;
+
+  &[data-paper='58'] {
+    width: var(--size-receipt-58);
+    font-size: var(--font-size-xs);
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: center;
+}
+
+.business {
+  margin: 0;
+  font-size: inherit;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+}
+
+// A voided sale says so in big letters: a reprint can never pass for a sale.
+.voided {
+  padding-block: var(--space-1);
+  border-block: 1px solid currentcolor;
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+}
+
+.figures {
+  display: flex;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px dashed currentcolor;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.figure {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+
+  // The term never breaks: on 58 mm the value wraps instead.
+  dt {
+    flex-shrink: 0;
+  }
+
+  dd {
+    margin: 0;
+    text-align: end;
+
+    @include numeric;
+  }
+
+  &[data-strong] {
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px dashed currentcolor;
+  text-align: center;
+}

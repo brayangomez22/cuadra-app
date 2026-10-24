@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Me } from '@/features/auth';
 import type { Location } from '@/features/inventory';
 import { loadPaper, savePaper } from '../../../../model/storage';
-import { PrintableReceipt } from '../../../../PrintableReceipt';
+import { PrintableReceipt } from '../../../../components/PrintableReceipt/PrintableReceipt';
 import type { Checkout } from '../../hooks/useCheckout';
 import { CheckoutDialog } from '../CheckoutDialog/CheckoutDialog';
 

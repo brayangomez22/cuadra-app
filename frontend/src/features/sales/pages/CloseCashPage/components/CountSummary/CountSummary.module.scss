@@ -1,0 +1,54 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-inline: calc(-1 * var(--space-4));
+  padding-block: var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  padding-inline: var(--space-4);
+  border-block-start: 1px solid var(--color-border-default);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-lg);
+
+  @include respond-to(md) {
+    margin-inline: 0;
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+  }
+
+  @include respond-to(xl) {
+    inset-block: var(--space-6) auto;
+    padding: var(--space-5);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+.total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.totalLabel {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.totalValue {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+
+  @include numeric;
+}
+
+.submit {
+  inline-size: 100%;
+}

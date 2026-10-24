@@ -2,7 +2,7 @@
 // blocked (private windows, previews), so every access is guarded and the
 // screen works without it.
 import { emptyCart, type Cart } from './cart/cartReducer';
-import type { Paper } from '../Receipt';
+import type { Paper } from './paper';
 
 // CART_VERSION changes whenever the stored cart changes shape: a cart of
 // another version is discarded instead of read wrong (2: lines by variant;

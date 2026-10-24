@@ -1,15 +1,6 @@
 import { aUser, fakeApi, json, signedIn, type Me } from '@/test/fakeApi';
-import {
-  aCement,
-  aGarment,
-  aLocation,
-  anOpenCashSession,
-  aProduct,
-  aSale,
-  page,
-  query,
-  type Product,
-} from '@/test/fixtures';
+import { aCement, aGarment, aLocation, aProduct, page, query, type Product } from '@/test/fixtures';
+import { anOpenCashSession, aSale } from './fixtures';
 
 /** The barcode of the cement in the POS's catalog. */
 export const CEMENT_BARCODE = '7701234567890';

@@ -1,0 +1,23 @@
+@use '@/styles/abstracts' as *;
+
+// The count on the left and the total with "Cerrar caja" beside it from xl up
+// (the counter monitor); stacked below that.
+.root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+
+  @include respond-to(xl) {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+
+// The count and the notes.
+.count {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-inline-size: 0;
+  max-inline-size: var(--size-form);
+}
