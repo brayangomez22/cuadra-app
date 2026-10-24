@@ -190,7 +190,7 @@ En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`: las tablas de l
 **Alcance:** se borra la lista temporal de T26k (ningún archivo ni regla queda excluido); se revisa `docs/backend.md` contra el código final; **`README.md` mínimo en la raíz** (qué es Cuadra, la arquitectura en un párrafo con enlaces a `docs/backend.md` y `docs/frontend.md`, cómo correrlo y los comandos de `make`), que T52 completa; entrada en `docs/decisiones.md` con lo que cambió.
 **Verificación final:** `make lint` sin exclusiones; un reporte en el PR con los hallazgos de cada linter y las líneas por archivo antes (el reporte de T26k) y después.
 
-### [ ] T27 · Escáner de códigos con la cámara
+### [x] T27 · Escáner de códigos con la cámara
 **Alcance:** componente reutilizable en `shared/ui` que lee códigos de barras (EAN-13, EAN-8, Code 128, UPC) y QR con la cámara del celular o la tablet. Usa la API nativa `BarcodeDetector` cuando existe y una librería de respaldo cuando no (proponer cuál y confirmar antes de agregarla). Linterna, vibración o sonido al leer, y prevención de lecturas duplicadas en ráfaga. Se usa en el POS (agrega al carrito) y en la toma de inventario (T30). Requiere HTTPS.
 **Tests primero:** con un detector simulado, una lectura dispara `onScan` una sola vez aunque el código siga en cámara; si el usuario niega el permiso de cámara se muestra un mensaje claro y la alternativa de digitar el código.
 

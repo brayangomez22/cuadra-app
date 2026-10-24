@@ -86,6 +86,14 @@ export default defineConfig([
       ecmaVersion: 2023,
       globals: globals.browser,
     },
+    rules: {
+      // The options of configs.vite, plus createIcon: it makes components
+      // (shared/ui/icons), so the files that export icons keep fast refresh.
+      'react-refresh/only-export-components': [
+        'error',
+        { allowConstantExport: true, allowCompoundComponents: true, extraHOCs: ['createIcon'] },
+      ],
+    },
   },
   {
     files: ['*.{js,mjs,ts}', 'eslint/**/*.{mjs,ts}', 'stylelint/**/*.ts', 'styles-check/**/*.ts', 'scripts/**/*.ts'],

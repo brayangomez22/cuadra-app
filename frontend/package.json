@@ -26,6 +26,7 @@
     "@radix-ui/react-toast": "1.2.24",
     "@sentry/react": "10.75.3",
     "@tanstack/react-query": "5.104.1",
+    "barcode-detector": "3.2.3",
     "clsx": "2.1.1",
     "openapi-fetch": "0.17.0",
     "react": "19.3.0",

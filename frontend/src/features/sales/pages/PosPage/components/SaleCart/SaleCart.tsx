@@ -26,6 +26,7 @@ export function SaleCart({ cart, limit, searchRef, onDone }: Props) {
     <div className={styles.root}>
       <ProductSearch
         ref={searchRef}
+        onDone={onDone}
         // A unit's barcode sells that unit, with the module on or off: the API
         // sells the units already defined, and a box charged as one unit
         // would be a wrong charge (docs/decisiones.md, T26a).

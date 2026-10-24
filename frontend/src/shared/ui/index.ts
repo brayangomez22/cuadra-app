@@ -1,5 +1,6 @@
 // Base components. Screens compose these instead of styling their own controls.
 export { Alert, type AlertTone } from './Alert';
+export { BarcodeScanner } from './BarcodeScanner';
 export { Badge } from './Badge';
 export { Button, ButtonLink, type ButtonProps } from './Button';
 export { Checkbox } from './Checkbox';

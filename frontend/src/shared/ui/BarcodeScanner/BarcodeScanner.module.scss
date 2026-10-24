@@ -1,0 +1,57 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+// The camera fills the width; on a phone held sideways the height runs out
+// first, so it never takes more than half the screen and the form stays in view.
+.viewport {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  max-block-size: 50dvh;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+}
+
+.video {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+// Where to put the code. Decorative: the status says what to do.
+.frame {
+  position: absolute;
+  inset: var(--space-8) var(--space-6);
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+
+.torch {
+  position: absolute;
+  inset-block-end: var(--space-3);
+  inset-inline-end: var(--space-3);
+}
+
+.status {
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.manual {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.manualField {
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+}

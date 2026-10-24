@@ -3,6 +3,7 @@ import { FormFieldsSection } from './components/FormFieldsSection/FormFieldsSect
 import { LayoutSamples } from './components/LayoutSamples/LayoutSamples';
 import { LoadingSection } from './components/LoadingSection/LoadingSection';
 import { OverlaysSection } from './components/OverlaysSection/OverlaysSection';
+import { ScannerSection } from './components/ScannerSection/ScannerSection';
 import { Section } from './components/Section/Section';
 import { StatusSection } from './components/StatusSection/StatusSection';
 import { StockTableSection } from './components/StockTableSection/StockTableSection';
@@ -31,6 +32,7 @@ export function UiCatalogPage() {
       <OverlaysSection />
       <ToastSection />
       <LoadingSection />
+      <ScannerSection />
       <Section title="Stack e Inline">
         <LayoutSamples />
       </Section>
