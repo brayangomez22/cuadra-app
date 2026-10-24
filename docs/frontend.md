@@ -11,8 +11,9 @@ Una feature es una carpeta de `src/features/` por contexto del producto (`auth`,
 ```
 features/<feature>/
   README.md            # qué hace la feature, sus páginas y su API pública (≤ 30 líneas)
-  index.ts             # API pública: lo único que importan otras features y el router
-  pages.ts             # opcional: las páginas que el router carga en diferido (chunk aparte)
+  index.ts             # API pública: lo único que importan otras features
+  routes.tsx           # las rutas de la feature, con su permiso; el router las importa directo
+  pages.ts             # las páginas, que routes.tsx carga en diferido (chunk aparte)
   api/                 # keys.ts, types.ts y un archivo por recurso (queries y mutations)
   model/               # lógica pura sin React, con sus tests (cart/, variantMatrix.ts...)
   hooks/               # hooks compartidos dentro de la feature
@@ -41,10 +42,12 @@ Fuera de las features:
 | Desde | Puede importar | No puede importar |
 |---|---|---|
 | una feature | `@/shared/...`, `@/features/<otra>` (su `index.ts`), `@/app/routes/paths` | archivos internos de otra feature (`@/features/x/api`), el resto de `app/` |
-| `app/` | `@/shared/...`, `@/features/<x>` y `@/features/<x>/pages` | archivos internos de una feature |
+| `app/` | `@/shared/...`, `@/features/<x>` y `@/features/<x>/routes` | archivos internos de una feature |
 | `shared/` | `@/shared/...` | `features/` y `app/` |
 
-Dentro de una feature, los imports son relativos.
+Dentro de una feature, los imports son relativos. La regla propia `cuadra/feature-boundaries` (`frontend/eslint/featureBoundaries.mjs`) rechaza un import relativo que entre a otra feature (`../../inventory/api`): `no-restricted-imports` solo ve el texto de la ruta.
+
+**Rutas por feature.** Cada feature declara sus pantallas en `routes.tsx` (`catalogRoutes`...), cada grupo detrás del permiso de su API (`RequirePermission`), con `lazyPage` de `@/shared/routing/lazyPage` para cargarlas desde su `pages.ts`. `app/router.tsx` solo las anida bajo el layout. El router importa `@/features/x/routes` y no el `index.ts`, porque con el `index.ts` todo lo que la feature exporta entraría al bundle principal (decisión de T26j). `src/app/router.test.ts` verifica que cada URL de `paths` tenga su ruta.
 
 ## 2. Nombres
 
@@ -69,7 +72,7 @@ Las líneas se cuentan sin las vacías ni los comentarios.
 
 Además, **lint con tipos** (`strictTypeChecked` y `stylisticTypeChecked` de `typescript-eslint`): promesas sin manejar, condiciones innecesarias, casts sobrantes y accesos `any`.
 
-**Lista temporal de excepciones.** `frontend/eslint.legacy.js` (y `legacyLongModules` en `stylelint.config.mjs`) tienen los archivos que ya incumplían el día que llegaron las reglas, con las reglas que incumple cada uno. **Solo se recorta:** cada tarea del bloque T26b–T26j borra las entradas de su feature y T26j borra el archivo. Un archivo nuevo nunca entra y una entrada nunca gana reglas: se divide el archivo o se arregla el código.
+**Sin excepciones.** Ningún archivo de `src/` apaga una regla (salvo el generado `schema.d.ts`, que no se revisa). La lista temporal del bloque T26b–T26j (`eslint.legacy.js`) se borró en T26j. Si un archivo pasa un límite, se divide o se arregla el código; no se agrega un `'off'` por archivo en `eslint.config.js` ni en `stylelint.config.mjs`.
 
 ## 4. Responsabilidades
 
@@ -101,7 +104,7 @@ Los parámetros van en el orden del patrón y la query es un último argumento o
 
 **`fakeApi` está tipado contra el contrato.** Las llaves (`'GET /api/v1/products/{productId}'` o con un ID concreto) salen de los `paths` del cliente generado y los cuerpos de `json(...)` se revisan contra el esquema de la respuesta. Un mock de una ruta o de un cuerpo que el contrato ya no tiene falla en `tsc`. Una llave calculada (`` `GET /api/v1/products/${id}` ``) es un `string` para `tsc` y no se revisa: si el cuerpo importa más que el ID, usa la llave de plantilla.
 
-Los fixtures, builders y mocks de una feature viven en su `testing/` (por ejemplo `catalogApi.products([...])`). `src/test/` queda para lo transversal, como los usuarios y las sesiones (`aUser`, `signedIn`), que usan todas las features.
+Los fixtures, builders y mocks de una feature viven en su `testing/` (por ejemplo `catalogApi.products([...])`). `src/test/` queda para lo que usan varias features: los usuarios y las sesiones (`aUser`, `signedIn`) y `src/test/fixtures/`, un archivo por tema (productos, prenda con variantes, unidades alternativas, atributos y ejes, sedes, ayudas de las peticiones) con un `index.ts` que se importa como `@/test/fixtures`.
 
 ## 7. Comentarios
 
@@ -109,7 +112,7 @@ Explican el **por qué** (una regla del negocio, una restricción del navegador,
 
 ## 8. Formato
 
-Prettier (`.prettierrc`: comillas simples, 120 columnas) formatea todo `frontend/`. `npm run format` lo aplica y `npm run format:check` corre en CI.
+Prettier (`.prettierrc` en la raíz del repo: comillas simples, 120 columnas) formatea `frontend/` y `e2e/`, cada uno con su `npm run format` y su `npm run format:check`, que corren en CI.
 
 ## 9. Ejemplo: `ProductFormPage` antes y después
 
@@ -126,7 +129,8 @@ features/catalog/
 
 ```
 features/catalog/
-  index.ts  pages.ts           # la API pública; las páginas van aparte para cargarlas en diferido
+  index.ts                     # la API pública
+  routes.tsx  pages.ts         # las rutas, que cargan las páginas en diferido
   api/
     keys.ts  types.ts
     products.ts                # useProduct, saveProduct, useStoreProduct (aquí viven setQueryData e invalidate)
@@ -162,6 +166,7 @@ Lo que se repetía en varias pantallas vive en `shared/` (T26c). Cada feature lo
 | `QueryState` (`@/shared/query`) | Cargando, error (con «Reintentar» de las queries que fallaron) y vacío de una o varias queries; el error gana sobre el cargando | `<QueryState queries={[stock, products]} errorTitle="No pudimos cargar las existencias" isEmpty={levels.length === 0} empty={<EmptyState … />}>{() => <StockTable … />}</QueryState>` |
 | `useSearchParamsState` (`@/shared/hooks/useSearchParamsState`) | Estado tipado en la URL; el valor por defecto no deja parámetro | `const [page, setPage] = useSearchParamsState('pagina', pageParam)`; `useSearchParamsState('estado', enumParam(['activos', 'todos'], 'activos'), { reset: ['pagina'] })` |
 | `useMutationToast` (`@/shared/hooks/useMutationToast`) | Toasts de éxito y error de una mutación; el error lleva el mensaje de la API | `useMutation({ mutationFn, ...useMutationToast({ success: (unit) => ({ title: 'Unidad guardada', description: unit.name }), error: 'No se pudo guardar la unidad' }) })` |
-| `Stack` e `Inline` (`@/shared/ui`) | Layout vertical y horizontal con `gap` de la escala de espacios; reemplazan las clases que solo hacen `display: flex` + `gap` | `docs/estilos.md`, sección 6. No los uses en un elemento que tiene más estilos (`padding`, `border`): ponen `margin` y `padding` en `0`, y el resultado dependería del orden de carga del CSS. Su `as` no tipa los props propios del elemento (`noValidate` de un `form`): envuelve el `Stack` en el elemento nativo |
+| `useCan` y `useModule` (`@/features/auth`) | Si el usuario tiene un permiso o la empresa un módulo activo, para mostrar u ocultar (la API revisa los dos en cada petición) | `const can = useCan(); can('catalog:write')` y `const alternateUnits = useModule('unit_conversions')` |
+| `Stack` e `Inline` (`@/shared/ui`) | Layout vertical y horizontal con `gap` de la escala de espacios; reemplazan las clases que solo hacen `display: flex` + `gap` | `docs/estilos.md`, sección 6. No los uses en un elemento que tiene más estilos (`padding`, `border`): ponen `margin` y `padding` en `0`, y el resultado dependería del orden de carga del CSS. Su `as` no tipa los props propios del elemento (`noValidate` de un `form`): envuelve el `Stack` en el elemento nativo (solo dos formularios lo hacen; ver P67 en T26j) |
 
 **Generador.** `npm run new -- component <ruta>/<Nombre>` crea la carpeta con `Nombre.tsx`, `Nombre.module.scss` (con `.root`) y `Nombre.test.tsx`. `npm run new -- hook <ruta>/useNombre` crea el hook y su test. La ruta es relativa a `src/features/`, salvo que empiece por `shared/` o `app/`. Si algo ya existe, no escribe nada. Un componente que solo se separó para leerlo mejor no lleva test propio (sección 6): borra el que se generó.

@@ -2,7 +2,7 @@
 
 La sesión y el acceso: ingresar, registrar la empresa, proteger las rutas y saber qué puede ver el usuario.
 
-## Páginas (`pages.ts`, carga diferida)
+## Páginas (`pages.ts`, que `routes.tsx` carga en diferido)
 
 - `LoginPage` (`/ingresar`): correo y contraseña; si el correo está en varias empresas, pide elegir una (`TenantChoice`).
 - `SignUpPage` (`/registro`): crea la empresa y su dueño con un tipo de negocio (`BusinessTypeField`).
@@ -10,8 +10,8 @@ La sesión y el acceso: ingresar, registrar la empresa, proteger las rutas y sab
 ## API pública (`index.ts`)
 
 - Sesión: `AuthProvider`, `useAuth` (estado, `startSession`, `logout`), `meQueryKey`, `Me`.
-- Rutas: `RequireAuth`, `GuestOnly`, `RequirePermission`.
-- Acceso: `useCan`, `useAccess`, `canSee`, `visibleItems`, `Gated`, `Access`. Solo muestran u ocultan: la API revisa permisos y módulos en cada petición.
+- Rutas: `authRoutes` (ingreso y registro, para el router), `RequireAuth`, `GuestOnly`, `RequirePermission`.
+- Acceso: `useCan`, `useModule`, `useAccess`, `canSee`, `visibleItems`, `Gated`, `Access`. Solo muestran u ocultan: la API revisa permisos y módulos en cada petición.
 
 ## Carpetas
 

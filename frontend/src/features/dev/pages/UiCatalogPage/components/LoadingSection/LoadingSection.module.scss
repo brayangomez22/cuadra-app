@@ -1,0 +1,20 @@
+.panel {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-inline-size: 60ch;
+}
+
+.short {
+  inline-size: 60%;
+}
+
+.skeletonBlock {
+  block-size: var(--space-16);
+}

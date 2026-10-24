@@ -101,7 +101,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 **Depende de:** T26h.
 **Alcance:** una carpeta por sección en `pages/` (`UnitsSettings`, `AttributesSettings`, `VariantAxesSettings`, `ModulesSettings`, `GeneralSettings`) y el layout (`SettingsLayout`, `SettingsSection`, `SectionGate`). Unidades, atributos y ejes repiten la misma forma (lista, diálogo de crear o editar, confirmar borrado y toast): se extrae a `components/` y `hooks/` de la feature (`useEditDialog`, `useDeleteConfirmation`, `RowActions`, `ConfirmDeleteDialog`) y cada sección solo declara sus campos y columnas. Si una pieza la necesita otra feature, pasa a `shared/ui`.
 
-### [ ] T26j · Refactor de `app/` y `dev/`, y cierre del bloque
+### [x] T26j · Refactor de `app/` y `dev/`, y cierre del bloque
 **Depende de:** T26i.
 **Alcance:** `UiCatalogPage` (362 líneas) dividido en una sección por grupo de componentes; `router.tsx` con las rutas agrupadas por feature (`routes.ts` en cada `index.ts` o un archivo por área); `src/test/fixtures.ts` repartido en el `testing/` de cada feature (lo compartido queda en `src/test/`); se borra `eslint.legacy.js` y toda excepción. Se revisa `docs/frontend.md` contra el código final y cada feature tiene su `README.md`.
 **Pendientes que entran a esta tarea:** P65, P66, P67, P69 y P71 (`docs/plan/pendientes.md`).

@@ -1,2 +1,3 @@
-// The router guards groups of settings sections with SectionGate.
-export { SectionGate } from './components/SectionGate/SectionGate';
+// The public API of settings. No other feature uses it: the router takes the
+// routes from routes.tsx.
+export {};

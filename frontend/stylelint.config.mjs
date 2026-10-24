@@ -1,10 +1,5 @@
 // Conventions in docs/estilos.md. stylelint/stylelint.test.ts checks the key rules.
 
-// Modules over cuadra/max-lines before the rule existed. Each task of the
-// T26b–T26j block removes the ones of its feature; T26j deletes the list.
-// A file never enters it: split the module instead.
-const legacyLongModules = [];
-
 /** @type {import('stylelint').Config} */
 export default {
   extends: ['stylelint-config-standard-scss'],
@@ -43,6 +38,5 @@ export default {
         'cuadra/max-lines': 100,
       },
     },
-    { files: legacyLongModules, rules: { 'cuadra/max-lines': null } },
   ],
 };

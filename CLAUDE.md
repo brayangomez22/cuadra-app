@@ -164,12 +164,13 @@ La UI es una prioridad del producto, no un detalle. **Antes de tocar cualquier `
 
 **Antes de crear o mover archivos del frontend, lee `docs/frontend.md`.** Resumen:
 
-- Cada feature tiene `api/`, `model/`, `hooks/`, `components/`, `pages/<NombrePage>/` (con sus `components/` y `hooks/`), `testing/`, un `index.ts` (su única API pública) y un `README.md` corto. Las features se importan entre sí **solo** por `@/features/x` (o `@/features/x/pages` desde el router); `shared/` no importa de `features/` ni de `app/`.
+- Cada feature tiene `api/`, `model/`, `hooks/`, `components/`, `pages/<NombrePage>/` (con sus `components/` y `hooks/`), `testing/`, un `index.ts` (su única API pública), un `routes.tsx` (sus pantallas, que el router importa por `@/features/x/routes`) y un `README.md` corto. Las features se importan entre sí **solo** por `@/features/x`; `shared/` no importa de `features/` ni de `app/`.
 - Límites en ESLint, en error: 120 líneas por archivo de código, 200 por test, 50 por función, `complexity` 8, `max-depth` 3, `max-params` 3; 100 líneas por `.module.scss` (stylelint). Lint con tipos (`strictTypeChecked`).
-- `frontend/eslint.legacy.js` es una lista temporal que **solo se recorta**: nunca agregues un archivo ni una regla; divide el archivo.
+- **Sin excepciones por archivo:** si un archivo pasa un límite, divídelo; nunca apagues una regla para un archivo en `eslint.config.js` o `stylelint.config.mjs`.
+- Si un módulo está activo se pregunta con `useModule('<id>')` de `@/features/auth`, nunca con `user.modules.includes` a mano.
 - La página carga datos y compone; las reglas van en `model/`, y la caché (`invalidateQueries`, `setQueryData`, llaves) solo en `api/`. Nada de `utils.ts` genéricos.
 - Las URLs salen de `@/app/routes/paths` (`paths.products.edit(id)`); los tests usan la URL literal. `fakeApi` está tipado contra el OpenAPI.
-- Prettier formatea el frontend (`npm run format`; `format:check` en CI).
+- Prettier formatea `frontend/` y `e2e/` (`npm run format`; `format:check` en CI).
 - Antes de escribir a mano, usa el kit de `shared/` (`useApiFormErrors`, `QueryState`, `useSearchParamsState`, `useMutationToast`, `Stack` e `Inline`) y crea componentes y hooks con `npm run new -- component|hook <ruta>` (`docs/frontend.md`, sección 10).
 
 ## Glosario del dominio

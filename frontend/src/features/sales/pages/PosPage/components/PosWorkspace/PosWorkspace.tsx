@@ -49,7 +49,7 @@ export function PosWorkspace({ guard, limit }: Props) {
       actions={hasHeader && <SaleHeader guard={guard} onChosen={focusSearch} />}
     >
       <div className={styles.workspace}>
-        <SaleCart cart={cart} limit={limit} searchRef={search} onDone={focusSearch} user={user} />
+        <SaleCart cart={cart} limit={limit} searchRef={search} onDone={focusSearch} />
         <SaleSummary totals={cart.totals} hasLocation={hasLocation} onCharge={checkout.openCheckout} />
       </div>
       <SaleCheckout checkout={checkout} total={cart.totals.total} locations={guard.locations} user={user} />

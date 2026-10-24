@@ -2,14 +2,14 @@
 
 El punto de venta y la caja: vender desde el teclado o el lector, cobrar con pagos mixtos, imprimir la tirilla, abrir y cerrar la caja y ver su reporte.
 
-## Páginas (`pages.ts`, que el router carga en diferido)
+## Páginas (`pages.ts`, que `routes.tsx` carga en diferido)
 
 - `PosPage` (`/vender`): `useCashSessionGuard` decide si se puede vender (la caja obligatoria y las sedes) y `QueryState` muestra la carga; `PosWorkspace` arma el carrito (`useCart`, `useAddToCart`), el cobro (`useCheckout`) y los atajos (`usePosShortcuts`). Sus piezas: `ProductSearch`, `CartLines`, `SaleSummary`, `CheckoutDialog` (`PaymentsForm` y `SaleDone`) y `CancelSaleDialog`.
 - `CashPage` (`/caja`): sin caja, `OpenCashForm` (`useOpenCashForm`); con caja, `OpenSession` con `CashMovementsTable` y `CashMovementDialog`.
 - `CloseCashPage` (`/caja/cerrar`): el arqueo ciego. `CountForm` (`useCashCount`) con `DenominationCounts`, `CountSummary` y `ConfirmCloseDialog`.
 - `CashReportPage` (`/caja/:sessionId`): `useCashReport` arma el reporte; `CashResultSummary` y `CashReport` para leer e imprimir.
 
-`index.ts` es la API pública y hoy no exporta nada: ninguna otra feature usa `sales`.
+`index.ts` es la API pública y hoy solo exporta `salesRoutes`, para el router: ninguna otra feature usa `sales`.
 
 ## Carpetas
 

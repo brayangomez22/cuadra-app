@@ -1,0 +1,12 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-block-start: var(--space-6);
+  border-block-start: 1px solid var(--color-border-default);
+}
+
+.title {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
+}

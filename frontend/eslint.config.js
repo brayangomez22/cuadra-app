@@ -4,24 +4,31 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
-import { legacy } from './eslint.legacy.js';
+import { featureBoundaries } from './eslint/featureBoundaries.mjs';
 
 // Size and boundary rules of docs/frontend.md. Lines are counted without blank
 // lines or comments.
 const lines = (max) => ['error', { max, skipBlankLines: true, skipComments: true }];
 
-// A feature is imported only through its index.ts, or its pages.ts when the
-// router loads its screens lazily (they then stay out of the main bundle).
+// A feature is imported only through its index.ts: its own routes.tsx loads
+// its screens lazily, from a path relative to the feature.
 const featureInternals = {
-  regex: '^@/features/[^/]+/(?!pages$).+',
+  regex: '^@/features/[^/]+/.+',
   message: 'Importa la feature por su index.ts (@/features/x), no sus archivos internos (docs/frontend.md).',
 };
 
-// no-restricted-imports skips import(): the router's lazy screens go through this.
+// The router takes each feature's routes from its routes.tsx: through the
+// index.ts, everything the feature exports would land in the main bundle.
+const featureInternalsButRoutes = {
+  regex: '^@/features/[^/]+/(?!routes$).+',
+  message: 'app/ importa una feature por su index.ts, o sus rutas por @/features/x/routes (docs/frontend.md).',
+};
+
+// no-restricted-imports skips import(): a lazy import of another feature's files goes through this.
 const lazyFeatureInternals = [
   'error',
   {
-    selector: 'ImportExpression[source.value=/^@\\/features\\/[^/]+\\/(?!pages$)/]',
+    selector: 'ImportExpression[source.value=/^@\\/features\\/[^/]+\\//]',
     message: featureInternals.message,
   },
 ];
@@ -43,7 +50,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['*.{js,mjs,ts}', 'stylelint/**/*.ts', 'styles-check/**/*.ts', 'scripts/**/*.ts'],
+    files: ['*.{js,mjs,ts}', 'eslint/**/*.{mjs,ts}', 'stylelint/**/*.ts', 'styles-check/**/*.ts', 'scripts/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
   {
@@ -65,7 +72,9 @@ export default defineConfig([
       'max-depth': ['error', 3],
       'max-params': ['error', 3],
       'max-nested-callbacks': ['error', 3],
+      'cuadra/feature-boundaries': 'error',
     },
+    plugins: { cuadra: { rules: { 'feature-boundaries': featureBoundaries } } },
   },
   {
     // Declaration files extend globals such as ImportMetaEnv, which only an
@@ -107,7 +116,7 @@ export default defineConfig([
   {
     files: ['src/app/**/*.{ts,tsx}'],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [featureInternals] }],
+      'no-restricted-imports': ['error', { patterns: [featureInternalsButRoutes] }],
       'no-restricted-syntax': lazyFeatureInternals,
     },
   },
@@ -127,9 +136,4 @@ export default defineConfig([
       ],
     },
   },
-  // Files that broke these rules before they existed (eslint.legacy.js).
-  ...Object.entries(legacy).map(([file, rules]) => ({
-    files: [file],
-    rules: Object.fromEntries(rules.map((rule) => [rule, 'off'])),
-  })),
 ]);
