@@ -90,11 +90,11 @@ export const routes: RouteObject[] = [
                 children: [
                   {
                     path: paths.inventory.stock.pattern,
-                    ...page(async () => (await import('@/features/inventory')).StockPage),
+                    ...page(async () => (await import('@/features/inventory/pages')).StockPage),
                   },
                   {
                     path: paths.inventory.kardex.pattern,
-                    ...page(async () => (await import('@/features/inventory')).KardexPage),
+                    ...page(async () => (await import('@/features/inventory/pages')).KardexPage),
                   },
                 ],
               },
@@ -173,7 +173,7 @@ export const routes: RouteObject[] = [
                 children: [
                   {
                     path: paths.inventory.receipt.pattern,
-                    ...page(async () => (await import('@/features/inventory')).ReceiptPage),
+                    ...page(async () => (await import('@/features/inventory/pages')).ReceiptPage),
                   },
                 ],
               },

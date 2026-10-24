@@ -1,6 +1,6 @@
 import { useFormContext, useWatch } from 'react-hook-form';
 import { Badge, Checkbox, Field, Input, TableCell, TableRow } from '@/shared/ui';
-import { useFieldError } from '../../../../hooks/useFieldError';
+import { useFieldError } from '@/shared/forms/useFieldError';
 import type { ProductFormInput, VariantRow } from '../../../../model/productSchema';
 import { axisLabel, generatedSku } from '../../../../model/variantMatrix';
 import styles from './VariantMatrixRow.module.scss';

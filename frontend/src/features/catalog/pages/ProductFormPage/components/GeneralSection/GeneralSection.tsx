@@ -1,8 +1,8 @@
 import { useFormContext } from 'react-hook-form';
 import { Field, Input, Textarea } from '@/shared/ui';
 import type { Category, UnitOfMeasure } from '../../../../api/types';
-import { useFieldError } from '../../../../hooks/useFieldError';
-import { SelectController } from '../../../../components/SelectController/SelectController';
+import { useFieldError } from '@/shared/forms/useFieldError';
+import { SelectController } from '@/shared/forms/SelectController/SelectController';
 import { categoryOptions } from '../../../../model/categoryOptions';
 import type { ProductFormInput } from '../../../../model/productSchema';
 import { FormGrid, FormGridWide, FormSection } from '../FormSection/FormSection';

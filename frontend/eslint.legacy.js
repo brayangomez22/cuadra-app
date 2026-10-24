@@ -9,16 +9,6 @@
 export const legacy = {
   'src/app/router.tsx': ['max-lines', 'no-restricted-syntax'],
   'src/features/dev/UiCatalogPage.tsx': ['max-lines', 'max-lines-per-function'],
-  'src/features/inventory/CreateLocationDialog.tsx': ['max-lines-per-function'],
-  'src/features/inventory/KardexPage.tsx': ['complexity', 'max-lines', 'max-lines-per-function'],
-  'src/features/inventory/ReceiptPage.test.tsx': ['max-lines'],
-  'src/features/inventory/ReceiptPage.tsx': [
-    '@typescript-eslint/no-unnecessary-condition',
-    'complexity',
-    'max-lines',
-    'max-lines-per-function',
-  ],
-  'src/features/inventory/StockPage.tsx': ['complexity', 'max-lines', 'max-lines-per-function'],
   'src/features/settings/AttributesSettings.test.tsx': [
     '@typescript-eslint/no-unsafe-argument',
     '@typescript-eslint/no-unsafe-call',

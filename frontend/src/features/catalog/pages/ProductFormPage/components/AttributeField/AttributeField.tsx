@@ -1,8 +1,8 @@
 import { useFormContext } from 'react-hook-form';
 import { Checkbox, Field, Input } from '@/shared/ui';
 import type { AttributeDefinition } from '../../../../api/types';
-import { SelectController } from '../../../../components/SelectController/SelectController';
-import { useFieldError } from '../../../../hooks/useFieldError';
+import { SelectController } from '@/shared/forms/SelectController/SelectController';
+import { useFieldError } from '@/shared/forms/useFieldError';
 import { NO_VALUE, type ProductFormInput } from '../../../../model/productSchema';
 import { FormGridWide } from '../FormSection/FormSection';
 

@@ -17,6 +17,6 @@ Los productos y sus variantes: la lista, el formulario (con atributos, matriz de
 
 - `api/`: un archivo por recurso. La caché solo vive aquí (`useStoreProduct`, las mutaciones de estado y de unidades).
 - `model/`: lógica pura con sus tests (valores iniciales, cuerpo de la API, errores a campos, matriz de variantes, montos de la lista).
-- `components/`: `ProductPicker` y sus piezas, y `SelectController` (un `Select` atado a react-hook-form).
-- `hooks/`: `useProductSearch` (del buscador) y `useFieldError`.
+- `components/`: `ProductPicker` y sus piezas. `SelectController` y `useFieldError` pasaron a `shared/forms/` (T26h), porque también los usa inventario.
+- `hooks/`: `useProductSearch` (del buscador).
 - `testing/`: `productFormApi`, `garmentServer`, `sentBody` y los pasos del formulario. Los fixtures de producto (`aProduct`, `aGarment`...) siguen en `src/test/fixtures.ts` porque los usan inventario, ventas y configuración.

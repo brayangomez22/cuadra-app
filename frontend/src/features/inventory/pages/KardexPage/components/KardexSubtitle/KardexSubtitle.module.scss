@@ -1,0 +1,8 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
