@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
+import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAccess, visibleItems } from '@/features/auth';
 import { Page } from '@/shared/ui';
-import { sections } from './sections';
+import { sections } from '../../model/sections';
 import styles from './SettingsLayout.module.scss';
 
 /** /configuracion: the sections the user may see, and the chosen one. */
@@ -14,7 +14,7 @@ export function SettingsLayout() {
   // On a phone the sections are a row that scrolls: bring the current one in,
   // without moving the page if it is already visible.
   useEffect(() => {
-    nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [pathname]);
 
   return (
@@ -40,10 +40,4 @@ export function SettingsLayout() {
       </div>
     </Page>
   );
-}
-
-/** /configuracion opens the first section the user may see. */
-export function SettingsHome() {
-  const [first] = visibleItems(sections, useAccess());
-  return first ? <Navigate to={first.to} replace /> : null;
 }

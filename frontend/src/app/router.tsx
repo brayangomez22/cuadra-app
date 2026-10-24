@@ -131,23 +131,23 @@ export const routes: RouteObject[] = [
                 children: [
                   {
                     path: paths.settings.home.pattern,
-                    ...page(async () => (await import('@/features/settings')).SettingsLayout),
+                    ...page(async () => (await import('@/features/settings/pages')).SettingsLayout),
                     children: [
-                      { index: true, ...page(async () => (await import('@/features/settings')).SettingsHome) },
+                      { index: true, ...page(async () => (await import('@/features/settings/pages')).SettingsHome) },
                       {
                         path: paths.settings.units.pattern,
-                        ...page(async () => (await import('@/features/settings')).UnitsSettings),
+                        ...page(async () => (await import('@/features/settings/pages')).UnitsSettings),
                       },
                       {
                         path: paths.settings.attributes.pattern,
-                        ...page(async () => (await import('@/features/settings')).AttributesSettings),
+                        ...page(async () => (await import('@/features/settings/pages')).AttributesSettings),
                       },
                       {
                         ...gate({ module: 'variants' }),
                         children: [
                           {
                             path: paths.settings.variantAxes.pattern,
-                            ...page(async () => (await import('@/features/settings')).VariantAxesSettings),
+                            ...page(async () => (await import('@/features/settings/pages')).VariantAxesSettings),
                           },
                         ],
                       },
@@ -156,11 +156,11 @@ export const routes: RouteObject[] = [
                         children: [
                           {
                             path: paths.settings.general.pattern,
-                            ...page(async () => (await import('@/features/settings')).GeneralSettings),
+                            ...page(async () => (await import('@/features/settings/pages')).GeneralSettings),
                           },
                           {
                             path: paths.settings.modules.pattern,
-                            ...page(async () => (await import('@/features/settings')).ModulesSettings),
+                            ...page(async () => (await import('@/features/settings/pages')).ModulesSettings),
                           },
                         ],
                       },

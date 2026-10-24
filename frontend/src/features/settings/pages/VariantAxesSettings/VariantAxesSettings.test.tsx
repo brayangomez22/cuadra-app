@@ -1,14 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { aUser, apiError, fakeApi, json, signedIn } from '@/test/fakeApi';
-import { axes, page } from '@/test/fixtures';
+import { apiError, json } from '@/test/fakeApi';
+import { axes } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
-
-const withVariants = { ...aUser('owner'), business_template: 'ropa_calzado', modules: ['variants'] };
-
-function axesApi(routes: Parameters<typeof fakeApi>[0] = {}) {
-  return fakeApi({ ...signedIn(withVariants), 'GET /api/v1/variant-axes': json(200, page(axes)), ...routes });
-}
+import { axesApi } from '../../testing/settingsApi';
 
 describe('VariantAxesSettings', () => {
   it('lista los ejes con sus valores', async () => {

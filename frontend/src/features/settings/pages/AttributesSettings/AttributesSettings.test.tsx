@@ -1,14 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { apiError, fakeApi, json, signedIn } from '@/test/fakeApi';
-import { attributes, page } from '@/test/fixtures';
+import { apiError, json } from '@/test/fakeApi';
+import { attributes } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
+import { attributesApi } from '../../testing/settingsApi';
 
-function attributesApi(routes: Parameters<typeof fakeApi>[0] = {}) {
-  return fakeApi({ ...signedIn(), 'GET /api/v1/product-attributes': json(200, page(attributes)), ...routes });
-}
-
-async function chooseType(dialog: ReturnType<typeof within>, type: string) {
+async function chooseType(dialog: { getByRole: typeof screen.getByRole }, type: string) {
   await userEvent.click(dialog.getByRole('combobox', { name: 'Tipo' }));
   await userEvent.click(await screen.findByRole('option', { name: type }));
 }
