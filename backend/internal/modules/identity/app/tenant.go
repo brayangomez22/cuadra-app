@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // TenantUpdate holds the tenant settings to change; a nil field keeps its
@@ -21,7 +22,7 @@ type TenantUpdate struct {
 // checked by the API (tenant:manage); an invalid value changes nothing.
 func (s *Service) UpdateTenant(ctx context.Context, tenantID, userID uuid.UUID, in TenantUpdate) (_ *domain.Tenant, err error) {
 	ctx, span := s.startSpan(ctx, "UpdateTenant")
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 	span.SetAttributes(attribute.String("tenant.id", tenantID.String()), attribute.String("user.id", userID.String()))
 
 	tenant, err := s.Tenants.GetByID(ctx, tenantID)

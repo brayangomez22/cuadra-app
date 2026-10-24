@@ -1,7 +1,7 @@
 import { describeError } from '@/shared/api/errors';
 import { formatMoney } from '@/shared/format';
 import { Spinner } from '@/shared/ui';
-import { variantName, type Sellable } from '../../model/variants';
+import { variantName, type Sellable } from '../../model/variants/variants';
 import styles from './PickerResults.module.scss';
 
 type Props = {

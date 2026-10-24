@@ -10,13 +10,11 @@ import (
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
-	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 const instrumentationName = "github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog"
@@ -46,7 +44,7 @@ type Deps struct {
 // Service runs the catalog use cases.
 type Service struct {
 	Deps
-	tracer trace.Tracer
+	spans usecase.Spans
 
 	productsCreated metric.Int64Counter
 	variantsCreated metric.Int64Counter
@@ -57,44 +55,26 @@ type Service struct {
 // NewService builds a Service. It fails if a repository is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if d.Products == nil || d.Categories == nil || d.Units == nil || d.Attributes == nil || d.VariantAxes == nil ||
-		d.Seeds == nil {
+	if usecase.AnyNil(d.Products, d.Categories, d.Units, d.Attributes, d.VariantAxes, d.Seeds) {
 		return nil, errors.New("catalog: missing service dependency")
 	}
 	if d.Now == nil {
 		d.Now = time.Now
 	}
-	if d.TracerProvider == nil {
-		d.TracerProvider = tracenoop.NewTracerProvider()
-	}
-	if d.MeterProvider == nil {
-		d.MeterProvider = metricnoop.NewMeterProvider()
-	}
-	if d.Logger == nil {
-		d.Logger = slog.New(slog.DiscardHandler)
-	}
+	d.Logger = usecase.Logger(d.Logger)
 
-	s := &Service{Deps: d, tracer: d.TracerProvider.Tracer(instrumentationName)}
-	meter := d.MeterProvider.Meter(instrumentationName)
-	var err error
-	if s.productsCreated, err = meter.Int64Counter("cuadra.catalog.products_created",
-		metric.WithDescription("Products added to the catalog."),
-		metric.WithUnit("{product}")); err != nil {
-		return nil, err
-	}
-	if s.variantsCreated, err = meter.Int64Counter("cuadra.catalog.variants_created",
-		metric.WithDescription("Variants added to an existing product (a product's default variant is not counted)."),
-		metric.WithUnit("{variant}")); err != nil {
-		return nil, err
-	}
-	if s.priceChanges, err = meter.Int64Counter("cuadra.catalog.price_changes",
-		metric.WithDescription("Variant price changes."),
-		metric.WithUnit("{change}")); err != nil {
-		return nil, err
-	}
-	if s.searches, err = meter.Int64Counter("cuadra.catalog.searches",
-		metric.WithDescription("Product searches with a text, by result (hit, empty)."),
-		metric.WithUnit("{search}")); err != nil {
+	s := &Service{Deps: d, spans: usecase.NewSpans(d.TracerProvider, instrumentationName, "catalog")}
+	err := usecase.Create(usecase.Meter(d.MeterProvider, instrumentationName),
+		usecase.Counter(&s.productsCreated, "cuadra.catalog.products_created",
+			"Products added to the catalog.", "{product}"),
+		usecase.Counter(&s.variantsCreated, "cuadra.catalog.variants_created",
+			"Variants added to an existing product (a product's default variant is not counted).", "{variant}"),
+		usecase.Counter(&s.priceChanges, "cuadra.catalog.price_changes",
+			"Variant price changes.", "{change}"),
+		usecase.Counter(&s.searches, "cuadra.catalog.searches",
+			"Product searches with a text, by result (hit, empty).", "{search}"),
+	)
+	if err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -102,20 +82,7 @@ func NewService(d Deps) (*Service, error) {
 
 // startSpan opens the use case's span with the actor's ids.
 func (s *Service) startSpan(ctx context.Context, name string, a Actor, attrs ...attribute.KeyValue) (context.Context, trace.Span) {
-	attrs = append(attrs,
-		attribute.String("tenant.id", a.TenantID.String()),
-		attribute.String("user.id", a.UserID.String()),
-	)
-	return s.tracer.Start(ctx, "catalog."+name, trace.WithAttributes(attrs...))
-}
-
-// endSpan records err on the span and ends it.
-func endSpan(span trace.Span, err error) {
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	span.End()
+	return s.spans.StartFor(ctx, name, a.TenantID, a.UserID, attrs...)
 }
 
 func productAttr(id uuid.UUID) attribute.KeyValue {

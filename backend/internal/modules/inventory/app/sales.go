@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // SaleStockLine is the quantity of a variant a sale takes.
@@ -47,7 +48,7 @@ func (e *VariantStockError) Unwrap() error { return e.Err }
 // sale's transaction (through ctx), a failed exit rolls back the whole sale.
 func (s *Service) IssueSaleStock(ctx context.Context, a Actor, in SaleStockInput) (_ []*domain.StockMovement, err error) {
 	ctx, span := s.startSpan(ctx, "IssueSaleStock", a, locationAttr(in.LocationID), saleAttr(in.SaleID))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	if err := s.requireActiveLocation(ctx, a, in.LocationID); err != nil {
 		return nil, err
@@ -87,7 +88,7 @@ func (s *Service) IssueSaleStock(ctx context.Context, a Actor, in SaleStockInput
 // nothing. The location may be inactive: the goods are already there.
 func (s *Service) ReverseSaleStock(ctx context.Context, a Actor, saleID uuid.UUID) (_ []*domain.StockMovement, err error) {
 	ctx, span := s.startSpan(ctx, "ReverseSaleStock", a, saleAttr(saleID))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	ref := domain.DocumentRef{Kind: domain.DocumentSale, ID: saleID}
 	existing, err := s.Stock.MovementsByReference(ctx, a.TenantID, ref)

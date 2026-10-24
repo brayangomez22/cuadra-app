@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // bogota is the time zone of the business day. Colombia has been at UTC−5
@@ -26,7 +27,7 @@ type ListSalesInput struct {
 // GetSale returns a sale with its lines and payments.
 func (s *Service) GetSale(ctx context.Context, a Actor, id uuid.UUID) (_ *domain.Sale, err error) {
 	ctx, span := s.startSpan(ctx, "GetSale", a, saleAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	return s.Sales.Get(ctx, a.TenantID, id)
 }
@@ -35,7 +36,7 @@ func (s *Service) GetSale(ctx context.Context, a Actor, id uuid.UUID) (_ *domain
 // voided ones included, newest first.
 func (s *Service) ListSales(ctx context.Context, a Actor, in ListSalesInput) (_ domain.SalePage, err error) {
 	ctx, span := s.startSpan(ctx, "ListSales", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	day := in.Date
 	if day.IsZero() {

@@ -1,108 +1,15 @@
 package httpadapter_test
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/domain"
 )
-
-func (s *stubUseCases) OpenCashSession(_ context.Context, a app.Actor, in app.OpenCashSessionInput) (*domain.CashSession, error) {
-	s.actor, s.openCash = a, in
-	return s.session, s.err
-}
-
-func (s *stubUseCases) RecordCashMovement(_ context.Context, a app.Actor, id uuid.UUID, in app.CashMovementRequest) (domain.CashMovement, error) {
-	s.actor, s.id, s.movement = a, id, in
-	return s.recorded, s.err
-}
-
-func (s *stubUseCases) CloseCashSession(_ context.Context, a app.Actor, id uuid.UUID, in app.CloseCashSessionInput) (app.CashSessionView, error) {
-	s.actor, s.id, s.closing = a, id, in
-	return s.view, s.err
-}
-
-func (s *stubUseCases) GetCashSession(_ context.Context, a app.Actor, id uuid.UUID) (app.CashSessionView, error) {
-	s.actor, s.id = a, id
-	return s.view, s.err
-}
-
-func (s *stubUseCases) GetCurrentCashSession(_ context.Context, a app.Actor) (app.CurrentCashSession, error) {
-	s.actor = a
-	return s.current, s.err
-}
-
-// anOpenSession is the owner's session with a float of 100000 and a cash out
-// of 12000.
-func anOpenSession(t *testing.T) app.CashSessionView {
-	t.Helper()
-	s, err := domain.OpenCashSession(domain.NewCashSessionParams{
-		ID: newID(), TenantID: owner.TenantID, LocationID: newID(), UserID: owner.UserID, OpeningFloat: dec("100000"), OpenedAt: now,
-	})
-	require.NoError(t, err)
-	m, err := s.RecordMovement(domain.CashMovementInput{
-		ID: newID(), Kind: domain.CashOut, Amount: dec("12000"), Reason: "Almuerzo", UserID: owner.UserID, At: now,
-	})
-	require.NoError(t, err)
-	return app.CashSessionView{Session: s, Movements: []domain.CashMovement{m}}
-}
-
-// aClosedSession is anOpenSession closed with 150000 counted: expected
-// 100000 + 80000 − 12000 − 20000 = 148000, overage 2000.
-func aClosedSession(t *testing.T) app.CashSessionView {
-	t.Helper()
-	v := anOpenSession(t)
-	count, err := domain.NewCashCount([]domain.DenominationCount{
-		{Denomination: dec("100000"), Quantity: 1}, {Denomination: dec("50000"), Quantity: 1},
-	})
-	require.NoError(t, err)
-	require.NoError(t, v.Session.Close(domain.CloseCashInput{
-		UserID: owner.UserID, Count: count, Notes: "Sin novedad", At: now,
-		Activity: domain.CashActivity{
-			CashReceived: dec("80000"), ChangeGiven: dec("20000"), CashIn: dec("0"), CashOut: dec("12000"), Sales: 3,
-			ByMethod: []domain.MethodTotal{{Method: domain.PaymentCash, Amount: dec("60000")}, {Method: domain.PaymentCard, Amount: dec("45000")}},
-		},
-	}))
-	return v
-}
-
-type sessionBody struct {
-	ID           uuid.UUID `json:"id"`
-	Status       string    `json:"status"`
-	OpeningFloat string    `json:"opening_float"`
-	Movements    []struct {
-		Kind, Amount, Reason string
-	} `json:"movements"`
-	Closing *struct {
-		SalesCount   int    `json:"sales_count"`
-		CashReceived string `json:"cash_received"`
-		ChangeGiven  string `json:"change_given"`
-		CashOut      string `json:"cash_out"`
-		Expected     string `json:"expected"`
-		Counted      string `json:"counted"`
-		Difference   string `json:"difference"`
-		Result       string `json:"result"`
-		Notes        string `json:"notes"`
-		Counts       []struct {
-			Denomination string `json:"denomination"`
-			Quantity     int64  `json:"quantity"`
-		} `json:"counts"`
-		Payments []struct{ Method, Amount string } `json:"payments"`
-	} `json:"closing"`
-}
-
-func decodeSession(t *testing.T, raw []byte) sessionBody {
-	t.Helper()
-	var body sessionBody
-	require.NoError(t, json.Unmarshal(raw, &body))
-	return body
-}
 
 func TestOpenCashSession(t *testing.T) {
 	t.Run("abre la caja del usuario autenticado con su base", func(t *testing.T) {

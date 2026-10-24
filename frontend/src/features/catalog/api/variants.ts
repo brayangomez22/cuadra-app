@@ -5,8 +5,8 @@
 // failure saving again only sends what is missing.
 import { api } from '@/shared/api/client';
 import { describeError, unwrap } from '@/shared/api/errors';
-import type { ResolvedRow, RowError, RowField } from '../model/resolveRows';
-import { changed, targetOf } from '../model/variantTarget';
+import type { ResolvedRow, RowError, RowField } from '../model/variantMatrix/resolveRows';
+import { changed, targetOf } from '../model/variantMatrix/variantTarget';
 import type { Product, ProductVariant } from './types';
 
 // Error codes of the variant endpoints that belong to one field of a row.

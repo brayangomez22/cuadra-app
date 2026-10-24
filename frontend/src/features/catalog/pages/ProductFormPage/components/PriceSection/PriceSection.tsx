@@ -2,8 +2,8 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { Field, Input } from '@/shared/ui';
 import { useFieldError } from '@/shared/forms/useFieldError';
 import { SelectController } from '@/shared/forms/SelectController/SelectController';
-import type { ProductFormInput } from '../../../../model/productSchema';
-import { taxRateOptions } from '../../../../model/taxRates';
+import type { ProductFormInput } from '../../../../model/productForm/productSchema';
+import { taxRateOptions } from '../../../../model/productForm/taxRates';
 import { FormGrid, FormSection } from '../FormSection/FormSection';
 
 type Props = {

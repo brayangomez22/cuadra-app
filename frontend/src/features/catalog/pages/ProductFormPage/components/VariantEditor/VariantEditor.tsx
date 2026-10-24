@@ -1,8 +1,8 @@
 import { useFormContext } from 'react-hook-form';
 import { Alert } from '@/shared/ui';
 import type { VariantAxis } from '../../../../api/types';
-import type { ProductFormInput } from '../../../../model/productSchema';
-import { MAX_COMBINATIONS } from '../../../../model/variantChoice';
+import type { ProductFormInput } from '../../../../model/productForm/productSchema';
+import { MAX_COMBINATIONS } from '../../../../model/variantMatrix/variantChoice';
 import { useVariantChoice } from '../../hooks/useVariantChoice';
 import { AxisPicker } from '../AxisPicker/AxisPicker';
 import { VariantMatrix } from '../VariantMatrix/VariantMatrix';

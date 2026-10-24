@@ -7,62 +7,33 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"strings"
-
-	"github.com/google/uuid"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/adapters/http/catalogapi"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/app"
-	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 )
 
-// permissionCatalogWrite lets a role see a product's cost and margin. It is
-// the identity module's "catalog:write", named here as the contract names it.
-const permissionCatalogWrite = "catalog:write"
-
-// defaultPageSize is the contract's default limit.
-const defaultPageSize = 20
-
-// opPOSSearch is the operation the POS latency SLO measures for a search
-// with text (docs/slo.md).
-const opPOSSearch = "pos.search"
-
-// UseCases are the catalog use cases the handlers call (*app.Service).
+// UseCases are the catalog use cases the handlers call (*app.Service), one
+// small interface per resource.
 type UseCases interface {
-	CreateProduct(ctx context.Context, a app.Actor, in app.ProductInput) (*domain.Product, error)
-	UpdateProduct(ctx context.Context, a app.Actor, id uuid.UUID, in app.ProductInput) (*domain.Product, error)
-	GetProduct(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Product, error)
-	SearchProducts(ctx context.Context, a app.Actor, f domain.ProductFilter) (domain.ProductPage, error)
-	DeactivateProduct(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Product, error)
-	ActivateProduct(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Product, error)
-	AddVariant(ctx context.Context, a app.Actor, productID uuid.UUID, in app.VariantInput) (*domain.Product, error)
-	UpdateVariant(ctx context.Context, a app.Actor, productID, variantID uuid.UUID, in app.VariantUpdate) (*domain.Product, error)
-	SetVariantUnit(ctx context.Context, a app.Actor, productID, variantID, unitID uuid.UUID, in app.VariantUnitInput) (*domain.Product, error)
-	RemoveVariantUnit(ctx context.Context, a app.Actor, productID, variantID, unitID uuid.UUID) (*domain.Product, error)
-	CreateCategory(ctx context.Context, a app.Actor, name string, parentID *uuid.UUID) (*domain.Category, error)
-	UpdateCategory(ctx context.Context, a app.Actor, id uuid.UUID, name string, parentID *uuid.UUID) (*domain.Category, error)
-	ListCategories(ctx context.Context, a app.Actor) ([]*domain.Category, error)
-	DeleteCategory(ctx context.Context, a app.Actor, id uuid.UUID) error
-	CreateUnit(ctx context.Context, a app.Actor, code, name string) (*domain.UnitOfMeasure, error)
-	UpdateUnit(ctx context.Context, a app.Actor, id uuid.UUID, code, name string) (*domain.UnitOfMeasure, error)
-	ListUnits(ctx context.Context, a app.Actor) ([]*domain.UnitOfMeasure, error)
-	DeleteUnit(ctx context.Context, a app.Actor, id uuid.UUID) error
-	CreateAttribute(ctx context.Context, a app.Actor, in app.AttributeInput) (*domain.AttributeDefinition, error)
-	UpdateAttribute(ctx context.Context, a app.Actor, id uuid.UUID, in app.AttributeUpdate) (*domain.AttributeDefinition, error)
-	ListAttributes(ctx context.Context, a app.Actor) ([]*domain.AttributeDefinition, error)
-	DeleteAttribute(ctx context.Context, a app.Actor, id uuid.UUID) error
-	CreateVariantAxis(ctx context.Context, a app.Actor, name string, values []string) (*domain.VariantAxis, error)
-	UpdateVariantAxis(ctx context.Context, a app.Actor, id uuid.UUID, values []string) (*domain.VariantAxis, error)
-	ListVariantAxes(ctx context.Context, a app.Actor) ([]*domain.VariantAxis, error)
-	DeleteVariantAxis(ctx context.Context, a app.Actor, id uuid.UUID) error
+	ProductUseCases
+	VariantUseCases
+	CategoryUseCases
+	UnitUseCases
+	AttributeUseCases
+	VariantAxisUseCases
 }
 
-// Handler implements catalogapi.StrictServerInterface.
+// Handler implements catalogapi.StrictServerInterface with one handler per
+// resource.
 type Handler struct {
-	uc  UseCases
-	can auth.Authorizer
+	productHandlers
+	variantHandlers
+	categoryHandlers
+	unitHandlers
+	attributeHandlers
+	variantAxisHandlers
 }
 
 var _ catalogapi.StrictServerInterface = (*Handler)(nil)
@@ -70,29 +41,24 @@ var _ catalogapi.StrictServerInterface = (*Handler)(nil)
 // Register mounts the catalog operations on mux, with the module's error
 // mapping. can decides who sees a product's cost and margin.
 func Register(mux *http.ServeMux, uc UseCases, can auth.Authorizer, log *slog.Logger) {
-	h := &Handler{uc: uc, can: can}
+	costs := costView{can: can}
+	h := &Handler{
+		productHandlers:     productHandlers{uc: uc, costView: costs},
+		variantHandlers:     variantHandlers{uc: uc, costView: costs},
+		categoryHandlers:    categoryHandlers{uc: uc},
+		unitHandlers:        unitHandlers{uc: uc},
+		attributeHandlers:   attributeHandlers{uc: uc},
+		variantAxisHandlers: variantAxisHandlers{uc: uc},
+	}
 	errs := httpx.NewErrorMapper(log, errorRules...)
+	middlewares := []catalogapi.StrictMiddlewareFunc{auth.RequirePrincipal[catalogapi.StrictHandlerFunc]}
 	catalogapi.HandlerWithOptions(
-		catalogapi.NewStrictHandlerWithOptions(h, []catalogapi.StrictMiddlewareFunc{requirePrincipal}, catalogapi.StrictHTTPServerOptions{
+		catalogapi.NewStrictHandlerWithOptions(h, middlewares, catalogapi.StrictHTTPServerOptions{
 			RequestErrorHandlerFunc:  errs.RequestError,
 			ResponseErrorHandlerFunc: errs.ResponseError,
 		}),
 		catalogapi.StdHTTPServerOptions{BaseRouter: mux, ErrorHandlerFunc: errs.RequestError},
 	)
-}
-
-// requirePrincipal answers 401 when no principal reached the handlers. The
-// API's auth middleware already demands one; this keeps a wiring mistake
-// from running a use case without a tenant.
-func requirePrincipal(next catalogapi.StrictHandlerFunc, _ string) catalogapi.StrictHandlerFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, req any) (any, error) {
-		if _, ok := auth.PrincipalFrom(ctx); !ok {
-			w.Header().Set("WWW-Authenticate", "Bearer")
-			httpx.WriteError(w, http.StatusUnauthorized, "unauthorized", unauthorizedMessage)
-			return nil, nil
-		}
-		return next(ctx, w, r, req)
-	}
 }
 
 // actor returns who calls: tenant and user come only from the access token.
@@ -101,284 +67,8 @@ func actor(ctx context.Context) app.Actor {
 	return app.Actor{TenantID: p.TenantID, UserID: p.UserID}
 }
 
+// costView decides who sees costs and margins.
+type costView struct{ can auth.Authorizer }
+
 // seesCost reports whether the caller may see costs and margins.
-func (h *Handler) seesCost(ctx context.Context) bool {
-	p, _ := auth.PrincipalFrom(ctx)
-	return h.can(p.Role, permissionCatalogWrite)
-}
-
-// ListProducts searches the tenant's products.
-func (h *Handler) ListProducts(ctx context.Context, req catalogapi.ListProductsRequestObject) (catalogapi.ListProductsResponseObject, error) {
-	params := req.Params
-	f := domain.ProductFilter{CategoryID: params.CategoryId, Limit: defaultPageSize}
-	if params.Q != nil {
-		f.Query = *params.Q
-	}
-	if strings.TrimSpace(f.Query) != "" {
-		// A typed text or a scanned code: the cashier is waiting for it.
-		httpx.SetOperation(ctx, opPOSSearch)
-	}
-	if params.Ids != nil {
-		f.IDs = *params.Ids
-	}
-	if params.Limit != nil {
-		f.Limit = *params.Limit
-	}
-	if params.Offset != nil {
-		f.Offset = *params.Offset
-	}
-	status := catalogapi.Active
-	if params.Status != nil {
-		status = *params.Status
-	}
-	if status != catalogapi.All {
-		active := status == catalogapi.Active
-		f.Active = &active
-	}
-
-	page, err := h.uc.SearchProducts(ctx, actor(ctx), f)
-	if err != nil {
-		return nil, err
-	}
-	seesCost := h.seesCost(ctx)
-	items := make([]catalogapi.Product, 0, len(page.Items))
-	for _, p := range page.Items {
-		items = append(items, productBody(p, seesCost))
-	}
-	return catalogapi.ListProducts200JSONResponse{Items: items, Total: page.Total}, nil
-}
-
-// CreateProduct adds a product to the catalog.
-func (h *Handler) CreateProduct(ctx context.Context, req catalogapi.CreateProductRequestObject) (catalogapi.CreateProductResponseObject, error) {
-	in, err := productInput(*req.Body)
-	if err != nil {
-		return nil, err
-	}
-	p, err := h.uc.CreateProduct(ctx, actor(ctx), in)
-	if err != nil {
-		return nil, err
-	}
-	return catalogapi.CreateProduct201JSONResponse(productBody(p, h.seesCost(ctx))), nil
-}
-
-// GetProduct returns a product, active or not.
-func (h *Handler) GetProduct(ctx context.Context, req catalogapi.GetProductRequestObject) (catalogapi.GetProductResponseObject, error) {
-	p, err := h.uc.GetProduct(ctx, actor(ctx), req.ProductId)
-	if err != nil {
-		return nil, err
-	}
-	return catalogapi.GetProduct200JSONResponse(productBody(p, h.seesCost(ctx))), nil
-}
-
-// UpdateProduct replaces a product's data.
-func (h *Handler) UpdateProduct(ctx context.Context, req catalogapi.UpdateProductRequestObject) (catalogapi.UpdateProductResponseObject, error) {
-	in, err := productInput(*req.Body)
-	if err != nil {
-		return nil, err
-	}
-	p, err := h.uc.UpdateProduct(ctx, actor(ctx), req.ProductId, in)
-	if err != nil {
-		return nil, err
-	}
-	return catalogapi.UpdateProduct200JSONResponse(productBody(p, h.seesCost(ctx))), nil
-}
-
-// ActivateProduct makes a product sellable again.
-func (h *Handler) ActivateProduct(ctx context.Context, req catalogapi.ActivateProductRequestObject) (catalogapi.ActivateProductResponseObject, error) {
-	p, err := h.uc.ActivateProduct(ctx, actor(ctx), req.ProductId)
-	if err != nil {
-		return nil, err
-	}
-	return catalogapi.ActivateProduct200JSONResponse(productBody(p, h.seesCost(ctx))), nil
-}
-
-// DeactivateProduct hides a product from sales.
-func (h *Handler) DeactivateProduct(ctx context.Context, req catalogapi.DeactivateProductRequestObject) (catalogapi.DeactivateProductResponseObject, error) {
-	p, err := h.uc.DeactivateProduct(ctx, actor(ctx), req.ProductId)
-	if err != nil {
-		return nil, err
-	}
-	return catalogapi.DeactivateProduct200JSONResponse(productBody(p, h.seesCost(ctx))), nil
-}
-
-// AddProductVariant adds a variant to a product.
-func (h *Handler) AddProductVariant(ctx context.Context, req catalogapi.AddProductVariantRequestObject) (catalogapi.AddProductVariantResponseObject, error) {
-	b := req.Body
-	in, err := variantInput(b.Sku, b.Barcode, b.Cost, b.Price, b.AxisValues)
-	if err != nil {
-		return nil, err
-	}
-	p, err := h.uc.AddVariant(ctx, actor(ctx), req.ProductId, in)
-	if err != nil {
-		return nil, err
-	}
-	return catalogapi.AddProductVariant201JSONResponse(productBody(p, h.seesCost(ctx))), nil
-}
-
-// UpdateProductVariant replaces a variant's data and state.
-func (h *Handler) UpdateProductVariant(ctx context.Context, req catalogapi.UpdateProductVariantRequestObject) (catalogapi.UpdateProductVariantResponseObject, error) {
-	b := req.Body
-	in, err := variantInput(b.Sku, b.Barcode, b.Cost, b.Price, b.AxisValues)
-	if err != nil {
-		return nil, err
-	}
-	p, err := h.uc.UpdateVariant(ctx, actor(ctx), req.ProductId, req.VariantId, app.VariantUpdate{VariantInput: in, Active: b.Active})
-	if err != nil {
-		return nil, err
-	}
-	return catalogapi.UpdateProductVariant200JSONResponse(productBody(p, h.seesCost(ctx))), nil
-}
-
-// ListCategories returns every category of the tenant.
-func (h *Handler) ListCategories(ctx context.Context, _ catalogapi.ListCategoriesRequestObject) (catalogapi.ListCategoriesResponseObject, error) {
-	list, err := h.uc.ListCategories(ctx, actor(ctx))
-	if err != nil {
-		return nil, err
-	}
-	items := make([]catalogapi.Category, 0, len(list))
-	for _, c := range list {
-		items = append(items, categoryBody(c))
-	}
-	return catalogapi.ListCategories200JSONResponse{Items: items}, nil
-}
-
-// CreateCategory adds a category.
-func (h *Handler) CreateCategory(ctx context.Context, req catalogapi.CreateCategoryRequestObject) (catalogapi.CreateCategoryResponseObject, error) {
-	c, err := h.uc.CreateCategory(ctx, actor(ctx), req.Body.Name, req.Body.ParentId)
-	if err != nil {
-		return nil, err
-	}
-	return catalogapi.CreateCategory201JSONResponse(categoryBody(c)), nil
-}
-
-// UpdateCategory renames and moves a category.
-func (h *Handler) UpdateCategory(ctx context.Context, req catalogapi.UpdateCategoryRequestObject) (catalogapi.UpdateCategoryResponseObject, error) {
-	c, err := h.uc.UpdateCategory(ctx, actor(ctx), req.CategoryId, req.Body.Name, req.Body.ParentId)
-	if err != nil {
-		return nil, err
-	}
-	return catalogapi.UpdateCategory200JSONResponse(categoryBody(c)), nil
-}
-
-// DeleteCategory removes an empty category.
-func (h *Handler) DeleteCategory(ctx context.Context, req catalogapi.DeleteCategoryRequestObject) (catalogapi.DeleteCategoryResponseObject, error) {
-	if err := h.uc.DeleteCategory(ctx, actor(ctx), req.CategoryId); err != nil {
-		return nil, err
-	}
-	return catalogapi.DeleteCategory204Response{}, nil
-}
-
-// productInput translates the request body. The contract already checked the
-// formats; the business rules are the domain's.
-func productInput(body catalogapi.ProductInput) (app.ProductInput, error) {
-	cost, err := parseAmount(body.Cost, domain.ErrInvalidCost)
-	if err != nil {
-		return app.ProductInput{}, err
-	}
-	price, err := parseAmount(body.Price, domain.ErrInvalidPrice)
-	if err != nil {
-		return app.ProductInput{}, err
-	}
-	rateValue, err := parseAmount(body.TaxRate, domain.ErrInvalidTaxRate)
-	if err != nil {
-		return app.ProductInput{}, err
-	}
-	rate, err := domain.ParseTaxRate(rateValue)
-	if err != nil {
-		return app.ProductInput{}, err
-	}
-	attrs, err := attributeValues(body.Attributes)
-	if err != nil {
-		return app.ProductInput{}, err
-	}
-	in := app.ProductInput{
-		SKU:        body.Sku,
-		Name:       body.Name,
-		CategoryID: body.CategoryId,
-		BaseUnitID: body.BaseUnitId,
-		Cost:       cost,
-		Price:      price,
-		TaxRate:    rate,
-		Attributes: attrs,
-	}
-	if body.Barcode != nil {
-		in.Barcode = *body.Barcode
-	}
-	if body.Description != nil {
-		in.Description = *body.Description
-	}
-	return in, nil
-}
-
-// variantInput translates a variant body. The contract already checked the
-// formats; the business rules are the domain's.
-func variantInput(sku string, barcode *string, costText, priceText string, axes catalogapi.AxisValues) (app.VariantInput, error) {
-	cost, err := parseAmount(costText, domain.ErrInvalidCost)
-	if err != nil {
-		return app.VariantInput{}, err
-	}
-	price, err := parseAmount(priceText, domain.ErrInvalidPrice)
-	if err != nil {
-		return app.VariantInput{}, err
-	}
-	in := app.VariantInput{SKU: sku, Cost: cost, Price: price, AxisValues: axes}
-	if barcode != nil {
-		in.Barcode = *barcode
-	}
-	return in, nil
-}
-
-// productBody builds the response; the variants carry cost and margin only
-// for who may edit the catalog.
-func productBody(p *domain.Product, seesCost bool) catalogapi.Product {
-	variants := make([]catalogapi.ProductVariant, 0, len(p.Variants()))
-	for _, v := range p.Variants() {
-		variants = append(variants, variantBody(v, p.TaxRate(), seesCost))
-	}
-	body := catalogapi.Product{
-		Id:         p.ID(),
-		Name:       p.Name(),
-		CategoryId: p.CategoryID(),
-		BaseUnitId: p.BaseUnit().ID,
-		Unit:       unitBody(p.BaseUnit()),
-		TaxRate:    formatRate(p.TaxRate()),
-		Attributes: attributesBody(p.Attributes()),
-		Active:     p.IsActive(),
-		CreatedAt:  p.CreatedAt(),
-		Variants:   variants,
-	}
-	if description := p.Description(); description != "" {
-		body.Description = &description
-	}
-	return body
-}
-
-// variantBody builds a variant of the response; its price with tax uses the
-// product's rate.
-func variantBody(v *domain.ProductVariant, rate domain.TaxRate, seesCost bool) catalogapi.ProductVariant {
-	body := catalogapi.ProductVariant{
-		Id:           v.ID(),
-		Sku:          v.SKU(),
-		Price:        formatMoney(v.Price()),
-		PriceWithTax: formatMoney(v.PriceWithTax(rate)),
-		AxisValues:   v.AxisValues(),
-		Label:        v.Label(),
-		Units:        variantUnitsBody(v, rate),
-		IsDefault:    v.IsDefault(),
-		Active:       v.IsActive(),
-		CreatedAt:    v.CreatedAt(),
-	}
-	if barcode := v.Barcode(); barcode != "" {
-		body.Barcode = &barcode
-	}
-	if seesCost {
-		cost := formatMoney(v.Cost())
-		margin := v.MarginPercent().String()
-		body.Cost, body.MarginPercent = &cost, &margin
-	}
-	return body
-}
-
-func categoryBody(c *domain.Category) catalogapi.Category {
-	return catalogapi.Category{Id: c.ID(), Name: c.Name(), ParentId: c.ParentID(), CreatedAt: c.CreatedAt()}
-}
+func (c costView) seesCost(ctx context.Context) bool { return auth.SeesCosts(ctx, c.can) }

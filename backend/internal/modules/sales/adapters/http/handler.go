@@ -55,26 +55,12 @@ func Register(mux *http.ServeMux, uc UseCases, can auth.Authorizer, log *slog.Lo
 	h := &Handler{uc: uc, can: can}
 	errs := httpx.NewErrorMapper(log, errorRules...)
 	salesapi.HandlerWithOptions(
-		salesapi.NewStrictHandlerWithOptions(h, []salesapi.StrictMiddlewareFunc{requirePrincipal}, salesapi.StrictHTTPServerOptions{
+		salesapi.NewStrictHandlerWithOptions(h, []salesapi.StrictMiddlewareFunc{auth.RequirePrincipal[salesapi.StrictHandlerFunc]}, salesapi.StrictHTTPServerOptions{
 			RequestErrorHandlerFunc:  errs.RequestError,
 			ResponseErrorHandlerFunc: errs.ResponseError,
 		}),
 		salesapi.StdHTTPServerOptions{BaseRouter: mux, ErrorHandlerFunc: errs.RequestError},
 	)
-}
-
-// requirePrincipal answers 401 when no principal reached the handlers. The
-// API's auth middleware already demands one; this keeps a wiring mistake
-// from running a use case without a tenant.
-func requirePrincipal(next salesapi.StrictHandlerFunc, _ string) salesapi.StrictHandlerFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, req any) (any, error) {
-		if _, ok := auth.PrincipalFrom(ctx); !ok {
-			w.Header().Set("WWW-Authenticate", "Bearer")
-			httpx.WriteError(w, http.StatusUnauthorized, "unauthorized", unauthorizedMessage)
-			return nil, nil
-		}
-		return next(ctx, w, r, req)
-	}
 }
 
 // actor returns who calls: tenant and user come only from the access token,
@@ -90,13 +76,13 @@ func (h *Handler) ConfirmSale(ctx context.Context, req salesapi.ConfirmSaleReque
 	httpx.SetOperation(ctx, "pos.confirm_sale")
 	in := app.ConfirmSaleInput{LocationID: req.Body.LocationId}
 	for _, l := range req.Body.Lines {
-		qty, err := parseDecimal(l.Quantity, domain.ErrInvalidQuantity)
+		qty, err := httpx.ParseDecimal(l.Quantity, domain.ErrInvalidQuantity)
 		if err != nil {
 			return nil, err
 		}
 		discount := decimal.Zero
 		if l.Discount != nil {
-			if discount, err = parseDecimal(*l.Discount, domain.ErrInvalidDiscount); err != nil {
+			if discount, err = httpx.ParseDecimal(*l.Discount, domain.ErrInvalidDiscount); err != nil {
 				return nil, err
 			}
 		}
@@ -105,7 +91,7 @@ func (h *Handler) ConfirmSale(ctx context.Context, req salesapi.ConfirmSaleReque
 		})
 	}
 	for _, p := range req.Body.Payments {
-		amount, err := parseDecimal(p.Amount, domain.ErrInvalidPaymentAmount)
+		amount, err := httpx.ParseDecimal(p.Amount, domain.ErrInvalidPaymentAmount)
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +142,7 @@ func (h *Handler) ListSales(ctx context.Context, req salesapi.ListSalesRequestOb
 	for _, s := range page.Items {
 		items = append(items, salesapi.SaleSummary{
 			Id: s.ID, Number: s.Number, LocationId: s.LocationID, UserId: s.UserID,
-			Status: salesapi.SaleStatus(s.Status), Total: formatMoney(s.Total),
+			Status: salesapi.SaleStatus(s.Status), Total: httpx.FormatMoney(s.Total),
 			ConfirmedAt: s.ConfirmedAt, VoidedAt: s.VoidedAt,
 		})
 	}
@@ -173,7 +159,7 @@ func (h *Handler) GetDiscountLimit(ctx context.Context, _ salesapi.GetDiscountLi
 	if limit.Unlimited() {
 		return salesapi.GetDiscountLimit200JSONResponse{Unlimited: true, Max: "1"}, nil
 	}
-	return salesapi.GetDiscountLimit200JSONResponse{Max: formatDecimal(limit.Max())}, nil
+	return salesapi.GetDiscountLimit200JSONResponse{Max: httpx.FormatDecimal(limit.Max())}, nil
 }
 
 func saleBody(s *domain.Sale) salesapi.Sale {
@@ -183,22 +169,22 @@ func saleBody(s *domain.Sale) salesapi.Sale {
 		Status: salesapi.SaleStatus(s.Status()), CashSessionId: s.CashSessionID(),
 		Lines: make([]salesapi.SaleLine, 0, len(s.Lines())), Payments: make([]salesapi.SalePayment, 0, len(s.Payments())),
 		Totals: salesapi.SaleTotals{
-			Subtotal: formatMoney(totals.Subtotal), Discounts: formatMoney(totals.Discounts),
-			Tax: formatMoney(totals.Tax), Total: formatMoney(totals.Total),
+			Subtotal: httpx.FormatMoney(totals.Subtotal), Discounts: httpx.FormatMoney(totals.Discounts),
+			Tax: httpx.FormatMoney(totals.Tax), Total: httpx.FormatMoney(totals.Total),
 			Taxes: make([]salesapi.TaxBreakdown, 0, len(totals.Taxes)),
 		},
-		Paid: formatMoney(s.Paid()), Change: formatMoney(s.Change()),
+		Paid: httpx.FormatMoney(s.Paid()), Change: httpx.FormatMoney(s.Change()),
 	}
 	if at := s.ConfirmedAt(); at != nil {
 		body.ConfirmedAt = *at
 	}
 	for _, l := range s.Lines() {
 		line := salesapi.SaleLine{
-			VariantId: l.VariantID(), ProductId: l.ProductID(), ProductName: l.ProductName(), Quantity: formatDecimal(l.Quantity()),
-			UnitFactor: formatDecimal(l.Unit().Factor), BaseQuantity: formatDecimal(l.BaseQuantity()),
-			UnitPrice: formatMoney(l.UnitPrice()), PriceRule: string(l.PriceRule()), TaxRate: formatDecimal(l.TaxRate()),
-			Discount: formatMoney(l.Discount()), Gross: formatMoney(l.Gross()), Base: formatMoney(l.Base()),
-			Tax: formatMoney(l.Tax()), Total: formatMoney(l.Total()),
+			VariantId: l.VariantID(), ProductId: l.ProductID(), ProductName: l.ProductName(), Quantity: httpx.FormatDecimal(l.Quantity()),
+			UnitFactor: httpx.FormatDecimal(l.Unit().Factor), BaseQuantity: httpx.FormatDecimal(l.BaseQuantity()),
+			UnitPrice: httpx.FormatMoney(l.UnitPrice()), PriceRule: string(l.PriceRule()), TaxRate: httpx.FormatDecimal(l.TaxRate()),
+			Discount: httpx.FormatMoney(l.Discount()), Gross: httpx.FormatMoney(l.Gross()), Base: httpx.FormatMoney(l.Base()),
+			Tax: httpx.FormatMoney(l.Tax()), Total: httpx.FormatMoney(l.Total()),
 		}
 		if label := l.VariantLabel(); label != "" {
 			line.VariantLabel = &label
@@ -209,11 +195,11 @@ func saleBody(s *domain.Sale) salesapi.Sale {
 		body.Lines = append(body.Lines, line)
 	}
 	for _, p := range s.Payments() {
-		body.Payments = append(body.Payments, salesapi.SalePayment{Method: salesapi.PaymentMethod(p.Method()), Amount: formatMoney(p.Amount())})
+		body.Payments = append(body.Payments, salesapi.SalePayment{Method: salesapi.PaymentMethod(p.Method()), Amount: httpx.FormatMoney(p.Amount())})
 	}
 	for _, t := range totals.Taxes {
 		body.Totals.Taxes = append(body.Totals.Taxes, salesapi.TaxBreakdown{
-			Rate: formatDecimal(t.Rate), Base: formatMoney(t.Base), Tax: formatMoney(t.Tax),
+			Rate: httpx.FormatDecimal(t.Rate), Base: httpx.FormatMoney(t.Base), Tax: httpx.FormatMoney(t.Tax),
 		})
 	}
 	if v := s.VoidInfo(); v != nil {

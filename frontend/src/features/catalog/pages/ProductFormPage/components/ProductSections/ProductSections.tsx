@@ -1,5 +1,5 @@
 import type { Product } from '../../../../api/types';
-import { hasAxes } from '../../../../model/variants';
+import { hasAxes } from '../../../../model/variants/variants';
 import type { ProductFormData } from '../../hooks/useProductFormData';
 import { AttributesSection } from '../AttributesSection/AttributesSection';
 import { GeneralSection } from '../GeneralSection/GeneralSection';

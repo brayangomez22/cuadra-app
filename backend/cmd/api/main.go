@@ -15,10 +15,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 
-	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog"
-	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity"
-	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory"
-	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/config"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
@@ -26,8 +22,8 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/jobs"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/logger"
-	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/telemetry"
+	"github.com/brayangomez22/cuadra-app/backend/internal/server"
 )
 
 const serviceName = "cuadra-api"
@@ -57,47 +53,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
-
-	shutdownTelemetry, err := telemetry.Setup(ctx, telemetry.Resource{
-		ServiceName:    serviceName,
-		ServiceVersion: version(),
-		Environment:    cfg.Env,
-	}, os.Getenv)
+	log, flushTelemetry, err := setUpTelemetry(ctx, cfg)
 	if err != nil {
 		return err
 	}
-
-	// Every Error log also goes to Sentry (a no-op without SENTRY_DSN). Its
-	// flush is deferred before the telemetry and database ones, so it runs
-	// after them and sends whatever their shutdown logs.
-	reporter, err := errreport.New(errreport.Options{
-		DSN:         cfg.SentryDSN,
-		Environment: cfg.Env,
-		Release:     cmp.Or(cfg.SentryRelease, version()),
-		Extractors:  []func(context.Context) []slog.Attr{httpx.RequestIDAttrs, auth.PrincipalAttrs},
-	})
-	if err != nil {
-		return err
-	}
-	defer reporter.Flush(errorFlushTimeout)
-
-	base := logger.New(os.Stdout, cfg.LogLevel, serviceName, httpx.RequestIDAttrs, auth.PrincipalAttrs)
-	log := slog.New(reporter.Handler(base.Handler())).With(slog.String("env", cfg.Env))
-
-	// Export failures are degraded telemetry, not app failures. They go only to
-	// stdout: sending them through OTLP would loop when the log export fails.
-	otelLog := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With(slog.String("env", cfg.Env))
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		otelLog.Warn("telemetry export failed", slog.Any("error", err))
-	}))
-	defer func() {
-		// ctx is canceled by now; the flush gets its own deadline.
-		flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), telemetryShutdownTimeout)
-		defer cancel()
-		if err := shutdownTelemetry(flushCtx); err != nil {
-			otelLog.WarnContext(flushCtx, "telemetry shutdown failed", slog.Any("error", err))
-		}
-	}()
+	defer flushTelemetry()
 
 	// Fails fast if the database is down or the role could bypass RLS; the
 	// orchestrator restarts the process.
@@ -118,98 +78,77 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	handler, err := newAPIHandler(cfg, database, log)
+	if err != nil {
+		return err
+	}
+	return serve(ctx, cfg, log, httpx.NewServer(cfg.HTTPAddr, handler, cfg.ShutdownTimeout), jobClient)
+}
 
+// setUpTelemetry starts the traces, metrics and logs, with every Error log
+// also sent to Sentry (a no-op without SENTRY_DSN). flush sends what is
+// pending: the telemetry first, then the Sentry events, so Sentry gets
+// whatever the telemetry's shutdown logs.
+func setUpTelemetry(ctx context.Context, cfg config.Config) (log *slog.Logger, flush func(), err error) {
+	shutdownTelemetry, err := telemetry.Setup(ctx, telemetry.Resource{
+		ServiceName:    serviceName,
+		ServiceVersion: version(),
+		Environment:    cfg.Env,
+	}, os.Getenv)
+	if err != nil {
+		return nil, nil, err
+	}
+	reporter, err := errreport.New(errreport.Options{
+		DSN:         cfg.SentryDSN,
+		Environment: cfg.Env,
+		Release:     cmp.Or(cfg.SentryRelease, version()),
+		Extractors:  []func(context.Context) []slog.Attr{httpx.RequestIDAttrs, auth.PrincipalAttrs},
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	base := logger.New(os.Stdout, cfg.LogLevel, serviceName, httpx.RequestIDAttrs, auth.PrincipalAttrs)
+	log = slog.New(reporter.Handler(base.Handler())).With(slog.String("env", cfg.Env))
+
+	// Export failures are degraded telemetry, not app failures. They go only to
+	// stdout: sending them through OTLP would loop when the log export fails.
+	otelLog := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With(slog.String("env", cfg.Env))
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		otelLog.WarnContext(context.Background(), "telemetry export failed", slog.Any("error", err))
+	}))
+	flush = func() {
+		// ctx is canceled by now; the flush gets its own deadline.
+		flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), telemetryShutdownTimeout)
+		defer cancel()
+		if err := shutdownTelemetry(flushCtx); err != nil {
+			otelLog.WarnContext(flushCtx, "telemetry shutdown failed", slog.Any("error", err))
+		}
+		reporter.Flush(errorFlushTimeout)
+	}
+	return log, flush, nil
+}
+
+// newAPIHandler builds the API (internal/server) with the access tokens of
+// cfg.
+func newAPIHandler(cfg config.Config, database *db.DB, log *slog.Logger) (http.Handler, error) {
 	tokens, err := auth.NewJWT(cfg.JWTSecret, accessTokenTTL)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// The activable modules and the permission matrix are built before the
-	// business modules, which authorize with it.
-	registry, err := modules.NewRegistry(modules.Builtin()...)
-	if err != nil {
-		return err
-	}
-	moduleService, err := newModuleService(registry, database, log, otel.GetTracerProvider(), otel.GetMeterProvider())
-	if err != nil {
-		return err
-	}
-	permissions, err := identity.NewPermissions(identityRegistry{registry})
-	if err != nil {
-		return err
-	}
-
-	catalogModule, err := catalog.New(catalog.Config{
-		DB:             database,
-		Authorize:      permissions.Authorize,
-		Logger:         log,
-		TracerProvider: otel.GetTracerProvider(),
-		MeterProvider:  otel.GetMeterProvider(),
-	})
-	if err != nil {
-		return err
-	}
-	setup, err := newTenantSetup(registry, catalogModule, moduleService)
-	if err != nil {
-		return err
-	}
-	identityModule, err := identity.New(identity.Config{
-		DB:             database,
-		Issuer:         tokens,
-		Setup:          setup,
-		Permissions:    permissions,
-		Modules:        moduleService,
-		Logger:         log,
-		TracerProvider: otel.GetTracerProvider(),
-		MeterProvider:  otel.GetMeterProvider(),
-	})
-	if err != nil {
-		return err
-	}
-
-	inventoryModule, err := inventory.New(inventory.Config{
-		DB:             database,
-		Authorize:      permissions.Authorize,
-		Variants:       inventoryCatalog{catalogModule},
-		Logger:         log,
-		TracerProvider: otel.GetTracerProvider(),
-		MeterProvider:  otel.GetMeterProvider(),
-	})
-	if err != nil {
-		return err
-	}
-
-	salesModule, err := sales.New(sales.Config{
-		DB:             database,
-		Authorize:      permissions.Authorize,
-		Catalog:        salesCatalog{catalogModule},
-		Stock:          salesStock{inventoryModule},
-		Logger:         log,
-		TracerProvider: otel.GetTracerProvider(),
-		MeterProvider:  otel.GetMeterProvider(),
-	})
-	if err != nil {
-		return err
-	}
-
-	handler, err := newHandler(handlerConfig{
+	return server.New(server.Config{
+		DB:     database,
+		Tokens: tokens,
+		// The API docs are for developers only; other environments do not serve them.
+		Docs:           cfg.Env == "development",
 		Log:            log,
 		TracerProvider: otel.GetTracerProvider(),
-		DB:             database,
-		// The API docs are for developers only; other environments do not serve them.
-		Docs:        cfg.Env == "development",
-		Verifier:    tokens,
-		Permissions: permissions,
-		Modules:     moduleService,
-		Routes: []func(*http.ServeMux){
-			identityModule.RegisterRoutes, catalogModule.RegisterRoutes, inventoryModule.RegisterRoutes,
-			salesModule.RegisterRoutes, moduleRoutes(moduleService, log),
-		},
+		MeterProvider:  otel.GetMeterProvider(),
 	})
-	if err != nil {
-		return err
-	}
-	srv := httpx.NewServer(cfg.HTTPAddr, handler, cfg.ShutdownTimeout)
+}
 
+// serve runs the API until ctx is canceled, with the job workers.
+func serve(ctx context.Context, cfg config.Config, log *slog.Logger, srv *httpx.Server, jobClient *jobs.Client) error {
 	if err := jobClient.Start(ctx); err != nil {
 		return err
 	}

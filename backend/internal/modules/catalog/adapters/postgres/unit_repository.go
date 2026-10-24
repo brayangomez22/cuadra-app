@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -26,7 +25,7 @@ func (r *UnitRepository) Create(ctx context.Context, u *domain.UnitOfMeasure) er
 		return createUnit(ctx, sqlcgen.New(tx), u)
 	})
 	switch {
-	case violates(err, uniqueViolation, unitsCodeKey):
+	case db.Violates(err, db.UniqueViolation, unitsCodeKey):
 		return domain.ErrUnitCodeTaken
 	case err != nil:
 		return fmt.Errorf("catalog: create unit: %w", err)
@@ -47,80 +46,29 @@ func (r *UnitRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*
 }
 
 func (r *UnitRepository) get(ctx context.Context, tenantID uuid.UUID, query func(*sqlcgen.Queries) (sqlcgen.UnitsOfMeasure, error)) (*domain.UnitOfMeasure, error) {
-	var row sqlcgen.UnitsOfMeasure
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		row, err = query(sqlcgen.New(tx))
-		return err
-	})
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return nil, domain.ErrUnitNotFound
-	case err != nil:
-		return nil, fmt.Errorf("catalog: get unit: %w", err)
-	}
-	return unitFromRow(row)
+	return unitRows.one(ctx, r.db, tenantID, query)
 }
 
 // List returns every unit of the tenant, by name.
 func (r *UnitRepository) List(ctx context.Context, tenantID uuid.UUID) ([]*domain.UnitOfMeasure, error) {
-	var rows []sqlcgen.UnitsOfMeasure
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		rows, err = sqlcgen.New(tx).ListUnits(ctx)
-		return err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("catalog: list units: %w", err)
-	}
-	out := make([]*domain.UnitOfMeasure, 0, len(rows))
-	for _, row := range rows {
-		u, err := unitFromRow(row)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, u)
-	}
-	return out, nil
+	return unitRows.all(ctx, r.db, tenantID, func(q *sqlcgen.Queries) ([]sqlcgen.UnitsOfMeasure, error) { return q.ListUnits(ctx) })
 }
 
 // Update stores the code and the name.
 func (r *UnitRepository) Update(ctx context.Context, u *domain.UnitOfMeasure) error {
-	var affected int64
-	err := r.db.WithTenantTx(ctx, u.TenantID(), func(tx pgx.Tx) error {
-		var err error
-		affected, err = sqlcgen.New(tx).UpdateUnit(ctx, sqlcgen.UpdateUnitParams{ID: u.ID(), Code: u.Code(), Name: u.Name()})
-		return err
-	})
-	switch {
-	case violates(err, uniqueViolation, unitsCodeKey):
-		return domain.ErrUnitCodeTaken
-	case err != nil:
-		return fmt.Errorf("catalog: update unit: %w", err)
-	case affected == 0:
-		return domain.ErrUnitNotFound
-	}
-	return nil
+	return unitRows.writeOne(ctx, r.db, u.TenantID(), "update",
+		onViolation(db.UniqueViolation, unitsCodeKey, domain.ErrUnitCodeTaken),
+		func(q *sqlcgen.Queries) (int64, error) {
+			return q.UpdateUnit(ctx, sqlcgen.UpdateUnitParams{ID: u.ID(), Code: u.Code(), Name: u.Name()})
+		})
 }
 
 // Delete removes the unit. The foreign key of the products that use it
 // refuses the delete, so a concurrent insert cannot slip in.
 func (r *UnitRepository) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
-	var affected int64
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		affected, err = sqlcgen.New(tx).DeleteUnit(ctx, id)
-		return err
-	})
-	switch {
-	case isForeignKeyViolation(err):
-		return domain.ErrUnitInUse
-	case err != nil:
-		return fmt.Errorf("catalog: delete unit: %w", err)
-	case affected == 0:
-		return domain.ErrUnitNotFound
-	}
-	return nil
+	return unitRows.writeOne(ctx, r.db, tenantID, "delete",
+		onCode(db.ForeignKeyViolation, domain.ErrUnitInUse),
+		func(q *sqlcgen.Queries) (int64, error) { return q.DeleteUnit(ctx, id) })
 }
 
 func unitFromRow(row sqlcgen.UnitsOfMeasure) (*domain.UnitOfMeasure, error) {
@@ -131,4 +79,8 @@ func unitFromRow(row sqlcgen.UnitsOfMeasure) (*domain.UnitOfMeasure, error) {
 		return nil, fmt.Errorf("catalog: unit %s: %w", row.ID, err)
 	}
 	return u, nil
+}
+
+var unitRows = entityRows[sqlcgen.UnitsOfMeasure, *domain.UnitOfMeasure]{
+	single: "unit", plural: "units", notFound: domain.ErrUnitNotFound, fromRow: unitFromRow,
 }

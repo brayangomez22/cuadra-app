@@ -1,6 +1,11 @@
 import { formatMoney } from '@/shared/format';
 import { Field, Input } from '@/shared/ui';
-import { denominationLabel, denominations, denominationSubtotal, parseCount } from '../../../../model/denominations';
+import {
+  denominationLabel,
+  denominations,
+  denominationSubtotal,
+  parseCount,
+} from '../../../../model/cash/denominations';
 import styles from './DenominationCounts.module.scss';
 
 type Props = {

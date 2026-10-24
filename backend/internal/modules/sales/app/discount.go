@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // GetDiscountLimit returns how much the actor may discount on a line: no
@@ -11,7 +12,7 @@ import (
 // the discount field with it; ConfirmSale applies it again.
 func (s *Service) GetDiscountLimit(ctx context.Context, a Actor) (_ domain.DiscountLimit, err error) {
 	ctx, span := s.startSpan(ctx, "GetDiscountLimit", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	if a.UnlimitedDiscount {
 		return domain.NoDiscountLimit, nil

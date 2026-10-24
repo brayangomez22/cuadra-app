@@ -7,12 +7,13 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // CreateCategory stores a new category under parentID, or at the root.
 func (s *Service) CreateCategory(ctx context.Context, a Actor, name string, parentID *uuid.UUID) (_ *domain.Category, err error) {
 	ctx, span := s.startSpan(ctx, "CreateCategory", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	c, err := domain.NewCategory(a.TenantID, name, parentID, s.Now())
 	if err != nil {
@@ -31,7 +32,7 @@ func (s *Service) CreateCategory(ctx context.Context, a Actor, name string, pare
 // accepted (docs/decisiones.md) and Ancestors stops walking a cycle.
 func (s *Service) UpdateCategory(ctx context.Context, a Actor, id uuid.UUID, name string, parentID *uuid.UUID) (_ *domain.Category, err error) {
 	ctx, span := s.startSpan(ctx, "UpdateCategory", a, categoryAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	c, err := s.Categories.GetByID(ctx, a.TenantID, id)
 	if err != nil {
@@ -64,7 +65,7 @@ func (s *Service) UpdateCategory(ctx context.Context, a Actor, id uuid.UUID, nam
 // ListCategories returns every category of the tenant, by name.
 func (s *Service) ListCategories(ctx context.Context, a Actor) (_ []*domain.Category, err error) {
 	ctx, span := s.startSpan(ctx, "ListCategories", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	return s.Categories.List(ctx, a.TenantID)
 }
@@ -72,7 +73,7 @@ func (s *Service) ListCategories(ctx context.Context, a Actor) (_ []*domain.Cate
 // DeleteCategory removes a category without products or subcategories.
 func (s *Service) DeleteCategory(ctx context.Context, a Actor, id uuid.UUID) (err error) {
 	ctx, span := s.startSpan(ctx, "DeleteCategory", a, categoryAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	return s.Categories.Delete(ctx, a.TenantID, id)
 }

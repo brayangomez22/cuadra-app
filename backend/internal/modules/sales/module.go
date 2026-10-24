@@ -1,5 +1,5 @@
 // Package sales wires the sales module: point-of-sale sales, their numbering
-// and voiding. cmd/api builds it with New, giving it the catalog and the
+// and voiding. internal/server builds it with New, giving it the catalog and the
 // stock through the ports of app, and mounts its routes.
 package sales
 
@@ -24,7 +24,7 @@ type Config struct {
 	// Authorize is the role → permission matrix; it decides who discounts
 	// without the tenant's limit.
 	Authorize auth.Authorizer
-	// Catalog and Stock are the catalog and the inventory, adapted by cmd/api.
+	// Catalog and Stock are the catalog and the inventory, adapted by internal/server.
 	Catalog app.VariantCatalog
 	Stock   app.StockReserver
 	// Prices gives the unit price of each line: the chain of the price rules

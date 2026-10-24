@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { isZero } from '@/shared/format';
 import { settle } from '../../../model/cart/settlement';
-import type { PaymentInput } from '../../../model/paymentMethods';
+import type { PaymentInput } from '../../../model/payments/paymentMethods';
 import {
   amountText,
   nextMethod,
@@ -9,7 +9,7 @@ import {
   settlementMessage,
   validPayments,
   type PaymentRow,
-} from '../../../model/payments';
+} from '../../../model/payments/payments';
 
 // Up to this many payments in one sale.
 export const MAX_PAYMENTS = 10;

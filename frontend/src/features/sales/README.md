@@ -16,5 +16,7 @@ El punto de venta y la caja: vender desde el teclado o el lector, cobrar con pag
 - `api/`: `sales` (ventas y tope de descuento) y `cashSessions` (caja), con `keys` y `types`. La caché solo vive aquí (la venta invalida el inventario y `useRefreshCurrentCash` relee la caja).
 - `components/`: lo que comparten el POS y la caja: `Receipt` (con `ReceiptLines` y `ReceiptTaxes`), `PrintableReceipt`, `CashReport` y `Printable`.
 - `model/cart/`: el carrito como lo calcula el backend (decisión T17), un archivo por regla, cada uno con su test.
-- `model/`: `payments`, `paymentMethods`, `searchText`, `storage` (el carrito de la pestaña y la sede y el papel del equipo), `paper`, `denominations` (el conteo de la caja), `moneyField` y `cashSchemas` (los formularios de caja), `cashLabels` y `negated`.
+- `model/cash/`: `denominations` (el conteo de la caja), `moneyField` y `cashSchemas` (los formularios de caja), `cashLabels` y `negated`.
+- `model/payments/`: `payments` y `paymentMethods`.
+- `model/`: `searchText`, `storage` (el carrito de la pestaña y la sede y el papel del equipo) y `paper`.
 - `testing/`: `fixtures` (`aSale`, `anOpenCashSession`, `aClosedCashSession`), `posApi` y `posSteps`, `cart`, `cashApi` (`cashApi`, `closeApi`, `CLOSE_KEY`) y `receipt` (`aMixedSale`, `renderReceipt`, `figure`).

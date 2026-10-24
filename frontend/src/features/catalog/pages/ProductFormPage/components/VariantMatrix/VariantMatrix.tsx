@@ -1,6 +1,6 @@
 import type { FieldArrayWithId } from 'react-hook-form';
 import { Table, TableBody, TableHead, TableHeaderCell, TableRow } from '@/shared/ui';
-import type { ProductFormInput, VariantRow } from '../../../../model/productSchema';
+import type { ProductFormInput, VariantRow } from '../../../../model/productForm/productSchema';
 import { VariantMatrixRow } from '../VariantMatrixRow/VariantMatrixRow';
 import styles from './VariantMatrix.module.scss';
 

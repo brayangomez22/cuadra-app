@@ -2,7 +2,6 @@ package app_test
 
 import (
 	"bytes"
-	"errors"
 	"testing"
 
 	"github.com/google/uuid"
@@ -93,7 +92,7 @@ func TestIssueSaleStock(t *testing.T) {
 		})
 		require.ErrorIs(t, err, domain.ErrInsufficientStock)
 		var pe *app.VariantStockError
-		require.True(t, errors.As(err, &pe))
+		require.ErrorAs(t, err, &pe)
 		require.Equal(t, p, pe.VariantID)
 		require.Equal(t, int64(1), e.counter(t, "cuadra.inventory.insufficient_stock", "type", "sale_out"))
 	})

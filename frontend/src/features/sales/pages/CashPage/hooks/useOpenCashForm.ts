@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 import { paths } from '@/app/routes/paths';
 import { useApiFormErrors } from '@/shared/forms/useApiFormErrors';
 import { useOpenCashSession } from '../../../api/cashSessions';
-import { openCashSchema, type OpenCashInput, type OpenCashValues } from '../../../model/cashSchemas';
+import { openCashSchema, type OpenCashInput, type OpenCashValues } from '../../../model/cash/cashSchemas';
 
 // No error of POST /cash-sessions belongs to a field: they go above the form.
 const noFields = {};

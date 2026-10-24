@@ -3,7 +3,7 @@ import { paths } from '@/app/routes/paths';
 import { formatDateTime, formatMoney } from '@/shared/format';
 import { Button, ButtonLink, Page } from '@/shared/ui';
 import type { CashSession } from '../../../../api/types';
-import type { CashMovementKind } from '../../../../model/cashLabels';
+import type { CashMovementKind } from '../../../../model/cash/cashLabels';
 import { CashMovementDialog } from '../CashMovementDialog/CashMovementDialog';
 import { CashMovementsTable } from '../CashMovementsTable/CashMovementsTable';
 import styles from './OpenSession.module.scss';

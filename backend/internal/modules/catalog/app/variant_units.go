@@ -7,6 +7,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // VariantUnitInput is the data of an alternate unit of a variant: how many
@@ -22,7 +23,7 @@ type VariantUnitInput struct {
 // replaces its data. The stock stays in the product's base unit.
 func (s *Service) SetVariantUnit(ctx context.Context, a Actor, productID, variantID, unitID uuid.UUID, in VariantUnitInput) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "SetVariantUnit", a, productAttr(productID), variantAttr(variantID), unitAttr(unitID))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	p, err := s.Products.GetByID(ctx, a.TenantID, productID)
 	if err != nil {
@@ -47,7 +48,7 @@ func (s *Service) SetVariantUnit(ctx context.Context, a Actor, productID, varian
 // returns the product. Past sales keep the unit they were sold in.
 func (s *Service) RemoveVariantUnit(ctx context.Context, a Actor, productID, variantID, unitID uuid.UUID) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "RemoveVariantUnit", a, productAttr(productID), variantAttr(variantID), unitAttr(unitID))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	p, err := s.Products.GetByID(ctx, a.TenantID, productID)
 	if err != nil {

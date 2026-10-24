@@ -26,7 +26,7 @@ func (r *VariantAxisRepository) Create(ctx context.Context, a *domain.VariantAxi
 		return createVariantAxis(ctx, sqlcgen.New(tx), a)
 	})
 	switch {
-	case violates(err, uniqueViolation, axesNameKey):
+	case db.Violates(err, db.UniqueViolation, axesNameKey):
 		return domain.ErrAxisNameTaken
 	case err != nil:
 		return fmt.Errorf("catalog: create variant axis: %w", err)
@@ -43,49 +43,19 @@ func createVariantAxis(ctx context.Context, q *sqlcgen.Queries, a *domain.Varian
 // GetByID returns domain.ErrAxisNotFound when the axis does not exist in
 // tenantID.
 func (r *VariantAxisRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*domain.VariantAxis, error) {
-	var row sqlcgen.VariantAxis
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		row, err = sqlcgen.New(tx).GetVariantAxis(ctx, id)
-		return err
-	})
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return nil, domain.ErrAxisNotFound
-	case err != nil:
-		return nil, fmt.Errorf("catalog: get variant axis: %w", err)
-	}
-	return axisFromRow(row)
+	return axisRows.one(ctx, r.db, tenantID, func(q *sqlcgen.Queries) (sqlcgen.VariantAxis, error) { return q.GetVariantAxis(ctx, id) })
 }
 
 // List returns every axis of the tenant, by name.
 func (r *VariantAxisRepository) List(ctx context.Context, tenantID uuid.UUID) ([]*domain.VariantAxis, error) {
-	var rows []sqlcgen.VariantAxis
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		rows, err = sqlcgen.New(tx).ListVariantAxes(ctx)
-		return err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("catalog: list variant axes: %w", err)
-	}
-	out := make([]*domain.VariantAxis, 0, len(rows))
-	for _, row := range rows {
-		a, err := axisFromRow(row)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, a)
-	}
-	return out, nil
+	return axisRows.all(ctx, r.db, tenantID, func(q *sqlcgen.Queries) ([]sqlcgen.VariantAxis, error) { return q.ListVariantAxes(ctx) })
 }
 
 // Update stores the allowed values; domain.ErrAxisValueInUse if a variant
 // has one of removedValues, in any case. The check runs after the update,
 // so the axis's row stays locked until the transaction ends.
 func (r *VariantAxisRepository) Update(ctx context.Context, a *domain.VariantAxis, removedValues []string) error {
-	err := r.db.WithTenantTx(ctx, a.TenantID(), func(tx pgx.Tx) error {
-		q := sqlcgen.New(tx)
+	return axisRows.writeTx(ctx, r.db, a.TenantID(), "update", func(q *sqlcgen.Queries) error {
 		affected, err := q.UpdateVariantAxis(ctx, sqlcgen.UpdateVariantAxisParams{ID: a.ID(), AllowedValues: a.Values()})
 		if err != nil {
 			return err
@@ -97,29 +67,15 @@ func (r *VariantAxisRepository) Update(ctx context.Context, a *domain.VariantAxi
 			return nil
 		}
 		used, err := q.VariantAxisValuesInUse(ctx, sqlcgen.VariantAxisValuesInUseParams{Name: a.Name(), AxisValues: removedValues})
-		if err != nil {
-			return err
-		}
-		if used {
-			return domain.ErrAxisValueInUse
-		}
-		return nil
-	})
-	switch {
-	case errors.Is(err, domain.ErrAxisNotFound), errors.Is(err, domain.ErrAxisValueInUse):
-		return err
-	case err != nil:
-		return fmt.Errorf("catalog: update variant axis: %w", err)
-	}
-	return nil
+		return failIfUsed(used, err, domain.ErrAxisValueInUse)
+	}, domain.ErrAxisValueInUse)
 }
 
 // Delete removes the axis; domain.ErrAxisInUse if a variant has a value on
 // it. Variants keep their values by name, with no foreign key, so the check
 // runs after the delete, in its transaction.
 func (r *VariantAxisRepository) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		q := sqlcgen.New(tx)
+	return axisRows.writeTx(ctx, r.db, tenantID, "delete", func(q *sqlcgen.Queries) error {
 		name, err := q.DeleteVariantAxis(ctx, id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ErrAxisNotFound
@@ -128,21 +84,8 @@ func (r *VariantAxisRepository) Delete(ctx context.Context, tenantID, id uuid.UU
 			return err
 		}
 		used, err := q.VariantAxisInUse(ctx, name)
-		if err != nil {
-			return err
-		}
-		if used {
-			return domain.ErrAxisInUse
-		}
-		return nil
-	})
-	switch {
-	case errors.Is(err, domain.ErrAxisNotFound), errors.Is(err, domain.ErrAxisInUse):
-		return err
-	case err != nil:
-		return fmt.Errorf("catalog: delete variant axis: %w", err)
-	}
-	return nil
+		return failIfUsed(used, err, domain.ErrAxisInUse)
+	}, domain.ErrAxisInUse)
 }
 
 func axisFromRow(row sqlcgen.VariantAxis) (*domain.VariantAxis, error) {
@@ -153,4 +96,8 @@ func axisFromRow(row sqlcgen.VariantAxis) (*domain.VariantAxis, error) {
 		return nil, fmt.Errorf("catalog: variant axis %s: %w", row.ID, err)
 	}
 	return a, nil
+}
+
+var axisRows = entityRows[sqlcgen.VariantAxis, *domain.VariantAxis]{
+	single: "variant axis", plural: "variant axes", notFound: domain.ErrAxisNotFound, fromRow: axisFromRow,
 }

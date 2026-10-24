@@ -61,26 +61,12 @@ var _ modulesapi.StrictServerInterface = (*Handler)(nil)
 func Register(mux *http.ServeMux, uc UseCases, log *slog.Logger) {
 	errs := httpx.NewErrorMapper(log, errorRules...)
 	modulesapi.HandlerWithOptions(
-		modulesapi.NewStrictHandlerWithOptions(&Handler{uc: uc}, []modulesapi.StrictMiddlewareFunc{requirePrincipal}, modulesapi.StrictHTTPServerOptions{
+		modulesapi.NewStrictHandlerWithOptions(&Handler{uc: uc}, []modulesapi.StrictMiddlewareFunc{auth.RequirePrincipal[modulesapi.StrictHandlerFunc]}, modulesapi.StrictHTTPServerOptions{
 			RequestErrorHandlerFunc:  errs.RequestError,
 			ResponseErrorHandlerFunc: errs.ResponseError,
 		}),
 		modulesapi.StdHTTPServerOptions{BaseRouter: mux, ErrorHandlerFunc: errs.RequestError},
 	)
-}
-
-// requirePrincipal answers 401 when no principal reached the handlers. The
-// API's auth middleware already demands one; this keeps a wiring mistake
-// from running a use case without a tenant.
-func requirePrincipal(next modulesapi.StrictHandlerFunc, _ string) modulesapi.StrictHandlerFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, req any) (any, error) {
-		if _, ok := auth.PrincipalFrom(ctx); !ok {
-			w.Header().Set("WWW-Authenticate", "Bearer")
-			httpx.WriteError(w, http.StatusUnauthorized, "unauthorized", unauthorizedMessage)
-			return nil, nil
-		}
-		return next(ctx, w, r, req)
-	}
 }
 
 // ListModules lists every module with whether the tenant has it active.

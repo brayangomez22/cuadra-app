@@ -1,6 +1,6 @@
 import { Field, IconButton, IconClose, Input, Select } from '@/shared/ui';
-import { methodLabels, type PaymentMethod } from '../../../../model/paymentMethods';
-import type { PaymentRow as Row } from '../../../../model/payments';
+import { methodLabels, type PaymentMethod } from '../../../../model/payments/paymentMethods';
+import type { PaymentRow as Row } from '../../../../model/payments/payments';
 import styles from './PaymentRow.module.scss';
 
 type Props = {

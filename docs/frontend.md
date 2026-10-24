@@ -15,7 +15,7 @@ features/<feature>/
   routes.tsx           # las rutas de la feature, con su permiso; el router las importa directo
   pages.ts             # las páginas, que routes.tsx carga en diferido (chunk aparte)
   api/                 # keys.ts, types.ts y un archivo por recurso (queries y mutations)
-  model/               # lógica pura sin React, con sus tests (cart/, variantMatrix.ts...)
+  model/               # lógica pura sin React, con sus tests, agrupada por tema (cart/, cash/, variantMatrix/...)
   hooks/               # hooks compartidos dentro de la feature
   components/<Nombre>/ # componentes compartidos dentro de la feature
   pages/<NombrePage>/
@@ -28,6 +28,8 @@ features/<feature>/
 ```
 
 Una feature puede tener otras carpetas cuando su nombre dice el rol de lo que contienen y no encaja en las de arriba. Por ejemplo, `auth` tiene `session/` (el estado de la sesión y el acceso) y `guards/` (los elementos de ruta que protegen pantallas). Lo que no tiene rol propio va en `components/`, `hooks/` o `model/`.
+
+**Carpetas por tema, no archivos sueltos.** Cuando una carpeta (`model/`, `api/`, `components/`, `hooks/`) pasa de unos 10 archivos contando los tests, o mezcla temas distintos, se agrupa en subcarpetas con el nombre del tema: `sales/model/` tiene `cart/`, `cash/` y `payments/`, y `catalog/model/` tiene `productForm/`, `variants/` y `variantMatrix/`. Una subcarpeta es de un solo tema y puede tener más archivos si todos son de él (`cart/` tiene una regla por archivo). Mover un archivo de carpeta solo cambia sus imports: nunca se hace un `index.ts` de reexportación dentro de una feature (solo hay uno, el de la API pública).
 
 `NombrePage.module.scss` existe solo si la página tiene estilos propios. Cuando un formulario lleva su `useForm`, sus campos y su hook, va en `components/<Nombre>Form/` y la página solo compone (`SignUpPage` → `SignUpForm`).
 
@@ -53,7 +55,7 @@ Dentro de una feature, los imports son relativos. La regla propia `cuadra/featur
 
 - Componentes en `PascalCase/PascalCase.tsx`; hooks `useCamelCase.ts`; lógica pura `camelCase.ts`.
 - Una carpeta por componente y un componente exportado por archivo. Excepción: piezas hermanas pequeñas que comparten la hoja de estilos del componente, como su esqueleto (`BusinessTypeOptionsSkeleton`) o su enlace (`AuthLink`).
-- Nada de `utils.ts` ni `helpers.ts` genéricos: el archivo se llama por lo que hace (`lineTotals.ts`, `toProductInput.ts`).
+- Nada de `utils.ts` ni `helpers.ts` genéricos: el archivo se llama por lo que hace (`lineTotals.ts`, `toProductInput.ts`). La regla `cuadra/file-names` rechaza `utils`, `helpers`, `common` y `misc`.
 - Los tests de una página van en `NombrePage.test.tsx` mientras quepan en el límite de 200 líneas. Cuando lo pasan, se dividen por escenario: `PosPage.checkout.test.tsx`, `PosPage.scanner.test.tsx`. No hay carpetas `__tests__/`.
 
 ## 3. Tamaño y complejidad (ESLint, en error)
@@ -71,6 +73,11 @@ Las líneas se cuentan sin las vacías ni los comentarios.
 | `cuadra/max-lines` (stylelint) | 100 por `.module.scss` | — |
 
 Además, **lint con tipos** (`strictTypeChecked` y `stylisticTypeChecked` de `typescript-eslint`): promesas sin manejar, condiciones innecesarias, casts sobrantes y accesos `any`.
+
+**Fronteras de responsabilidad (ESLint, en error).** Fuera del `api/` de la feature y de los tests:
+- no se importa `@/shared/api/client` ni `useQuery`, `useMutation`, `useQueryClient`, `useInfiniteQuery` o `useSuspenseQuery` de TanStack Query: las llamadas, las llaves y la caché viven en `api/`;
+- no se escriben URLs a mano en `to`, `href` ni `navigate(...)`: salen de `@/app/routes/paths` (los tests sí usan la URL literal, a propósito);
+- no se pregunta por un módulo con `modules.includes(...)`: se usa `useModule('<id>')` de `@/features/auth`.
 
 **Sin excepciones.** Ningún archivo de `src/` apaga una regla (salvo el generado `schema.d.ts`, que no se revisa). La lista temporal del bloque T26b–T26j (`eslint.legacy.js`) se borró en T26j. Si un archivo pasa un límite, se divide o se arregla el código; no se agrega un `'off'` por archivo en `eslint.config.js` ni en `stylelint.config.mjs`.
 
@@ -137,10 +144,11 @@ features/catalog/
     variants.ts                # el ciclo de peticiones de la matriz de variantes
     variantUnits.ts  units.ts  categories.ts  attributes.ts  variantAxes.ts
   model/
-    productDefaults.ts         # valores iniciales del formulario (+ test)
-    toProductInput.ts          # cuerpo de POST y PUT /products (+ test)
-    productErrorFields.ts      # código de error → campo, según haya matriz (+ test)
-    resolveRows.ts  variantTarget.ts  variantChoice.ts  variantMatrix.ts ...
+    productForm/               # el formulario: productDefaults (valores iniciales), toProductInput
+                               # (cuerpo de POST y PUT /products), productErrorFields (error → campo),
+                               # productSchema, categoryOptions, taxRates (+ tests)
+    variants/                  # variants, variantAmount, variantUnitSchema (+ tests)
+    variantMatrix/             # variantMatrix, variantChoice, variantTarget, resolveRows (+ tests)
   pages/ProductFormPage/
     ProductFormPage.tsx        # carga con useProductFormData y QueryState; compone ProductForm
     ProductFormPage.{create,edit,errors,attributes,variants,units}.test.tsx
@@ -170,3 +178,16 @@ Lo que se repetía en varias pantallas vive en `shared/` (T26c). Cada feature lo
 | `Stack` e `Inline` (`@/shared/ui`) | Layout vertical y horizontal con `gap` de la escala de espacios; reemplazan las clases que solo hacen `display: flex` + `gap` | `docs/estilos.md`, sección 6. No los uses en un elemento que tiene más estilos (`padding`, `border`): ponen `margin` y `padding` en `0`, y el resultado dependería del orden de carga del CSS. Su `as` no tipa los props propios del elemento (`noValidate` de un `form`): envuelve el `Stack` en el elemento nativo (solo dos formularios lo hacen; ver P67 en T26j) |
 
 **Generador.** `npm run new -- component <ruta>/<Nombre>` crea la carpeta con `Nombre.tsx`, `Nombre.module.scss` (con `.root`) y `Nombre.test.tsx`. `npm run new -- hook <ruta>/useNombre` crea el hook y su test. La ruta es relativa a `src/features/`, salvo que empiece por `shared/` o `app/`. Si algo ya existe, no escribe nada. Un componente que solo se separó para leerlo mejor no lleva test propio (sección 6): borra el que se generó.
+
+## 11. Agregar una feature
+
+Una feature nueva (clientes, compras...) tiene la forma de `inventory`. Los pasos, en orden:
+
+1. **Cliente de la API:** con el contrato ya actualizado, `npm run gen:api`. Nada de tipos escritos a mano para lo que el contrato define.
+2. **Carpeta:** `src/features/<feature>/` con `index.ts` (solo lo que otras features usan), `routes.tsx`, `pages.ts`, `README.md` (≤ 30 líneas) y las carpetas de la sección 1 que necesite. Componentes y hooks con `npm run new` (sección 10).
+3. **URLs:** sus rutas en `src/app/routes/paths.ts` (en español) y sus pantallas en `routes.tsx`, cada grupo detrás de `RequirePermission` con el `x-permission` de su API y cargadas con `lazyPage`. `app/router.tsx` las anida importando `@/features/<feature>/routes`; `src/app/router.test.ts` falla si una URL de `paths` no tiene ruta.
+4. **Menú:** su entrada en `src/app/layout/navItems.ts` con su `permission` (y `module` si es de un módulo activable), para que el menú la esconda a quien no puede usarla.
+5. **Datos:** un archivo por recurso en `api/` con sus llaves en `api/keys.ts`; las mutaciones invalidan ahí lo que cambian.
+6. **Lógica:** las reglas puras en `model/`, agrupadas por tema si pasan de unos 10 archivos, con tests table-driven de al menos dos tipos de negocio.
+7. **Tests:** las páginas por escenario con `renderApp` y `fakeApi` (tipado contra el contrato), con sus fixtures y builders en `testing/`. Estados de carga, vacío y error con `QueryState`; formularios con `useApiFormErrors`.
+8. **Estilos y responsive:** `docs/estilos.md` (tokens, `.root`, `data-*`, de 360 a 1920 px, 44 px en el POS) y el kit de `shared/ui` antes de crear un componente.

@@ -5,9 +5,9 @@ import (
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // Seed is a new tenant's initial catalog configuration, as its business
@@ -34,9 +34,8 @@ type AxisSeed struct {
 // category, attribute or axis fails before anything is stored. It runs at
 // sign-up, before the tenant has a user acting on it.
 func (s *Service) SeedTenant(ctx context.Context, tenantID uuid.UUID, in Seed) (err error) {
-	ctx, span := s.tracer.Start(ctx, "catalog.SeedTenant",
-		trace.WithAttributes(attribute.String("tenant.id", tenantID.String())))
-	defer func() { endSpan(span, err) }()
+	ctx, span := s.spans.Start(ctx, "SeedTenant", attribute.String("tenant.id", tenantID.String()))
+	defer func() { usecase.End(span, err) }()
 
 	seed, err := s.buildSeed(tenantID, in)
 	if err != nil {

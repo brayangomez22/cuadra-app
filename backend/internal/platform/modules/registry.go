@@ -86,31 +86,48 @@ type Registry struct {
 func NewRegistry(defs ...Definition) (*Registry, error) {
 	r := &Registry{defs: make([]Definition, 0, len(defs)), index: make(map[string]int, len(defs))}
 	for _, d := range defs {
-		if !moduleIDFormat.MatchString(d.ID) {
-			return nil, fmt.Errorf("%w: %q", ErrInvalidModuleID, d.ID)
+		if err := r.add(d); err != nil {
+			return nil, err
 		}
-		if strings.TrimSpace(d.Name) == "" {
-			return nil, fmt.Errorf("%w: %s", ErrInvalidModuleName, d.ID)
-		}
-		if _, dup := r.index[d.ID]; dup {
-			return nil, fmt.Errorf("%w: %s", ErrDuplicateModule, d.ID)
-		}
-		r.index[d.ID] = len(r.defs)
-		r.defs = append(r.defs, d.clone())
 	}
+	if err := r.checkDependencies(); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+// add registers d after checking its ID and name.
+func (r *Registry) add(d Definition) error {
+	if !moduleIDFormat.MatchString(d.ID) {
+		return fmt.Errorf("%w: %q", ErrInvalidModuleID, d.ID)
+	}
+	if strings.TrimSpace(d.Name) == "" {
+		return fmt.Errorf("%w: %s", ErrInvalidModuleName, d.ID)
+	}
+	if _, dup := r.index[d.ID]; dup {
+		return fmt.Errorf("%w: %s", ErrDuplicateModule, d.ID)
+	}
+	r.index[d.ID] = len(r.defs)
+	r.defs = append(r.defs, d.clone())
+	return nil
+}
+
+// checkDependencies checks that every dependency is registered and that
+// none is cyclic.
+func (r *Registry) checkDependencies() error {
 	for _, d := range r.defs {
 		for _, dep := range d.DependsOn {
 			if _, ok := r.index[dep]; !ok {
-				return nil, fmt.Errorf("%w: %s depends on %s", ErrUnknownDependency, d.ID, dep)
+				return fmt.Errorf("%w: %s depends on %s", ErrUnknownDependency, d.ID, dep)
 			}
 		}
 	}
 	for _, d := range r.defs {
 		if err := r.checkCycle(d.ID, nil); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return r, nil
+	return nil
 }
 
 // checkCycle walks id's dependencies depth first; path holds the modules

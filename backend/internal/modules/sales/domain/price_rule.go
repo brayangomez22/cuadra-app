@@ -20,9 +20,14 @@ func NewPriceRuleID(s string) (PriceRuleID, error) {
 		return "", ErrInvalidPriceRule
 	}
 	for _, c := range []byte(s) {
-		if (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '_' {
+		if !isRuleChar(c) {
 			return "", ErrInvalidPriceRule
 		}
 	}
 	return PriceRuleID(s), nil
+}
+
+// isRuleChar reports whether c may appear in a rule ID: [a-z0-9_].
+func isRuleChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_'
 }

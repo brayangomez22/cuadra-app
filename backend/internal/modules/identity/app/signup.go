@@ -4,11 +4,13 @@ import (
 	"context"
 	"log/slog"
 	"slices"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // SignUpInput registers a business and its owner.
@@ -28,35 +30,15 @@ type SignUpInput struct {
 // anything is stored or hashed.
 func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err error) {
 	ctx, span := s.startSpan(ctx, "SignUp")
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
-	nit, err := domain.ParseNIT(in.NIT)
+	signUp, err := s.parseSignUp(in)
 	if err != nil {
-		return Session{}, err
-	}
-	email, err := domain.ParseEmail(in.Email)
-	if err != nil {
-		return Session{}, err
-	}
-	if err := domain.ValidatePassword(in.Password); err != nil {
 		return Session{}, err
 	}
 	template := in.BusinessTemplate
-	tpl, ok := s.findTemplate(template)
-	if !ok {
-		return Session{}, domain.ErrUnknownBusinessTemplate
-	}
 	span.SetAttributes(attribute.String("business_template", template))
-	now := s.Now()
-	tenant, err := domain.NewTenant(in.TenantName, nit, template, tpl.DefaultTaxRate, now)
-	if err != nil {
-		return Session{}, err
-	}
-	hash, err := s.Hasher.Hash(in.Password)
-	if err != nil {
-		return Session{}, err
-	}
-	owner, err := domain.NewUser(tenant.ID(), email, in.OwnerName, hash, domain.RoleOwner, now)
+	tenant, owner, err := s.newTenantWithOwner(in, signUp, s.Now())
 	if err != nil {
 		return Session{}, err
 	}
@@ -79,6 +61,52 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err er
 	return s.startSession(ctx, profile)
 }
 
+// signUpData is what SignUp parses from its input before building anything.
+type signUpData struct {
+	nit      domain.NIT
+	email    domain.Email
+	template BusinessTemplate
+}
+
+// parseSignUp validates the NIT, the email, the password and the business
+// template of in.
+func (s *Service) parseSignUp(in SignUpInput) (signUpData, error) {
+	nit, err := domain.ParseNIT(in.NIT)
+	if err != nil {
+		return signUpData{}, err
+	}
+	email, err := domain.ParseEmail(in.Email)
+	if err != nil {
+		return signUpData{}, err
+	}
+	if err := domain.ValidatePassword(in.Password); err != nil {
+		return signUpData{}, err
+	}
+	tpl, ok := s.findTemplate(in.BusinessTemplate)
+	if !ok {
+		return signUpData{}, domain.ErrUnknownBusinessTemplate
+	}
+	return signUpData{nit: nit, email: email, template: tpl}, nil
+}
+
+// newTenantWithOwner builds the tenant and its owner, with the password
+// hashed.
+func (s *Service) newTenantWithOwner(in SignUpInput, d signUpData, now time.Time) (*domain.Tenant, *domain.User, error) {
+	tenant, err := domain.NewTenant(in.TenantName, d.nit, d.template.ID, d.template.DefaultTaxRate, now)
+	if err != nil {
+		return nil, nil, err
+	}
+	hash, err := s.Hasher.Hash(in.Password)
+	if err != nil {
+		return nil, nil, err
+	}
+	owner, err := domain.NewUser(tenant.ID(), d.email, in.OwnerName, hash, domain.RoleOwner, now)
+	if err != nil {
+		return nil, nil, err
+	}
+	return tenant, owner, nil
+}
+
 // findTemplate returns the business template id; ok is false when there is none.
 func (s *Service) findTemplate(id string) (_ BusinessTemplate, ok bool) {
 	templates := s.Setup.Templates()
@@ -88,3 +116,7 @@ func (s *Service) findTemplate(id string) (_ BusinessTemplate, ok bool) {
 	}
 	return templates[i], true
 }
+
+// BusinessTemplates lists the templates a business can sign up with. They
+// are static data, so it opens no span.
+func (s *Service) BusinessTemplates() []BusinessTemplate { return s.Setup.Templates() }

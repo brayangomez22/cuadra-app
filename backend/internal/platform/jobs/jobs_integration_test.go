@@ -125,7 +125,7 @@ func newHarness(t *testing.T) *harness {
 }
 
 // enqueue inserts args in a committed transaction and returns the job id.
-func (h *harness) enqueue(t *testing.T, ctx context.Context, args river.JobArgs, opts *river.InsertOpts) int64 {
+func (h *harness) enqueue(ctx context.Context, t *testing.T, args river.JobArgs, opts *river.InsertOpts) int64 {
 	t.Helper()
 	var id int64
 	require.NoError(t, h.db.WithTx(ctx, func(tx pgx.Tx) error {
@@ -242,14 +242,14 @@ func TestJobs(t *testing.T) {
 	})
 
 	t.Run("si la transacción hace commit, el trabajo se encola y se ejecuta", func(t *testing.T) {
-		id := h.enqueue(t, t.Context(), okArgs{Marker: uuid.New()}, nil)
+		id := h.enqueue(t.Context(), t, okArgs{Marker: uuid.New()}, nil)
 
 		s := h.waitState(t, id, "completed")
 		require.Equal(t, 1, s.Attempt)
 	})
 
 	t.Run("un trabajo que falla se reintenta y queda descartado tras agotar los intentos", func(t *testing.T) {
-		id := h.enqueue(t, t.Context(), failArgs{Marker: uuid.New()}, &river.InsertOpts{MaxAttempts: 3})
+		id := h.enqueue(t.Context(), t, failArgs{Marker: uuid.New()}, &river.InsertOpts{MaxAttempts: 3})
 
 		s := h.waitState(t, id, "discarded")
 		require.Equal(t, 3, s.Attempt)
@@ -262,7 +262,7 @@ func TestJobs(t *testing.T) {
 
 	t.Run("la traza del worker queda enlazada a la del request que lo originó", func(t *testing.T) {
 		ctx, request := h.tracer.Start(t.Context(), "POST /api/v1/sales")
-		id := h.enqueue(t, ctx, okArgs{Marker: uuid.New()}, nil)
+		id := h.enqueue(ctx, t, okArgs{Marker: uuid.New()}, nil)
 		request.End()
 
 		span := h.spanFor(t, "jobs.test_ok", id)
@@ -283,8 +283,8 @@ func TestJobs(t *testing.T) {
 
 	t.Run("registra trabajos encolados, completados, fallidos y la latencia de la cola", func(t *testing.T) {
 		before := h.collect(t)
-		okID := h.enqueue(t, t.Context(), okArgs{Marker: uuid.New()}, nil)
-		failID := h.enqueue(t, t.Context(), failArgs{Marker: uuid.New()}, &river.InsertOpts{MaxAttempts: 2})
+		okID := h.enqueue(t.Context(), t, okArgs{Marker: uuid.New()}, nil)
+		failID := h.enqueue(t.Context(), t, failArgs{Marker: uuid.New()}, &river.InsertOpts{MaxAttempts: 2})
 		h.waitState(t, okID, "completed")
 		h.waitState(t, failID, "discarded")
 		// The metric is recorded after the job's state is saved.

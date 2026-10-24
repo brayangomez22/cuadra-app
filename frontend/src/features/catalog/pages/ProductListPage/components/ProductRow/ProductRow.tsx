@@ -2,8 +2,8 @@ import { paths } from '@/app/routes/paths';
 import { formatMoney, formatPercent } from '@/shared/format';
 import { Badge, TableCell, TableRow, TextLink } from '@/shared/ui';
 import type { Product } from '../../../../api/types';
-import { variantAmount } from '../../../../model/variantAmount';
-import { defaultVariant, hasAxes } from '../../../../model/variants';
+import { variantAmount } from '../../../../model/variants/variantAmount';
+import { defaultVariant, hasAxes } from '../../../../model/variants/variants';
 import styles from './ProductRow.module.scss';
 
 type Props = { product: Product; canWrite: boolean; canSeeStock: boolean };

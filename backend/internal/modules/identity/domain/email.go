@@ -44,13 +44,22 @@ func validEmailDomain(d string) bool {
 		return false
 	}
 	for _, label := range labels {
-		if label == "" || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
+		if !validDomainLabel(label) {
 			return false
 		}
-		for _, r := range label {
-			if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '-' {
-				return false
-			}
+	}
+	return true
+}
+
+// validDomainLabel accepts a non-empty label of [a-z0-9-] that neither starts
+// nor ends with "-".
+func validDomainLabel(label string) bool {
+	if label == "" || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
+		return false
+	}
+	for _, r := range label {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '-' {
+			return false
 		}
 	}
 	return true

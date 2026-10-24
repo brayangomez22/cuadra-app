@@ -2,7 +2,6 @@ package httpx_test
 
 import (
 	"context"
-	"errors"
 	"net"
 	"net/http"
 	"testing"
@@ -101,7 +100,7 @@ func TestServerGracefulShutdown(t *testing.T) {
 		cancel()
 		select {
 		case err := <-done:
-			require.True(t, errors.Is(err, context.DeadlineExceeded), "error inesperado: %v", err)
+			require.ErrorIs(t, err, context.DeadlineExceeded, "error inesperado: %v", err)
 		case <-time.After(2 * time.Second):
 			t.Fatal("Serve no respetó el timeout de apagado")
 		}

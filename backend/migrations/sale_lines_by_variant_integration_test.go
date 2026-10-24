@@ -256,7 +256,7 @@ func TestSaleLinesByVariantMigration(t *testing.T) {
 		s.MigrateTo(t, salesByVariant)
 		s.MigrateDownTo(t, beforeSalesByVariant)
 
-		require.Equal(t, len(before), len(linesPerTenant(t, s)))
+		require.Len(t, linesPerTenant(t, s), len(before))
 		conn := connect(t, s.SuperuserURL)
 		var columns int
 		require.NoError(t, conn.QueryRow(t.Context(), `

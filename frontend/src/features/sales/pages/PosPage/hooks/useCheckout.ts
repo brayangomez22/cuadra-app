@@ -3,7 +3,7 @@ import { ApiError, describeError } from '@/shared/api/errors';
 import { useRefreshCurrentCash } from '../../../api/cashSessions';
 import { useConfirmSale } from '../../../api/sales';
 import type { Sale } from '../../../api/types';
-import type { PaymentInput } from '../../../model/paymentMethods';
+import type { PaymentInput } from '../../../model/payments/paymentMethods';
 import type { CartState } from './useCart';
 
 // Errors of a sale that mean the cashier's drawer is gone: the screen asks

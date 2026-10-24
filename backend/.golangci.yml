@@ -2,26 +2,160 @@ version: "2"
 
 run:
   timeout: 5m
+  # Integration tests are code too: lint them with the rest.
+  build-tags:
+    - integration
 
 linters:
   enable:
     - bodyclose
+    - cyclop
+    - depguard
+    - dupl
     - errorlint
+    - forbidigo
+    - funlen
+    - gocognit
     - gocritic
     - gosec
+    - interfacebloat
     - misspell
+    - nestif
+    - nilnil
     - noctx
     - nolintlint
     - revive
     - sloglint
+    - testifylint
+    - thelper
     - unconvert
     - unparam
   settings:
+    cyclop:
+      max-complexity: 10
+    depguard:
+      # The architecture rules of CLAUDE.md, verified (docs/backend.md).
+      rules:
+        domain:
+          list-mode: strict
+          files:
+            - "**/internal/modules/*/domain/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/google/uuid
+            - github.com/shopspring/decimal
+          deny:
+            - pkg: net/http
+              desc: domain knows no HTTP; it lives in adapters/http
+        app:
+          files:
+            - "**/internal/modules/*/app/*.go"
+            - "!$test"
+          deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/adapters
+              desc: app depends on domain and interfaces, never on adapters
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/adapters
+              desc: app depends on domain and interfaces, never on adapters
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/adapters
+              desc: app depends on domain and interfaces, never on adapters
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/adapters
+              desc: app depends on domain and interfaces, never on adapters
+            - pkg: github.com/jackc/pgx
+              desc: the database lives in adapters/postgres
+            - pkg: net/http
+              desc: HTTP lives in adapters/http
+            - pkg: go.opentelemetry.io/otel/sdk
+              desc: app uses the OpenTelemetry API, never the SDK
+        catalog:
+          files:
+            - "**/internal/modules/catalog/**"
+          deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/identity
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/sales
+              desc: a module does not import another one; cmd/api wires them through ports
+        identity:
+          files:
+            - "**/internal/modules/identity/**"
+          deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/sales
+              desc: a module does not import another one; cmd/api wires them through ports
+        inventory:
+          files:
+            - "**/internal/modules/inventory/**"
+          deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/identity
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/sales
+              desc: a module does not import another one; cmd/api wires them through ports
+        sales:
+          files:
+            - "**/internal/modules/sales/**"
+          deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/identity
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory
+              desc: a module does not import another one; cmd/api wires them through ports
+        composition:
+          files:
+            - "**/cmd/**"
+            - "**/test/api/**"
+          deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules
+              desc: only internal/server joins the modules; cmd and the API tests use server.New
+        platform:
+          files:
+            - "**/internal/platform/**"
+          deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules
+              desc: platform is shared infrastructure and knows no module
+    dupl:
+      threshold: 100
+    funlen:
+      lines: 50
+      statements: 35
+    gocognit:
+      min-complexity: 15
+    interfacebloat:
+      max: 10
+    nestif:
+      min-complexity: 4
     sloglint:
+      # Logs are JSON for Loki: fixed messages, attributes in snake_case and
+      # always the request's context (trace_id, tenant_id... come from it).
       attr-only: true
+      context: all
+      no-global: all
+      static-msg: true
+      key-naming-case: snake
+    forbidigo:
+      analyze-types: true
+      # The rules of CLAUDE.md that a grep can check. Where each one applies
+      # is in the exclusions below.
+      forbid:
+        - pattern: ^uuid\.(New|NewString|NewRandom)$
+          msg: los IDs son UUID v7 (uuid.NewV7)
+        - pattern: ^(float32|float64)$
+          msg: dinero y cantidades van en decimal.Decimal (NUMERIC en Postgres, string en el JSON)
+        - pattern: ^time\.Now$
+          msg: el dominio recibe la hora (el caso de uso la inyecta con Deps.Now)
+        - pattern: ^fmt\.Print(f|ln)?$
+          msg: usa el logger (slog) con contexto
     misspell:
       locale: US
       ignore-rules:
+        - columnas
         - contraseña
         - dependencias
         - inventario
@@ -34,10 +168,28 @@ linters:
         - variantes
   exclusions:
     rules:
+      # Scope of the forbidigo rules (not exceptions): floats only for
+      # metrics and telemetry outside the domain and the adapters; the clock
+      # only outside the domain; fmt.Print only in the command-line tools.
+      - linters: [forbidigo]
+        text: "float(32|64)"
+        path-except: internal/modules/[^/]+/(domain|adapters)/
+      - linters: [forbidigo]
+        text: "time\\.Now"
+        path-except: internal/modules/[^/]+/domain/
+      - linters: [forbidigo]
+        text: "fmt\\.Print"
+        path-except: ^internal/
       - path: _test\.go
         linters:
+          - cyclop
+          - dupl
+          - forbidigo
+          - funlen
+          - gocognit
           - gosec
           - noctx
+          - sloglint
           - unparam
 
 formatters:

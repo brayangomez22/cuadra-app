@@ -26,10 +26,11 @@ Sigue este flujo sin saltarte pasos.
    - Si la tarea no pertenece a la fase activa, o si tiene un **Depende de** sin completar, avísame antes de seguir.
    - De `docs/plan/pendientes.md`, busca los pendientes con **Destino** $ARGUMENTS (`grep -n '| $ARGUMENTS |'`): son parte del alcance de esta tarea.
    - **No leas `docs/decisiones.md` completo** (es largo y crece). Busca con `grep -n` las entradas de esta tarea, de sus dependencias y de los módulos o conceptos que toca, y lee solo esas líneas.
+   - **Convenciones:** si la tarea toca el backend, lee `docs/backend.md`; si toca el frontend, `docs/frontend.md` (y `docs/estilos.md` si hay estilos o componentes visuales). Si crea un módulo o una feature, sigue sus pasos ("Agregar un módulo" de `docs/backend.md`, sección 11 de `docs/frontend.md`) y lístalos en el plan. Antes de escribir algo a mano, busca si ya existe en el kit compartido (`platform/` en el backend; `shared/` y el `index.ts` de cada feature en el frontend) y úsalo: no se copia un helper que ya existe.
    - Lee el código existente de los módulos que toca, con rangos. Del contrato (`api/openapi.yaml`), lee solo los paths y schemas que cambian. No leas ni modifiques nada fuera de ese alcance.
    - Si el texto de la tarea contradice la sección "Core genérico y módulos por tipo de negocio" de `CLAUDE.md` (por ejemplo, usa términos de un nicho, enums fijos o "producto" donde corresponde "variante"), **sigue `CLAUDE.md`** y avísame de la contradicción en el plan.
 2. **Plan:** preséntame un plan corto con:
-   - los archivos que vas a crear o modificar,
+   - los archivos que vas a crear o modificar, **con su ruta completa y por qué van ahí** según `docs/backend.md` o `docs/frontend.md` (un archivo por caso de uso o recurso, carpeta del tema, prefijos en Go, subcarpetas por tema en el frontend), y qué piezas del kit compartido vas a usar. Si algo no encaja en la convención, dilo como pregunta abierta en vez de inventar una ubicación,
    - los cambios al contrato OpenAPI, si hay endpoints,
    - la lista de casos de test (en español, como nombres de `t.Run`),
    - los spans y métricas que vas a agregar,
@@ -37,9 +38,10 @@ Sigue este flujo sin saltarte pasos.
    - las decisiones de diseño y las preguntas abiertas.
    Luego **detente y espera mi aprobación**.
 3. **Tests en rojo:** escribe solo los tests. Córrelos y muéstrame que fallan por la razón esperada (no por errores de compilación sin relación).
-4. **Implementación:** escribe lo mínimo para que pasen y luego refactoriza, respetando las reglas de `CLAUDE.md` (arquitectura, multi-tenant, dinero, observabilidad, estilos).
+4. **Implementación:** escribe lo mínimo para que pasen y luego refactoriza, respetando las reglas de `CLAUDE.md` (arquitectura, multi-tenant, dinero, observabilidad, estilos) y las convenciones de `docs/backend.md` y `docs/frontend.md`. El refactor es parte del paso: si un archivo o una función se acerca al límite, divídelo ahora por responsabilidad, no lo dejes para después.
 5. **Verificación:** corre `make check` (y `npm run format:check && npm run lint && npm run lint:styles && npm test` si tocaste el frontend). Si algo falla, arréglalo; nunca saltes ni desactives un test.
    - Si tocaste el frontend, revisa con `git diff main -- frontend/eslint.config.js frontend/stylelint.config.mjs` que la tarea **no apague** reglas para un archivo (`'off'` o `null` por archivo), y con `git diff main --name-status --diff-filter=A -- frontend/src` que los archivos nuevos sigan la estructura y los nombres de `docs/frontend.md`.
+   - Si tocaste el backend, revisa con `git diff main -- backend/.golangci.yml backend/cmd/lint-size` que la tarea **no agregue** exclusiones por ruta ni archivos permitidos, y con `git diff main --name-status --diff-filter=A -- backend` que los archivos nuevos sigan la estructura y los nombres de `docs/backend.md`.
 6. **Cierre:**
    - resumen de lo que cambió,
    - lista concreta de lo que debo revisar yo con lupa (dinero, stock, permisos, tenant, seguridad, datos sensibles en logs o spans),

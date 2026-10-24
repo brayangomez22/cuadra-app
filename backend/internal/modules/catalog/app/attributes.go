@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // AttributeInput is the data of a new attribute definition.
@@ -28,7 +29,7 @@ type AttributeUpdate struct {
 // CreateAttribute stores a new attribute definition.
 func (s *Service) CreateAttribute(ctx context.Context, a Actor, in AttributeInput) (_ *domain.AttributeDefinition, err error) {
 	ctx, span := s.startSpan(ctx, "CreateAttribute", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	d, err := domain.NewAttributeDefinition(a.TenantID, domain.AttributeParams{
 		Key: in.Key, Label: in.Label, Type: in.Type, Options: in.Options, Required: in.Required,
@@ -48,7 +49,7 @@ func (s *Service) CreateAttribute(ctx context.Context, a Actor, in AttributeInpu
 // newly required attribute keeps its values until it is edited.
 func (s *Service) UpdateAttribute(ctx context.Context, a Actor, id uuid.UUID, in AttributeUpdate) (_ *domain.AttributeDefinition, err error) {
 	ctx, span := s.startSpan(ctx, "UpdateAttribute", a, attributeAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	d, err := s.Attributes.GetByID(ctx, a.TenantID, id)
 	if err != nil {
@@ -67,7 +68,7 @@ func (s *Service) UpdateAttribute(ctx context.Context, a Actor, id uuid.UUID, in
 // ListAttributes returns every attribute definition of the tenant, by label.
 func (s *Service) ListAttributes(ctx context.Context, a Actor) (_ []*domain.AttributeDefinition, err error) {
 	ctx, span := s.startSpan(ctx, "ListAttributes", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	return s.Attributes.List(ctx, a.TenantID)
 }
@@ -75,7 +76,7 @@ func (s *Service) ListAttributes(ctx context.Context, a Actor) (_ []*domain.Attr
 // DeleteAttribute removes a definition no product has a value for.
 func (s *Service) DeleteAttribute(ctx context.Context, a Actor, id uuid.UUID) (err error) {
 	ctx, span := s.startSpan(ctx, "DeleteAttribute", a, attributeAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	return s.Attributes.Delete(ctx, a.TenantID, id)
 }

@@ -50,7 +50,7 @@ func (r *SaleRepository) SaveConfirmed(ctx context.Context, s *domain.Sale, rese
 	switch {
 	case reserveErr != nil:
 		return reserveErr
-	case violates(err, foreignKeyViolation, saleSequencesLocationFKey), violates(err, foreignKeyViolation, salesLocationFKey):
+	case db.Violates(err, db.ForeignKeyViolation, saleSequencesLocationFKey), db.Violates(err, db.ForeignKeyViolation, salesLocationFKey):
 		return domain.ErrLocationNotFound
 	case err != nil:
 		return fmt.Errorf("sales: save sale %s: %w", s.ID(), err)

@@ -60,17 +60,17 @@ type Server struct {
 
 // New returns a DB connected as app_user to the PostgreSQL shared by the test
 // package. Tests sharing it must use their own tenant ids.
-func New(t testing.TB) *db.DB {
-	t.Helper()
-	return Open(t, Shared(t).AppURL)
+func New(tb testing.TB) *db.DB {
+	tb.Helper()
+	return Open(tb, Shared(tb).AppURL)
 }
 
 // Open connects to url without telemetry and closes the pool when t ends.
-func Open(t testing.TB, url string) *db.DB {
-	t.Helper()
-	d, err := db.Open(t.Context(), url, tracenoop.NewTracerProvider(), metricnoop.NewMeterProvider())
-	require.NoError(t, err)
-	t.Cleanup(d.Close)
+func Open(tb testing.TB, url string) *db.DB {
+	tb.Helper()
+	d, err := db.Open(tb.Context(), url, tracenoop.NewTracerProvider(), metricnoop.NewMeterProvider())
+	require.NoError(tb, err)
+	tb.Cleanup(d.Close)
 	return d
 }
 
@@ -82,75 +82,78 @@ var (
 
 // Shared returns the PostgreSQL shared by the test package, starting it on
 // first use. It is removed when the test binary exits.
-func Shared(t testing.TB) *Server {
-	t.Helper()
+func Shared(tb testing.TB) *Server {
+	tb.Helper()
 	sharedOnce.Do(func() {
 		// Not tied to t: the server outlives the test that started it.
 		sharedServer, errShared = start(context.Background(), math.MaxInt64)
 	})
-	require.NoError(t, errShared)
+	require.NoError(tb, errShared)
 	return sharedServer
 }
 
 // Start starts a PostgreSQL dedicated to t, for tests that need to control the
 // server (stop it, roll migrations back). It is removed when t ends.
-func Start(t testing.TB) *Server { return StartAt(t, math.MaxInt64) }
+func Start(tb testing.TB) *Server {
+	tb.Helper()
+	return StartAt(tb, math.MaxInt64)
+}
 
 // StartAt is Start with the migrations applied only up to version, for
 // tests that load data in an older schema and then migrate it (MigrateTo).
-func StartAt(t testing.TB, version int64) *Server {
-	t.Helper()
-	s, err := start(t.Context(), version)
+func StartAt(tb testing.TB, version int64) *Server {
+	tb.Helper()
+	s, err := start(tb.Context(), version)
 	if s != nil {
-		t.Cleanup(func() { _ = s.container.Terminate(context.WithoutCancel(t.Context())) })
+		tb.Cleanup(func() { _ = s.container.Terminate(context.WithoutCancel(tb.Context())) })
 	}
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return s
 }
 
 // Stop stops the server, leaving the URLs unreachable.
-func (s *Server) Stop(t testing.TB) {
-	t.Helper()
+func (s *Server) Stop(tb testing.TB) {
+	tb.Helper()
 	timeout := 10 * time.Second
-	require.NoError(t, s.container.Stop(t.Context(), &timeout))
+	require.NoError(tb, s.container.Stop(tb.Context(), &timeout))
 }
 
 // MigrateTo applies the pending migrations up to version as the owner.
-func (s *Server) MigrateTo(t testing.TB, version int64) {
-	t.Helper()
-	require.NoError(t, s.TryMigrateTo(t, version))
+func (s *Server) MigrateTo(tb testing.TB, version int64) {
+	tb.Helper()
+	require.NoError(tb, s.TryMigrateTo(tb, version))
 }
 
 // TryMigrateTo is MigrateTo returning the error, for tests that expect a
 // migration to fail.
-func (s *Server) TryMigrateTo(t testing.TB, version int64) error {
-	t.Helper()
-	_, err := s.provider(t).UpTo(t.Context(), version)
+func (s *Server) TryMigrateTo(tb testing.TB, version int64) error {
+	tb.Helper()
+	_, err := s.provider(tb).UpTo(tb.Context(), version)
 	return err
 }
 
 // MigrateDownTo rolls the migrations back down to version as the owner.
-func (s *Server) MigrateDownTo(t testing.TB, version int64) {
-	t.Helper()
-	require.NoError(t, s.TryMigrateDownTo(t, version))
+func (s *Server) MigrateDownTo(tb testing.TB, version int64) {
+	tb.Helper()
+	require.NoError(tb, s.TryMigrateDownTo(tb, version))
 }
 
 // TryMigrateDownTo is MigrateDownTo returning the error, for tests that
 // expect a Down to fail.
-func (s *Server) TryMigrateDownTo(t testing.TB, version int64) error {
-	t.Helper()
-	_, err := s.provider(t).DownTo(t.Context(), version)
+func (s *Server) TryMigrateDownTo(tb testing.TB, version int64) error {
+	tb.Helper()
+	_, err := s.provider(tb).DownTo(tb.Context(), version)
 	return err
 }
 
-func (s *Server) provider(t testing.TB) *goose.Provider {
-	t.Helper()
+func (s *Server) provider(tb testing.TB) *goose.Provider {
+	tb.Helper()
 	cfg, err := pgx.ParseConfig(s.AdminURL)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	sqlDB := stdlib.OpenDB(*cfg)
-	t.Cleanup(func() { _ = sqlDB.Close() })
+	tb.Cleanup(func() { _ = sqlDB.Close() })
 	p, err := goose.NewProvider(goose.DialectPostgres, sqlDB, migrations.FS)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return p
 }
 

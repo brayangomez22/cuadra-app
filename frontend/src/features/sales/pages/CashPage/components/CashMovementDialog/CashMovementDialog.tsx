@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { Button, Dialog, DialogClose } from '@/shared/ui';
-import type { CashMovementKind } from '../../../../model/cashLabels';
+import type { CashMovementKind } from '../../../../model/cash/cashLabels';
 import { MovementForm } from './MovementForm';
 
 const copy: Record<CashMovementKind, { title: string; description: string; reason: string }> = {

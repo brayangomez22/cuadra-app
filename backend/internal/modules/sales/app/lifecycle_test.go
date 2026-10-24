@@ -59,7 +59,7 @@ func TestConfirmSaleNumbering(t *testing.T) {
 
 		require.ErrorIs(t, err, domain.ErrInsufficientStock)
 		var typed *domain.InsufficientStockError
-		require.True(t, errors.As(err, &typed))
+		require.ErrorAs(t, err, &typed)
 		require.Equal(t, p, typed.VariantID)
 		require.Equal(t, "Cemento gris 50kg", typed.ProductName)
 		require.Empty(t, typed.VariantLabel)
@@ -79,7 +79,7 @@ func TestConfirmSaleNumbering(t *testing.T) {
 		})
 
 		var typed *domain.InsufficientStockError
-		require.True(t, errors.As(err, &typed))
+		require.ErrorAs(t, err, &typed)
 		require.Equal(t, medium, typed.VariantID)
 		require.Equal(t, "Camiseta básica (Rojo · M)", typed.Description())
 	})

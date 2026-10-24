@@ -43,12 +43,18 @@ func validRequestID(id string) bool {
 		return false
 	}
 	for _, c := range id {
-		isAlnum := (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
-		if !isAlnum && c != '-' && c != '_' && c != '.' {
+		if !requestIDChar(c) {
 			return false
 		}
 	}
 	return true
+}
+
+// requestIDChar reports whether c may appear in a request ID: letters,
+// digits, "-", "_" and ".".
+func requestIDChar(c rune) bool {
+	isAlnum := (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+	return isAlnum || c == '-' || c == '_' || c == '.'
 }
 
 func newRequestID() string {

@@ -45,7 +45,7 @@ func TestVariantUnitsBody(t *testing.T) {
 		code, unitName             string
 		factor, price, priceWithTx string
 	}{
-		{"ferretería: caja de 12 de un producto por metro", func(t *testing.T) *domain.Product { return product(t, "8000", "10000") }, "caja", "Caja", "12", "110000", "130900.00"},
+		{"ferretería: caja de 12 de un producto por metro", func(t *testing.T) *domain.Product { t.Helper(); return product(t, "8000", "10000") }, "caja", "Caja", "12", "110000", "130900.00"},
 		{"almacén de ropa: paquete de 3 camisetas", productWithVariants, "paquete", "Paquete", "3", "70000.5", "83300.60"},
 	}
 	for _, tt := range tests {

@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { Alert, Button, Dialog, DialogClose } from '@/shared/ui';
 import type { UnitOfMeasure } from '../../../../api/types';
-import { hasAxes, variantName } from '../../../../model/variants';
+import { hasAxes, variantName } from '../../../../model/variants/variants';
 import { useUnitForm, type UnitTarget } from '../../hooks/useUnitForm';
 import { UnitFields } from '../UnitFields/UnitFields';
 import styles from './UnitDialog.module.scss';

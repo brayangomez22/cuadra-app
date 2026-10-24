@@ -82,43 +82,40 @@ type UnitRepository interface {
 	Delete(ctx context.Context, tenantID, id uuid.UUID) error
 }
 
-// AttributeRepository persists attribute definitions, scoped to a tenant
-// like ProductRepository.
-type AttributeRepository interface {
-	// Create stores a new definition; ErrAttributeKeyTaken if another
-	// definition of the tenant has its key.
-	Create(ctx context.Context, d *AttributeDefinition) error
-	// GetByID returns ErrAttributeNotFound when the definition does not
-	// exist in tenantID.
-	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*AttributeDefinition, error)
-	// List returns every definition of the tenant, by label.
-	List(ctx context.Context, tenantID uuid.UUID) ([]*AttributeDefinition, error)
-	// Update stores the label, the options and whether it is required;
-	// ErrAttributeNotFound if it does not exist, ErrAttributeOptionInUse
-	// (and nothing changes) if a product has one of removedOptions.
-	Update(ctx context.Context, d *AttributeDefinition, removedOptions []string) error
-	// Delete removes the definition; ErrAttributeInUse if a product has a
-	// value for it, ErrAttributeNotFound if it does not exist.
+// choiceRepository persists one of the tenant's lists of choices that
+// describe products (attribute definitions with their options, variant axes
+// with their values), scoped to a tenant like ProductRepository.
+type choiceRepository[T any] interface {
+	Create(ctx context.Context, item *T) error
+	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*T, error)
+	List(ctx context.Context, tenantID uuid.UUID) ([]*T, error)
+	// Update stores item; removed are the choices it no longer allows,
+	// which no product may be using.
+	Update(ctx context.Context, item *T, removed []string) error
 	Delete(ctx context.Context, tenantID, id uuid.UUID) error
 }
 
-// VariantAxisRepository persists variant axes, scoped to a tenant like
-// ProductRepository.
+// AttributeRepository persists attribute definitions. List returns them by
+// label. Create fails with ErrAttributeKeyTaken if another definition of
+// the tenant has its key; GetByID, Update and Delete with
+// ErrAttributeNotFound when it does not exist in the tenant. Update stores
+// the label, the options and whether it is required, and fails with
+// ErrAttributeOptionInUse (and nothing changes) if a product has one of the
+// removed options; Delete fails with ErrAttributeInUse if a product has a
+// value for it.
+type AttributeRepository interface {
+	choiceRepository[AttributeDefinition]
+}
+
+// VariantAxisRepository persists variant axes. List returns them by name.
+// Create fails with ErrAxisNameTaken if another axis of the tenant has its
+// name; GetByID, Update and Delete with ErrAxisNotFound when it does not
+// exist in the tenant. Update stores the allowed values and fails with
+// ErrAxisValueInUse (and nothing changes) if a variant has one of the
+// removed values, in any case; Delete fails with ErrAxisInUse if a variant
+// has a value on it.
 type VariantAxisRepository interface {
-	// Create stores a new axis; ErrAxisNameTaken if another axis of the
-	// tenant has its name.
-	Create(ctx context.Context, a *VariantAxis) error
-	// GetByID returns ErrAxisNotFound when the axis does not exist in tenantID.
-	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*VariantAxis, error)
-	// List returns every axis of the tenant, by name.
-	List(ctx context.Context, tenantID uuid.UUID) ([]*VariantAxis, error)
-	// Update stores the allowed values; ErrAxisNotFound if the axis does not
-	// exist, ErrAxisValueInUse (and nothing changes) if a variant has one of
-	// removedValues, in any case.
-	Update(ctx context.Context, a *VariantAxis, removedValues []string) error
-	// Delete removes the axis; ErrAxisInUse if a variant has a value on it,
-	// ErrAxisNotFound if it does not exist.
-	Delete(ctx context.Context, tenantID, id uuid.UUID) error
+	choiceRepository[VariantAxis]
 }
 
 // TenantSeed is a new tenant's initial catalog configuration: what its

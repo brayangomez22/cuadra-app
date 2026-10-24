@@ -9,8 +9,8 @@ import {
   variantUnitSchema,
   type VariantUnitFormInput,
   type VariantUnitFormValues,
-} from '../../../model/variantUnitSchema';
-import { suggestedUnitPrice } from '../../../model/variants';
+} from '../../../model/variants/variantUnitSchema';
+import { suggestedUnitPrice } from '../../../model/variants/variants';
 
 /** The unit of a variant the dialog edits; without unit, it adds one. */
 export type UnitTarget = { product: Product; variant: ProductVariant; unit?: VariantUnit };

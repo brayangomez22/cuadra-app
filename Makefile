@@ -10,7 +10,7 @@ OPENAPI_SPEC := $(CURDIR)/api/openapi.yaml
 export
 
 .DEFAULT_GOAL := help
-.PHONY: help up down run test test-int lint lint-neutral check migrate sqlc openapi e2e-up e2e e2e-down obs-up obs-down obs-alert-test jobs-ui
+.PHONY: help up down run test test-int lint lint-size lint-guards lint-neutral check migrate sqlc openapi e2e-up e2e e2e-down obs-up obs-down obs-alert-test jobs-ui
 
 help: ## List available commands
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -30,10 +30,28 @@ test: ## Unit tests (fast, no Docker)
 test-int: ## Integration tests (requires Docker)
 	cd $(BACKEND) && go test -race -count=1 -tags=integration ./...
 
-lint: ## gofmt + go vet + golangci-lint
+lint: ## gofmt + go vet + golangci-lint + lint-size + lint-guards
 	@cd $(BACKEND) && unformatted="$$(gofmt -l .)" && if [ -n "$$unformatted" ]; then echo "gofmt needed:"; echo "$$unformatted"; exit 1; fi
 	cd $(BACKEND) && go vet ./...
 	cd $(BACKEND) && golangci-lint run ./...
+	@$(MAKE) --no-print-directory lint-size lint-guards
+
+lint-size: ## Fail if a Go file passes 300 lines (400 for tests)
+	cd $(BACKEND) && go run ./cmd/lint-size -root .
+
+# Each depguard rule and forbidigo message of .golangci.yml must reject what
+# backend/testdata/guards breaks it with.
+DEPGUARD_RULES := domain app catalog platform composition
+FORBIDIGO_MSGS := "UUID v7" "decimal.Decimal" "recibe la hora"
+
+lint-guards: ## Check that depguard and forbidigo still reject what testdata/guards breaks them with
+	@cd $(BACKEND)/testdata/guards && out="$$(golangci-lint run --config ../../.golangci.yml --enable-only depguard,forbidigo --uniq-by-line=false --max-same-issues 0 ./... 2>&1)"; \
+	for rule in $(DEPGUARD_RULES); do \
+		echo "$$out" | grep -q "from list '$$rule'" || { echo "depguard no rechazó el import prohibido de la regla '$$rule':"; echo "$$out"; exit 1; }; \
+	done; \
+	for msg in $(FORBIDIGO_MSGS); do \
+		echo "$$out" | grep -q "$$msg" || { echo "forbidigo no rechazó el caso de \"$$msg\":"; echo "$$out"; exit 1; }; \
+	done; echo "guardas: depguard ($(DEPGUARD_RULES)) y forbidigo rechazan sus casos prohibidos"
 
 lint-neutral: ## Fail if a term of one business type appears in the core
 	cd $(BACKEND) && go run ./cmd/lint-neutral -root $(CURDIR)

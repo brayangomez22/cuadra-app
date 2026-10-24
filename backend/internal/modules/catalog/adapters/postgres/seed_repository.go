@@ -25,36 +25,40 @@ func NewSeedRepository(d *db.DB) *SeedRepository { return &SeedRepository{db: d}
 func (r *SeedRepository) Seed(ctx context.Context, tenantID uuid.UUID, seed domain.TenantSeed) error {
 	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
-		for _, u := range seed.Units {
-			if err := createUnit(ctx, q, u); err != nil {
-				return err
-			}
+		if err := createAll(ctx, q, seed.Units, createUnit); err != nil {
+			return err
 		}
-		for _, c := range seed.Categories {
-			if err := createCategory(ctx, q, c); err != nil {
-				return err
-			}
+		if err := createAll(ctx, q, seed.Categories, createCategory); err != nil {
+			return err
 		}
-		for _, d := range seed.Attributes {
-			if err := createAttribute(ctx, q, d); err != nil {
-				return err
-			}
+		if err := createAll(ctx, q, seed.Attributes, createAttribute); err != nil {
+			return err
 		}
-		for _, a := range seed.VariantAxes {
-			if err := createVariantAxis(ctx, q, a); err != nil {
-				return err
-			}
-		}
-		return nil
+		return createAll(ctx, q, seed.VariantAxes, createVariantAxis)
 	})
+	return seedError(err)
+}
+
+// createAll stores items in order, with the create of their repository.
+func createAll[T any](ctx context.Context, q *sqlcgen.Queries, items []T, create func(context.Context, *sqlcgen.Queries, T) error) error {
+	for _, item := range items {
+		if err := create(ctx, q, item); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// seedError translates the errors of a seed as each repository's Create does.
+func seedError(err error) error {
 	switch {
-	case violates(err, uniqueViolation, unitsCodeKey):
+	case db.Violates(err, db.UniqueViolation, unitsCodeKey):
 		return domain.ErrUnitCodeTaken
-	case violates(err, foreignKeyViolation, categoriesParentFKey):
+	case db.Violates(err, db.ForeignKeyViolation, categoriesParentFKey):
 		return domain.ErrCategoryNotFound
-	case violates(err, uniqueViolation, attributesKeyKey):
+	case db.Violates(err, db.UniqueViolation, attributesKeyKey):
 		return domain.ErrAttributeKeyTaken
-	case violates(err, uniqueViolation, axesNameKey):
+	case db.Violates(err, db.UniqueViolation, axesNameKey):
 		return domain.ErrAxisNameTaken
 	case err != nil:
 		return fmt.Errorf("catalog: seed tenant: %w", err)

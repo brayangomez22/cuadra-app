@@ -7,6 +7,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // VariantInput is the data of a variant added to a product.
@@ -28,7 +29,7 @@ type VariantUpdate struct {
 // Its axis values must be among the tenant's axes.
 func (s *Service) AddVariant(ctx context.Context, a Actor, productID uuid.UUID, in VariantInput) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "AddVariant", a, productAttr(productID))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	p, err := s.Products.GetByID(ctx, a.TenantID, productID)
 	if err != nil {
@@ -58,7 +59,7 @@ func (s *Service) AddVariant(ctx context.Context, a Actor, productID uuid.UUID, 
 // price.
 func (s *Service) UpdateVariant(ctx context.Context, a Actor, productID, variantID uuid.UUID, in VariantUpdate) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "UpdateVariant", a, productAttr(productID), variantAttr(variantID))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	p, err := s.Products.GetByID(ctx, a.TenantID, productID)
 	if err != nil {

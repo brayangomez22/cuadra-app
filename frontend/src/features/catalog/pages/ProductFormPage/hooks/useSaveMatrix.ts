@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { saveVariants } from '../../../api/variants';
 import { useStoreProduct } from '../../../api/products';
 import type { Product } from '../../../api/types';
-import type { ResolvedRow, RowError } from '../../../model/resolveRows';
+import type { ResolvedRow, RowError } from '../../../model/variantMatrix/resolveRows';
 import type { ProductFormApi } from './useProductForm';
 
 type Input = {

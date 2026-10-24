@@ -36,14 +36,14 @@ func (f *fakeStore) Active(_ context.Context, tenantID uuid.UUID) ([]string, err
 	return slices.Clone(f.active[tenantID]), nil
 }
 
-func (f *fakeStore) Update(_ context.Context, tenantID uuid.UUID, decide func(active []string) (*modules.Change, error)) error {
+func (f *fakeStore) Update(_ context.Context, tenantID uuid.UUID, decide modules.Decide) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	change, err := decide(slices.Clone(f.active[tenantID]))
-	if err != nil || change == nil {
+	change, ok, err := decide(slices.Clone(f.active[tenantID]))
+	if err != nil || !ok {
 		return err
 	}
-	f.changes = append(f.changes, *change)
+	f.changes = append(f.changes, change)
 	if change.Active {
 		f.active[tenantID] = append(f.active[tenantID], change.Module)
 	} else {
@@ -317,7 +317,7 @@ func TestNewService(t *testing.T) {
 type failingStore struct{ err error }
 
 func (f failingStore) Active(context.Context, uuid.UUID) ([]string, error) { return nil, f.err }
-func (f failingStore) Update(context.Context, uuid.UUID, func([]string) (*modules.Change, error)) error {
+func (f failingStore) Update(context.Context, uuid.UUID, modules.Decide) error {
 	return f.err
 }
 

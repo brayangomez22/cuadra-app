@@ -6,12 +6,12 @@ import { useApiFormErrors } from '@/shared/forms/useApiFormErrors';
 import { useToast } from '@/shared/ui';
 import { saveProduct, useStoreProduct } from '../../../api/products';
 import type { AttributeDefinition, Product } from '../../../api/types';
-import { defaultRow } from '../../../model/productDefaults';
-import { attributeErrorField, productErrorFields } from '../../../model/productErrorFields';
-import type { ProductFormValues, VariantRow } from '../../../model/productSchema';
-import { resolveRows, type ResolvedRow } from '../../../model/resolveRows';
-import { defaultVariantInput, toProductInput } from '../../../model/toProductInput';
-import { defaultVariant } from '../../../model/variants';
+import { defaultRow } from '../../../model/productForm/productDefaults';
+import { attributeErrorField, productErrorFields } from '../../../model/productForm/productErrorFields';
+import type { ProductFormValues, VariantRow } from '../../../model/productForm/productSchema';
+import { resolveRows, type ResolvedRow } from '../../../model/variantMatrix/resolveRows';
+import { defaultVariantInput, toProductInput } from '../../../model/productForm/toProductInput';
+import { defaultVariant } from '../../../model/variants/variants';
 import type { ProductFormApi } from './useProductForm';
 import { useSaveMatrix } from './useSaveMatrix';
 

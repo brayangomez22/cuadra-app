@@ -1,7 +1,7 @@
 import type { components } from '@/shared/api/schema';
 import { apiError, fakeApi, json } from '@/test/fakeApi';
 import { aGarment, ids, variantId, type Product, type ProductVariant } from '@/test/fixtures';
-import { axisLabel } from '../model/variantMatrix';
+import { axisLabel } from '../model/variantMatrix/variantMatrix';
 import { sentBody } from './sentBody';
 
 type ProductInput = components['schemas']['ProductInput'];
