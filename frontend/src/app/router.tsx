@@ -101,11 +101,17 @@ export const routes: RouteObject[] = [
               {
                 element: <RequirePermission permission="sales:create" />,
                 children: [
-                  { path: paths.sales.pos.pattern, ...page(async () => (await import('@/features/sales')).PosPage) },
-                  { path: paths.sales.cash.pattern, ...page(async () => (await import('@/features/sales')).CashPage) },
+                  {
+                    path: paths.sales.pos.pattern,
+                    ...page(async () => (await import('@/features/sales/pages')).PosPage),
+                  },
+                  {
+                    path: paths.sales.cash.pattern,
+                    ...page(async () => (await import('@/features/sales/pages')).CashPage),
+                  },
                   {
                     path: paths.sales.closeCash.pattern,
-                    ...page(async () => (await import('@/features/sales')).CloseCashPage),
+                    ...page(async () => (await import('@/features/sales/pages')).CloseCashPage),
                   },
                 ],
               },
@@ -114,7 +120,7 @@ export const routes: RouteObject[] = [
                 children: [
                   {
                     path: paths.sales.cashReport.pattern,
-                    ...page(async () => (await import('@/features/sales')).CashReportPage),
+                    ...page(async () => (await import('@/features/sales/pages')).CashReportPage),
                   },
                 ],
               },

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ApiError, describeError } from '@/shared/api/errors';
-import { useConfirmSale, useRefreshCurrentCash, type Sale } from '../../../api';
+import { useRefreshCurrentCash } from '../../../api/cashSessions';
+import { useConfirmSale } from '../../../api/sales';
+import type { Sale } from '../../../api/types';
 import type { PaymentInput } from '../../../model/paymentMethods';
 import type { CartState } from './useCart';
 

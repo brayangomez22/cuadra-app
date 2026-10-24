@@ -1,0 +1,29 @@
+@use '@/styles/abstracts' as *;
+
+// One field per denomination, from the largest down, like a counting sheet.
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  max-inline-size: var(--size-form);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+// The field and, to its right, what those bills or coins add up to.
+.denomination {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 8rem);
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.subtotal {
+  padding-block-end: var(--space-3);
+  text-align: end;
+  color: var(--color-text-muted);
+
+  @include numeric;
+}

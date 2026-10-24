@@ -1,5 +1,5 @@
 import { Dialog } from '@/shared/ui';
-import type { Paper } from '../../../../Receipt';
+import type { Paper } from '../../../../model/paper';
 import type { Checkout } from '../../hooks/useCheckout';
 import { PaymentsForm } from '../PaymentsForm/PaymentsForm';
 import { SaleDone } from '../SaleDone/SaleDone';

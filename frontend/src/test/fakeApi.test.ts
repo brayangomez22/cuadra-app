@@ -1,9 +1,23 @@
+import type { components } from '@/shared/api/schema';
 import { apiError, fakeApi, json } from './fakeApi';
-import { aProduct, anOpenCashSession } from './fixtures';
+import { aProduct, ids } from './fixtures';
 
 const productId = '01920000-0000-7000-8000-000000000101';
 const product = aProduct({ id: productId });
 const get = (path: string) => fetch(new Request(`http://localhost${path}`));
+
+// A drawer with nothing in it: the test only tells two sessions apart by ID.
+function aCashSession(id: string): components['schemas']['CashSession'] {
+  return {
+    id,
+    location_id: ids.main,
+    user_id: '01920000-0000-7000-8000-000000000001',
+    status: 'open',
+    opening_float: '0.00',
+    opened_at: '2026-10-13T13:00:00Z',
+    movements: [],
+  };
+}
 
 describe('fakeApi', () => {
   it('resuelve /api/v1/products/{productId} para un ID concreto', async () => {
@@ -17,8 +31,8 @@ describe('fakeApi', () => {
 
   it('prefiere la llave exacta sobre la plantilla', async () => {
     fakeApi({
-      'GET /api/v1/cash-sessions/{cashSessionId}': json(200, anOpenCashSession({ id: 'por plantilla' })),
-      'GET /api/v1/cash-sessions/current': json(200, { required: true, session: anOpenCashSession({ id: 'exacta' }) }),
+      'GET /api/v1/cash-sessions/{cashSessionId}': json(200, aCashSession('por plantilla')),
+      'GET /api/v1/cash-sessions/current': json(200, { required: true, session: aCashSession('exacta') }),
     });
 
     expect(await (await get('/api/v1/cash-sessions/current')).json()).toMatchObject({ session: { id: 'exacta' } });
