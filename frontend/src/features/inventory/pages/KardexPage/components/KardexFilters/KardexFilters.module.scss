@@ -1,0 +1,14 @@
+@use '@/styles/abstracts' as *;
+
+// Variant and location side by side when they fit; stacked on a phone.
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.filter {
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+  max-inline-size: var(--size-form);
+}

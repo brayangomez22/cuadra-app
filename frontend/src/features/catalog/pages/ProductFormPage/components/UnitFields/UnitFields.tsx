@@ -1,7 +1,7 @@
 import { formatMoney, formatQuantity, toDecimalInput } from '@/shared/format';
 import { Button, Field, Input, type SelectOption } from '@/shared/ui';
-import { SelectController } from '../../../../components/SelectController/SelectController';
-import { useFieldError } from '../../../../hooks/useFieldError';
+import { SelectController } from '@/shared/forms/SelectController/SelectController';
+import { useFieldError } from '@/shared/forms/useFieldError';
 import type { UnitForm } from '../../hooks/useUnitForm';
 import styles from './UnitFields.module.scss';
 

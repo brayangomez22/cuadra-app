@@ -92,7 +92,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 **Depende de:** T26f.
 **Alcance:** `pages/CashPage`, `pages/CloseCashPage`, `pages/CashReportPage`; `components/CashReport`, `components/Receipt` y `components/Printable` (los usan el POS y la caja); `CashMovementDialog`; `model/cash.ts` dividido si pasa el límite. `api.ts` se divide en ventas y caja. `CashPage.test.tsx` y `Receipt.test.tsx` se dividen por escenario. Decide `sales/pages.ts` y dónde viven los fixtures de venta y caja (P70).
 
-### [ ] T26h · Refactor de `inventory`
+### [x] T26h · Refactor de `inventory`
 **Depende de:** T26g.
 **Alcance:** `pages/StockPage`, `pages/KardexPage` y `pages/ReceiptPage` (con el formulario de entrada dividido en producto, unidad y cantidad, y sus hooks), `components/CreateLocationDialog`, `model/movements.ts`. Kardex y Existencias usan `useSearchParamsState` y `QueryState`; `ReceiptPage` usa `useApiFormErrors`.
 **Pendientes que entran a esta tarea:** P63 y P68 (`docs/plan/pendientes.md`).
@@ -104,7 +104,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 ### [ ] T26j · Refactor de `app/` y `dev/`, y cierre del bloque
 **Depende de:** T26i.
 **Alcance:** `UiCatalogPage` (362 líneas) dividido en una sección por grupo de componentes; `router.tsx` con las rutas agrupadas por feature (`routes.ts` en cada `index.ts` o un archivo por área); `src/test/fixtures.ts` repartido en el `testing/` de cada feature (lo compartido queda en `src/test/`); se borra `eslint.legacy.js` y toda excepción. Se revisa `docs/frontend.md` contra el código final y cada feature tiene su `README.md`.
-**Pendientes que entran a esta tarea:** P65, P66, P67 y P69 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P65, P66, P67, P69 y P71 (`docs/plan/pendientes.md`).
 **Verificación final:** `npm run lint` sin excepciones; ningún archivo de `src/` pasa de los límites (salvo el generado `schema.d.ts`); un reporte en el PR con las líneas por archivo antes y después.
 
 ### [ ] T27 · Escáner de códigos con la cámara

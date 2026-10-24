@@ -1,0 +1,25 @@
+@use '@/styles/abstracts' as *;
+
+.date {
+  white-space: nowrap;
+
+  @include numeric;
+}
+
+// The sign carries the meaning ("+10", "-2,5"); the weight only helps scan entries.
+.quantity {
+  &[data-sign='in'] {
+    font-weight: var(--font-weight-semibold);
+  }
+}
+
+.meta {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.detail {
+  min-inline-size: 16ch;
+  color: var(--color-text-muted);
+}

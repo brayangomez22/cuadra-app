@@ -8,8 +8,6 @@ type AttributeDefinition = Schemas['AttributeDefinition'];
 type VariantAxis = Schemas['VariantAxis'];
 export type VariantUnit = Schemas['VariantUnit'];
 export type Location = Schemas['Location'];
-export type StockLevel = Schemas['StockLevel'];
-export type StockMovement = Schemas['StockMovement'];
 
 // Fixed ids keep assertions on URLs and bodies readable.
 export const ids = {
@@ -239,42 +237,6 @@ export function withoutCost(product: Product): Product {
 
 export function aLocation(overrides: Partial<Location> = {}): Location {
   return { id: ids.main, name: 'Bodega principal', active: true, created_at: '2026-10-01T15:00:00Z', ...overrides };
-}
-
-export function aStockLevel(overrides: Partial<StockLevel> = {}): StockLevel {
-  return {
-    variant_id: ids.pipe,
-    product_id: ids.pipe,
-    location_id: ids.main,
-    quantity: '120',
-    average_cost: '8333.33',
-    ...overrides,
-  };
-}
-
-export function aMovement(overrides: Partial<StockMovement> = {}): StockMovement {
-  return {
-    id: '01920000-0000-7000-8000-000000000401',
-    variant_id: ids.pipe,
-    product_id: ids.pipe,
-    location_id: ids.main,
-    type: 'purchase_in',
-    quantity: '10',
-    unit_cost: '8000.00',
-    balance_after: '10',
-    average_cost_after: '8000.00',
-    user_id: '01920000-0000-7000-8000-000000000001',
-    occurred_at: '2026-10-10T20:05:00Z',
-    ...overrides,
-  };
-}
-
-// withoutCosts is a movement as the API sends it to a role without catalog:write.
-export function withoutCosts(movement: StockMovement): StockMovement {
-  const copy = { ...movement };
-  delete copy.unit_cost;
-  delete copy.average_cost_after;
-  return copy;
 }
 
 export function page<T>(items: T[], total = items.length) {
