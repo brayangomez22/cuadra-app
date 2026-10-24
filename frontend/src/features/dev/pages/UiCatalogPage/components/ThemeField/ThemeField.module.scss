@@ -1,0 +1,10 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  inline-size: 100%;
+
+  @include respond-to(sm) {
+    inline-size: auto;
+    min-inline-size: 20ch;
+  }
+}

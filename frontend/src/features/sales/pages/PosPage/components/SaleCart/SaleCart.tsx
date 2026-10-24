@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { Me } from '@/features/auth';
+import { useModule } from '@/features/auth';
 import { formatPercent, isZero } from '@/shared/format';
 import { cartItem } from '../../../../model/cart/cartItem';
 import type { DiscountLimit } from '../../../../model/cart/discount';
@@ -15,12 +15,12 @@ type Props = {
   searchRef: RefObject<HTMLInputElement | null>;
   /** Gives the focus back to the search, for the next product. */
   onDone: () => void;
-  user: Me | undefined;
 };
 
 /** The search and the lines of the sale. */
-export function SaleCart({ cart, limit, searchRef, onDone, user }: Props) {
+export function SaleCart({ cart, limit, searchRef, onDone }: Props) {
   const { added, announcement, add } = useAddToCart({ cart: cart.cart, change: cart.change, limit });
+  const alternateUnits = useModule('unit_conversions');
   const showDiscount = limit.unlimited || !isZero(limit.max);
   return (
     <div className={styles.root}>
@@ -42,7 +42,7 @@ export function SaleCart({ cart, limit, searchRef, onDone, user }: Props) {
       <CartLines
         totals={cart.totals}
         added={added}
-        alternateUnits={user?.modules.includes('unit_conversions') ?? false}
+        alternateUnits={alternateUnits}
         dispatch={cart.change}
         showDiscount={showDiscount}
         outOfStock={cart.outOfStock}

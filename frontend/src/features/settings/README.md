@@ -2,13 +2,13 @@
 
 La configuración del negocio: unidades, atributos de producto, ejes de variante, módulos y lo general (IVA por defecto).
 
-## Páginas (`pages.ts`, que el router carga en diferido)
+## Páginas (`pages.ts`, que `routes.tsx` carga en diferido)
 
 - `SettingsLayout` (`/configuracion`): el menú de secciones que el usuario puede ver (`model/sections`) y la elegida; `SettingsHome` abre la primera.
 - `UnitsSettings`, `AttributesSettings` y `VariantAxesSettings`: una lista con editar y borrar. Cada una declara sus columnas, su diálogo (`UnitDialog`, `AttributeDialog` con `AttributeFields`, `AxisDialog`) y los textos del borrado; lo demás es compartido.
 - `ModulesSettings` (`/configuracion/modulos`) y `GeneralSettings` (`/configuracion/general`): solo el dueño (`tenant:manage`).
 
-`index.ts` es la API pública: `SectionGate`, que el router pone delante de una sección con permiso o módulo propio.
+`index.ts` es la API pública: `settingsRoutes`, con `SectionGate` delante de cada grupo de secciones con permiso o módulo propio.
 
 ## Carpetas
 

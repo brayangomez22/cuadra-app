@@ -92,6 +92,8 @@ jobs:
         working-directory: frontend
       - run: npm ci
         working-directory: e2e
+      - run: npm run format:check
+        working-directory: e2e
       - run: npm run lint
         working-directory: e2e
       - name: Install Chromium

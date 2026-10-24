@@ -1,60 +1,29 @@
-import type { ComponentType } from 'react';
 import { createBrowserRouter, type RouteObject } from 'react-router';
-import { GuestOnly, RequireAuth, RequirePermission, type Gated } from '@/features/auth';
-import { Spinner } from '@/shared/ui';
+import { RequireAuth } from '@/features/auth';
+import { authRoutes } from '@/features/auth/routes';
+import { catalogRoutes } from '@/features/catalog/routes';
+import { devRoutes } from '@/features/dev/routes';
+import { inventoryRoutes } from '@/features/inventory/routes';
+import { salesRoutes } from '@/features/sales/routes';
+import { settingsRoutes } from '@/features/settings/routes';
 import { AppLayout } from './layout/AppLayout';
 import { HomePage } from './pages/HomePage';
 import { paths } from './routes/paths';
 import { RouteError } from './RouteError';
 
-// Each screen loads with its first visit, in the chunk of its feature: a
-// cashier who only sells never downloads the catalog screens, and a signed-in
-// user never downloads the login forms. The layout stays in the main bundle.
-function page(load: () => Promise<ComponentType>): Pick<RouteObject, 'lazy' | 'HydrateFallback'> {
-  return {
-    lazy: async () => ({ Component: await load() }),
-    // Shown while the section loads on the first page of a visit.
-    HydrateFallback: () => <Spinner label="Cargando…" />,
-  };
-}
-
-// gate guards a group of settings sections inside the settings layout, which
-// keeps the page's title: the section answers "no access" in its place.
-function gate(access: Gated): Pick<RouteObject, 'lazy'> {
-  return {
-    lazy: async () => {
-      const { SectionGate } = await import('@/features/settings');
-      return { Component: () => <SectionGate {...access} /> };
-    },
-  };
-}
-
-// Internal pages that never reach a production build: import.meta.env.DEV is
-// false there, so the bundler drops the route and its lazy import.
-const devRoutes: RouteObject[] = import.meta.env.DEV
-  ? [
-      {
-        path: paths.dev.ui.pattern,
-        lazy: async () => ({ Component: (await import('@/features/dev/UiCatalogPage')).UiCatalogPage }),
-        // Shown while the lazy page loads on a first visit to /dev/ui.
-        HydrateFallback: () => null,
-      },
-    ]
-  : [];
-
-// URLs are in Spanish: the user sees them. Everything hangs from one root route
-// whose errorElement reports what a screen throws and answers unknown URLs.
+// Each feature declares its screens in routes.tsx, loaded with their first
+// visit in the chunk of the feature, behind the permission of their API. The
+// router imports routes.tsx, not the feature's index.ts, which would bring
+// everything the feature exports into the main bundle. It only nests them:
+// the layout stays in the main bundle. URLs are in
+// Spanish: the user sees them (routes/paths.ts). Everything hangs from one
+// root route whose errorElement reports what a screen throws and answers
+// unknown URLs.
 export const routes: RouteObject[] = [
   {
     errorElement: <RouteError />,
     children: [
-      {
-        element: <GuestOnly />,
-        children: [
-          { path: paths.login.pattern, ...page(async () => (await import('@/features/auth/pages')).LoginPage) },
-          { path: paths.signUp.pattern, ...page(async () => (await import('@/features/auth/pages')).SignUpPage) },
-        ],
-      },
+      ...authRoutes,
       {
         element: <RequireAuth />,
         children: [
@@ -62,121 +31,10 @@ export const routes: RouteObject[] = [
             element: <AppLayout />,
             children: [
               { path: paths.home.pattern, element: <HomePage /> },
-              // Each section checks the permission of its API (x-permission in api/openapi.yaml).
-              {
-                element: <RequirePermission permission="catalog:read" />,
-                children: [
-                  {
-                    path: paths.products.list.pattern,
-                    ...page(async () => (await import('@/features/catalog/pages')).ProductListPage),
-                  },
-                ],
-              },
-              {
-                element: <RequirePermission permission="catalog:write" />,
-                children: [
-                  {
-                    path: paths.products.new.pattern,
-                    ...page(async () => (await import('@/features/catalog/pages')).ProductFormPage),
-                  },
-                  {
-                    path: paths.products.edit.pattern,
-                    ...page(async () => (await import('@/features/catalog/pages')).ProductFormPage),
-                  },
-                ],
-              },
-              {
-                element: <RequirePermission permission="inventory:read" />,
-                children: [
-                  {
-                    path: paths.inventory.stock.pattern,
-                    ...page(async () => (await import('@/features/inventory/pages')).StockPage),
-                  },
-                  {
-                    path: paths.inventory.kardex.pattern,
-                    ...page(async () => (await import('@/features/inventory/pages')).KardexPage),
-                  },
-                ],
-              },
-              {
-                element: <RequirePermission permission="sales:create" />,
-                children: [
-                  {
-                    path: paths.sales.pos.pattern,
-                    ...page(async () => (await import('@/features/sales/pages')).PosPage),
-                  },
-                  {
-                    path: paths.sales.cash.pattern,
-                    ...page(async () => (await import('@/features/sales/pages')).CashPage),
-                  },
-                  {
-                    path: paths.sales.closeCash.pattern,
-                    ...page(async () => (await import('@/features/sales/pages')).CloseCashPage),
-                  },
-                ],
-              },
-              {
-                element: <RequirePermission permission="sales:read" />,
-                children: [
-                  {
-                    path: paths.sales.cashReport.pattern,
-                    ...page(async () => (await import('@/features/sales/pages')).CashReportPage),
-                  },
-                ],
-              },
-              // Settings: owners and admins (catalog:write); each group of
-              // sections asks for its own permission or module.
-              {
-                element: <RequirePermission permission="catalog:write" />,
-                children: [
-                  {
-                    path: paths.settings.home.pattern,
-                    ...page(async () => (await import('@/features/settings/pages')).SettingsLayout),
-                    children: [
-                      { index: true, ...page(async () => (await import('@/features/settings/pages')).SettingsHome) },
-                      {
-                        path: paths.settings.units.pattern,
-                        ...page(async () => (await import('@/features/settings/pages')).UnitsSettings),
-                      },
-                      {
-                        path: paths.settings.attributes.pattern,
-                        ...page(async () => (await import('@/features/settings/pages')).AttributesSettings),
-                      },
-                      {
-                        ...gate({ module: 'variants' }),
-                        children: [
-                          {
-                            path: paths.settings.variantAxes.pattern,
-                            ...page(async () => (await import('@/features/settings/pages')).VariantAxesSettings),
-                          },
-                        ],
-                      },
-                      {
-                        ...gate({ permission: 'tenant:manage' }),
-                        children: [
-                          {
-                            path: paths.settings.general.pattern,
-                            ...page(async () => (await import('@/features/settings/pages')).GeneralSettings),
-                          },
-                          {
-                            path: paths.settings.modules.pattern,
-                            ...page(async () => (await import('@/features/settings/pages')).ModulesSettings),
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                ],
-              },
-              {
-                element: <RequirePermission permission="inventory:adjust" />,
-                children: [
-                  {
-                    path: paths.inventory.receipt.pattern,
-                    ...page(async () => (await import('@/features/inventory/pages')).ReceiptPage),
-                  },
-                ],
-              },
+              ...catalogRoutes,
+              ...inventoryRoutes,
+              ...salesRoutes,
+              ...settingsRoutes,
             ],
           },
         ],

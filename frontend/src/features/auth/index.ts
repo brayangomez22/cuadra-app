@@ -8,3 +8,4 @@ export { canSee, useAccess, visibleItems, type Access, type Gated } from './sess
 export { AuthProvider } from './session/AuthProvider';
 export { useAuth } from './session/useAuth';
 export { useCan } from './session/useCan';
+export { useModule } from './session/useModule';

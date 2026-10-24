@@ -1,4 +1,4 @@
-import { useAuth } from '@/features/auth';
+import { useAuth, useModule } from '@/features/auth';
 import { useAttributeDefinitions } from '../../../api/attributes';
 import { useCategories } from '../../../api/categories';
 import { useProduct } from '../../../api/products';
@@ -21,13 +21,12 @@ export type ProductFormData = {
 };
 
 // What the form takes from the signed-in tenant: its modules and its IVA rate.
-function tenantOptions(auth: ReturnType<typeof useAuth>) {
-  const user = auth.status === 'authenticated' ? auth.user : undefined;
-  const modules = user?.modules ?? [];
+function useTenantOptions() {
+  const auth = useAuth();
   return {
-    variantsOn: modules.includes('variants'),
-    alternateUnits: modules.includes('unit_conversions'),
-    defaultTaxRate: user?.default_tax_rate ?? '0.19',
+    variantsOn: useModule('variants'),
+    alternateUnits: useModule('unit_conversions'),
+    defaultTaxRate: auth.status === 'authenticated' ? auth.user.default_tax_rate : '0.19',
   };
 }
 
@@ -38,7 +37,7 @@ function loadedLists(categories?: Category[], units?: UnitOfMeasure[], definitio
 
 /** Loads the product (when editing) and the tenant's lists the form offers. data is there once all are. */
 export function useProductFormData(productId: string | undefined) {
-  const { variantsOn, ...options } = tenantOptions(useAuth());
+  const { variantsOn, ...options } = useTenantOptions();
   const product = useProduct(productId);
   const categories = useCategories();
   const units = useUnits();

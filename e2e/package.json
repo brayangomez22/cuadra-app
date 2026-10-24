@@ -9,11 +9,14 @@
   "scripts": {
     "test": "playwright test",
     "lint": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "report": "playwright show-report"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "@types/node": "24.19.2",
+    "prettier": "3.9.10",
     "typescript": "5.9.3"
   }
 }

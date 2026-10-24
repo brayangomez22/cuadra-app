@@ -60,6 +60,10 @@ export default defineConfig(({ mode }) => ({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // Half the cores: with one worker per core, each jsdom page test shares a
+    // loaded CPU and a few of them, different each run, pass the 5 s timeout.
+    // A longer timeout would hide slow tests instead (docs/decisiones.md, T26j).
+    maxWorkers: '50%',
     css: { modules: { classNameStrategy: 'non-scoped' } },
   },
 }));
