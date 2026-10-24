@@ -6,12 +6,13 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // CreateVariantAxis stores a new variant axis with the values it allows.
 func (s *Service) CreateVariantAxis(ctx context.Context, a Actor, name string, values []string) (_ *domain.VariantAxis, err error) {
 	ctx, span := s.startSpan(ctx, "CreateVariantAxis", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	axis, err := domain.NewVariantAxis(a.TenantID, name, values, s.Now())
 	if err != nil {
@@ -29,7 +30,7 @@ func (s *Service) CreateVariantAxis(ctx context.Context, a Actor, name string, v
 // values under it.
 func (s *Service) UpdateVariantAxis(ctx context.Context, a Actor, id uuid.UUID, values []string) (_ *domain.VariantAxis, err error) {
 	ctx, span := s.startSpan(ctx, "UpdateVariantAxis", a, axisAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	axis, err := s.VariantAxes.GetByID(ctx, a.TenantID, id)
 	if err != nil {
@@ -48,7 +49,7 @@ func (s *Service) UpdateVariantAxis(ctx context.Context, a Actor, id uuid.UUID, 
 // ListVariantAxes returns every variant axis of the tenant, by name.
 func (s *Service) ListVariantAxes(ctx context.Context, a Actor) (_ []*domain.VariantAxis, err error) {
 	ctx, span := s.startSpan(ctx, "ListVariantAxes", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	return s.VariantAxes.List(ctx, a.TenantID)
 }
@@ -56,7 +57,7 @@ func (s *Service) ListVariantAxes(ctx context.Context, a Actor) (_ []*domain.Var
 // DeleteVariantAxis removes an axis no variant uses.
 func (s *Service) DeleteVariantAxis(ctx context.Context, a Actor, id uuid.UUID) (err error) {
 	ctx, span := s.startSpan(ctx, "DeleteVariantAxis", a, axisAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	return s.VariantAxes.Delete(ctx, a.TenantID, id)
 }

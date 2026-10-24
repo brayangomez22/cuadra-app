@@ -1,7 +1,7 @@
 import { formatDateTime, formatMoney } from '@/shared/format';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '@/shared/ui';
 import type { CashMovement } from '../../../../api/types';
-import { movementLabels } from '../../../../model/cashLabels';
+import { movementLabels } from '../../../../model/cash/cashLabels';
 import styles from './CashMovementsTable.module.scss';
 
 /** The cash ins and outs of the open drawer, outs with their sign. */

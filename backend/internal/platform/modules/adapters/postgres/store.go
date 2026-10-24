@@ -39,7 +39,7 @@ func (s *Store) Active(ctx context.Context, tenantID uuid.UUID) ([]string, error
 // Update applies decide's change in one transaction. An advisory lock per
 // tenant serializes the updates of one tenant: the rows decide reads cannot
 // be locked with FOR UPDATE, because the module it checks may have no row.
-func (s *Store) Update(ctx context.Context, tenantID uuid.UUID, decide func(active []string) (*modules.Change, error)) error {
+func (s *Store) Update(ctx context.Context, tenantID uuid.UUID, decide modules.Decide) error {
 	return s.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
 		if err := q.LockTenantModules(ctx, tenantID); err != nil {
@@ -49,26 +49,31 @@ func (s *Store) Update(ctx context.Context, tenantID uuid.UUID, decide func(acti
 		if err != nil {
 			return fmt.Errorf("modules: list active modules: %w", err)
 		}
-		change, err := decide(active)
-		if err != nil || change == nil {
+		change, ok, err := decide(active)
+		if err != nil || !ok {
 			return err
 		}
-		if !change.Active {
-			if err := q.DisableModule(ctx, sqlcgen.DisableModuleParams{TenantID: tenantID, ModuleID: change.Module}); err != nil {
-				return fmt.Errorf("modules: disable %s: %w", change.Module, err)
-			}
-			return nil
-		}
-		var by *uuid.UUID
-		if change.By != uuid.Nil {
-			by = &change.By
-		}
-		err = q.EnableModule(ctx, sqlcgen.EnableModuleParams{
-			TenantID: tenantID, ModuleID: change.Module, EnabledAt: change.At, EnabledBy: by,
-		})
-		if err != nil {
-			return fmt.Errorf("modules: enable %s: %w", change.Module, err)
+		return apply(ctx, q, tenantID, change)
+	})
+}
+
+// apply turns the module of change on or off.
+func apply(ctx context.Context, q *sqlcgen.Queries, tenantID uuid.UUID, change modules.Change) error {
+	if !change.Active {
+		if err := q.DisableModule(ctx, sqlcgen.DisableModuleParams{TenantID: tenantID, ModuleID: change.Module}); err != nil {
+			return fmt.Errorf("modules: disable %s: %w", change.Module, err)
 		}
 		return nil
+	}
+	var by *uuid.UUID
+	if change.By != uuid.Nil {
+		by = &change.By
+	}
+	err := q.EnableModule(ctx, sqlcgen.EnableModuleParams{
+		TenantID: tenantID, ModuleID: change.Module, EnabledAt: change.At, EnabledBy: by,
 	})
+	if err != nil {
+		return fmt.Errorf("modules: enable %s: %w", change.Module, err)
+	}
+	return nil
 }

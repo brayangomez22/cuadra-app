@@ -21,11 +21,8 @@ func NewPolicyRepository(d *db.DB) *PolicyRepository { return &PolicyRepository{
 
 // Get returns the tenant's policy; the defaults if it has no settings row.
 func (r *PolicyRepository) Get(ctx context.Context, tenantID uuid.UUID) (domain.StockPolicy, error) {
-	var allowNegative bool
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		allowNegative, err = sqlcgen.New(tx).GetStockPolicy(ctx, tenantID)
-		return err
+	allowNegative, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) (bool, error) {
+		return sqlcgen.New(tx).GetStockPolicy(ctx, tenantID)
 	})
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):

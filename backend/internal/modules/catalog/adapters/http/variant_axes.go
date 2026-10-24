@@ -4,12 +4,26 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
+
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/adapters/http/catalogapi"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
 )
 
+// VariantAxisUseCases are the use cases of the variant axes.
+type VariantAxisUseCases interface {
+	CreateVariantAxis(ctx context.Context, a app.Actor, name string, values []string) (*domain.VariantAxis, error)
+	UpdateVariantAxis(ctx context.Context, a app.Actor, id uuid.UUID, values []string) (*domain.VariantAxis, error)
+	ListVariantAxes(ctx context.Context, a app.Actor) ([]*domain.VariantAxis, error)
+	DeleteVariantAxis(ctx context.Context, a app.Actor, id uuid.UUID) error
+}
+
+// variantAxisHandlers are the operations on variant axes.
+type variantAxisHandlers struct{ uc VariantAxisUseCases }
+
 // ListVariantAxes lists the tenant's variant axes.
-func (h *Handler) ListVariantAxes(ctx context.Context, _ catalogapi.ListVariantAxesRequestObject) (catalogapi.ListVariantAxesResponseObject, error) {
+func (h *variantAxisHandlers) ListVariantAxes(ctx context.Context, _ catalogapi.ListVariantAxesRequestObject) (catalogapi.ListVariantAxesResponseObject, error) {
 	axes, err := h.uc.ListVariantAxes(ctx, actor(ctx))
 	if err != nil {
 		return nil, err
@@ -22,7 +36,7 @@ func (h *Handler) ListVariantAxes(ctx context.Context, _ catalogapi.ListVariantA
 }
 
 // CreateVariantAxis defines a variant axis.
-func (h *Handler) CreateVariantAxis(ctx context.Context, req catalogapi.CreateVariantAxisRequestObject) (catalogapi.CreateVariantAxisResponseObject, error) {
+func (h *variantAxisHandlers) CreateVariantAxis(ctx context.Context, req catalogapi.CreateVariantAxisRequestObject) (catalogapi.CreateVariantAxisResponseObject, error) {
 	a, err := h.uc.CreateVariantAxis(ctx, actor(ctx), req.Body.Name, req.Body.Values)
 	if err != nil {
 		return nil, err
@@ -31,7 +45,7 @@ func (h *Handler) CreateVariantAxis(ctx context.Context, req catalogapi.CreateVa
 }
 
 // UpdateVariantAxis replaces the values an axis allows.
-func (h *Handler) UpdateVariantAxis(ctx context.Context, req catalogapi.UpdateVariantAxisRequestObject) (catalogapi.UpdateVariantAxisResponseObject, error) {
+func (h *variantAxisHandlers) UpdateVariantAxis(ctx context.Context, req catalogapi.UpdateVariantAxisRequestObject) (catalogapi.UpdateVariantAxisResponseObject, error) {
 	a, err := h.uc.UpdateVariantAxis(ctx, actor(ctx), req.AxisId, req.Body.Values)
 	if err != nil {
 		return nil, err
@@ -40,7 +54,7 @@ func (h *Handler) UpdateVariantAxis(ctx context.Context, req catalogapi.UpdateVa
 }
 
 // DeleteVariantAxis removes an axis no variant uses.
-func (h *Handler) DeleteVariantAxis(ctx context.Context, req catalogapi.DeleteVariantAxisRequestObject) (catalogapi.DeleteVariantAxisResponseObject, error) {
+func (h *variantAxisHandlers) DeleteVariantAxis(ctx context.Context, req catalogapi.DeleteVariantAxisRequestObject) (catalogapi.DeleteVariantAxisResponseObject, error) {
 	if err := h.uc.DeleteVariantAxis(ctx, actor(ctx), req.AxisId); err != nil {
 		return nil, err
 	}

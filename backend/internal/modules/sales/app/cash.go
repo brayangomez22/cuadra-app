@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // OpenCashSessionInput opens the actor's cash session at a location with an
@@ -52,7 +53,7 @@ type CurrentCashSession struct {
 // open session.
 func (s *Service) OpenCashSession(ctx context.Context, a Actor, in OpenCashSessionInput) (_ *domain.CashSession, err error) {
 	ctx, span := s.startSpan(ctx, "OpenCashSession", a, attribute.String("location.id", in.LocationID.String()))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	id, err := uuid.NewV7()
 	if err != nil {
@@ -78,7 +79,7 @@ func (s *Service) OpenCashSession(ctx context.Context, a Actor, in OpenCashSessi
 // RecordCashMovement records a cash in or out of the actor's open session.
 func (s *Service) RecordCashMovement(ctx context.Context, a Actor, sessionID uuid.UUID, in CashMovementRequest) (_ domain.CashMovement, err error) {
 	ctx, span := s.startSpan(ctx, "RecordCashMovement", a, cashSessionAttr(sessionID))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	id, err := uuid.NewV7()
 	if err != nil {
@@ -103,7 +104,7 @@ func (s *Service) RecordCashMovement(ctx context.Context, a Actor, sessionID uui
 // between. The closing never changes afterwards.
 func (s *Service) CloseCashSession(ctx context.Context, a Actor, sessionID uuid.UUID, in CloseCashSessionInput) (_ CashSessionView, err error) {
 	ctx, span := s.startSpan(ctx, "CloseCashSession", a, cashSessionAttr(sessionID))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	count, err := domain.NewCashCount(in.Counts)
 	if err != nil {
@@ -135,7 +136,7 @@ func (s *Service) CloseCashSession(ctx context.Context, a Actor, sessionID uuid.
 // GetCashSession returns a session with its movements.
 func (s *Service) GetCashSession(ctx context.Context, a Actor, id uuid.UUID) (_ CashSessionView, err error) {
 	ctx, span := s.startSpan(ctx, "GetCashSession", a, cashSessionAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	session, err := s.CashSessions.Get(ctx, a.TenantID, id)
 	if err != nil {
@@ -148,7 +149,7 @@ func (s *Service) GetCashSession(ctx context.Context, a Actor, id uuid.UUID) (_ 
 // to sell and the actor's open session with its movements, if any.
 func (s *Service) GetCurrentCashSession(ctx context.Context, a Actor) (_ CurrentCashSession, err error) {
 	ctx, span := s.startSpan(ctx, "GetCurrentCashSession", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	policy, err := s.Policies.Get(ctx, a.TenantID)
 	if err != nil {

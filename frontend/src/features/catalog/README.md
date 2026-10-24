@@ -9,7 +9,7 @@ Los productos y sus variantes: la lista, el formulario (con atributos, matriz de
 
 ## API pública (`index.ts`)
 
-- Datos: `useProducts`, `useProduct`, `fetchProducts`, `useUnits`, `useAttributeDefinitions`, `useVariantAxes`, `catalogKeys` y sus tipos.
+- Datos: `useProducts`, `useProduct`, `useProductSearchResults` y `useSearchProductsNow` (la búsqueda de `ProductPicker` y del POS, con la búsqueda inmediata del Enter), `useUnits`, `useAttributeDefinitions`, `useVariantAxes`, `catalogKeys` (para que las mutaciones de configuración invaliden las listas) y sus tipos.
 - Variantes: `defaultVariant`, `variantName`, `hasAxes`, `sellables`, `findByCode`, `suggestedUnitPrice`, `Sellable`.
 - `catalogRoutes`, para el router.
 - `ProductPicker` (buscar y elegir una variante, también con lector de códigos) y `taxRateOptions`.
@@ -17,7 +17,7 @@ Los productos y sus variantes: la lista, el formulario (con atributos, matriz de
 ## Carpetas
 
 - `api/`: un archivo por recurso. La caché solo vive aquí (`useStoreProduct`, las mutaciones de estado y de unidades).
-- `model/`: lógica pura con sus tests (valores iniciales, cuerpo de la API, errores a campos, matriz de variantes, montos de la lista).
+- `model/`: lógica pura con sus tests, por tema: `productForm/` (valores iniciales, cuerpo de la API, errores a campos, esquema, opciones de categoría y de IVA), `variants/` (variantes vendibles, montos de la lista, esquema de la unidad de venta) y `variantMatrix/` (la matriz de variantes y a qué variante guarda cada fila).
 - `components/`: `ProductPicker` y sus piezas. `SelectController` y `useFieldError` pasaron a `shared/forms/` (T26h), porque también los usa inventario.
 - `hooks/`: `useProductSearch` (del buscador).
 - `testing/`: `productFormApi`, `garmentServer`, `sentBody` y los pasos del formulario. Los fixtures de producto (`aProduct`, `aGarment`...), `axes` y `attributes` siguen en `src/test/fixtures/` porque también los usan inventario, ventas y configuración.

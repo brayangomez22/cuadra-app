@@ -3,7 +3,7 @@ import { Checkbox, Field, Input } from '@/shared/ui';
 import type { AttributeDefinition } from '../../../../api/types';
 import { SelectController } from '@/shared/forms/SelectController/SelectController';
 import { useFieldError } from '@/shared/forms/useFieldError';
-import { NO_VALUE, type ProductFormInput } from '../../../../model/productSchema';
+import { NO_VALUE, type ProductFormInput } from '../../../../model/productForm/productSchema';
 import { FormGridWide } from '../FormSection/FormSection';
 
 const numeric = { inputMode: 'decimal', align: 'end' } as const;

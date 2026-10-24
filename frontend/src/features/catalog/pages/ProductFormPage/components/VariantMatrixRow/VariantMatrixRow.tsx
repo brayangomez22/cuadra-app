@@ -1,8 +1,8 @@
 import { useFormContext, useWatch } from 'react-hook-form';
 import { Badge, Checkbox, Field, Input, TableCell, TableRow } from '@/shared/ui';
 import { useFieldError } from '@/shared/forms/useFieldError';
-import type { ProductFormInput, VariantRow } from '../../../../model/productSchema';
-import { axisLabel, generatedSku } from '../../../../model/variantMatrix';
+import type { ProductFormInput, VariantRow } from '../../../../model/productForm/productSchema';
+import { axisLabel, generatedSku } from '../../../../model/variantMatrix/variantMatrix';
 import styles from './VariantMatrixRow.module.scss';
 
 type Props = { index: number; row: VariantRow; inactive: boolean };

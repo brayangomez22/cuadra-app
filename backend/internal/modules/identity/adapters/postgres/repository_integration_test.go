@@ -3,7 +3,6 @@
 package postgres_test
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -86,7 +85,7 @@ func requireSameUser(t *testing.T, want, got *domain.User) {
 func requireRLSViolation(t *testing.T, err error) {
 	t.Helper()
 	var pgErr *pgconn.PgError
-	require.True(t, errors.As(err, &pgErr), "expected a PostgreSQL error, got %v", err)
+	require.ErrorAs(t, err, &pgErr, "expected a PostgreSQL error, got %v", err)
 	require.Equal(t, "42501", pgErr.Code, pgErr.Message)
 }
 

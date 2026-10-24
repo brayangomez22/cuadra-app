@@ -1,7 +1,6 @@
 package domain_test
 
 import (
-	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -102,7 +101,7 @@ func TestInsufficientStockError(t *testing.T) {
 
 		require.ErrorIs(t, err, domain.ErrInsufficientStock)
 		var typed *domain.InsufficientStockError
-		require.True(t, errors.As(err, &typed))
+		require.ErrorAs(t, err, &typed)
 		require.Equal(t, id, typed.VariantID)
 		require.Contains(t, err.Error(), id.String())
 		require.NotContains(t, err.Error(), "Cemento", "the message goes to logs and spans")
@@ -144,6 +143,7 @@ func snapshotOf(s *domain.Sale) domain.SaleSnapshot {
 
 func TestRehydrateSale(t *testing.T) {
 	numbered := func(t *testing.T) *domain.Sale {
+		t.Helper()
 		s := confirmedSale(t)
 		require.NoError(t, s.AssignNumber(7))
 		return s

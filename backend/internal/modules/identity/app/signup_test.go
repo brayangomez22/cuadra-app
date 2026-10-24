@@ -1,0 +1,171 @@
+package app_test
+
+import (
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/app"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/domain"
+)
+
+func signUpInput() app.SignUpInput {
+	return app.SignUpInput{
+		TenantName: "Ferretería El Tornillo",
+		NIT:        validNIT,
+		OwnerName:  "Ana Gómez",
+		Email:      "Ana@ElTornillo.co",
+		Password:   validPassword,
+
+		BusinessTemplate: "ferreteria",
+	}
+}
+
+func TestSignUp(t *testing.T) {
+	t.Run("crea el tenant y el usuario owner y devuelve la sesión", func(t *testing.T) {
+		e := newEnv(t)
+
+		session, err := e.svc.SignUp(t.Context(), signUpInput())
+		require.NoError(t, err)
+
+		user, tenant := session.Profile.User, session.Profile.Tenant
+		require.Equal(t, domain.RoleOwner, user.Role())
+		require.Equal(t, "ana@eltornillo.co", user.Email().String())
+		require.Equal(t, "Ana Gómez", user.Name())
+		require.Equal(t, tenant.ID(), user.TenantID())
+		require.Equal(t, "Ferretería El Tornillo", tenant.Name())
+		require.Equal(t, validNIT, tenant.NIT().String())
+		require.True(t, tenant.IsActive())
+
+		_, err = e.tenants.GetByID(t.Context(), tenant.ID())
+		require.NoError(t, err)
+		stored, err := e.users.GetByID(t.Context(), tenant.ID(), user.ID())
+		require.NoError(t, err)
+		require.Equal(t, "hash:"+validPassword, stored.PasswordHash(), "only the hash is stored")
+
+		require.Equal(t, "access:"+tenant.ID().String()+":"+user.ID().String()+":owner", session.AccessToken)
+		require.Equal(t, e.clock.Now().Add(15*time.Minute), session.AccessExpiresAt)
+		require.Equal(t, e.clock.Now().Add(domain.RefreshTokenTTL), session.RefreshExpiresAt)
+		requireUsableRefresh(t, e, session.RefreshToken, user.ID())
+
+		require.EqualValues(t, 1, e.counter(t, "cuadra.identity.signups", "", ""))
+		span := e.span(t, "identity.SignUp")
+		require.Contains(t, span.Attributes(), attribute.String("tenant.id", tenant.ID().String()))
+		require.Contains(t, span.Attributes(), attribute.String("user.id", user.ID().String()))
+	})
+
+	t.Run("el registro aplica la plantilla elegida dentro de su transacción", func(t *testing.T) {
+		for _, template := range []string{"ferreteria", "ropa_calzado"} {
+			t.Run(template, func(t *testing.T) {
+				e := newEnv(t)
+				in := signUpInput()
+				in.BusinessTemplate = template
+
+				session, err := e.svc.SignUp(t.Context(), in)
+				require.NoError(t, err)
+
+				require.Equal(t, template, session.Profile.Tenant.BusinessTemplate())
+				stored, err := e.tenants.GetByID(t.Context(), session.Profile.Tenant.ID())
+				require.NoError(t, err)
+				require.Equal(t, template, stored.BusinessTemplate())
+				require.Equal(t, []uuid.UUID{session.Profile.Tenant.ID()}, e.setup.tenants)
+				require.Equal(t, []string{template}, e.setup.templates)
+				require.Equal(t, []bool{true}, e.setup.inTx)
+				require.EqualValues(t, 1, e.counter(t, "cuadra.identity.signups", "business_template", template))
+				require.Contains(t, e.span(t, "identity.SignUp").Attributes(), attribute.String("business_template", template))
+			})
+		}
+	})
+
+	t.Run("el registro guarda el IVA por defecto de la plantilla", func(t *testing.T) {
+		tests := []struct{ template, rate string }{
+			{template: "ferreteria", rate: "0.19"},
+			{template: "drogueria", rate: "0"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.template, func(t *testing.T) {
+				e := newEnv(t)
+				in := signUpInput()
+				in.BusinessTemplate = tt.template
+
+				session, err := e.svc.SignUp(t.Context(), in)
+				require.NoError(t, err)
+
+				require.Equal(t, tt.rate, session.Profile.Tenant.DefaultTaxRate().String())
+				stored, err := e.tenants.GetByID(t.Context(), session.Profile.Tenant.ID())
+				require.NoError(t, err)
+				require.Equal(t, tt.rate, stored.DefaultTaxRate().String())
+			})
+		}
+	})
+
+	t.Run("un registro sin plantilla o con una inexistente falla sin crear el tenant", func(t *testing.T) {
+		for _, template := range []string{"", "panaderia", "Ferreteria", "../generica"} {
+			t.Run(template, func(t *testing.T) {
+				e := newEnv(t)
+				in := signUpInput()
+				in.BusinessTemplate = template
+				hashes := e.hasher.Hashes()
+
+				_, err := e.svc.SignUp(t.Context(), in)
+
+				require.ErrorIs(t, err, domain.ErrUnknownBusinessTemplate)
+				require.Empty(t, e.tenants.byID)
+				require.Empty(t, e.users.byID)
+				require.Empty(t, e.setup.tenants)
+				require.Equal(t, hashes, e.hasher.Hashes(), "the password is not hashed")
+			})
+		}
+	})
+
+	t.Run("lista las plantillas disponibles", func(t *testing.T) {
+		e := newEnv(t)
+		require.Equal(t, testTemplates, e.svc.BusinessTemplates())
+	})
+
+	t.Run("si la preparación del tenant falla, el registro falla y no crea el tenant", func(t *testing.T) {
+		e := newEnv(t)
+		e.setup.err = errors.New("catalog down")
+
+		_, err := e.svc.SignUp(t.Context(), signUpInput())
+
+		require.ErrorIs(t, err, e.setup.err)
+		require.Empty(t, e.tenants.byID)
+		require.Empty(t, e.users.byID)
+		require.Empty(t, e.tokens.byID)
+		require.Zero(t, e.counter(t, "cuadra.identity.signups", "", ""))
+	})
+
+	t.Run("rechaza datos inválidos sin crear el tenant", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			mutate  func(*app.SignUpInput)
+			wantErr error
+		}{
+			{name: "email inválido", mutate: func(in *app.SignUpInput) { in.Email = "ana@" }, wantErr: domain.ErrInvalidEmail},
+			{name: "NIT con DV incorrecto", mutate: func(in *app.SignUpInput) { in.NIT = "900123456-1" }, wantErr: domain.ErrInvalidNITCheckDigit},
+			{name: "contraseña corta", mutate: func(in *app.SignUpInput) { in.Password = "corta" }, wantErr: domain.ErrPasswordTooShort},
+			{name: "contraseña larga", mutate: func(in *app.SignUpInput) { in.Password = string(make([]byte, 73)) }, wantErr: domain.ErrPasswordTooLong},
+			{name: "empresa sin nombre", mutate: func(in *app.SignUpInput) { in.TenantName = "  " }, wantErr: domain.ErrInvalidTenantName},
+			{name: "dueño sin nombre", mutate: func(in *app.SignUpInput) { in.OwnerName = "" }, wantErr: domain.ErrInvalidUserName},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				e := newEnv(t)
+				in := signUpInput()
+				tt.mutate(&in)
+
+				_, err := e.svc.SignUp(t.Context(), in)
+
+				require.ErrorIs(t, err, tt.wantErr)
+				require.Empty(t, e.tenants.byID)
+				require.Empty(t, e.users.byID)
+				require.Empty(t, e.tokens.byID)
+			})
+		}
+	})
+}

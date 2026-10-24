@@ -122,20 +122,8 @@ type StockMovement struct {
 // newMovement checks the invariants shared by the movements StockLevel
 // creates and RehydrateStockMovement.
 func newMovement(s StockMovementSnapshot) (*StockMovement, error) {
-	if s.ID == uuid.Nil {
-		return nil, ErrInvalidMovementID
-	}
-	if s.TenantID == uuid.Nil {
-		return nil, ErrInvalidTenantID
-	}
-	if s.VariantID == uuid.Nil {
-		return nil, ErrInvalidVariantID
-	}
-	if s.LocationID == uuid.Nil {
-		return nil, ErrInvalidLocationID
-	}
-	if s.UserID == uuid.Nil {
-		return nil, ErrInvalidUserID
+	if err := checkMovementIDs(s); err != nil {
+		return nil, err
 	}
 	if _, err := ParseMovementType(string(s.Type)); err != nil {
 		return nil, err
@@ -144,25 +132,12 @@ func newMovement(s StockMovementSnapshot) (*StockMovement, error) {
 		!validCost(s.UnitCost) || !fitsStorage(s.BalanceAfter) || !validCost(s.AverageCostAfter) {
 		return nil, ErrInvalidMovement
 	}
-	reason := strings.TrimSpace(s.Reason)
-	if s.Type == MovementAdjustment {
-		var err error
-		if reason, err = normalizeReason(reason); err != nil {
-			return nil, err
-		}
-	} else if reason != "" {
-		return nil, ErrInvalidMovement
+	reason, err := s.Type.reason(s.Reason)
+	if err != nil {
+		return nil, err
 	}
-	if s.Reference != nil && !s.Reference.valid() {
-		return nil, ErrInvalidReference
-	}
-	isTransferRef := s.Reference != nil && s.Reference.Kind == DocumentTransfer
-	if isTransferRef != s.Type.isTransfer() {
-		return nil, ErrInvalidReference
-	}
-	// Giving stock back is always for a sale.
-	if s.Type == MovementSaleVoid && (s.Reference == nil || s.Reference.Kind != DocumentSale) {
-		return nil, ErrInvalidReference
+	if err := s.Type.checkReference(s.Reference); err != nil {
+		return nil, err
 	}
 	return &StockMovement{
 		id:               s.ID,
@@ -179,6 +154,54 @@ func newMovement(s StockMovementSnapshot) (*StockMovement, error) {
 		userID:           s.UserID,
 		occurredAt:       s.OccurredAt.UTC(),
 	}, nil
+}
+
+// checkMovementIDs checks that a movement has its id, tenant, variant,
+// location and user.
+func checkMovementIDs(s StockMovementSnapshot) error {
+	switch {
+	case s.ID == uuid.Nil:
+		return ErrInvalidMovementID
+	case s.TenantID == uuid.Nil:
+		return ErrInvalidTenantID
+	case s.VariantID == uuid.Nil:
+		return ErrInvalidVariantID
+	case s.LocationID == uuid.Nil:
+		return ErrInvalidLocationID
+	case s.UserID == uuid.Nil:
+		return ErrInvalidUserID
+	}
+	return nil
+}
+
+// reason normalizes the reason of a movement of type t: only an adjustment
+// has one, and it is required.
+func (t MovementType) reason(text string) (string, error) {
+	reason := strings.TrimSpace(text)
+	if t == MovementAdjustment {
+		return normalizeReason(reason)
+	}
+	if reason != "" {
+		return "", ErrInvalidMovement
+	}
+	return "", nil
+}
+
+// checkReference checks the document of a movement of type t: a transfer
+// always references a transfer, and nothing else does; giving stock back is
+// always for a sale.
+func (t MovementType) checkReference(ref *DocumentRef) error {
+	if ref != nil && !ref.valid() {
+		return ErrInvalidReference
+	}
+	isTransferRef := ref != nil && ref.Kind == DocumentTransfer
+	if isTransferRef != t.isTransfer() {
+		return ErrInvalidReference
+	}
+	if t == MovementSaleVoid && (ref == nil || ref.Kind != DocumentSale) {
+		return ErrInvalidReference
+	}
+	return nil
 }
 
 // normalizeReason trims an adjustment reason; it is required and at most

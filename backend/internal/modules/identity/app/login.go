@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // LoginInput are the credentials of a login attempt.
@@ -76,7 +78,7 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (_ Session, err erro
 			span.SetAttributes(attribute.String("auth.failure_reason", failureReason(err)))
 		}
 		s.logins.Add(ctx, 1, metric.WithAttributes(attribute.String("result", result)))
-		endSpan(span, err)
+		usecase.End(span, err)
 	}()
 
 	if ok, retryAfter := s.IPLimiter.Allow(in.ClientIP); !ok {
@@ -97,21 +99,47 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (_ Session, err erro
 // authenticate returns the only active user whose password matches among the
 // users registered with the email (in in.TenantID, when given).
 func (s *Service) authenticate(ctx context.Context, in LoginInput) (Profile, error) {
-	email, err := domain.ParseEmail(in.Email)
-	if err != nil {
-		return Profile{}, s.rejectWithoutUser(in.Password)
-	}
-	candidates, err := s.Directory.FindByEmail(ctx, email)
+	candidates, err := s.loginCandidates(ctx, in)
 	if err != nil {
 		return Profile{}, err
-	}
-	if in.TenantID != uuid.Nil {
-		candidates = filterTenant(candidates, in.TenantID)
 	}
 	if len(candidates) == 0 {
 		return Profile{}, s.rejectWithoutUser(in.Password)
 	}
+	matches, err := s.matchingUsers(ctx, candidates, in.Password)
+	if err != nil {
+		return Profile{}, err
+	}
+	switch len(matches) {
+	case 0:
+		return Profile{}, domain.ErrInvalidCredentials
+	case 1:
+		return s.profileIfTenantActive(ctx, matches[0])
+	default:
+		return Profile{}, s.tenantSelection(ctx, matches)
+	}
+}
 
+// loginCandidates lists the users registered with the email of in (in
+// in.TenantID, when given). An invalid email has none.
+func (s *Service) loginCandidates(ctx context.Context, in LoginInput) ([]domain.LoginCandidate, error) {
+	email, err := domain.ParseEmail(in.Email)
+	if err != nil {
+		return nil, nil
+	}
+	candidates, err := s.Directory.FindByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	if in.TenantID != uuid.Nil {
+		candidates = filterTenant(candidates, in.TenantID)
+	}
+	return candidates, nil
+}
+
+// matchingUsers returns the active candidates whose password matches.
+// Inactive users are verified too, so they take as long as active ones.
+func (s *Service) matchingUsers(ctx context.Context, candidates []domain.LoginCandidate, password string) ([]*domain.User, error) {
 	var matches []*domain.User
 	for _, c := range candidates {
 		user, err := s.Users.GetByID(ctx, c.TenantID, c.UserID)
@@ -119,27 +147,21 @@ func (s *Service) authenticate(ctx context.Context, in LoginInput) (Profile, err
 		case errors.Is(err, domain.ErrUserNotFound):
 			continue // Deleted since the directory lookup.
 		case err != nil:
-			return Profile{}, err
+			return nil, err
 		}
-		// Inactive users are verified too, so they take as long as active ones.
-		ok, err := s.Hasher.Verify(in.Password, user.PasswordHash())
+		ok, err := s.Hasher.Verify(password, user.PasswordHash())
 		if err != nil {
-			return Profile{}, fmt.Errorf("identity: user %s: verify password: %w", user.ID(), err)
+			return nil, fmt.Errorf("identity: user %s: verify password: %w", user.ID(), err)
 		}
 		if ok && user.IsActive() {
 			matches = append(matches, user)
 		}
 	}
+	return matches, nil
+}
 
-	switch len(matches) {
-	case 0:
-		return Profile{}, domain.ErrInvalidCredentials
-	case 1:
-	default:
-		return Profile{}, s.tenantSelection(ctx, matches)
-	}
-
-	user := matches[0]
+// profileIfTenantActive is the profile of user, when its tenant is active.
+func (s *Service) profileIfTenantActive(ctx context.Context, user *domain.User) (Profile, error) {
 	tenant, err := s.Tenants.GetByID(ctx, user.TenantID())
 	if err != nil {
 		return Profile{}, err
@@ -193,3 +215,7 @@ func failureReason(err error) string {
 		return "error"
 	}
 }
+
+// normalizeEmailKey lowercases and trims s for rate limiting, also when it is
+// not a valid email.
+func normalizeEmailKey(s string) string { return strings.ToLower(strings.TrimSpace(s)) }

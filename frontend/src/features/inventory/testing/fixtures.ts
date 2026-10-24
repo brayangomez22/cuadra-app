@@ -17,7 +17,7 @@ export function aStockLevel(overrides: Partial<StockLevel> = {}): StockLevel {
 
 export function aMovement(overrides: Partial<StockMovement> = {}): StockMovement {
   return {
-    id: '01920000-0000-7000-8000-000000000401',
+    id: '01920000-0000-7000-8000-000000000901',
     variant_id: ids.pipe,
     product_id: ids.pipe,
     location_id: ids.main,

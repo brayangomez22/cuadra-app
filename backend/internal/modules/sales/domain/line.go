@@ -68,40 +68,17 @@ type SaleLine struct {
 // newLine validates in and computes the line's amounts. The discount must be
 // within limit.
 func newLine(in LineInput, limit DiscountLimit) (SaleLine, error) {
-	if in.VariantID == uuid.Nil {
-		return SaleLine{}, ErrInvalidVariantID
-	}
-	if in.ProductID == uuid.Nil {
-		return SaleLine{}, ErrInvalidProductID
-	}
-	name := strings.TrimSpace(in.ProductName)
-	if name == "" || utf8.RuneCountInString(name) > maxProductNameLength {
-		return SaleLine{}, ErrInvalidProductName
-	}
-	label := strings.TrimSpace(in.VariantLabel)
-	if utf8.RuneCountInString(label) > maxVariantLabelLength {
-		return SaleLine{}, ErrInvalidVariantLabel
+	name, label, err := lineNames(in)
+	if err != nil {
+		return SaleLine{}, err
 	}
 	rule, err := NewPriceRuleID(string(in.PriceRule))
 	if err != nil {
 		return SaleLine{}, err
 	}
-	if !in.Quantity.IsPositive() || !fitsStorage(in.Quantity) {
-		return SaleLine{}, ErrInvalidQuantity
-	}
-	unit, err := newLineUnit(in.Unit)
+	unit, unitPrice, err := linePricing(in)
 	if err != nil {
 		return SaleLine{}, err
-	}
-	if !fitsStorage(in.Quantity.Mul(unit.Factor)) {
-		return SaleLine{}, ErrQuantityPrecision
-	}
-	unitPrice := in.UnitPrice.Round(amountScale)
-	if !unitPrice.IsPositive() || !fitsStorage(unitPrice) {
-		return SaleLine{}, ErrInvalidUnitPrice
-	}
-	if in.TaxRate.IsNegative() || in.TaxRate.GreaterThanOrEqual(decimal.NewFromInt(1)) || !fitsStorage(in.TaxRate) {
-		return SaleLine{}, ErrInvalidTaxRate
 	}
 	gross := roundMoney(in.Quantity.Mul(unitPrice))
 	if !fitsStorage(gross) {
@@ -128,6 +105,49 @@ func newLine(in LineInput, limit DiscountLimit) (SaleLine, error) {
 		gross:        gross,
 		tax:          roundMoney(base.Mul(in.TaxRate)),
 	}, nil
+}
+
+// lineNames checks what the line sells (variant and product) and returns
+// the product's name and the variant's label, trimmed.
+func lineNames(in LineInput) (name, label string, err error) {
+	if in.VariantID == uuid.Nil {
+		return "", "", ErrInvalidVariantID
+	}
+	if in.ProductID == uuid.Nil {
+		return "", "", ErrInvalidProductID
+	}
+	name = strings.TrimSpace(in.ProductName)
+	if name == "" || utf8.RuneCountInString(name) > maxProductNameLength {
+		return "", "", ErrInvalidProductName
+	}
+	label = strings.TrimSpace(in.VariantLabel)
+	if utf8.RuneCountInString(label) > maxVariantLabelLength {
+		return "", "", ErrInvalidVariantLabel
+	}
+	return name, label, nil
+}
+
+// linePricing checks the quantity, the unit, the unit price and the IVA rate
+// of the line, and returns the unit and the unit price rounded.
+func linePricing(in LineInput) (LineUnit, decimal.Decimal, error) {
+	if !in.Quantity.IsPositive() || !fitsStorage(in.Quantity) {
+		return LineUnit{}, decimal.Decimal{}, ErrInvalidQuantity
+	}
+	unit, err := newLineUnit(in.Unit)
+	if err != nil {
+		return LineUnit{}, decimal.Decimal{}, err
+	}
+	if !fitsStorage(in.Quantity.Mul(unit.Factor)) {
+		return LineUnit{}, decimal.Decimal{}, ErrQuantityPrecision
+	}
+	unitPrice := in.UnitPrice.Round(amountScale)
+	if !unitPrice.IsPositive() || !fitsStorage(unitPrice) {
+		return LineUnit{}, decimal.Decimal{}, ErrInvalidUnitPrice
+	}
+	if in.TaxRate.IsNegative() || in.TaxRate.GreaterThanOrEqual(decimal.NewFromInt(1)) || !fitsStorage(in.TaxRate) {
+		return LineUnit{}, decimal.Decimal{}, ErrInvalidTaxRate
+	}
+	return unit, unitPrice, nil
 }
 
 // VariantID returns the variant sold: what the stock counts.

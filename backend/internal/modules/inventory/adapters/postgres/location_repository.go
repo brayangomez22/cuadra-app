@@ -34,7 +34,7 @@ func (r *LocationRepository) Create(ctx context.Context, l *domain.Location) err
 		})
 	})
 	switch {
-	case violates(err, uniqueViolation, locationsNameKey):
+	case db.Violates(err, db.UniqueViolation, locationsNameKey):
 		return domain.ErrLocationNameTaken
 	case err != nil:
 		return fmt.Errorf("inventory: create location: %w", err)
@@ -45,11 +45,8 @@ func (r *LocationRepository) Create(ctx context.Context, l *domain.Location) err
 // GetByID returns domain.ErrLocationNotFound when the location does not
 // exist in tenantID.
 func (r *LocationRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*domain.Location, error) {
-	var row sqlcgen.Location
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		row, err = sqlcgen.New(tx).GetLocation(ctx, id)
-		return err
+	row, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) (sqlcgen.Location, error) {
+		return sqlcgen.New(tx).GetLocation(ctx, id)
 	})
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
@@ -62,11 +59,8 @@ func (r *LocationRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID
 
 // List returns every location of the tenant, by name.
 func (r *LocationRepository) List(ctx context.Context, tenantID uuid.UUID) ([]*domain.Location, error) {
-	var rows []sqlcgen.Location
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		rows, err = sqlcgen.New(tx).ListLocations(ctx)
-		return err
+	rows, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) ([]sqlcgen.Location, error) {
+		return sqlcgen.New(tx).ListLocations(ctx)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("inventory: list locations: %w", err)

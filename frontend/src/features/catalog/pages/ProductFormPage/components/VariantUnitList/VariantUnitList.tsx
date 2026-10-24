@@ -1,6 +1,6 @@
 import { Button, IconPlus } from '@/shared/ui';
 import type { Product, ProductVariant, VariantUnit } from '../../../../api/types';
-import { hasAxes } from '../../../../model/variants';
+import { hasAxes } from '../../../../model/variants/variants';
 import { VariantUnitRow } from '../VariantUnitRow/VariantUnitRow';
 import styles from './VariantUnitList.module.scss';
 

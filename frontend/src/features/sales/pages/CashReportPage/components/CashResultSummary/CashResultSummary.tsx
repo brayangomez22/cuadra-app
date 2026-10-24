@@ -1,7 +1,7 @@
 import { formatMoney } from '@/shared/format';
 import { Badge } from '@/shared/ui';
 import type { CashSession } from '../../../../api/types';
-import { resultLabels, resultTones } from '../../../../model/cashLabels';
+import { resultLabels, resultTones } from '../../../../model/cash/cashLabels';
 import styles from './CashResultSummary.module.scss';
 
 /** The result of the count: whether it matched, and the expected, counted and difference. */

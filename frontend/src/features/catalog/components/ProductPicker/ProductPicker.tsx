@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Field, Input } from '@/shared/ui';
 import { useProductSearch } from '../../hooks/useProductSearch';
-import type { Sellable } from '../../model/variants';
+import type { Sellable } from '../../model/variants/variants';
 import { ChosenProduct } from '../ChosenProduct/ChosenProduct';
 import { PickerResults } from '../PickerResults/PickerResults';
 import styles from './ProductPicker.module.scss';

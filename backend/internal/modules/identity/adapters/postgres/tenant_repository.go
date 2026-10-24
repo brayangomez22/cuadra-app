@@ -56,7 +56,7 @@ func (r *TenantRepository) CreateWithOwner(ctx context.Context, t *domain.Tenant
 	switch {
 	case setUpErr != nil:
 		return setUpErr
-	case isUniqueViolation(err, usersEmailKey):
+	case db.Violates(err, db.UniqueViolation, usersEmailKey):
 		return domain.ErrEmailTaken
 	case err != nil:
 		return fmt.Errorf("identity: create tenant with owner: %w", err)
@@ -78,11 +78,8 @@ func createTenant(ctx context.Context, q *sqlcgen.Queries, t *domain.Tenant) err
 
 // GetByID returns domain.ErrTenantNotFound when the tenant does not exist.
 func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Tenant, error) {
-	var row sqlcgen.GetTenantRow
-	err := r.db.WithTenantTx(ctx, id, func(tx pgx.Tx) error {
-		var err error
-		row, err = sqlcgen.New(tx).GetTenant(ctx, id)
-		return err
+	row, err := db.Read(ctx, r.db, id, func(tx pgx.Tx) (sqlcgen.GetTenantRow, error) {
+		return sqlcgen.New(tx).GetTenant(ctx, id)
 	})
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
@@ -96,16 +93,13 @@ func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.T
 // Update stores the name, status and default tax rate; domain.ErrTenantNotFound if the tenant
 // does not exist.
 func (r *TenantRepository) Update(ctx context.Context, t *domain.Tenant) error {
-	var affected int64
-	err := r.db.WithTenantTx(ctx, t.ID(), func(tx pgx.Tx) error {
-		var err error
-		affected, err = sqlcgen.New(tx).UpdateTenant(ctx, sqlcgen.UpdateTenantParams{
+	affected, err := db.Affected(ctx, r.db, t.ID(), func(tx pgx.Tx) (int64, error) {
+		return sqlcgen.New(tx).UpdateTenant(ctx, sqlcgen.UpdateTenantParams{
 			ID:             t.ID(),
 			Name:           t.Name(),
 			Status:         string(t.Status()),
 			DefaultTaxRate: t.DefaultTaxRate(),
 		})
-		return err
 	})
 	switch {
 	case err != nil:

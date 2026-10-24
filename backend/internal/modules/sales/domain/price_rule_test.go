@@ -26,6 +26,6 @@ func TestNewPriceRuleID(t *testing.T) {
 	})
 
 	t.Run("la regla base es variant_price", func(t *testing.T) {
-		require.Equal(t, domain.PriceRuleID("variant_price"), domain.VariantPriceRule)
+		require.Equal(t, domain.VariantPriceRule, domain.PriceRuleID("variant_price"))
 	})
 }

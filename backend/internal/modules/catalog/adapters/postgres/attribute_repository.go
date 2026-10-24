@@ -26,7 +26,7 @@ func (r *AttributeRepository) Create(ctx context.Context, d *domain.AttributeDef
 		return createAttribute(ctx, sqlcgen.New(tx), d)
 	})
 	switch {
-	case violates(err, uniqueViolation, attributesKeyKey):
+	case db.Violates(err, db.UniqueViolation, attributesKeyKey):
 		return domain.ErrAttributeKeyTaken
 	case err != nil:
 		return fmt.Errorf("catalog: create attribute: %w", err)
@@ -44,41 +44,12 @@ func createAttribute(ctx context.Context, q *sqlcgen.Queries, d *domain.Attribut
 // GetByID returns domain.ErrAttributeNotFound when the definition does not
 // exist in tenantID.
 func (r *AttributeRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*domain.AttributeDefinition, error) {
-	var row sqlcgen.AttributeDefinition
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		row, err = sqlcgen.New(tx).GetAttribute(ctx, id)
-		return err
-	})
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return nil, domain.ErrAttributeNotFound
-	case err != nil:
-		return nil, fmt.Errorf("catalog: get attribute: %w", err)
-	}
-	return attributeFromRow(row)
+	return attributeRows.one(ctx, r.db, tenantID, func(q *sqlcgen.Queries) (sqlcgen.AttributeDefinition, error) { return q.GetAttribute(ctx, id) })
 }
 
 // List returns every definition of the tenant, by label.
 func (r *AttributeRepository) List(ctx context.Context, tenantID uuid.UUID) ([]*domain.AttributeDefinition, error) {
-	var rows []sqlcgen.AttributeDefinition
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		rows, err = sqlcgen.New(tx).ListAttributes(ctx)
-		return err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("catalog: list attributes: %w", err)
-	}
-	out := make([]*domain.AttributeDefinition, 0, len(rows))
-	for _, row := range rows {
-		d, err := attributeFromRow(row)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, d)
-	}
-	return out, nil
+	return attributeRows.all(ctx, r.db, tenantID, func(q *sqlcgen.Queries) ([]sqlcgen.AttributeDefinition, error) { return q.ListAttributes(ctx) })
 }
 
 // Update stores the label, the options and whether the attribute is
@@ -86,8 +57,7 @@ func (r *AttributeRepository) List(ctx context.Context, tenantID uuid.UUID) ([]*
 // removedOptions. The check runs after the update, so the definition's row
 // stays locked until the transaction ends.
 func (r *AttributeRepository) Update(ctx context.Context, d *domain.AttributeDefinition, removedOptions []string) error {
-	err := r.db.WithTenantTx(ctx, d.TenantID(), func(tx pgx.Tx) error {
-		q := sqlcgen.New(tx)
+	return attributeRows.writeTx(ctx, r.db, d.TenantID(), "update", func(q *sqlcgen.Queries) error {
 		affected, err := q.UpdateAttribute(ctx, sqlcgen.UpdateAttributeParams{
 			ID: d.ID(), Label: d.Label(), Options: nonNil(d.Options()), Required: d.Required(),
 		})
@@ -101,29 +71,15 @@ func (r *AttributeRepository) Update(ctx context.Context, d *domain.AttributeDef
 			return nil
 		}
 		used, err := q.AttributeOptionsInUse(ctx, sqlcgen.AttributeOptionsInUseParams{Key: d.Key(), Options: removedOptions})
-		if err != nil {
-			return err
-		}
-		if used {
-			return domain.ErrAttributeOptionInUse
-		}
-		return nil
-	})
-	switch {
-	case errors.Is(err, domain.ErrAttributeNotFound), errors.Is(err, domain.ErrAttributeOptionInUse):
-		return err
-	case err != nil:
-		return fmt.Errorf("catalog: update attribute: %w", err)
-	}
-	return nil
+		return failIfUsed(used, err, domain.ErrAttributeOptionInUse)
+	}, domain.ErrAttributeOptionInUse)
 }
 
 // Delete removes the definition; domain.ErrAttributeInUse if a product has a
 // value for it. Products keep their values by key, with no foreign key, so
 // the check runs after the delete, in its transaction.
 func (r *AttributeRepository) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		q := sqlcgen.New(tx)
+	return attributeRows.writeTx(ctx, r.db, tenantID, "delete", func(q *sqlcgen.Queries) error {
 		key, err := q.DeleteAttribute(ctx, id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ErrAttributeNotFound
@@ -132,21 +88,8 @@ func (r *AttributeRepository) Delete(ctx context.Context, tenantID, id uuid.UUID
 			return err
 		}
 		used, err := q.AttributeInUse(ctx, key)
-		if err != nil {
-			return err
-		}
-		if used {
-			return domain.ErrAttributeInUse
-		}
-		return nil
-	})
-	switch {
-	case errors.Is(err, domain.ErrAttributeNotFound), errors.Is(err, domain.ErrAttributeInUse):
-		return err
-	case err != nil:
-		return fmt.Errorf("catalog: delete attribute: %w", err)
-	}
-	return nil
+		return failIfUsed(used, err, domain.ErrAttributeInUse)
+	}, domain.ErrAttributeInUse)
 }
 
 func attributeFromRow(row sqlcgen.AttributeDefinition) (*domain.AttributeDefinition, error) {
@@ -166,4 +109,8 @@ func nonNil(s []string) []string {
 		return []string{}
 	}
 	return s
+}
+
+var attributeRows = entityRows[sqlcgen.AttributeDefinition, *domain.AttributeDefinition]{
+	single: "attribute", plural: "attributes", notFound: domain.ErrAttributeNotFound, fromRow: attributeFromRow,
 }

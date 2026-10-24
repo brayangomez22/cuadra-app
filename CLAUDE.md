@@ -30,7 +30,7 @@ make sqlc         # regenera código de sqlc
 make openapi      # regenera código desde api/openapi.yaml
 make test         # tests unitarios (rápidos, sin Docker)
 make test-int     # tests de integración (requiere Docker)
-make lint         # gofmt + go vet + golangci-lint
+make lint         # gofmt + go vet + golangci-lint + lint-size + lint-guards
 make lint-neutral   # falla si hay términos de un nicho en el core
 make check        # lint + test + test-int → DEBE pasar antes de dar una tarea por terminada
 make run          # corre la API en :8080
@@ -42,9 +42,10 @@ cd frontend && npm run dev | npm test | npm run lint | npm run lint:styles | npm
 ```
 api/openapi.yaml             # contrato de la API: fuente de verdad
 backend/
-  cmd/api/main.go            # composición: arma dependencias y arranca el servidor
+  cmd/api/main.go            # arranca la API: configuración, telemetría, base de datos y servidor
   internal/
     platform/                # infraestructura compartida: config, db, telemetry, jobs, auth, httpx
+    server/                  # composición: arma los módulos, los une por puertos (ports/) y monta el handler
     modules/<modulo>/        # un módulo por contexto: identity, catalog, inventory, sales...
       domain/                # entidades, value objects, errores de dominio, interfaces de repositorio (puertos)
       app/                   # casos de uso; dependen solo de domain y de interfaces
@@ -53,6 +54,7 @@ backend/
         postgres/            # implementación de repositorios, queries .sql para sqlc
       module.go              # constructor público del módulo (wiring)
   migrations/                # migraciones goose: NNNNN_descripcion.sql
+  test/api/                  # tests de la API completa (integración), sobre internal/server
 frontend/src/
   styles/                    # tokens, mixins, base y temas (ver docs/estilos.md)
   shared/ui/<Componente>/    # componentes base (Button.tsx + Button.module.scss, Field, Table...)
@@ -62,7 +64,7 @@ deploy/observability/        # config del Collector, Prometheus, Loki, Tempo, Gr
 infra/terraform/             # infraestructura de Azure
 e2e/  loadtest/              # Playwright y k6
 .github/workflows/           # CI/CD
-docs/                        # plan/, decisiones.md, estilos.md, negocio.md, runbooks/, legal/
+docs/                        # plan/, decisiones.md, backend.md, frontend.md, estilos.md, negocio.md, runbooks/, legal/
 PRODUCT.md                   # contexto de producto y usuarios para el diseño de UI (lo genera /impeccable init)
 ```
 
@@ -71,9 +73,21 @@ PRODUCT.md                   # contexto de producto y usuarios para el diseño d
 1. `domain/` **no importa** nada del proyecto fuera de sí mismo, ni `pgx`, `net/http`, `sqlc` u OpenTelemetry. Solo librería estándar, `decimal` y `uuid`.
 2. `app/` depende de `domain/` y de interfaces. Nunca de adapters concretos. Puede usar la API de OpenTelemetry (`go.opentelemetry.io/otel`) para spans y métricas, nunca el SDK.
 3. Las reglas de negocio viven en `domain/` (métodos de entidades y value objects). Los handlers solo traducen HTTP ↔ caso de uso; **cero lógica de negocio en handlers o repositorios**.
-4. Un módulo **no importa** el `domain/` ni los `adapters/` de otro módulo. Si necesita algo de otro módulo, define en su propio `app/` una interfaz pequeña (puerto) y el wiring en `cmd/api` la satisface.
+4. Un módulo **no importa** el `domain/` ni los `adapters/` de otro módulo. Si necesita algo de otro módulo, define en su propio `app/` una interfaz pequeña (puerto) y el wiring de `internal/server` la satisface (con un adaptador de `internal/server/ports`).
 5. Las entidades se crean con constructores (`NewProduct(...)`) que validan invariantes. No existen entidades en estado inválido.
 6. Los errores de dominio son valores tipados (`var ErrInsufficientStock = errors.New(...)` o tipos con código). El adapter HTTP los mapea a status. Nunca `panic` para flujo normal.
+
+## Backend: estructura y tamaño
+
+**Antes de crear o mover archivos del backend, lee `docs/backend.md`.** Resumen:
+
+- Las reglas de arquitectura de arriba las verifica `depguard` en el CI: `domain` solo importa la librería estándar, `uuid` y `decimal`; `app` no importa adapters, `pgx`, `net/http` ni el SDK de OpenTelemetry; un módulo no importa otro; `platform/` no importa módulos; `cmd/` y `test/api` no importan módulos (solo `internal/server` los une). `make lint-guards` comprueba que cada regla siga rechazando su import prohibido.
+- Límites en error: 300 líneas por archivo de código y 400 por test (`make lint-size`), `funlen` 50 líneas / 35 sentencias, `gocognit` 15, `cyclop` 10, `nestif` 4, `dupl` 100, `interfacebloat` 10, sin `return nil, nil` (`nilnil`), y `thelper` y `testifylint` en los tests. En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`.
+- `forbidigo` rechaza `uuid.New` (v4), floats en `domain/` y adapters, `time.Now` en `domain/` y `fmt.Print` en `internal/`; `sloglint` exige logs con contexto, mensaje fijo y atributos `snake_case`. Tests de `internal/modules/` verifican que cada módulo tenga sus reglas de `depguard`, que cada caso de uso abra su span y que las métricas se llamen `cuadra.<modulo>.<cosa>`, con unidad y sin `tenant`/`user` como atributo.
+- Un módulo nuevo sigue los pasos de `docs/backend.md` ("Agregar un módulo"); los trabajos en segundo plano, su sección 7.
+- **Sin excepciones por archivo:** si algo pasa un límite, divídelo; nunca agregues una exclusión en `.golangci.yml` ni en `cmd/lint-size`.
+- Un archivo por caso de uso o por recurso; interfaces pequeñas definidas donde se consumen (el handler declara una por recurso).
+- Antes de escribir a mano, usa el kit de `platform/`: `usecase` (spans, `End`, instrumentos declarados con `Create`, `AnyNil`), `db` (`Read`, `Affected`, `Violates`, `PageBounds`), `httpx` (`FormatMoney`, `ParseDecimal`) y `auth` (`RequirePrincipal`, `SeesCosts`). Nada de repositorios base genéricos: el SQL sigue en sqlc.
 
 ## Core genérico y módulos por tipo de negocio (obligatorio)
 
@@ -170,6 +184,8 @@ La UI es una prioridad del producto, no un detalle. **Antes de tocar cualquier `
 - Si un módulo está activo se pregunta con `useModule('<id>')` de `@/features/auth`, nunca con `user.modules.includes` a mano.
 - La página carga datos y compone; las reglas van en `model/`, y la caché (`invalidateQueries`, `setQueryData`, llaves) solo en `api/`. Nada de `utils.ts` genéricos.
 - Las URLs salen de `@/app/routes/paths` (`paths.products.edit(id)`); los tests usan la URL literal. `fakeApi` está tipado contra el OpenAPI.
+- ESLint lo verifica: fuera de `api/` no se importa el cliente de la API ni los hooks de TanStack Query, no se escriben URLs a mano ni se usa `modules.includes`, y `cuadra/file-names` rechaza `utils`, `helpers`, `common` y `misc`.
+- Una carpeta con más de unos 10 archivos (con tests) o que mezcla temas se agrupa en subcarpetas por tema. Una feature nueva sigue los pasos de `docs/frontend.md`, sección 11.
 - Prettier formatea `frontend/` y `e2e/` (`npm run format`; `format:check` en CI).
 - Antes de escribir a mano, usa el kit de `shared/` (`useApiFormErrors`, `QueryState`, `useSearchParamsState`, `useMutationToast`, `Stack` e `Inline`) y crea componentes y hooks con `npm run new -- component|hook <ruta>` (`docs/frontend.md`, sección 10).
 

@@ -11,13 +11,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
-	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 const instrumentationName = "github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory"
@@ -43,7 +41,7 @@ type Deps struct {
 }
 
 // ProductVariants is what the inventory needs of the catalog, through a
-// port cmd/api satisfies with the catalog module: the product of each
+// port internal/server satisfies with the catalog module: the product of each
 // variant, for the product_id of the levels and movements.
 type ProductVariants interface {
 	// ProductsOf returns the product of each of variantIDs that exists in
@@ -58,7 +56,7 @@ type ProductVariants interface {
 // Service runs the inventory use cases.
 type Service struct {
 	Deps
-	tracer trace.Tracer
+	spans usecase.Spans
 
 	movements         metric.Int64Counter
 	insufficientStock metric.Int64Counter
@@ -67,33 +65,22 @@ type Service struct {
 // NewService builds a Service. It fails if a repository is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if d.Locations == nil || d.Stock == nil || d.Policies == nil || d.Variants == nil {
+	if usecase.AnyNil(d.Locations, d.Stock, d.Policies, d.Variants) {
 		return nil, errors.New("inventory: missing service dependency")
 	}
 	if d.Now == nil {
 		d.Now = time.Now
 	}
-	if d.TracerProvider == nil {
-		d.TracerProvider = tracenoop.NewTracerProvider()
-	}
-	if d.MeterProvider == nil {
-		d.MeterProvider = metricnoop.NewMeterProvider()
-	}
-	if d.Logger == nil {
-		d.Logger = slog.New(slog.DiscardHandler)
-	}
+	d.Logger = usecase.Logger(d.Logger)
 
-	s := &Service{Deps: d, tracer: d.TracerProvider.Tracer(instrumentationName)}
-	meter := d.MeterProvider.Meter(instrumentationName)
-	var err error
-	if s.movements, err = meter.Int64Counter("cuadra.inventory.movements",
-		metric.WithDescription("Stock movements registered, by type."),
-		metric.WithUnit("{movement}")); err != nil {
-		return nil, err
-	}
-	if s.insufficientStock, err = meter.Int64Counter("cuadra.inventory.insufficient_stock",
-		metric.WithDescription("Stock exits rejected for lack of stock, by the movement type attempted."),
-		metric.WithUnit("{rejection}")); err != nil {
+	s := &Service{Deps: d, spans: usecase.NewSpans(d.TracerProvider, instrumentationName, "inventory")}
+	err := usecase.Create(usecase.Meter(d.MeterProvider, instrumentationName),
+		usecase.Counter(&s.movements, "cuadra.inventory.movements",
+			"Stock movements registered, by type.", "{movement}"),
+		usecase.Counter(&s.insufficientStock, "cuadra.inventory.insufficient_stock",
+			"Stock exits rejected for lack of stock, by the movement type attempted.", "{rejection}"),
+	)
+	if err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -101,20 +88,7 @@ func NewService(d Deps) (*Service, error) {
 
 // startSpan opens the use case's span with the actor's ids.
 func (s *Service) startSpan(ctx context.Context, name string, a Actor, attrs ...attribute.KeyValue) (context.Context, trace.Span) {
-	attrs = append(attrs,
-		attribute.String("tenant.id", a.TenantID.String()),
-		attribute.String("user.id", a.UserID.String()),
-	)
-	return s.tracer.Start(ctx, "inventory."+name, trace.WithAttributes(attrs...))
-}
-
-// endSpan records err on the span and ends it.
-func endSpan(span trace.Span, err error) {
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	span.End()
+	return s.spans.StartFor(ctx, name, a.TenantID, a.UserID, attrs...)
 }
 
 func variantAttr(id uuid.UUID) attribute.KeyValue {

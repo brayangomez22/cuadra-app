@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // Page size bounds of SearchProducts.
@@ -48,7 +49,7 @@ func (in ProductInput) details(unit domain.UnitRef, attrs domain.Attributes) dom
 // CreateProduct stores a new, active product with its default variant.
 func (s *Service) CreateProduct(ctx context.Context, a Actor, in ProductInput) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "CreateProduct", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	unit, err := s.resolveUnit(ctx, a, in)
 	if err != nil {
@@ -93,7 +94,7 @@ func (s *Service) CreateProduct(ctx context.Context, a Actor, in ProductInput) (
 // UpdateVariant.
 func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in ProductInput) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "UpdateProduct", a, productAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	p, err := s.Products.GetByID(ctx, a.TenantID, id)
 	if err != nil {
@@ -110,18 +111,10 @@ func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in P
 	if err := p.UpdateDetails(in.details(unit, attrs)); err != nil {
 		return nil, err
 	}
-	def := p.DefaultVariant()
-	span.SetAttributes(variantAttr(def.ID()))
-	if err := p.UpdateVariant(def.ID(), domain.VariantDetails{
-		SKU: in.SKU, Barcode: in.Barcode, Cost: in.Cost, AxisValues: def.AxisValues(),
-	}); err != nil {
+	span.SetAttributes(variantAttr(p.DefaultVariant().ID()))
+	priceChanged, err := updateDefaultVariant(p, in)
+	if err != nil {
 		return nil, err
-	}
-	priceChanged := !in.Price.Equal(def.Price())
-	if priceChanged {
-		if err := p.ChangeVariantPrice(def.ID(), in.Price); err != nil {
-			return nil, err
-		}
 	}
 	if err := s.requireCategory(ctx, a, p.CategoryID()); err != nil {
 		return nil, err
@@ -133,6 +126,21 @@ func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in P
 		s.priceChanges.Add(ctx, 1)
 	}
 	return p, nil
+}
+
+// updateDefaultVariant replaces the default variant's data with in's, and
+// its price when in has another one (priceChanged).
+func updateDefaultVariant(p *domain.Product, in ProductInput) (priceChanged bool, err error) {
+	def := p.DefaultVariant()
+	if err := p.UpdateVariant(def.ID(), domain.VariantDetails{
+		SKU: in.SKU, Barcode: in.Barcode, Cost: in.Cost, AxisValues: def.AxisValues(),
+	}); err != nil {
+		return false, err
+	}
+	if in.Price.Equal(def.Price()) {
+		return false, nil
+	}
+	return true, p.ChangeVariantPrice(def.ID(), in.Price)
 }
 
 // resolveUnit returns the tenant's unit that in names;
@@ -158,7 +166,7 @@ func (s *Service) requireCategory(ctx context.Context, a Actor, id *uuid.UUID) e
 // GetProduct returns a product, active or not.
 func (s *Service) GetProduct(ctx context.Context, a Actor, id uuid.UUID) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "GetProduct", a, productAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	return s.Products.GetByID(ctx, a.TenantID, id)
 }
@@ -168,7 +176,7 @@ func (s *Service) GetProduct(ctx context.Context, a Actor, id uuid.UUID) (_ *dom
 // span: it may be anything the user typed.
 func (s *Service) SearchProducts(ctx context.Context, a Actor, f domain.ProductFilter) (_ domain.ProductPage, err error) {
 	ctx, span := s.startSpan(ctx, "SearchProducts", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	switch {
 	case f.Limit <= 0:
@@ -195,7 +203,7 @@ func (s *Service) SearchProducts(ctx context.Context, a Actor, f domain.ProductF
 // DeactivateProduct hides the product from sales. Idempotent.
 func (s *Service) DeactivateProduct(ctx context.Context, a Actor, id uuid.UUID) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "DeactivateProduct", a, productAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	return s.setActive(ctx, a, id, false)
 }
@@ -203,7 +211,7 @@ func (s *Service) DeactivateProduct(ctx context.Context, a Actor, id uuid.UUID) 
 // ActivateProduct makes the product sellable again. Idempotent.
 func (s *Service) ActivateProduct(ctx context.Context, a Actor, id uuid.UUID) (_ *domain.Product, err error) {
 	ctx, span := s.startSpan(ctx, "ActivateProduct", a, productAttr(id))
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	return s.setActive(ctx, a, id, true)
 }

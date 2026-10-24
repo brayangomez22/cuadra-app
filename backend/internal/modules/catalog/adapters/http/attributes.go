@@ -4,13 +4,26 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
+
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/adapters/http/catalogapi"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
 )
 
+// AttributeUseCases are the use cases of the attribute definitions.
+type AttributeUseCases interface {
+	CreateAttribute(ctx context.Context, a app.Actor, in app.AttributeInput) (*domain.AttributeDefinition, error)
+	UpdateAttribute(ctx context.Context, a app.Actor, id uuid.UUID, in app.AttributeUpdate) (*domain.AttributeDefinition, error)
+	ListAttributes(ctx context.Context, a app.Actor) ([]*domain.AttributeDefinition, error)
+	DeleteAttribute(ctx context.Context, a app.Actor, id uuid.UUID) error
+}
+
+// attributeHandlers are the operations on attribute definitions.
+type attributeHandlers struct{ uc AttributeUseCases }
+
 // ListAttributes lists the tenant's attribute definitions.
-func (h *Handler) ListAttributes(ctx context.Context, _ catalogapi.ListAttributesRequestObject) (catalogapi.ListAttributesResponseObject, error) {
+func (h *attributeHandlers) ListAttributes(ctx context.Context, _ catalogapi.ListAttributesRequestObject) (catalogapi.ListAttributesResponseObject, error) {
 	defs, err := h.uc.ListAttributes(ctx, actor(ctx))
 	if err != nil {
 		return nil, err
@@ -23,7 +36,7 @@ func (h *Handler) ListAttributes(ctx context.Context, _ catalogapi.ListAttribute
 }
 
 // CreateAttribute defines a product attribute.
-func (h *Handler) CreateAttribute(ctx context.Context, req catalogapi.CreateAttributeRequestObject) (catalogapi.CreateAttributeResponseObject, error) {
+func (h *attributeHandlers) CreateAttribute(ctx context.Context, req catalogapi.CreateAttributeRequestObject) (catalogapi.CreateAttributeResponseObject, error) {
 	b := req.Body
 	typ, err := domain.ParseAttributeType(string(b.Type))
 	if err != nil {
@@ -40,7 +53,7 @@ func (h *Handler) CreateAttribute(ctx context.Context, req catalogapi.CreateAttr
 
 // UpdateAttribute changes a definition's label, options and whether it is
 // required.
-func (h *Handler) UpdateAttribute(ctx context.Context, req catalogapi.UpdateAttributeRequestObject) (catalogapi.UpdateAttributeResponseObject, error) {
+func (h *attributeHandlers) UpdateAttribute(ctx context.Context, req catalogapi.UpdateAttributeRequestObject) (catalogapi.UpdateAttributeResponseObject, error) {
 	b := req.Body
 	d, err := h.uc.UpdateAttribute(ctx, actor(ctx), req.AttributeId, app.AttributeUpdate{
 		Label: b.Label, Options: options(b.Options), Required: b.Required,
@@ -52,7 +65,7 @@ func (h *Handler) UpdateAttribute(ctx context.Context, req catalogapi.UpdateAttr
 }
 
 // DeleteAttribute removes a definition no product has.
-func (h *Handler) DeleteAttribute(ctx context.Context, req catalogapi.DeleteAttributeRequestObject) (catalogapi.DeleteAttributeResponseObject, error) {
+func (h *attributeHandlers) DeleteAttribute(ctx context.Context, req catalogapi.DeleteAttributeRequestObject) (catalogapi.DeleteAttributeResponseObject, error) {
 	if err := h.uc.DeleteAttribute(ctx, actor(ctx), req.AttributeId); err != nil {
 		return nil, err
 	}

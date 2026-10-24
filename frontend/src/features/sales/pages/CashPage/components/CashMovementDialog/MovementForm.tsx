@@ -3,8 +3,12 @@ import { useForm } from 'react-hook-form';
 import { useApiFormErrors } from '@/shared/forms/useApiFormErrors';
 import { Alert, Field, Input } from '@/shared/ui';
 import { useRecordCashMovement } from '../../../../api/cashSessions';
-import type { CashMovementKind } from '../../../../model/cashLabels';
-import { cashMovementSchema, type CashMovementFormInput, type CashMovementValues } from '../../../../model/cashSchemas';
+import type { CashMovementKind } from '../../../../model/cash/cashLabels';
+import {
+  cashMovementSchema,
+  type CashMovementFormInput,
+  type CashMovementValues,
+} from '../../../../model/cash/cashSchemas';
 import styles from './CashMovementDialog.module.scss';
 
 // No error of POST /cash-sessions/{id}/movements belongs to a field.

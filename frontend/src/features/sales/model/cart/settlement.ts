@@ -1,5 +1,5 @@
 import { fromUnits, toUnits } from '@/shared/money/decimal';
-import type { PaymentInput } from '../paymentMethods';
+import type { PaymentInput } from '../payments/paymentMethods';
 
 export type Settlement = {
   paid: string;

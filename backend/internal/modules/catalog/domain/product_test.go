@@ -87,6 +87,7 @@ func TestNewProduct(t *testing.T) {
 		}{
 			{"ferretería: cemento por bulto", validProductParams, "CEM-GRIS-50"},
 			{"almacén de ropa: camiseta básica", func(t *testing.T) domain.NewProductParams {
+				t.Helper()
 				p := validProductParams(t)
 				p.Name, p.BaseUnit = "Camiseta básica", piece
 				p.Variant.SKU, p.Variant.Barcode = "cam-basica", ""

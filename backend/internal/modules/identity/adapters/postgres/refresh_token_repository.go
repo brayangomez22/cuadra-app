@@ -49,11 +49,8 @@ func createToken(ctx context.Context, q *sqlcgen.Queries, t *domain.RefreshToken
 // GetByHash returns domain.ErrRefreshTokenNotFound when no token of tenantID
 // has hash.
 func (r *RefreshTokenRepository) GetByHash(ctx context.Context, tenantID uuid.UUID, hash []byte) (*domain.RefreshToken, error) {
-	var row sqlcgen.RefreshToken
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		row, err = sqlcgen.New(tx).GetRefreshTokenByHash(ctx, sqlcgen.GetRefreshTokenByHashParams{TenantID: tenantID, TokenHash: hash})
-		return err
+	row, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) (sqlcgen.RefreshToken, error) {
+		return sqlcgen.New(tx).GetRefreshTokenByHash(ctx, sqlcgen.GetRefreshTokenByHashParams{TenantID: tenantID, TokenHash: hash})
 	})
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):

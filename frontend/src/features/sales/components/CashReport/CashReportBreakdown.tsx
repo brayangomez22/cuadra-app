@@ -1,9 +1,9 @@
 import { formatMoney } from '@/shared/format';
 import type { CashSession } from '../../api/types';
-import { movementLabels } from '../../model/cashLabels';
-import { denominationSubtotal } from '../../model/denominations';
-import { negated } from '../../model/negated';
-import { methodLabels } from '../../model/paymentMethods';
+import { movementLabels } from '../../model/cash/cashLabels';
+import { denominationSubtotal } from '../../model/cash/denominations';
+import { negated } from '../../model/cash/negated';
+import { methodLabels } from '../../model/payments/paymentMethods';
 import styles from './CashReport.module.scss';
 import { ReportFigure } from './ReportFigure';
 

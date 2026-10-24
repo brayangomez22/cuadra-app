@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -26,7 +25,7 @@ func (r *CategoryRepository) Create(ctx context.Context, c *domain.Category) err
 		return createCategory(ctx, sqlcgen.New(tx), c)
 	})
 	switch {
-	case violates(err, foreignKeyViolation, categoriesParentFKey):
+	case db.Violates(err, db.ForeignKeyViolation, categoriesParentFKey):
 		return domain.ErrCategoryNotFound
 	case err != nil:
 		return fmt.Errorf("catalog: create category: %w", err)
@@ -47,91 +46,36 @@ func createCategory(ctx context.Context, q *sqlcgen.Queries, c *domain.Category)
 // GetByID returns domain.ErrCategoryNotFound when the category does not
 // exist in tenantID.
 func (r *CategoryRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*domain.Category, error) {
-	var row sqlcgen.Category
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		row, err = sqlcgen.New(tx).GetCategory(ctx, id)
-		return err
-	})
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return nil, domain.ErrCategoryNotFound
-	case err != nil:
-		return nil, fmt.Errorf("catalog: get category: %w", err)
-	}
-	return categoryFromRow(row)
+	return categoryRows.one(ctx, r.db, tenantID, func(q *sqlcgen.Queries) (sqlcgen.Category, error) { return q.GetCategory(ctx, id) })
 }
 
 // List returns every category of the tenant, by name.
 func (r *CategoryRepository) List(ctx context.Context, tenantID uuid.UUID) ([]*domain.Category, error) {
-	var rows []sqlcgen.Category
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		rows, err = sqlcgen.New(tx).ListCategories(ctx)
-		return err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("catalog: list categories: %w", err)
-	}
-	out := make([]*domain.Category, 0, len(rows))
-	for _, row := range rows {
-		c, err := categoryFromRow(row)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, c)
-	}
-	return out, nil
+	return categoryRows.all(ctx, r.db, tenantID, func(q *sqlcgen.Queries) ([]sqlcgen.Category, error) { return q.ListCategories(ctx) })
 }
 
 // Update stores the name and parent.
 func (r *CategoryRepository) Update(ctx context.Context, c *domain.Category) error {
-	var affected int64
-	err := r.db.WithTenantTx(ctx, c.TenantID(), func(tx pgx.Tx) error {
-		var err error
-		affected, err = sqlcgen.New(tx).UpdateCategory(ctx, sqlcgen.UpdateCategoryParams{
-			ID: c.ID(), Name: c.Name(), ParentID: c.ParentID(),
+	// A missing parent violates the foreign key: the category is not found.
+	return categoryRows.writeOne(ctx, r.db, c.TenantID(), "update",
+		onViolation(db.ForeignKeyViolation, categoriesParentFKey, domain.ErrCategoryNotFound),
+		func(q *sqlcgen.Queries) (int64, error) {
+			return q.UpdateCategory(ctx, sqlcgen.UpdateCategoryParams{ID: c.ID(), Name: c.Name(), ParentID: c.ParentID()})
 		})
-		return err
-	})
-	switch {
-	case violates(err, foreignKeyViolation, categoriesParentFKey):
-		return domain.ErrCategoryNotFound
-	case err != nil:
-		return fmt.Errorf("catalog: update category: %w", err)
-	case affected == 0:
-		return domain.ErrCategoryNotFound
-	}
-	return nil
 }
 
 // Delete removes the category. The foreign keys of its products and
 // subcategories refuse the delete, so a concurrent insert cannot slip in.
 func (r *CategoryRepository) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
-	var affected int64
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		affected, err = sqlcgen.New(tx).DeleteCategory(ctx, id)
-		return err
-	})
-	switch {
-	case isForeignKeyViolation(err):
-		return domain.ErrCategoryInUse
-	case err != nil:
-		return fmt.Errorf("catalog: delete category: %w", err)
-	case affected == 0:
-		return domain.ErrCategoryNotFound
-	}
-	return nil
+	return categoryRows.writeOne(ctx, r.db, tenantID, "delete",
+		onCode(db.ForeignKeyViolation, domain.ErrCategoryInUse),
+		func(q *sqlcgen.Queries) (int64, error) { return q.DeleteCategory(ctx, id) })
 }
 
 // Ancestors returns id and its ancestors, nearest first.
 func (r *CategoryRepository) Ancestors(ctx context.Context, tenantID, id uuid.UUID) ([]uuid.UUID, error) {
-	var chain []uuid.UUID
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		chain, err = sqlcgen.New(tx).CategoryAncestors(ctx, id)
-		return err
+	chain, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) ([]uuid.UUID, error) {
+		return sqlcgen.New(tx).CategoryAncestors(ctx, id)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("catalog: category ancestors: %w", err)
@@ -147,4 +91,8 @@ func categoryFromRow(row sqlcgen.Category) (*domain.Category, error) {
 		return nil, fmt.Errorf("catalog: category %s: %w", row.ID, err)
 	}
 	return c, nil
+}
+
+var categoryRows = entityRows[sqlcgen.Category, *domain.Category]{
+	single: "category", plural: "categories", notFound: domain.ErrCategoryNotFound, fromRow: categoryFromRow,
 }

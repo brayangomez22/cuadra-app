@@ -5,9 +5,23 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/adapters/http/catalogapi"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
 )
+
+// UnitUseCases are the use cases of the units of measure.
+type UnitUseCases interface {
+	CreateUnit(ctx context.Context, a app.Actor, code, name string) (*domain.UnitOfMeasure, error)
+	UpdateUnit(ctx context.Context, a app.Actor, id uuid.UUID, code, name string) (*domain.UnitOfMeasure, error)
+	ListUnits(ctx context.Context, a app.Actor) ([]*domain.UnitOfMeasure, error)
+	DeleteUnit(ctx context.Context, a app.Actor, id uuid.UUID) error
+}
+
+// unitHandlers are the operations on units of measure.
+type unitHandlers struct{ uc UnitUseCases }
 
 // errUnitPathNotFound is domain.ErrUnitNotFound when the unit is the
 // resource of the path (404). As the unit of a product it is a field of the
@@ -23,7 +37,7 @@ func unitPathError(err error) error {
 }
 
 // ListUnits lists the tenant's units of measure.
-func (h *Handler) ListUnits(ctx context.Context, _ catalogapi.ListUnitsRequestObject) (catalogapi.ListUnitsResponseObject, error) {
+func (h *unitHandlers) ListUnits(ctx context.Context, _ catalogapi.ListUnitsRequestObject) (catalogapi.ListUnitsResponseObject, error) {
 	units, err := h.uc.ListUnits(ctx, actor(ctx))
 	if err != nil {
 		return nil, err
@@ -36,7 +50,7 @@ func (h *Handler) ListUnits(ctx context.Context, _ catalogapi.ListUnitsRequestOb
 }
 
 // CreateUnit adds a unit of measure.
-func (h *Handler) CreateUnit(ctx context.Context, req catalogapi.CreateUnitRequestObject) (catalogapi.CreateUnitResponseObject, error) {
+func (h *unitHandlers) CreateUnit(ctx context.Context, req catalogapi.CreateUnitRequestObject) (catalogapi.CreateUnitResponseObject, error) {
 	u, err := h.uc.CreateUnit(ctx, actor(ctx), req.Body.Code, req.Body.Name)
 	if err != nil {
 		return nil, err
@@ -45,7 +59,7 @@ func (h *Handler) CreateUnit(ctx context.Context, req catalogapi.CreateUnitReque
 }
 
 // UpdateUnit changes a unit's code and name.
-func (h *Handler) UpdateUnit(ctx context.Context, req catalogapi.UpdateUnitRequestObject) (catalogapi.UpdateUnitResponseObject, error) {
+func (h *unitHandlers) UpdateUnit(ctx context.Context, req catalogapi.UpdateUnitRequestObject) (catalogapi.UpdateUnitResponseObject, error) {
 	u, err := h.uc.UpdateUnit(ctx, actor(ctx), req.UnitId, req.Body.Code, req.Body.Name)
 	if err != nil {
 		return nil, unitPathError(err)
@@ -54,7 +68,7 @@ func (h *Handler) UpdateUnit(ctx context.Context, req catalogapi.UpdateUnitReque
 }
 
 // DeleteUnit removes a unit no product uses.
-func (h *Handler) DeleteUnit(ctx context.Context, req catalogapi.DeleteUnitRequestObject) (catalogapi.DeleteUnitResponseObject, error) {
+func (h *unitHandlers) DeleteUnit(ctx context.Context, req catalogapi.DeleteUnitRequestObject) (catalogapi.DeleteUnitResponseObject, error) {
 	if err := h.uc.DeleteUnit(ctx, actor(ctx), req.UnitId); err != nil {
 		return nil, unitPathError(err)
 	}

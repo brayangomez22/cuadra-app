@@ -1,6 +1,6 @@
 import { Alert, Button, DialogClose, IconPlus } from '@/shared/ui';
-import { amountText } from '../../../../model/payments';
-import type { PaymentInput } from '../../../../model/paymentMethods';
+import { amountText } from '../../../../model/payments/payments';
+import type { PaymentInput } from '../../../../model/payments/paymentMethods';
 import { MAX_PAYMENTS, usePayments } from '../../hooks/usePayments';
 import { PaymentFigures } from '../PaymentFigures/PaymentFigures';
 import { PaymentRow } from '../PaymentRow/PaymentRow';

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCloseCashSession } from '../../../api/cashSessions';
 import type { CashSession } from '../../../api/types';
-import { countedTotal, readCounts } from '../../../model/denominations';
+import { countedTotal, readCounts } from '../../../model/cash/denominations';
 
 /**
  * The count of the drawer as it is typed, and its closing: "Cerrar caja"

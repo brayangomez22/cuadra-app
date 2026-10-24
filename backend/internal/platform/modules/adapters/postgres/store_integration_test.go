@@ -34,8 +34,8 @@ func createTenant(t *testing.T, d *db.DB) uuid.UUID {
 // set applies one change, unconditionally.
 func set(t *testing.T, store *postgres.Store, tenantID uuid.UUID, module string, active bool) {
 	t.Helper()
-	require.NoError(t, store.Update(t.Context(), tenantID, func([]string) (*modules.Change, error) {
-		return &modules.Change{Module: module, Active: active, By: uuid.Must(uuid.NewV7()), At: now}, nil
+	require.NoError(t, store.Update(t.Context(), tenantID, func([]string) (modules.Change, bool, error) {
+		return modules.Change{Module: module, Active: active, By: uuid.Must(uuid.NewV7()), At: now}, true, nil
 	}))
 }
 
@@ -75,9 +75,9 @@ func TestStore(t *testing.T) {
 		set(t, store, tenant, "variants", true)
 
 		var seen []string
-		require.NoError(t, store.Update(t.Context(), tenant, func(active []string) (*modules.Change, error) {
+		require.NoError(t, store.Update(t.Context(), tenant, func(active []string) (modules.Change, bool, error) {
 			seen = active
-			return nil, nil
+			return modules.Change{}, false, nil
 		}))
 
 		require.Equal(t, []string{"variants"}, seen)
@@ -86,8 +86,8 @@ func TestStore(t *testing.T) {
 	t.Run("un error de decide no escribe", func(t *testing.T) {
 		tenant := createTenant(t, d)
 
-		err := store.Update(t.Context(), tenant, func([]string) (*modules.Change, error) {
-			return nil, modules.ErrDependencyInactive
+		err := store.Update(t.Context(), tenant, func([]string) (modules.Change, bool, error) {
+			return modules.Change{}, false, modules.ErrDependencyInactive
 		})
 
 		require.ErrorIs(t, err, modules.ErrDependencyInactive)
@@ -106,8 +106,8 @@ func TestStore(t *testing.T) {
 		errs := make(chan error, writers)
 		for range writers {
 			wg.Go(func() {
-				errs <- store.Update(t.Context(), tenant, func(active []string) (*modules.Change, error) {
-					return &modules.Change{Module: "m" + string(rune('0'+len(active))), Active: true, By: uuid.Must(uuid.NewV7()), At: now}, nil
+				errs <- store.Update(t.Context(), tenant, func(active []string) (modules.Change, bool, error) {
+					return modules.Change{Module: "m" + string(rune('0'+len(active))), Active: true, By: uuid.Must(uuid.NewV7()), At: now}, true, nil
 				})
 			})
 		}

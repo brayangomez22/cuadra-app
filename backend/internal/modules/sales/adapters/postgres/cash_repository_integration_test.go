@@ -4,7 +4,6 @@ package postgres_test
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
 
@@ -231,11 +230,9 @@ func TestCashSessionRepository(t *testing.T) {
 
 		locked := make(chan struct{})
 		release := make(chan struct{})
-		var wg sync.WaitGroup
-		wg.Add(1)
+		saved := make(chan error, 1)
 		go func() {
-			defer wg.Done()
-			err := f.sales.SaveConfirmed(context.Background(), sale, func(ctx context.Context) error {
+			saved <- f.sales.SaveConfirmed(context.Background(), sale, func(ctx context.Context) error {
 				if err := repo.EnsureOpen(ctx, tn.id, s.ID()); err != nil {
 					return err
 				}
@@ -243,15 +240,19 @@ func TestCashSessionRepository(t *testing.T) {
 				<-release
 				return nil
 			})
-			require.NoError(t, err)
 		}()
 		<-locked
 
-		closed := make(chan *domain.CashSession, 1)
+		// The goroutines only send their results: require runs in the test's
+		// goroutine.
+		type closeResult struct {
+			session *domain.CashSession
+			err     error
+		}
+		closed := make(chan closeResult, 1)
 		go func() {
 			c, err := repo.Close(context.Background(), tn.id, s.ID(), closeWith(s))
-			require.NoError(t, err)
-			closed <- c
+			closed <- closeResult{c, err}
 		}()
 		select {
 		case <-closed:
@@ -259,9 +260,10 @@ func TestCashSessionRepository(t *testing.T) {
 		case <-time.After(200 * time.Millisecond):
 		}
 		close(release)
-		wg.Wait()
+		require.NoError(t, <-saved)
 		c := <-closed
-		require.Equal(t, 1, c.Closing().Activity.Sales)
+		require.NoError(t, c.err)
+		require.Equal(t, 1, c.session.Closing().Activity.Sales)
 	})
 
 	t.Run("aislamiento: la caja del tenant A no se ve ni se modifica desde el tenant B", func(t *testing.T) {

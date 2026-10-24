@@ -14,6 +14,7 @@ import (
 func TestRehydrateTenant(t *testing.T) {
 	createdAt := time.Date(2026, 10, 9, 20, 0, 0, 0, time.UTC)
 	valid := func(t *testing.T) domain.TenantSnapshot {
+		t.Helper()
 		return domain.TenantSnapshot{
 			ID:               uuid.Must(uuid.NewV7()),
 			Name:             "Ferretería El Tornillo",
@@ -66,6 +67,7 @@ func TestRehydrateTenant(t *testing.T) {
 func TestRehydrateUser(t *testing.T) {
 	createdAt := time.Date(2026, 10, 9, 20, 0, 0, 0, time.UTC)
 	valid := func(t *testing.T) domain.UserSnapshot {
+		t.Helper()
 		return domain.UserSnapshot{
 			ID:           uuid.Must(uuid.NewV7()),
 			TenantID:     uuid.Must(uuid.NewV7()),

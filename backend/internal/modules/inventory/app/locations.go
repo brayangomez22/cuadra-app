@@ -6,12 +6,13 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 // CreateLocation stores a new, active location.
 func (s *Service) CreateLocation(ctx context.Context, a Actor, name string) (_ *domain.Location, err error) {
 	ctx, span := s.startSpan(ctx, "CreateLocation", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	l, err := domain.NewLocation(a.TenantID, name, s.Now())
 	if err != nil {
@@ -27,7 +28,7 @@ func (s *Service) CreateLocation(ctx context.Context, a Actor, name string) (_ *
 // ListLocations returns every location of the tenant, by name.
 func (s *Service) ListLocations(ctx context.Context, a Actor) (_ []*domain.Location, err error) {
 	ctx, span := s.startSpan(ctx, "ListLocations", a)
-	defer func() { endSpan(span, err) }()
+	defer func() { usecase.End(span, err) }()
 
 	return s.Locations.List(ctx, a.TenantID)
 }

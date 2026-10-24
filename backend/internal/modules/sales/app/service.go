@@ -2,7 +2,7 @@
 // checkout), VoidSale, the queries of a sale and of the day's sales, and the
 // cash sessions (opening, cash ins and outs, closing with the count). The
 // catalog and the stock are reached through the ports VariantCatalog and
-// StockReserver, which cmd/api satisfies with the other modules; prices come
+// StockReserver, which internal/server satisfies with the other modules; prices come
 // from a PriceResolver, a chain of rules that modules extend.
 package app
 
@@ -15,13 +15,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
-	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 const instrumentationName = "github.com/brayangomez22/cuadra-app/backend/internal/modules/sales"
@@ -108,7 +106,7 @@ type Deps struct {
 // Service runs the sales use cases.
 type Service struct {
 	Deps
-	tracer trace.Tracer
+	spans usecase.Spans
 
 	confirmed          metric.Int64Counter
 	amount             metric.Float64Histogram
@@ -138,7 +136,7 @@ var cashDifferenceBuckets = []float64{0, 50, 500, 1_000, 5_000, 10_000, 20_000, 
 // NewService builds a Service. It fails if a port is missing or a metric
 // instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if d.Catalog == nil || d.Stock == nil || d.Sales == nil || d.Policies == nil || d.CashSessions == nil {
+	if usecase.AnyNil(d.Catalog, d.Stock, d.Sales, d.Policies, d.CashSessions) {
 		return nil, errors.New("sales: missing service dependency")
 	}
 	if d.Prices == nil {
@@ -151,107 +149,49 @@ func NewService(d Deps) (*Service, error) {
 	if d.Now == nil {
 		d.Now = time.Now
 	}
-	if d.TracerProvider == nil {
-		d.TracerProvider = tracenoop.NewTracerProvider()
-	}
-	if d.MeterProvider == nil {
-		d.MeterProvider = metricnoop.NewMeterProvider()
-	}
-	if d.Logger == nil {
-		d.Logger = slog.New(slog.DiscardHandler)
-	}
+	d.Logger = usecase.Logger(d.Logger)
 
-	s := &Service{Deps: d, tracer: d.TracerProvider.Tracer(instrumentationName)}
-	meter := d.MeterProvider.Meter(instrumentationName)
-	var err error
-	if s.confirmed, err = meter.Int64Counter("cuadra.sales.confirmed",
-		metric.WithDescription("Sales confirmed."),
-		metric.WithUnit("{sale}")); err != nil {
-		return nil, err
-	}
-	if s.amount, err = meter.Float64Histogram("cuadra.sales.amount",
-		metric.WithDescription("Total of the sales confirmed, IVA included."),
-		metric.WithUnit("{COP}"),
-		metric.WithExplicitBucketBoundaries(amountBuckets...)); err != nil {
-		return nil, err
-	}
-	if s.discountRejected, err = meter.Int64Counter("cuadra.sales.discount_rejected",
-		metric.WithDescription("Sales rejected for a discount above the user's limit."),
-		metric.WithUnit("{rejection}")); err != nil {
-		return nil, err
-	}
-	if s.voided, err = meter.Int64Counter("cuadra.sales.voided",
-		metric.WithDescription("Sales voided."),
-		metric.WithUnit("{sale}")); err != nil {
-		return nil, err
-	}
-	if s.priceRules, err = meter.Int64Counter("cuadra.sales.price_rule_applied",
-		metric.WithDescription("Lines of confirmed sales priced, by the rule that gave the price (price.rule)."),
-		metric.WithUnit("{line}")); err != nil {
-		return nil, err
-	}
-	if s.alternateUnitLines, err = meter.Int64Counter("cuadra.sales.alternate_unit_lines",
-		metric.WithDescription("Lines of confirmed sales sold in an alternate unit of the variant."),
-		metric.WithUnit("{line}")); err != nil {
-		return nil, err
-	}
-	if err := s.newCashInstruments(meter); err != nil {
+	s := &Service{Deps: d, spans: usecase.NewSpans(d.TracerProvider, instrumentationName, "sales")}
+	if err := usecase.Create(usecase.Meter(d.MeterProvider, instrumentationName), s.instruments()...); err != nil {
 		return nil, err
 	}
 	return s, nil
 }
 
+// instruments are the metrics of the sales and of the cash sessions.
+func (s *Service) instruments() []usecase.Instrument {
+	return []usecase.Instrument{
+		usecase.Counter(&s.confirmed, "cuadra.sales.confirmed", "Sales confirmed.", "{sale}"),
+		usecase.Histogram(&s.amount, "cuadra.sales.amount",
+			"Total of the sales confirmed, IVA included.", "{COP}", amountBuckets...),
+		usecase.Counter(&s.discountRejected, "cuadra.sales.discount_rejected",
+			"Sales rejected for a discount above the user's limit.", "{rejection}"),
+		usecase.Counter(&s.voided, "cuadra.sales.voided", "Sales voided.", "{sale}"),
+		usecase.Counter(&s.priceRules, "cuadra.sales.price_rule_applied",
+			"Lines of confirmed sales priced, by the rule that gave the price (price.rule).", "{line}"),
+		usecase.Counter(&s.alternateUnitLines, "cuadra.sales.alternate_unit_lines",
+			"Lines of confirmed sales sold in an alternate unit of the variant.", "{line}"),
+
+		usecase.Counter(&s.cashOpened, "cuadra.sales.cash_sessions_opened", "Cash sessions opened.", "{session}"),
+		usecase.Counter(&s.cashClosed, "cuadra.sales.cash_sessions_closed",
+			"Cash sessions closed, by result of the count (cash.result).", "{session}"),
+		usecase.Histogram(&s.cashDifference, "cuadra.sales.cash_difference",
+			"Absolute difference between the counted and the expected cash at closing, by cash.result.", "{COP}",
+			cashDifferenceBuckets...),
+		usecase.Counter(&s.cashMovements, "cuadra.sales.cash_movements",
+			"Cash ins and outs recorded, by cash.movement_kind.", "{movement}"),
+		usecase.Counter(&s.cashSessionRequired, "cuadra.sales.cash_session_required_rejected",
+			"Sales rejected because the cashier had no open cash session.", "{rejection}"),
+	}
+}
+
 // startSpan opens the use case's span with the actor's ids.
 func (s *Service) startSpan(ctx context.Context, name string, a Actor, attrs ...attribute.KeyValue) (context.Context, trace.Span) {
-	attrs = append(attrs,
-		attribute.String("tenant.id", a.TenantID.String()),
-		attribute.String("user.id", a.UserID.String()),
-	)
-	return s.tracer.Start(ctx, "sales."+name, trace.WithAttributes(attrs...))
+	return s.spans.StartFor(ctx, name, a.TenantID, a.UserID, attrs...)
 }
 
 func saleAttr(id uuid.UUID) attribute.KeyValue {
 	return attribute.String("sale.id", id.String())
-}
-
-// endSpan records err on the span and ends it.
-func endSpan(span trace.Span, err error) {
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	span.End()
-}
-
-func (s *Service) newCashInstruments(meter metric.Meter) error {
-	var err error
-	if s.cashOpened, err = meter.Int64Counter("cuadra.sales.cash_sessions_opened",
-		metric.WithDescription("Cash sessions opened."),
-		metric.WithUnit("{session}")); err != nil {
-		return err
-	}
-	if s.cashClosed, err = meter.Int64Counter("cuadra.sales.cash_sessions_closed",
-		metric.WithDescription("Cash sessions closed, by result of the count (cash.result)."),
-		metric.WithUnit("{session}")); err != nil {
-		return err
-	}
-	if s.cashDifference, err = meter.Float64Histogram("cuadra.sales.cash_difference",
-		metric.WithDescription("Absolute difference between the counted and the expected cash at closing, by cash.result."),
-		metric.WithUnit("{COP}"),
-		metric.WithExplicitBucketBoundaries(cashDifferenceBuckets...)); err != nil {
-		return err
-	}
-	if s.cashMovements, err = meter.Int64Counter("cuadra.sales.cash_movements",
-		metric.WithDescription("Cash ins and outs recorded, by cash.movement_kind."),
-		metric.WithUnit("{movement}")); err != nil {
-		return err
-	}
-	if s.cashSessionRequired, err = meter.Int64Counter("cuadra.sales.cash_session_required_rejected",
-		metric.WithDescription("Sales rejected because the cashier had no open cash session."),
-		metric.WithUnit("{rejection}")); err != nil {
-		return err
-	}
-	return nil
 }
 
 func cashSessionAttr(id uuid.UUID) attribute.KeyValue {

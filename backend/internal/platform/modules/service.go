@@ -9,11 +9,10 @@ import (
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
-	tracenoop "go.opentelemetry.io/otel/trace/noop"
+
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
 const instrumentationName = "github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
@@ -33,11 +32,15 @@ type Store interface {
 	// may include IDs that are no longer registered.
 	Active(ctx context.Context, tenantID uuid.UUID) ([]string, error)
 	// Update runs decide with the tenant's active modules and applies the
-	// change it returns (none when it returns nil). One tenant's updates run
-	// one at a time, so decide sees the state its change applies to. When
-	// decide fails, nothing is written and its error is returned as is.
-	Update(ctx context.Context, tenantID uuid.UUID, decide func(active []string) (*Change, error)) error
+	// change it returns, if any. One tenant's updates run one at a time, so
+	// decide sees the state its change applies to. When decide fails,
+	// nothing is written and its error is returned as is.
+	Update(ctx context.Context, tenantID uuid.UUID, decide Decide) error
 }
+
+// Decide chooses the change to apply to a tenant's active modules; ok is
+// false when there is nothing to change.
+type Decide func(active []string) (change Change, ok bool, err error)
 
 // Deps are the Service's dependencies. Now defaults to time.Now, the
 // providers to no-ops and Logger to a discarding logger.
@@ -59,33 +62,26 @@ type Status struct {
 // Service turns the registered modules on and off for each tenant.
 type Service struct {
 	Deps
-	tracer  trace.Tracer
+	spans   usecase.Spans
 	changes metric.Int64Counter
 }
 
 // NewService builds a Service. It fails if the registry or the store is
 // missing, or the metric cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if d.Registry == nil || d.Store == nil {
+	if usecase.AnyNil(d.Registry, d.Store) {
 		return nil, errors.New("modules: missing service dependency")
 	}
 	if d.Now == nil {
 		d.Now = time.Now
 	}
-	if d.TracerProvider == nil {
-		d.TracerProvider = tracenoop.NewTracerProvider()
-	}
-	if d.MeterProvider == nil {
-		d.MeterProvider = metricnoop.NewMeterProvider()
-	}
-	if d.Logger == nil {
-		d.Logger = slog.New(slog.DiscardHandler)
-	}
-	s := &Service{Deps: d, tracer: d.TracerProvider.Tracer(instrumentationName)}
-	var err error
-	if s.changes, err = d.MeterProvider.Meter(instrumentationName).Int64Counter("cuadra.modules.changes",
-		metric.WithDescription("Modules turned on or off for a tenant, by module and action (enabled, disabled)."),
-		metric.WithUnit("{change}")); err != nil {
+	d.Logger = usecase.Logger(d.Logger)
+	s := &Service{Deps: d, spans: usecase.NewSpans(d.TracerProvider, instrumentationName, "modules")}
+	err := usecase.Create(usecase.Meter(d.MeterProvider, instrumentationName),
+		usecase.Counter(&s.changes, "cuadra.modules.changes",
+			"Modules turned on or off for a tenant, by module and action (enabled, disabled).", "{change}"),
+	)
+	if err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -120,8 +116,8 @@ func (s *Service) IsActive(ctx context.Context, tenantID uuid.UUID, id string) (
 
 // List returns every registered module with whether the tenant has it active.
 func (s *Service) List(ctx context.Context, tenantID uuid.UUID) (_ []Status, err error) {
-	ctx, span := s.tracer.Start(ctx, "modules.ListModules")
-	defer func() { endSpan(span, err) }()
+	ctx, span := s.spans.Start(ctx, "ListModules")
+	defer func() { usecase.End(span, err) }()
 	span.SetAttributes(attribute.String("tenant.id", tenantID.String()))
 
 	active, err := s.Store.Active(ctx, tenantID)
@@ -142,12 +138,12 @@ func (s *Service) List(ctx context.Context, tenantID uuid.UUID) (_ []Status, err
 // it; otherwise it fails with a *DependencyError. Turning a module off
 // keeps its data.
 func (s *Service) SetActive(ctx context.Context, tenantID, userID uuid.UUID, id string, active bool) (_ Status, err error) {
-	name := "modules.DisableModule"
+	name := "DisableModule"
 	if active {
-		name = "modules.EnableModule"
+		name = "EnableModule"
 	}
-	ctx, span := s.tracer.Start(ctx, name)
-	defer func() { endSpan(span, err) }()
+	ctx, span := s.spans.Start(ctx, name)
+	defer func() { usecase.End(span, err) }()
 	span.SetAttributes(
 		attribute.String("tenant.id", tenantID.String()),
 		attribute.String("user.id", userID.String()),
@@ -159,16 +155,16 @@ func (s *Service) SetActive(ctx context.Context, tenantID, userID uuid.UUID, id 
 		return Status{}, ErrUnknownModule
 	}
 	changed := false
-	err = s.Store.Update(ctx, tenantID, func(current []string) (*Change, error) {
+	err = s.Store.Update(ctx, tenantID, func(current []string) (Change, bool, error) {
 		current = s.registered(current)
 		if slices.Contains(current, id) == active {
-			return nil, nil
+			return Change{}, false, nil
 		}
 		if err := s.checkDependencies(def, current, active); err != nil {
-			return nil, err
+			return Change{}, false, err
 		}
 		changed = true
-		return &Change{Module: id, Active: active, By: userID, At: s.Now().UTC()}, nil
+		return Change{Module: id, Active: active, By: userID, At: s.Now().UTC()}, true, nil
 	})
 	if err != nil {
 		return Status{}, err
@@ -180,7 +176,7 @@ func (s *Service) SetActive(ctx context.Context, tenantID, userID uuid.UUID, id 
 			action = "enabled"
 		}
 		s.changes.Add(ctx, 1, metric.WithAttributes(attribute.String("module.id", id), attribute.String("action", action)))
-		s.Logger.InfoContext(ctx, "module "+action, slog.String("module_id", id))
+		s.Logger.InfoContext(ctx, "module changed", slog.String("module_id", id), slog.String("action", action))
 	}
 	return Status{Definition: def.clone(), Active: active}, nil
 }
@@ -192,8 +188,8 @@ func (s *Service) SetActive(ctx context.Context, tenantID, userID uuid.UUID, id 
 // It is not counted in cuadra.modules.changes: no one changed the tenant's
 // modules.
 func (s *Service) SetUpTenant(ctx context.Context, tenantID uuid.UUID, ids []string) (err error) {
-	ctx, span := s.tracer.Start(ctx, "modules.SetUpTenant")
-	defer func() { endSpan(span, err) }()
+	ctx, span := s.spans.Start(ctx, "SetUpTenant")
+	defer func() { usecase.End(span, err) }()
 	span.SetAttributes(attribute.String("tenant.id", tenantID.String()))
 
 	if err := s.Registry.CheckSet(ids); err != nil {
@@ -201,11 +197,11 @@ func (s *Service) SetUpTenant(ctx context.Context, tenantID uuid.UUID, ids []str
 	}
 	at := s.Now().UTC()
 	for _, id := range s.registered(ids) {
-		err := s.Store.Update(ctx, tenantID, func(active []string) (*Change, error) {
+		err := s.Store.Update(ctx, tenantID, func(active []string) (Change, bool, error) {
 			if slices.Contains(active, id) {
-				return nil, nil
+				return Change{}, false, nil
 			}
-			return &Change{Module: id, Active: true, At: at}, nil
+			return Change{Module: id, Active: true, At: at}, true, nil
 		})
 		if err != nil {
 			return err
@@ -247,12 +243,4 @@ func (s *Service) registered(ids []string) []string {
 		}
 	}
 	return out
-}
-
-func endSpan(span trace.Span, err error) {
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	span.End()
 }

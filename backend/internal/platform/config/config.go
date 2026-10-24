@@ -43,28 +43,21 @@ func Load(getenv func(string) string) (Config, error) {
 		errs = append(errs, errors.New("DATABASE_URL is required"))
 	}
 
-	// The value is never echoed: it is a secret.
-	switch secret := getenv("JWT_SECRET"); {
-	case secret == "":
-		errs = append(errs, errors.New("JWT_SECRET is required"))
-	case len(secret) < minJWTSecretLength:
-		errs = append(errs, fmt.Errorf("JWT_SECRET must have at least %d bytes", minJWTSecretLength))
-	default:
-		cfg.JWTSecret = []byte(secret)
+	secret, err := jwtSecret(getenv("JWT_SECRET"))
+	if err != nil {
+		errs = append(errs, err)
 	}
+	cfg.JWTSecret = secret
 
 	if err := cfg.LogLevel.UnmarshalText([]byte(withDefault(getenv("LOG_LEVEL"), "info"))); err != nil {
 		errs = append(errs, fmt.Errorf("LOG_LEVEL is invalid: %w", err))
 	}
 
 	if raw := getenv("SHUTDOWN_TIMEOUT"); raw != "" {
-		d, err := time.ParseDuration(raw)
-		switch {
-		case err != nil:
-			errs = append(errs, fmt.Errorf("SHUTDOWN_TIMEOUT is invalid: %w", err))
-		case d <= 0:
-			errs = append(errs, fmt.Errorf("SHUTDOWN_TIMEOUT must be positive, got %s", d))
-		default:
+		d, err := shutdownTimeout(raw)
+		if err != nil {
+			errs = append(errs, err)
+		} else {
 			cfg.ShutdownTimeout = d
 		}
 	}
@@ -80,4 +73,28 @@ func withDefault(value, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+// jwtSecret checks the JWT secret. The value is never echoed: it is a
+// secret.
+func jwtSecret(secret string) ([]byte, error) {
+	switch {
+	case secret == "":
+		return nil, errors.New("JWT_SECRET is required")
+	case len(secret) < minJWTSecretLength:
+		return nil, fmt.Errorf("JWT_SECRET must have at least %d bytes", minJWTSecretLength)
+	}
+	return []byte(secret), nil
+}
+
+// shutdownTimeout reads a positive duration.
+func shutdownTimeout(raw string) (time.Duration, error) {
+	d, err := time.ParseDuration(raw)
+	switch {
+	case err != nil:
+		return 0, fmt.Errorf("SHUTDOWN_TIMEOUT is invalid: %w", err)
+	case d <= 0:
+		return 0, fmt.Errorf("SHUTDOWN_TIMEOUT must be positive, got %s", d)
+	}
+	return d, nil
 }

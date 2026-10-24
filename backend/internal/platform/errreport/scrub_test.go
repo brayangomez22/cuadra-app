@@ -36,6 +36,7 @@ func TestScrub(t *testing.T) {
 			},
 			gone: []string{"ana.perez@ferreteria.co", "ana+pos@gmail.com"},
 			check: func(t *testing.T, e *sentry.Event) {
+				t.Helper()
 				require.Equal(t, "usuario [email] no encontrado", e.Message)
 				require.Contains(t, e.Exception[0].Value, "users_email_key")
 			},
@@ -48,6 +49,7 @@ func TestScrub(t *testing.T) {
 			},
 			gone: []string{jwt, "abc123.def-456_ghi"},
 			check: func(t *testing.T, e *sentry.Event) {
+				t.Helper()
 				require.Equal(t, "token rechazado: [token]", e.Message)
 				require.Contains(t, e.Exception[0].Value, "Bearer [token]")
 			},
@@ -65,6 +67,7 @@ func TestScrub(t *testing.T) {
 			},
 			gone: []string{"hunter2", "s3cr3t-value", "Sup3rS3cret", "app_user:"},
 			check: func(t *testing.T, e *sentry.Event) {
+				t.Helper()
 				require.Contains(t, e.Exception[0].Value, "postgres://[filtered]@db:5432/cuadra")
 			},
 		},
@@ -87,6 +90,7 @@ func TestScrub(t *testing.T) {
 			},
 			gone: []string{"hunter2", "dXNlcjpwYXNz", "opaque-value", "cliente@correo.com", "k-123456"},
 			check: func(t *testing.T, e *sentry.Event) {
+				t.Helper()
 				require.Equal(t, "cuadra-api", e.Contexts["app"]["name"])
 				require.Equal(t, 3, e.Contexts["job"]["count"])
 				require.Equal(t, 3, e.Contexts["job"]["nested"].(map[string]any)["items"])
@@ -114,6 +118,7 @@ func TestScrub(t *testing.T) {
 			},
 			gone: []string{"ana@correo.com", "hunter2", refreshToken, jwt, "k-123456", "181.50.10.20"},
 			check: func(t *testing.T, e *sentry.Event) {
+				t.Helper()
 				require.Equal(t, "https://api.cuadra.co/api/v1/auth/login", e.Request.URL)
 				require.Equal(t, "POST", e.Request.Method)
 				require.Empty(t, e.Request.Data)
@@ -137,6 +142,7 @@ func TestScrub(t *testing.T) {
 			},
 			gone: []string{"ana@correo.com", "Ana Pérez", "181.50.10.20", "3001234567"},
 			check: func(t *testing.T, e *sentry.Event) {
+				t.Helper()
 				require.Equal(t, sentry.User{ID: "0192f0a1-1234-7abc-8def-0123456789ab"}, e.User)
 			},
 		},
@@ -150,6 +156,7 @@ func TestScrub(t *testing.T) {
 			},
 			gone: []string{"ana@correo.com", "opaque-value", jwt},
 			check: func(t *testing.T, e *sentry.Event) {
+				t.Helper()
 				require.Equal(t, 401, e.Breadcrumbs[0].Data["status"])
 			},
 		},
@@ -164,6 +171,7 @@ func TestScrub(t *testing.T) {
 				},
 			},
 			check: func(t *testing.T, e *sentry.Event) {
+				t.Helper()
 				require.Equal(t, "stock insuficiente del producto 0192f0a1-1234-7abc-8def-0123456789ab", e.Message)
 				require.Equal(t, "inventory: insufficient stock", e.Exception[0].Value)
 				require.Equal(t, "0192f0a1-0000-7000-8000-0000000000aa", e.Tags["tenant_id"])

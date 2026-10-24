@@ -26,7 +26,7 @@ func (r *UserRepository) Create(ctx context.Context, u *domain.User) error {
 		return createUser(ctx, sqlcgen.New(tx), u)
 	})
 	switch {
-	case isUniqueViolation(err, usersEmailKey):
+	case db.Violates(err, db.UniqueViolation, usersEmailKey):
 		return domain.ErrEmailTaken
 	case err != nil:
 		return fmt.Errorf("identity: create user: %w", err)
@@ -62,11 +62,8 @@ func (r *UserRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 }
 
 func (r *UserRepository) get(ctx context.Context, tenantID uuid.UUID, query func(*sqlcgen.Queries) (sqlcgen.User, error)) (*domain.User, error) {
-	var row sqlcgen.User
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		row, err = query(sqlcgen.New(tx))
-		return err
+	row, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) (sqlcgen.User, error) {
+		return query(sqlcgen.New(tx))
 	})
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
@@ -80,10 +77,8 @@ func (r *UserRepository) get(ctx context.Context, tenantID uuid.UUID, query func
 // Update stores the name, password hash, role and active flag;
 // domain.ErrUserNotFound if the user does not exist in its tenant.
 func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
-	var affected int64
-	err := r.db.WithTenantTx(ctx, u.TenantID(), func(tx pgx.Tx) error {
-		var err error
-		affected, err = sqlcgen.New(tx).UpdateUser(ctx, sqlcgen.UpdateUserParams{
+	affected, err := db.Affected(ctx, r.db, u.TenantID(), func(tx pgx.Tx) (int64, error) {
+		return sqlcgen.New(tx).UpdateUser(ctx, sqlcgen.UpdateUserParams{
 			TenantID:     u.TenantID(),
 			ID:           u.ID(),
 			Name:         u.Name(),
@@ -91,7 +86,6 @@ func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
 			Role:         u.Role().String(),
 			Active:       u.IsActive(),
 		})
-		return err
 	})
 	switch {
 	case err != nil:

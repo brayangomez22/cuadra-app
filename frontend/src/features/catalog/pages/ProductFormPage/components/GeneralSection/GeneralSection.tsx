@@ -3,8 +3,8 @@ import { Field, Input, Textarea } from '@/shared/ui';
 import type { Category, UnitOfMeasure } from '../../../../api/types';
 import { useFieldError } from '@/shared/forms/useFieldError';
 import { SelectController } from '@/shared/forms/SelectController/SelectController';
-import { categoryOptions } from '../../../../model/categoryOptions';
-import type { ProductFormInput } from '../../../../model/productSchema';
+import { categoryOptions } from '../../../../model/productForm/categoryOptions';
+import type { ProductFormInput } from '../../../../model/productForm/productSchema';
 import { FormGrid, FormGridWide, FormSection } from '../FormSection/FormSection';
 
 type Props = {

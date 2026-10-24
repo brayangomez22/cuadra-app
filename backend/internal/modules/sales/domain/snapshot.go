@@ -95,10 +95,7 @@ func (s *Sale) Snapshot() SaleSnapshot {
 // entity with wrong amounts. The discount limit is not checked again: it
 // applied to whoever sold.
 func RehydrateSale(snap SaleSnapshot) (*Sale, error) {
-	if snap.Status != SaleConfirmed && snap.Status != SaleVoided {
-		return nil, ErrInconsistentSale
-	}
-	if (snap.Status == SaleVoided) != (snap.Void != nil) || len(snap.Lines) == 0 {
+	if !snap.consistentStatus() {
 		return nil, ErrInconsistentSale
 	}
 	s, err := NewSale(NewSaleParams{
@@ -108,7 +105,37 @@ func RehydrateSale(snap SaleSnapshot) (*Sale, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, ls := range snap.Lines {
+	if s.lines, err = rehydrateLines(snap.Lines); err != nil {
+		return nil, err
+	}
+	if err := s.rehydratePayments(snap); err != nil {
+		return nil, err
+	}
+	if err := s.AssignNumber(snap.Number); err != nil {
+		return nil, err
+	}
+	if v := snap.Void; v != nil {
+		if err := s.Void(v.UserID, v.Reason, v.At); err != nil {
+			return nil, err
+		}
+	}
+	return s, nil
+}
+
+// consistentStatus reports whether a stored sale is confirmed or voided,
+// with its void only when voided, and has lines.
+func (snap SaleSnapshot) consistentStatus() bool {
+	if snap.Status != SaleConfirmed && snap.Status != SaleVoided {
+		return false
+	}
+	return (snap.Status == SaleVoided) == (snap.Void != nil) && len(snap.Lines) > 0
+}
+
+// rehydrateLines rebuilds the stored lines with the rules of newLine and
+// checks their stored amounts.
+func rehydrateLines(snaps []LineSnapshot) ([]SaleLine, error) {
+	lines := make([]SaleLine, 0, len(snaps))
+	for _, ls := range snaps {
 		l, err := newLine(LineInput{
 			VariantID: ls.VariantID, ProductID: ls.ProductID, ProductName: ls.ProductName, VariantLabel: ls.VariantLabel,
 			Quantity: ls.Quantity, UnitPrice: ls.UnitPrice, PriceRule: ls.PriceRule, TaxRate: ls.TaxRate, Discount: ls.Discount,
@@ -122,31 +149,29 @@ func RehydrateSale(snap SaleSnapshot) (*Sale, error) {
 		if !l.unitPrice.Equal(ls.UnitPrice) || !l.gross.Equal(ls.Gross) || !l.tax.Equal(ls.Tax) {
 			return nil, ErrInconsistentSale
 		}
-		s.lines = append(s.lines, l)
+		lines = append(lines, l)
 	}
+	return lines, nil
+}
+
+// rehydratePayments confirms the sale with its stored payments and checks
+// the stored totals against the ones the rules give.
+func (s *Sale) rehydratePayments(snap SaleSnapshot) error {
 	payments := make([]Payment, 0, len(snap.Payments))
 	for _, ps := range snap.Payments {
 		p, err := NewPayment(ps.Method, ps.Amount)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		payments = append(payments, p)
 	}
 	if err := s.Confirm(payments, snap.ConfirmedAt); err != nil {
-		return nil, err
+		return err
 	}
 	t, st := s.Totals(), snap.Totals
 	if !t.Subtotal.Equal(st.Subtotal) || !t.Discounts.Equal(st.Discounts) || !t.Tax.Equal(st.Tax) ||
 		!t.Total.Equal(st.Total) || !s.Paid().Equal(st.Paid) || !s.change.Equal(st.Change) {
-		return nil, ErrInconsistentSale
+		return ErrInconsistentSale
 	}
-	if err := s.AssignNumber(snap.Number); err != nil {
-		return nil, err
-	}
-	if v := snap.Void; v != nil {
-		if err := s.Void(v.UserID, v.Reason, v.At); err != nil {
-			return nil, err
-		}
-	}
-	return s, nil
+	return nil
 }

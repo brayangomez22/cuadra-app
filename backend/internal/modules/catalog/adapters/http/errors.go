@@ -7,10 +7,6 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 )
 
-// unauthorizedMessage answers a request that reaches the module without a
-// principal, which RequireAuth should have stopped.
-const unauthorizedMessage = "Su sesión no es válida o expiró. Inicie sesión de nuevo."
-
 // errorRules maps the catalog domain errors to HTTP.
 var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrProductNotFound, Status: http.StatusNotFound, Code: "product_not_found", Message: "El producto no existe."},

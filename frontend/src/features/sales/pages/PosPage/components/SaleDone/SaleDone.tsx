@@ -1,7 +1,7 @@
 import { formatMoney, isZero } from '@/shared/format';
 import { Button, Field, IconPrinter, IconSuccess, Select } from '@/shared/ui';
 import type { Sale } from '../../../../api/types';
-import { methodLabels } from '../../../../model/paymentMethods';
+import { methodLabels } from '../../../../model/payments/paymentMethods';
 import type { Paper } from '../../../../model/paper';
 import styles from './SaleDone.module.scss';
 

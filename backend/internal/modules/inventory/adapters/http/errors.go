@@ -7,10 +7,6 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 )
 
-// unauthorizedMessage answers a request that reaches the module without a
-// principal, which RequireAuth should have stopped.
-const unauthorizedMessage = "Su sesión no es válida o expiró. Inicie sesión de nuevo."
-
 // Code and message of a missing location. In a body it is a rule (422); in
 // the path of GET /locations/{id}/stock it is the resource (404).
 const (

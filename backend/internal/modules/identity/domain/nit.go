@@ -24,22 +24,8 @@ type NIT struct {
 // digit is the DV when there is no dash) and verifies the check digit with
 // the DIAN algorithm. Dots and spaces are ignored.
 func ParseNIT(s string) (NIT, error) {
-	cleaned := strings.NewReplacer(".", "", " ", "").Replace(s)
-
-	var number, dv string
-	switch strings.Count(cleaned, "-") {
-	case 0:
-		if len(cleaned) < 2 {
-			return NIT{}, ErrInvalidNIT
-		}
-		number, dv = cleaned[:len(cleaned)-1], cleaned[len(cleaned)-1:]
-	case 1:
-		number, dv, _ = strings.Cut(cleaned, "-")
-	default:
-		return NIT{}, ErrInvalidNIT
-	}
-
-	if len(number) < minNITDigits || len(number) > maxNITDigits || len(dv) != 1 ||
+	number, dv, ok := splitNIT(strings.NewReplacer(".", "", " ", "").Replace(s))
+	if !ok || len(number) < minNITDigits || len(number) > maxNITDigits || len(dv) != 1 ||
 		!allDigits(number) || !allDigits(dv) {
 		return NIT{}, ErrInvalidNIT
 	}
@@ -49,6 +35,23 @@ func ParseNIT(s string) (NIT, error) {
 		return NIT{}, ErrInvalidNITCheckDigit
 	}
 	return NIT{number: number, checkDigit: got}, nil
+}
+
+// splitNIT separates the number from the DV: after the dash, or the last
+// digit when there is no dash. More than one dash is not a NIT.
+func splitNIT(cleaned string) (number, dv string, ok bool) {
+	switch strings.Count(cleaned, "-") {
+	case 0:
+		if len(cleaned) < 2 {
+			return "", "", false
+		}
+		return cleaned[:len(cleaned)-1], cleaned[len(cleaned)-1:], true
+	case 1:
+		number, dv, _ = strings.Cut(cleaned, "-")
+		return number, dv, true
+	default:
+		return "", "", false
+	}
 }
 
 // nitCheckDigit computes the DV: weighted sum mod 11; remainders 0 and 1 are

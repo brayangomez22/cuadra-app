@@ -1,0 +1,193 @@
+//go:build integration
+
+package api
+
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
+)
+
+// TestInventoryFlow runs the inventory through the whole stack: contract
+// validation, permissions from x-permission, use cases and PostgreSQL with
+// Row-Level Security.
+func TestInventoryFlow(t *testing.T) {
+	handler, tokens := newAPI(t)
+
+	do := func(t *testing.T, method, path, body, bearer string) *httptest.ResponseRecorder {
+		t.Helper()
+		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		if body != "" {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		req.Header.Set("Authorization", "Bearer "+bearer)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		return rec
+	}
+	id := func(t *testing.T, rec *httptest.ResponseRecorder) string {
+		t.Helper()
+		var body struct{ ID string }
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+		return body.ID
+	}
+
+	signup := do(t, http.MethodPost, "/api/v1/auth/signup",
+		`{"tenant_name":"Ferretería El Tornillo","nit":"900123456-8","name":"Ana Gómez","email":"ana@inventario.co","password":"clave-segura-123","business_template":"ferreteria"}`, "")
+	require.Equal(t, http.StatusCreated, signup.Code, signup.Body.String())
+	var session struct {
+		AccessToken string `json:"access_token"`
+		User        struct {
+			TenantID uuid.UUID `json:"tenant_id"`
+		} `json:"user"`
+	}
+	require.NoError(t, json.Unmarshal(signup.Body.Bytes(), &session))
+	ownerToken := session.AccessToken
+	// Other roles of the same tenant: user management arrives in T41, so the
+	// tokens are issued directly.
+	cashierToken, _, err := tokens.Issue(session.User.TenantID, uuid.Must(uuid.NewV7()), "cashier")
+	require.NoError(t, err)
+	warehouseToken, _, err := tokens.Issue(session.User.TenantID, uuid.Must(uuid.NewV7()), "warehouse")
+	require.NoError(t, err)
+
+	product := do(t, http.MethodPost, "/api/v1/products",
+		`{"sku":"cem-50","name":"Cemento gris 50kg","base_unit_id":"`+unitID(t, do, ownerToken, "bulto")+
+			`","cost":"30000","price":"35000","tax_rate":"0.19","attributes":{}}`, ownerToken)
+	require.Equal(t, http.StatusCreated, product.Code, product.Body.String())
+	productID := id(t, product)
+	var created struct {
+		Variants []struct{ ID string } `json:"variants"`
+	}
+	require.NoError(t, json.Unmarshal(product.Body.Bytes(), &created))
+	require.Len(t, created.Variants, 1)
+	variantID := created.Variants[0].ID
+	require.NotEqual(t, productID, variantID, "a new product's default variant has its own id")
+
+	var bodegaID, centroID string
+
+	t.Run("el dueño crea sedes; el bodeguero no puede", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/locations", `{"name":"Bodega"}`, ownerToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		bodegaID = id(t, rec)
+		rec = do(t, http.MethodPost, "/api/v1/locations", `{"name":"Centro"}`, ownerToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		centroID = id(t, rec)
+
+		rec = do(t, http.MethodPost, "/api/v1/locations", `{"name":"Norte"}`, warehouseToken)
+		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+	})
+
+	receipt := func(qty, cost string) string {
+		return `{"variant_id":"` + variantID + `","location_id":"` + bodegaID + `","quantity":"` + qty + `","unit_cost":"` + cost + `"}`
+	}
+
+	t.Run("registrar una entrada sin inventory:adjust responde 403", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/inventory/receipts", receipt("10", "30000"), cashierToken)
+		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"forbidden"`)
+	})
+
+	t.Run("el bodeguero registra entradas sin ver el costo promedio", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/inventory/receipts", receipt("10", "30000"), warehouseToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"balance_after":"10"`)
+		require.NotContains(t, rec.Body.String(), "cost")
+
+		rec = do(t, http.MethodPost, "/api/v1/inventory/receipts", receipt("10", "32000"), warehouseToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	})
+
+	t.Run("un traslado mayor al stock responde 409 insufficient_stock", func(t *testing.T) {
+		body := `{"variant_id":"` + variantID + `","from_location_id":"` + bodegaID + `","to_location_id":"` + centroID + `","quantity":"21"}`
+		rec := do(t, http.MethodPost, "/api/v1/inventory/transfers", body, warehouseToken)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), "insufficient_stock")
+	})
+
+	t.Run("traslada y ajusta el stock", func(t *testing.T) {
+		body := `{"variant_id":"` + variantID + `","from_location_id":"` + bodegaID + `","to_location_id":"` + centroID + `","quantity":"5"}`
+		rec := do(t, http.MethodPost, "/api/v1/inventory/transfers", body, warehouseToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+		body = `{"variant_id":"` + variantID + `","location_id":"` + bodegaID + `","quantity":"-0.5","reason":"Bulto roto"}`
+		rec = do(t, http.MethodPost, "/api/v1/inventory/adjustments", body, warehouseToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	})
+
+	t.Run("el dueño ve las existencias de la sede con su costo promedio", func(t *testing.T) {
+		rec := do(t, http.MethodGet, "/api/v1/locations/"+bodegaID+"/stock", "", ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"quantity":"14.5"`)
+		require.Contains(t, rec.Body.String(), `"average_cost":"31000.00"`)
+	})
+
+	t.Run("el cajero consulta el kardex, el más reciente primero, sin costos", func(t *testing.T) {
+		rec := do(t, http.MethodGet, "/api/v1/variants/"+variantID+"/kardex?location_id="+bodegaID, "", cashierToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var page struct {
+			Items []struct{ Type, Quantity string }
+			Total int
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
+		require.Equal(t, 4, page.Total)
+		require.Equal(t, "adjustment", page.Items[0].Type)
+		require.Equal(t, "-0.5", page.Items[0].Quantity)
+		require.NotContains(t, rec.Body.String(), "cost")
+	})
+
+	t.Run("una entrada por variante responde la variante y el producto, y suma a la misma existencia", func(t *testing.T) {
+		body := `{"variant_id":"` + variantID + `","location_id":"` + bodegaID + `","quantity":"0.5","unit_cost":"31000"}`
+		rec := do(t, http.MethodPost, "/api/v1/inventory/receipts", body, ownerToken)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"variant_id":"`+variantID+`"`)
+		require.Contains(t, rec.Body.String(), `"product_id":"`+productID+`"`)
+		require.Contains(t, rec.Body.String(), `"balance_after":"15"`)
+
+		rec = do(t, http.MethodGet, "/api/v1/locations/"+bodegaID+"/stock?variant_id="+variantID, "", ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"quantity":"15"`)
+		require.Contains(t, rec.Body.String(), `"product_id":"`+productID+`"`)
+	})
+
+	t.Run("el kardex de la variante lleva todos sus movimientos; el kardex por producto ya no existe", func(t *testing.T) {
+		byVariant := do(t, http.MethodGet, "/api/v1/variants/"+variantID+"/kardex", "", cashierToken)
+		require.Equal(t, http.StatusOK, byVariant.Code, byVariant.Body.String())
+		require.Contains(t, byVariant.Body.String(), `"total":6`)
+
+		byProduct := do(t, http.MethodGet, "/api/v1/products/"+productID+"/kardex", "", cashierToken)
+		require.Equal(t, http.StatusNotFound, byProduct.Code, byProduct.Body.String())
+	})
+
+	t.Run("sin variant_id o con product_id responde 400 por el contrato", func(t *testing.T) {
+		for _, body := range []string{
+			`{"location_id":"` + bodegaID + `","quantity":"1","unit_cost":"1"}`,
+			`{"product_id":"` + productID + `","location_id":"` + bodegaID + `","quantity":"1","unit_cost":"1"}`,
+		} {
+			rec := do(t, http.MethodPost, "/api/v1/inventory/receipts", body, ownerToken)
+			require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("una variante de otro tenant responde 422 variant_not_found", func(t *testing.T) {
+		body := `{"variant_id":"` + uuid.Must(uuid.NewV7()).String() + `","location_id":"` + bodegaID + `","quantity":"1","unit_cost":"1"}`
+		rec := do(t, http.MethodPost, "/api/v1/inventory/receipts", body, ownerToken)
+		require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"variant_not_found"`)
+	})
+
+	t.Run("una cantidad con formato inválido responde 400 por el contrato", func(t *testing.T) {
+		rec := do(t, http.MethodPost, "/api/v1/inventory/receipts", receipt("2,5", "30000"), ownerToken)
+		require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	})
+
+	t.Run("un tenant_id en el body responde 400 por el contrato", func(t *testing.T) {
+		body := strings.Replace(receipt("1", "1"), "{", `{"tenant_id":"`+uuid.Must(uuid.NewV7()).String()+`",`, 1)
+		rec := do(t, http.MethodPost, "/api/v1/inventory/receipts", body, ownerToken)
+		require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	})
+}

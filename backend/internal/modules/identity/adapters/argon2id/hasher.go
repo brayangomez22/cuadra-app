@@ -76,30 +76,42 @@ func (h *Hasher) Verify(plain, hash string) (bool, error) {
 
 func decode(hash string) (p Params, salt, key []byte, err error) {
 	parts := strings.Split(hash, "$")
-	if len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" {
+	if len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" || parts[2] != fmt.Sprintf("v=%d", argon2.Version) {
 		return Params{}, nil, nil, ErrMalformedHash
 	}
-
-	if parts[2] != fmt.Sprintf("v=%d", argon2.Version) {
-		return Params{}, nil, nil, ErrMalformedHash
+	if p, err = decodeParams(parts[3]); err != nil {
+		return Params{}, nil, nil, err
 	}
-	// Re-encoding the scanned params must give back the same text, which
-	// rejects trailing garbage and non-canonical numbers.
-	_, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &p.Memory, &p.Iterations, &p.Parallelism)
-	if err != nil || parts[3] != fmt.Sprintf("m=%d,t=%d,p=%d", p.Memory, p.Iterations, p.Parallelism) {
-		return Params{}, nil, nil, ErrMalformedHash
+	if salt, err = decodeBytes(parts[4], -1); err != nil {
+		return Params{}, nil, nil, err
 	}
-	if p.Memory == 0 || p.Iterations == 0 || p.Parallelism == 0 {
-		return Params{}, nil, nil, ErrMalformedHash
-	}
-
-	salt, err = b64.DecodeString(parts[4])
-	if err != nil || len(salt) == 0 {
-		return Params{}, nil, nil, ErrMalformedHash
-	}
-	key, err = b64.DecodeString(parts[5])
-	if err != nil || len(key) == 0 || len(key) > maxKeyLength {
-		return Params{}, nil, nil, ErrMalformedHash
+	if key, err = decodeBytes(parts[5], maxKeyLength); err != nil {
+		return Params{}, nil, nil, err
 	}
 	return p, salt, key, nil
+}
+
+// decodeParams reads "m=…,t=…,p=…". Re-encoding the scanned params must give
+// back the same text, which rejects trailing garbage and non-canonical
+// numbers.
+func decodeParams(s string) (Params, error) {
+	var p Params
+	_, err := fmt.Sscanf(s, "m=%d,t=%d,p=%d", &p.Memory, &p.Iterations, &p.Parallelism)
+	if err != nil || s != fmt.Sprintf("m=%d,t=%d,p=%d", p.Memory, p.Iterations, p.Parallelism) {
+		return Params{}, ErrMalformedHash
+	}
+	if p.Memory == 0 || p.Iterations == 0 || p.Parallelism == 0 {
+		return Params{}, ErrMalformedHash
+	}
+	return p, nil
+}
+
+// decodeBytes reads a non-empty base64 field of at most maxLen bytes (no
+// limit when maxLen is negative).
+func decodeBytes(s string, maxLen int) ([]byte, error) {
+	b, err := b64.DecodeString(s)
+	if err != nil || len(b) == 0 || (maxLen >= 0 && len(b) > maxLen) {
+		return nil, ErrMalformedHash
+	}
+	return b, nil
 }

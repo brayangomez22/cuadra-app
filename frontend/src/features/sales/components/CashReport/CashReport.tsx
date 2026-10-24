@@ -1,8 +1,8 @@
 import clsx from 'clsx';
 import { formatDateTime, formatMoney } from '@/shared/format';
 import type { CashSession } from '../../api/types';
-import { resultLabels } from '../../model/cashLabels';
-import { negated } from '../../model/negated';
+import { resultLabels } from '../../model/cash/cashLabels';
+import { negated } from '../../model/cash/negated';
 import type { Paper } from '../../model/paper';
 import styles from './CashReport.module.scss';
 import { CashReportBreakdown } from './CashReportBreakdown';

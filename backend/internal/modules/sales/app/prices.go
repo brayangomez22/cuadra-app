@@ -44,7 +44,7 @@ type PriceResolver interface {
 }
 
 // PriceRule is one rule of a PriceChain, which a module (price lists,
-// volume pricing, promotions...) provides and cmd/api registers. Apply
+// volume pricing, promotions...) provides and internal/server registers. Apply
 // returns the unit price without IVA and true, or false to let the next rule
 // decide.
 type PriceRule interface {

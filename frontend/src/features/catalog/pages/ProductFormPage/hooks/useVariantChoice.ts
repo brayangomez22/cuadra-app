@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useFieldArray, useWatch, type Control } from 'react-hook-form';
 import type { VariantAxis } from '../../../api/types';
-import type { ProductFormInput } from '../../../model/productSchema';
-import { MAX_AXES, chosenOf, nextRows, toggleValue, withAxesOf } from '../../../model/variantChoice';
+import type { ProductFormInput } from '../../../model/productForm/productSchema';
+import { MAX_AXES, chosenOf, nextRows, toggleValue, withAxesOf } from '../../../model/variantMatrix/variantChoice';
 
 /**
  * The values picked in the variant editor and the rows of the matrix they

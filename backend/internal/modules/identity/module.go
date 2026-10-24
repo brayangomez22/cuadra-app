@@ -1,5 +1,5 @@
 // Package identity wires the identity module: tenants, users, sign-up, login
-// and sessions. cmd/api builds it with New and mounts its routes.
+// and sessions. internal/server builds it with New and mounts its routes.
 package identity
 
 import (

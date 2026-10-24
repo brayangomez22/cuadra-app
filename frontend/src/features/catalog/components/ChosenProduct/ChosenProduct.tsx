@@ -1,5 +1,5 @@
 import { Button } from '@/shared/ui';
-import { variantName, type Sellable } from '../../model/variants';
+import { variantName, type Sellable } from '../../model/variants/variants';
 import styles from './ChosenProduct.module.scss';
 
 type Props = { label: string; value: Sellable; onChange: () => void };

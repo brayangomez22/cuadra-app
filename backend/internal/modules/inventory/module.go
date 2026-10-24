@@ -1,5 +1,5 @@
 // Package inventory wires the inventory module: locations, stock levels and
-// the kardex. cmd/api builds it with New and mounts its routes.
+// the kardex. internal/server builds it with New and mounts its routes.
 package inventory
 
 import (
@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
@@ -25,7 +24,7 @@ type Config struct {
 	DB *db.DB
 	// Authorize is the role → permission matrix; it decides who sees costs.
 	Authorize auth.Authorizer
-	// Variants is the catalog as the inventory needs it; cmd/api adapts the
+	// Variants is the catalog as the inventory needs it; internal/server adapts the
 	// catalog module to it.
 	Variants       app.ProductVariants
 	Logger         *slog.Logger
@@ -67,7 +66,7 @@ func (m *Module) RegisterRoutes(mux *http.ServeMux) {
 
 // IssueSaleStock registers the stock exits of a sale (see
 // app.Service.IssueSaleStock). It is for the sales module, through the port
-// cmd/api adapts; with a ctx from db.InTenantTx it joins the sale's
+// internal/server adapts; with a ctx from db.InTenantTx it joins the sale's
 // transaction. Errors of one variant are *app.VariantStockError.
 func (m *Module) IssueSaleStock(ctx context.Context, tenantID, userID uuid.UUID, in app.SaleStockInput) error {
 	_, err := m.service.IssueSaleStock(ctx, app.Actor{TenantID: tenantID, UserID: userID}, in)

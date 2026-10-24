@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/shopspring/decimal"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/adapters/postgres/sqlcgen"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/domain"
@@ -31,9 +29,9 @@ func (r *CashSessionRepository) Open(ctx context.Context, s *domain.CashSession)
 		})
 	})
 	switch {
-	case violates(err, uniqueViolation, cashSessionsOneOpenKey):
+	case db.Violates(err, db.UniqueViolation, cashSessionsOneOpenKey):
 		return domain.ErrCashSessionAlreadyOpen
-	case violates(err, foreignKeyViolation, cashSessionsLocationFKey):
+	case db.Violates(err, db.ForeignKeyViolation, cashSessionsLocationFKey):
 		return domain.ErrLocationNotFound
 	case err != nil:
 		return fmt.Errorf("sales: open cash session %s: %w", s.ID(), err)
@@ -43,33 +41,31 @@ func (r *CashSessionRepository) Open(ctx context.Context, s *domain.CashSession)
 
 // Get returns a session with its closing, if closed.
 func (r *CashSessionRepository) Get(ctx context.Context, tenantID, id uuid.UUID) (*domain.CashSession, error) {
-	var session *domain.CashSession
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		q := sqlcgen.New(tx)
-		row, err := q.GetCashSession(ctx, id)
-		if err != nil {
-			return err
-		}
-		session, err = readCashSession(ctx, q, row)
-		return err
-	})
+	session, err := r.readOne(ctx, tenantID, func(q *sqlcgen.Queries) (sqlcgen.CashSession, error) { return q.GetCashSession(ctx, id) })
 	if err != nil {
 		return nil, cashError("get", id, err)
 	}
 	return session, nil
 }
 
+// readOne reads the session row get returns, with its closing.
+func (r *CashSessionRepository) readOne(
+	ctx context.Context, tenantID uuid.UUID, get func(*sqlcgen.Queries) (sqlcgen.CashSession, error),
+) (*domain.CashSession, error) {
+	return db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) (*domain.CashSession, error) {
+		q := sqlcgen.New(tx)
+		row, err := get(q)
+		if err != nil {
+			return nil, err
+		}
+		return readCashSession(ctx, q, row)
+	})
+}
+
 // Current returns the user's open session.
 func (r *CashSessionRepository) Current(ctx context.Context, tenantID, userID uuid.UUID) (*domain.CashSession, error) {
-	var session *domain.CashSession
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		q := sqlcgen.New(tx)
-		row, err := q.CurrentCashSession(ctx, userID)
-		if err != nil {
-			return err
-		}
-		session, err = readCashSession(ctx, q, row)
-		return err
+	session, err := r.readOne(ctx, tenantID, func(q *sqlcgen.Queries) (sqlcgen.CashSession, error) {
+		return q.CurrentCashSession(ctx, userID)
 	})
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
@@ -145,11 +141,8 @@ func (r *CashSessionRepository) AddMovement(ctx context.Context, tenantID, id uu
 // the sale's. The lock is held until that transaction ends, even though
 // this call runs in a savepoint.
 func (r *CashSessionRepository) EnsureOpen(ctx context.Context, tenantID, id uuid.UUID) error {
-	var status string
-	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		var err error
-		status, err = sqlcgen.New(tx).ShareLockCashSession(ctx, id)
-		return err
+	status, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) (string, error) {
+		return sqlcgen.New(tx).ShareLockCashSession(ctx, id)
 	})
 	if err != nil {
 		return cashError("lock", id, err)
@@ -193,136 +186,6 @@ func (r *CashSessionRepository) Close(ctx context.Context, tenantID, id uuid.UUI
 		return nil, cashError("close", id, err)
 	}
 	return session, nil
-}
-
-func readActivity(ctx context.Context, q *sqlcgen.Queries, id uuid.UUID) (domain.CashActivity, error) {
-	sales, err := q.CashSessionSales(ctx, &id)
-	if err != nil {
-		return domain.CashActivity{}, err
-	}
-	payments, err := q.CashSessionPayments(ctx, &id)
-	if err != nil {
-		return domain.CashActivity{}, err
-	}
-	movements, err := q.CashSessionMovementTotals(ctx, id)
-	if err != nil {
-		return domain.CashActivity{}, err
-	}
-	a := domain.CashActivity{
-		CashReceived: decimal.Zero, ChangeGiven: sales.ChangeGiven,
-		CashIn: movements.CashIn, CashOut: movements.CashOut, Sales: int(sales.SalesCount),
-	}
-	for _, p := range payments {
-		amount := p.Amount
-		if domain.PaymentMethod(p.Method) == domain.PaymentCash {
-			a.CashReceived = p.Amount
-			amount = p.Amount.Sub(sales.ChangeGiven)
-		}
-		a.ByMethod = append(a.ByMethod, domain.MethodTotal{Method: domain.PaymentMethod(p.Method), Amount: amount})
-	}
-	return a, nil
-}
-
-func insertClosing(ctx context.Context, q *sqlcgen.Queries, s *domain.CashSession) error {
-	c := s.Closing()
-	if c == nil {
-		return fmt.Errorf("cash session %s was not closed", s.ID())
-	}
-	for _, d := range c.Count.Counts() {
-		if err := q.InsertCashSessionCount(ctx, sqlcgen.InsertCashSessionCountParams{
-			TenantID: s.TenantID(), SessionID: s.ID(), Denomination: d.Denomination, Quantity: d.Quantity,
-		}); err != nil {
-			return err
-		}
-	}
-	for _, p := range c.Activity.ByMethod {
-		if err := q.InsertCashSessionPayment(ctx, sqlcgen.InsertCashSessionPaymentParams{
-			TenantID: s.TenantID(), SessionID: s.ID(), Method: p.Method.String(), Amount: p.Amount,
-		}); err != nil {
-			return err
-		}
-	}
-	a := c.Activity
-	if a.Sales < 0 || a.Sales > math.MaxInt32 {
-		return errors.New("sales count of the cash session out of range")
-	}
-	salesCount := int32(a.Sales)
-	var notes *string
-	if c.Notes != "" {
-		notes = &c.Notes
-	}
-	affected, err := q.CloseCashSession(ctx, sqlcgen.CloseCashSessionParams{
-		ID: s.ID(), ClosedAt: &c.ClosedAt, ClosedBy: &c.ClosedBy, Notes: notes,
-		CashReceived: &a.CashReceived, ChangeGiven: &a.ChangeGiven, CashIn: &a.CashIn, CashOut: &a.CashOut,
-		SalesCount: &salesCount, Expected: &c.Expected, Counted: &c.Counted, Difference: &c.Difference,
-	})
-	if err != nil {
-		return err
-	}
-	if affected != 1 {
-		return fmt.Errorf("cash session %s is no longer open", s.ID())
-	}
-	return nil
-}
-
-// readCashSession rebuilds a session row, with its count and payment totals
-// if it is closed.
-func readCashSession(ctx context.Context, q *sqlcgen.Queries, row sqlcgen.CashSession) (*domain.CashSession, error) {
-	snap := domain.CashSessionSnapshot{
-		ID: row.ID, TenantID: row.TenantID, LocationID: row.LocationID, UserID: row.UserID,
-		OpeningFloat: row.OpeningFloat, OpenedAt: row.OpenedAt, Status: domain.CashSessionStatus(row.Status),
-	}
-	if snap.Status == domain.CashSessionClosed {
-		closing, err := readClosing(ctx, q, row)
-		if err != nil {
-			return nil, fmt.Errorf("cash session %s: %w", row.ID, err)
-		}
-		snap.Closing = closing
-	}
-	s, err := domain.RehydrateCashSession(snap)
-	if err != nil {
-		return nil, fmt.Errorf("cash session %s: %w", row.ID, err)
-	}
-	return s, nil
-}
-
-func readClosing(ctx context.Context, q *sqlcgen.Queries, row sqlcgen.CashSession) (*domain.CashClosing, error) {
-	if row.ClosedAt == nil || row.ClosedBy == nil || row.CashReceived == nil || row.ChangeGiven == nil ||
-		row.CashIn == nil || row.CashOut == nil || row.SalesCount == nil || row.Expected == nil ||
-		row.Counted == nil || row.Difference == nil {
-		return nil, domain.ErrInconsistentCashSession
-	}
-	countRows, err := q.ListCashSessionCounts(ctx, row.ID)
-	if err != nil {
-		return nil, err
-	}
-	counts := make([]domain.DenominationCount, 0, len(countRows))
-	for _, c := range countRows {
-		counts = append(counts, domain.DenominationCount{Denomination: c.Denomination, Quantity: c.Quantity})
-	}
-	count, err := domain.NewCashCount(counts)
-	if err != nil {
-		return nil, err
-	}
-	paymentRows, err := q.ListCashSessionPayments(ctx, row.ID)
-	if err != nil {
-		return nil, err
-	}
-	activity := domain.CashActivity{
-		CashReceived: *row.CashReceived, ChangeGiven: *row.ChangeGiven, CashIn: *row.CashIn, CashOut: *row.CashOut,
-		Sales: int(*row.SalesCount),
-	}
-	for _, p := range paymentRows {
-		activity.ByMethod = append(activity.ByMethod, domain.MethodTotal{Method: domain.PaymentMethod(p.Method), Amount: p.Amount})
-	}
-	c := &domain.CashClosing{
-		ClosedBy: *row.ClosedBy, ClosedAt: *row.ClosedAt, Count: count, Activity: activity,
-		Expected: *row.Expected, Counted: *row.Counted, Difference: *row.Difference,
-	}
-	if row.Notes != nil {
-		c.Notes = *row.Notes
-	}
-	return c, nil
 }
 
 // cashError translates a missing row (another tenant's session included) to

@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { formatDateTime, formatMoney, isZero } from '@/shared/format';
 import type { Sale } from '../../api/types';
 import type { Paper } from '../../model/paper';
-import { methodLabels } from '../../model/paymentMethods';
+import { methodLabels } from '../../model/payments/paymentMethods';
 import { ReceiptLines } from '../ReceiptLines/ReceiptLines';
 import { ReceiptTaxes } from '../ReceiptTaxes/ReceiptTaxes';
 import styles from './Receipt.module.scss';

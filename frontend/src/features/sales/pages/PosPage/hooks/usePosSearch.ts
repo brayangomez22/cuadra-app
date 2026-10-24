@@ -1,19 +1,7 @@
-import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import {
-  catalogKeys,
-  fetchProducts,
-  sellables,
-  useProducts,
-  type ProductQuery,
-  type Sellable,
-} from '@/features/catalog';
+import { sellables, useProductSearchResults, useSearchProductsNow, type Sellable } from '@/features/catalog';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { readSearch, searchOutcome } from '../../../model/searchText';
-
-const RESULTS = 8;
-
-const searchQuery = (q: string): ProductQuery => ({ q, status: 'active', limit: RESULTS });
 
 /** Adds the variant to the sale; quantity is a decimal of the API ("1", "2.5"). */
 export type OnAdd = (sellable: Sellable, quantity: string) => void;
@@ -23,7 +11,7 @@ export type OnAdd = (sellable: Sellable, quantity: string) => void;
  * one the arrows chose. Enter searches at once, without the debounce.
  */
 export function usePosSearch(onAdd: OnAdd) {
-  const queryClient = useQueryClient();
+  const search = useSearchProductsNow();
   const [text, setText] = useState('');
   const [active, setActive] = useState(-1);
   const [submitted, setSubmitted] = useState<string | null>(null);
@@ -31,7 +19,7 @@ export function usePosSearch(onAdd: OnAdd) {
   const { quantity, term: typed } = readSearch(text);
   const debounced = useDebouncedValue(typed);
   const term = submitted ?? debounced;
-  const products = useProducts(searchQuery(term), { enabled: term !== '' });
+  const products = useProductSearchResults(term);
   const page = term && !products.isPlaceholderData ? products.data?.items : undefined;
   const results = page && sellables(page);
 
@@ -51,12 +39,7 @@ export function usePosSearch(onAdd: OnAdd) {
     if (!typed) return;
     setSubmitted(typed);
     try {
-      const query = searchQuery(typed);
-      const found = await queryClient.query({
-        queryKey: catalogKeys.products(query),
-        queryFn: () => fetchProducts(query),
-      });
-      const outcome = searchOutcome(found.items, typed);
+      const outcome = searchOutcome(await search(typed), typed);
       if (outcome.type === 'add') {
         add(outcome.sellable);
       } else if (outcome.type === 'not_found') {

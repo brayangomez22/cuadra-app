@@ -267,20 +267,28 @@ func RehydrateCashSession(snap CashSessionSnapshot) (*CashSession, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := snap.Closing
-	if c == nil {
+	if snap.Closing == nil {
 		return s, nil
 	}
-	count, err := NewCashCount(c.Count.Counts())
-	if err != nil {
+	if err := s.rehydrateClosing(*snap.Closing); err != nil {
 		return nil, err
 	}
+	return s, nil
+}
+
+// rehydrateClosing closes the session with the stored count and checks the
+// stored expected, counted and difference.
+func (s *CashSession) rehydrateClosing(c CashClosing) error {
+	count, err := NewCashCount(c.Count.Counts())
+	if err != nil {
+		return err
+	}
 	if err := s.Close(CloseCashInput{UserID: c.ClosedBy, Count: count, Activity: c.Activity, Notes: c.Notes, At: c.ClosedAt}); err != nil {
-		return nil, err
+		return err
 	}
 	got := s.closing
 	if !got.Expected.Equal(c.Expected) || !got.Counted.Equal(c.Counted) || !got.Difference.Equal(c.Difference) {
-		return nil, ErrInconsistentCashSession
+		return ErrInconsistentCashSession
 	}
-	return s, nil
+	return nil
 }

@@ -107,6 +107,89 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 **Pendientes que entran a esta tarea:** P65, P66, P67, P69 y P71 (`docs/plan/pendientes.md`).
 **Verificación final:** `npm run lint` sin excepciones; ningún archivo de `src/` pasa de los límites (salvo el generado `schema.d.ts`); un reporte en el PR con las líneas por archivo antes y después.
 
+### Bloque T26k–T26r · Refactor del backend: reglas verificables, funciones simples y lógica compartida
+
+El backend ya cumple la arquitectura hexagonal (cada `domain/` importa solo la librería estándar, `uuid` y `decimal`; ningún módulo importa otro), pero nada lo verifica: se cumple por disciplina. Además, cada módulo repite los mismos helpers (`startSpan`/`endSpan` ×5, `requirePrincipal` ×5, `actor` ×4, `formatMoney`/`parseDecimal` ×3, `violates`/`pageBounds`/SQLSTATE ×4), los `NewService` crean sus métricas una por una, hay repositorios CRUD casi iguales y unas 40 funciones pasan los umbrales de complejidad. El bloque deja las reglas en el CI y el código dentro de los límites antes de seguir con T27 (P62, análisis del 2026-10-24).
+
+**Umbrales** (en error, código no generado; `*.gen.go` y `sqlcgen/` quedan fuera):
+
+| Guarda | Límite | Hoy lo exceden |
+|---|---|---|
+| `funlen` | 50 líneas / 35 sentencias por función | 1 |
+| `gocognit` | 15 | 12 |
+| `cyclop` | 10 | 18 |
+| `nestif` | 4 | 0 |
+| `dupl` | 100 tokens | 13 |
+| `interfacebloat` | 10 métodos | 1 (`UseCases` del catálogo, 26) |
+| `nilnil` | — | 3 |
+| Tamaño de archivo | 300 líneas el código, 400 los tests | 7 de código, 13 de tests |
+| `thelper` y `testifylint` (tests) | — | 27 y 8 |
+
+En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`: las tablas de los tests table-driven son literales largos que se leen fácil. Los tests se mantienen pequeños por el límite de 400 líneas por archivo.
+
+**Reglas de todo el bloque**
+- **No cambian el comportamiento ni el contrato.** `api/openapi.yaml` no cambia, `make openapi` y `make sqlc` no dejan diferencias y no hay migraciones nuevas. Los tests existentes son la red de seguridad: se mueven y se dividen, pero sus aserciones no cambian en el mismo PR. Si un test tiene que cambiar, el plan de la tarea lo justifica.
+- Lo nuevo y reutilizable de `platform/` se escribe con tests primero. Un helper se extrae solo cuando hay al menos dos usos reales, y su paquete se nombra por su propósito (nada de `utils`, `common` ni `helpers`).
+- No se agrega un "repositorio base" genérico ni una capa tipo ORM: el SQL sigue en las queries de sqlc. Tampoco se activan `wrapcheck`, `ireturn` ni `err113`: casi todo lo que marcan es ruido.
+- Lo mejorable que no sea reorganizar (bugs, rendimiento, reglas de negocio) va a `pendientes.md` y no se arregla aquí.
+- Definición de terminado: `make check`, los E2E de Playwright y los checks del frontend en verde, con los spans y las métricas iguales (mismos nombres, atributos y unidades). Cada tarea borra de la lista temporal de T26k los archivos de su módulo, divide sus tests por escenario con builders de fixtures (`aProduct(...)`, `aSale(...)`) en el paquete y adopta el kit de T26l.
+
+### [x] T26k · Convención del backend y guardas
+**Alcance:**
+1. **`docs/backend.md`**, la convención, con un ejemplo real del antes y el después: la estructura de un módulo (`domain/`, `app/`, `adapters/http`, `adapters/postgres`, `module.go`), un archivo por caso de uso o recurso, interfaces pequeñas definidas donde se consumen, cuándo algo va en `platform/` y cómo se nombran los tests y sus builders. Se resume en `CLAUDE.md` (sección "Backend: estructura y tamaño", junto a las reglas de arquitectura).
+2. **`depguard` en `.golangci.yml`** con las reglas de `CLAUDE.md`:
+   - `modules/*/domain` solo importa la librería estándar, `uuid` y `decimal`;
+   - `modules/*/app` no importa `adapters`, `pgx`, `net/http`, `sqlc` ni el SDK de OpenTelemetry (`go.opentelemetry.io/otel/sdk`);
+   - un módulo no importa otro módulo (solo `cmd/api` los junta);
+   - `platform/` no importa `modules/`.
+3. **Los linters y umbrales de la tabla** en `.golangci.yml`.
+4. **`cmd/lint-size`** (Go, sin dependencias y con tests, como `lint-neutral`) y su `make lint-size` dentro de `make lint`: falla si un archivo `.go` no generado pasa de 300 líneas (400 si es `_test.go`).
+5. **Lista temporal** con los archivos que hoy no cumplen (exclusiones por ruta en `.golangci.yml` y la lista de `lint-size`), marcada con un comentario: **solo se recorta**, nunca se agrega una entrada. `/tarea` la revisa.
+
+**Tests primero:** `lint-size` cuenta bien las líneas, ignora los generados y aplica el límite de los tests; un import prohibido a propósito en un paquete de prueba (`testdata/`) hace fallar `depguard`.
+**Verificación:** `make lint` en verde con la lista temporal; el PR lleva el reporte inicial (los hallazgos por linter y por archivo), que es el punto de partida del reporte de T26r.
+
+### [x] T26l · Kit compartido de `platform/`
+**Depende de:** T26k.
+**Alcance:** los helpers que hoy se repiten en cada módulo, con tests primero y adoptados por los cuatro módulos y `platform/modules`:
+- **Casos de uso** (un paquete nuevo, por ejemplo `platform/usecase`, que solo importa la API de OpenTelemetry para que `app/` lo pueda usar): `StartSpan` (span `<modulo>.<CasoDeUso>` con `tenant.id` y `user.id`), `EndSpan` (`RecordError` + `SetStatus`) y un constructor de instrumentos que crea los contadores e histogramas de un servicio desde una lista declarativa, para que cada `NewService` quede lineal (hoy su complejidad está entre 15 y 20).
+- **HTTP** (`platform/httpx`): un `RequirePrincipal` genérico para los `StrictHandlerFunc` de cada paquete generado; el actor desde el principal; y los formatos decimales del contrato (`FormatMoney`, `FormatDecimal`, `ParseDecimal`), que hoy repiten los `money.go`.
+- **Postgres** (`platform/db`): `Violates(err, code, constraint)` con las constantes SQLSTATE, `PageBounds` y dos helpers pequeños sobre `WithTenantTx`: uno que lee un valor (`db.Read`) y otro que ejecuta y devuelve las filas afectadas, para quitar el `var rows; err := WithTenantTx(...)` repetido.
+- **Quién ve costos**: el permiso y la decisión en un solo lugar (hoy `"catalog:write"` está copiado en los handlers de `catalog` e `inventory`).
+
+**Verificación:** desaparecen las copias de los helpers (`dupl` y `grep` lo confirman); los spans y métricas tienen los mismos nombres y atributos.
+
+### [x] T26m · Refactor de `identity`
+**Depende de:** T26l.
+**Alcance:** `authenticate` (`app/login.go`) y `argon2id.decode` dentro de los umbrales, `app/service.go` dividido por caso de uso, y `adapters/http/handler_test.go` (490 líneas) dividido por escenario (login, refresh, registro, `/me`, cierre de sesión).
+
+### [x] T26n · Refactor de `catalog`
+**Depende de:** T26m.
+**Alcance:** el módulo más grande.
+- `adapters/http/handler.go` (384 líneas) y su `UseCases` de 26 métodos se dividen por recurso (productos, variantes, unidades alternativas, categorías, unidades, atributos y ejes), cada uno con su interfaz pequeña definida en el handler.
+- Los repositorios CRUD (`unit`, `category`, `attribute`, `variant_axis`) usan los helpers de T26l y dejan de repetirse.
+- `product_repository.go` (471 líneas) se divide por responsabilidad (escritura, búsqueda, variantes y unidades).
+- `SeedRepository.Seed` y `domain/product.go`, `domain/attribute.go` dentro de los umbrales.
+- `module.go` deja la API pública para otros módulos (`ProductsByID`, `ProductsOfVariants`, `VariantProducts`) en su propio archivo.
+- `handler_test.go` (560 líneas) y los tests de integración de los repositorios divididos por recurso.
+
+### [x] T26o · Refactor de `inventory`
+**Depende de:** T26n.
+**Alcance:** `StockRepository.Apply` (complejidad cognitiva 27) dividido en pasos (asegurar los niveles, bloquearlos en orden, aplicar el cambio y guardar movimientos y niveles), sin cambiar el orden de los bloqueos; `newMovement` (22) validado por tipo de movimiento; el producto de cada variante (`productsOf`), que hoy pide el handler, lo entrega el caso de uso o la consulta; `handler_test.go` (395 líneas) dividido por escenario.
+
+### [x] T26p · Refactor de `sales`
+**Depende de:** T26o.
+**Alcance:** `ConfirmSale` (26) dividido en armar el carrito (variantes, unidades y precios), armar la venta y guardarla, sin cambiar el orden de los pasos ni lo que corre dentro de la transacción; `newLine` (21), `RehydrateSale` (21) y `readClosing` (17) dentro de los umbrales; `saleCashSession` sin `nil, nil` (devuelve la caja y si la hay); la parte repetida de `cash_repository` y `sale_repository` con los helpers de T26l; `cash_repository.go` (335 líneas) y los tests de `adapters/http` divididos.
+
+### [x] T26q · `platform/modules`, `cmd/api` y `lint-neutral`
+**Depende de:** T26p.
+**Alcance:** `run()` de `cmd/api/main.go` (complejidad 20) dividido en armar la telemetría, los módulos y el handler; los puertos entre módulos (`salesports.go`, `identityports.go`, `moduleports.go`) con un archivo por puerto si pasan de los límites; los `nil, nil` de `platform/modules/service.go`; `Scan` de `cmd/lint-neutral` (42) en funciones pequeñas; los tests de integración de `cmd/api` (hasta 490 líneas) divididos por escenario.
+
+### [x] T26r · Cierre del bloque del backend
+**Depende de:** T26q.
+**Alcance:** se borra la lista temporal de T26k (ningún archivo ni regla queda excluido); se revisa `docs/backend.md` contra el código final; **`README.md` mínimo en la raíz** (qué es Cuadra, la arquitectura en un párrafo con enlaces a `docs/backend.md` y `docs/frontend.md`, cómo correrlo y los comandos de `make`), que T52 completa; entrada en `docs/decisiones.md` con lo que cambió.
+**Verificación final:** `make lint` sin exclusiones; un reporte en el PR con los hallazgos de cada linter y las líneas por archivo antes (el reporte de T26k) y después.
+
 ### [ ] T27 · Escáner de códigos con la cámara
 **Alcance:** componente reutilizable en `shared/ui` que lee códigos de barras (EAN-13, EAN-8, Code 128, UPC) y QR con la cámara del celular o la tablet. Usa la API nativa `BarcodeDetector` cuando existe y una librería de respaldo cuando no (proponer cuál y confirmar antes de agregarla). Linterna, vibración o sonido al leer, y prevención de lecturas duplicadas en ráfaga. Se usa en el POS (agrega al carrito) y en la toma de inventario (T30). Requiere HTTPS.
 **Tests primero:** con un detector simulado, una lectura dispara `onScan` una sola vez aunque el código siga en cámara; si el usuario niega el permiso de cámara se muestra un mensaje claro y la alternativa de digitar el código.
@@ -118,6 +201,7 @@ Las features crecieron sin subcarpetas ni límites: `sales/` tiene 34 archivos e
 ### [ ] T29 · Importación inicial desde Excel/CSV
 **Depende de:** T18 (River).
 **Alcance:** asistente para cargar productos, categorías, precios e inventario inicial desde una plantilla descargable. Previsualización, validación fila por fila con errores claros ("fila 154: el precio no es un número"), importación en un trabajo en segundo plano (River) y reporte final. **Crítico para el piloto:** nadie va a digitar 8.000 referencias a mano. La plantilla de Excel se genera según la configuración del tenant: incluye columnas para sus atributos de producto, sus unidades y, si el módulo `variants` está activo, una fila por variante (con columnas de ejes) agrupada por producto.
+**Convención que define:** es el primer trabajo de River con lógica de negocio, así que define y escribe en `docs/backend.md` (sección 7, "Trabajos en segundo plano") dónde vive un trabajo, cómo lleva el tenant (en sus argumentos, con `WithTenantTx`), cómo se encola en la misma transacción que lo origina (outbox), cómo se reintenta sin duplicar datos y su span y sus métricas. T34 y los siguientes la siguen.
 **Pendientes que entran a esta tarea:** P49 y P58 (`docs/plan/pendientes.md`).
 **Tests primero:** filas inválidas se reportan sin importar las válidas a medias (todo o nada por lote); un SKU duplicado actualiza en vez de duplicar (configurable); 10.000 filas se procesan sin agotar memoria; un archivo con variantes crea un producto con sus N variantes; un atributo obligatorio vacío se reporta como error de la fila.
 
