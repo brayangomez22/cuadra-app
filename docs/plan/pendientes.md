@@ -74,7 +74,7 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 
-P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31), P20 en `chore/P20-pos-critique`, P23 en `chore/P23-pending-ids-and-tarea-check` P54–P56 en `chore/P54-P56-ui-fixes` y P57 en la rama de T25 (`feat/T25-e2e-playwright`).
+P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31), P20 en `chore/P20-pos-critique`, P23 en `chore/P23-pending-ids-and-tarea-check` P54–P56 en `chore/P54-P56-ui-fixes` P57 en la rama de T25 (`feat/T25-e2e-playwright`) y P74 en `chore/P74-npm-audit`.
 
 | | ID | Pendiente | Origen |
 |---|---|---|---|
@@ -91,7 +91,7 @@ P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31), P20 en `chore
 | [x] | P57 | `features/dev/UiCatalogPage.tsx` usa datos de ejemplo de un solo nicho ("Cemento gris 50kg", unidad "bulto"): mezclar ejemplos de al menos dos tipos de negocio, como pide la regla de neutralidad de `docs/estilos.md`. Hecho en la rama de T25: ejemplos de droguería, ferretería, papelería y calzado | T24k |
 | [x] | P72 | Dos fixtures de los tests del frontend usan el mismo id `01920000-0000-7000-8000-000000000401`: `ids.cashSession` (`src/test/fixtures/ids.ts`) y `aMovement` (`inventory/testing/fixtures.ts`). Hoy no chocan, pero un test que junte caja e inventario confundiría las llamadas: darle a `aMovement` un id propio. Hecho en la rama del bloque T26k–T26r: `aMovement` usa `…000000000901` | T26j |
 | [x] | P73 | La búsqueda de productos está repetida en `catalog/hooks/useProductSearch.ts` y `sales/pages/PosPage/hooks/usePosSearch.ts` (el mismo `searchQuery`, `RESULTS = 8` y la búsqueda inmediata con Enter), y las dos llaman a `queryClient.query` con `catalogKeys` desde `hooks/`, cuando la caché solo se toca en `api/`. Por eso `catalog/index.ts` exporta `catalogKeys` y `fetchProducts`. Pasar la búsqueda inmediata a `catalog/api/products.ts` (por ejemplo `searchProductsNow` o un `useProductLookup`), que los dos hooks la usen y que `catalog` deje de exportar `catalogKeys` y `fetchProducts`. Hecho en la rama del bloque T26k–T26r: `catalog/api/productSearch.ts` (`useProductSearchResults` y `useSearchProductsNow`) y `fetchProducts` ya no se exporta. `catalogKeys` **sí** se sigue exportando: lo usan las mutaciones de `settings/api/` para invalidar las listas del catálogo, que es uso legítimo de la caché desde `api/` | Revisión del frontend después de T26j (2026-10-24) |
-| [ ] | P74 | `npm audit` del frontend reporta tres vulnerabilidades que ya estaban en `main` (no vienen de `barcode-detector`): `zod` < 4.6.6 (alta, dependencia directa: agotamiento de memoria al validar colecciones grandes), `undici` (alta) y `fast-uri` (moderada), estas dos transitivas de herramientas de desarrollo. Subir `zod` a 4.6.7 y revisar si Dependabot ya propuso las otras | T27 |
+| [x] | P74 | `npm audit` del frontend reporta tres vulnerabilidades que ya estaban en `main` (no vienen de `barcode-detector`): `zod` < 4.6.6 (alta, dependencia directa: agotamiento de memoria al validar colecciones grandes), `undici` (alta) y `fast-uri` (moderada), estas dos transitivas de herramientas de desarrollo. Subir `zod` a 4.6.7 y revisar si Dependabot ya propuso las otras. Hecho en `chore/P74-npm-audit`: `zod` 4.6.7 (versión exacta), `undici` 8.12.3 y `fast-uri` 3.1.9 con `npm audit fix` (sin `--force`); `npm audit` queda en 0. El PR #74 de Dependabot no sirve: agrupa `typescript` 7, que choca con `openapi-typescript` (`ERESOLVE`) | T27 |
 
 ## Para validar con los pilotos
 
