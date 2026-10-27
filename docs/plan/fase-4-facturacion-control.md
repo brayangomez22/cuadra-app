@@ -53,7 +53,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T43 · Tablero del dueño
 **Depende de:** T28, T32, T42.
 **Alcance:** pantalla de inicio para `owner` y `admin`: ventas de hoy contra el mismo día de la semana anterior, ticket promedio, variantes por agotarse, cartera vencida, documentos DIAN con problemas, cajas abiertas y **alertas de control** de la semana (anulaciones, descuentos o diferencias de caja por encima de lo habitual de ese usuario), con enlace al detalle de T42 y a la auditoría de T41. Se actualiza solo cada pocos minutos.
-**Pendientes que entran a esta tarea:** P11 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P11 y P77 (`docs/plan/pendientes.md`).
 **Tests primero:** cada indicador coincide con su reporte detallado en T42.
 **Después:** `/impeccable critique`: lo más importante debe entenderse en 5 segundos.
 

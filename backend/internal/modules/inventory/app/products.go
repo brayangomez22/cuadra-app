@@ -15,10 +15,12 @@ type Movement struct {
 	ProductID uuid.UUID
 }
 
-// Level is a stock level with the product of its variant.
+// Level is a stock level with the product of its variant and its reorder
+// rule, nil if the variant has none at the level's location.
 type Level struct {
 	*domain.StockLevel
 	ProductID uuid.UUID
+	Reorder   *domain.ReorderRule
 }
 
 // LevelPage is one page of levels and how many match in total.

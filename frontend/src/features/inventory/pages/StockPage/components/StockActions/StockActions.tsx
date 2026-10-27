@@ -4,17 +4,23 @@ import type { Location } from '../../../../api/types';
 import { CreateLocationDialog } from '../../../../components/CreateLocationDialog/CreateLocationDialog';
 
 type Props = {
-  /** Where an entry goes; without it (no location or no permission) there is no button. */
+  /** The location shown; without one there are no buttons about it. */
   location?: Location;
+  canReceive: boolean;
   canCreate: boolean;
   onCreated: (locationId: string) => void;
 };
 
-/** The page's actions: register an entry in the location shown and create another location. */
-export function StockActions({ location, canCreate, onCreated }: Props) {
+/** The page's actions: what to reorder and register an entry in the location shown, and create another location. */
+export function StockActions({ location, canReceive, canCreate, onCreated }: Props) {
   return (
     <>
       {location && (
+        <ButtonLink to={paths.inventory.reorder({ sede: location.id })} variant="secondary">
+          Por reponer
+        </ButtonLink>
+      )}
+      {location && canReceive && (
         <ButtonLink to={paths.inventory.receipt({ sede: location.id })} icon={<IconPlus />}>
           Registrar entrada
         </ButtonLink>

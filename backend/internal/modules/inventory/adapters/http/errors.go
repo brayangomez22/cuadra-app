@@ -12,6 +12,8 @@ import (
 const (
 	locationNotFoundCode    = "location_not_found"
 	locationNotFoundMessage = "La sede no existe."
+	variantNotFoundCode     = "variant_not_found"
+	variantNotFoundMessage  = "La variante no existe."
 )
 
 // errorRules maps the inventory domain errors to HTTP.
@@ -26,7 +28,9 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrInvalidQuantity, Status: http.StatusUnprocessableEntity, Code: "invalid_quantity", Message: "La cantidad no es válida: distinta de cero y con máximo 4 decimales."},
 	{Err: domain.ErrInvalidUnitCost, Status: http.StatusUnprocessableEntity, Code: "invalid_unit_cost", Message: "El costo no puede ser negativo y tiene máximo 4 decimales."},
 	{Err: domain.ErrInvalidLocationName, Status: http.StatusUnprocessableEntity, Code: "invalid_location_name", Message: "Escriba el nombre de la sede (máximo 100 caracteres)."},
-	{Err: domain.ErrVariantNotFound, Status: http.StatusUnprocessableEntity, Code: "variant_not_found", Message: "La variante no existe."},
+	{Err: domain.ErrVariantNotFound, Status: http.StatusUnprocessableEntity, Code: variantNotFoundCode, Message: variantNotFoundMessage},
 	{Err: domain.ErrLocationNotFound, Status: http.StatusUnprocessableEntity, Code: locationNotFoundCode, Message: locationNotFoundMessage},
+	{Err: domain.ErrInvalidReorderRange, Status: http.StatusUnprocessableEntity, Code: "invalid_reorder_range", Message: "El stock mínimo no puede ser negativo ni mayor que el máximo, y cada uno tiene máximo 4 decimales."},
+	{Err: domain.ErrReorderRuleNotFound, Status: http.StatusNotFound, Code: "reorder_rule_not_found", Message: "La variante no tiene stock mínimo en esta sede."},
 	{Err: domain.ErrLocationInactive, Status: http.StatusUnprocessableEntity, Code: "location_inactive", Message: "La sede está inactiva. Actívela antes de mover mercancía en ella."},
 }

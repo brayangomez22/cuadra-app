@@ -9,6 +9,7 @@ export const inventoryRoutes: RouteObject[] = [
     element: <RequirePermission permission="inventory:read" />,
     children: [
       { path: paths.inventory.stock.pattern, ...lazyPage(async () => (await import('./pages')).StockPage) },
+      { path: paths.inventory.reorder.pattern, ...lazyPage(async () => (await import('./pages')).ReorderPage) },
       { path: paths.inventory.kardex.pattern, ...lazyPage(async () => (await import('./pages')).KardexPage) },
     ],
   },

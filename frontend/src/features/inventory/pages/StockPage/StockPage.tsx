@@ -6,7 +6,7 @@ import { locationOptions } from '../../model/shownLocation';
 import { LocationStock } from './components/LocationStock/LocationStock';
 import { NoLocations } from './components/NoLocations/NoLocations';
 import { StockActions } from './components/StockActions/StockActions';
-import { useStockLocation } from './hooks/useStockLocation';
+import { useStockLocation } from '../../hooks/useStockLocation';
 import styles from './StockPage.module.scss';
 
 /** /inventario: the stock of one location (sede), chosen in the URL (?sede=). */
@@ -24,7 +24,8 @@ export function StockPage() {
       description="Lo que hay en cada sede, en la unidad de cada producto."
       actions={
         <StockActions
-          location={canReceive ? location : undefined}
+          location={location}
+          canReceive={canReceive}
           canCreate={canManage && list.length > 0}
           onCreated={chooseLocation}
         />

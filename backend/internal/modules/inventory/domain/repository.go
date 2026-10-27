@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // LocationRepository persists locations. Every operation is scoped to a
@@ -72,5 +73,44 @@ type KardexFilter struct {
 // MovementPage is one page of movements and how many match in total.
 type MovementPage struct {
 	Items []*StockMovement
+	Total int
+}
+
+// ReorderRuleRepository persists the reorder rules. A variant or location of
+// another tenant is reported as not found.
+type ReorderRuleRepository interface {
+	// Save stores the rule, replacing the one of its variant at its location
+	// if there is one; ErrVariantNotFound or ErrLocationNotFound if either
+	// does not exist in the rule's tenant.
+	Save(ctx context.Context, r *ReorderRule) error
+	// Delete removes the rule of variantID at locationID;
+	// ErrReorderRuleNotFound if there is none.
+	Delete(ctx context.Context, tenantID, variantID, locationID uuid.UUID) error
+	// ForVariants returns the rules at locationID of those of variantIDs that
+	// have one, by variant.
+	ForVariants(ctx context.Context, tenantID, locationID uuid.UUID, variantIDs []uuid.UUID) (map[uuid.UUID]*ReorderRule, error)
+	// Alerts returns one page of the rules whose stock at their location (of
+	// every lot, zero without a level) is at or below their minimum, the
+	// furthest below it first, with that stock.
+	Alerts(ctx context.Context, tenantID uuid.UUID, f ReorderFilter) (RuleStockPage, error)
+}
+
+// ReorderFilter selects the alerts of one location, or of every location
+// when LocationID is nil.
+type ReorderFilter struct {
+	LocationID *uuid.UUID
+	Limit      int
+	Offset     int
+}
+
+// RuleStock is a reorder rule with the stock it watches.
+type RuleStock struct {
+	Rule   *ReorderRule
+	OnHand decimal.Decimal
+}
+
+// RuleStockPage is one page of rules with their stock and how many match in total.
+type RuleStockPage struct {
+	Items []RuleStock
 	Total int
 }

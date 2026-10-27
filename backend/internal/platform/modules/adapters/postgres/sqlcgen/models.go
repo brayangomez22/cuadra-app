@@ -185,6 +185,15 @@ type RefreshToken struct {
 	RevokedAt pgtype.Timestamptz
 }
 
+type ReorderRule struct {
+	TenantID    uuid.UUID
+	VariantID   uuid.UUID
+	LocationID  uuid.UUID
+	MinQuantity pgtype.Numeric
+	MaxQuantity pgtype.Numeric
+	UpdatedAt   time.Time
+}
+
 type RiverJob struct {
 	ID           int64
 	State        RiverJobState

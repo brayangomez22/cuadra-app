@@ -34,6 +34,7 @@ type Deps struct {
 	Stock          domain.StockRepository
 	Policies       domain.PolicyRepository
 	Variants       ProductVariants
+	Reorder        domain.ReorderRuleRepository
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -60,12 +61,13 @@ type Service struct {
 
 	movements         metric.Int64Counter
 	insufficientStock metric.Int64Counter
+	reorderChanges    metric.Int64Counter
 }
 
 // NewService builds a Service. It fails if a repository is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Locations, d.Stock, d.Policies, d.Variants) {
+	if usecase.AnyNil(d.Locations, d.Stock, d.Policies, d.Variants, d.Reorder) {
 		return nil, errors.New("inventory: missing service dependency")
 	}
 	if d.Now == nil {
@@ -79,6 +81,8 @@ func NewService(d Deps) (*Service, error) {
 			"Stock movements registered, by type.", "{movement}"),
 		usecase.Counter(&s.insufficientStock, "cuadra.inventory.insufficient_stock",
 			"Stock exits rejected for lack of stock, by the movement type attempted.", "{rejection}"),
+		usecase.Counter(&s.reorderChanges, "cuadra.inventory.reorder_rule_changes",
+			"Reorder rules set or deleted, by action.", "{change}"),
 	)
 	if err != nil {
 		return nil, err

@@ -1,16 +1,5 @@
 @use '@/styles/abstracts' as *;
 
-.nameSkeleton {
-  inline-size: 12ch;
-}
-
-.sku {
-  display: block;
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
 .quantity {
   display: inline-flex;
   align-items: center;

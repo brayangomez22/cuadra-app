@@ -163,6 +163,87 @@ type ReceiptInput struct {
 	VariantId openapi_types.UUID  `json:"variant_id"`
 }
 
+// ReorderAlert Una variante por reponer en una sede: su existencia (de todos los lotes), su mínimo y máximo y cuánto pedir
+// para llegar al máximo. Todo en la unidad base del producto.
+type ReorderAlert struct {
+	LocationId openapi_types.UUID `json:"location_id"`
+
+	// MaxQuantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	MaxQuantity Quantity `json:"max_quantity"`
+
+	// MinQuantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	MinQuantity Quantity `json:"min_quantity"`
+
+	// ProductId El producto de la variante, para mostrar su nombre.
+	ProductId openapi_types.UUID `json:"product_id"`
+
+	// Quantity Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).
+	//
+	// Example: -3
+	Quantity SignedQuantity `json:"quantity"`
+
+	// SuggestedQuantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	SuggestedQuantity Quantity           `json:"suggested_quantity"`
+	VariantId         openapi_types.UUID `json:"variant_id"`
+}
+
+// ReorderAlertPage defines model for ReorderAlertPage.
+type ReorderAlertPage struct {
+	Items []ReorderAlert `json:"items"`
+
+	// Total Cantidad total de alertas que cumplen el filtro, sin paginar.
+	Total int `json:"total"`
+}
+
+// ReorderRule defines model for ReorderRule.
+type ReorderRule struct {
+	LocationId openapi_types.UUID `json:"location_id"`
+
+	// MaxQuantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	MaxQuantity Quantity `json:"max_quantity"`
+
+	// MinQuantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	MinQuantity Quantity           `json:"min_quantity"`
+	VariantId   openapi_types.UUID `json:"variant_id"`
+}
+
+// ReorderRuleInput Stock mínimo y máximo en la unidad base del producto, con 0 ≤ mínimo ≤ máximo.
+type ReorderRuleInput struct {
+	// MaxQuantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	MaxQuantity Quantity `json:"max_quantity"`
+
+	// MinQuantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	MinQuantity Quantity `json:"min_quantity"`
+}
+
 // SignedQuantity Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).
 //
 // Example: -3
@@ -170,6 +251,7 @@ type SignedQuantity = string
 
 // StockLevel La existencia de una variante en una sede. `quantity` es negativa solo si la empresa permite vender sin
 // stock. `average_cost` (costo promedio ponderado, sin IVA) solo se envía a quien tiene `catalog:write`.
+// `reorder` solo viene si la variante tiene stock mínimo y máximo en la sede.
 type StockLevel struct {
 	// AverageCost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
@@ -183,7 +265,10 @@ type StockLevel struct {
 	// Quantity Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).
 	//
 	// Example: -3
-	Quantity  SignedQuantity     `json:"quantity"`
+	Quantity SignedQuantity `json:"quantity"`
+
+	// Reorder El stock mínimo y máximo de la existencia, y si hay que reponerla.
+	Reorder   *StockReorder      `json:"reorder,omitempty"`
 	VariantId openapi_types.UUID `json:"variant_id"`
 }
 
@@ -243,6 +328,26 @@ type StockMovementPage struct {
 
 	// Total Cantidad total de movimientos que cumplen el filtro, sin paginar.
 	Total int `json:"total"`
+}
+
+// StockReorder El stock mínimo y máximo de la existencia, y si hay que reponerla.
+type StockReorder struct {
+	// MaxQuantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	MaxQuantity Quantity `json:"max_quantity"`
+
+	// MinQuantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	MinQuantity Quantity `json:"min_quantity"`
+
+	// NeedsReorder La existencia está en el mínimo o por debajo.
+	NeedsReorder bool `json:"needs_reorder"`
 }
 
 // TransferInput defines model for TransferInput.
@@ -321,6 +426,18 @@ type NotFound = Error
 // Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Unauthorized = Error
 
+// ListReorderAlertsParams defines parameters for ListReorderAlerts.
+type ListReorderAlertsParams struct {
+	// LocationId Solo las alertas de esta sede.
+	LocationId *openapi_types.UUID `form:"location_id,omitempty" json:"location_id,omitempty"`
+
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // ListStockParams defines parameters for ListStock.
 type ListStockParams struct {
 	// VariantId Solo la existencia de esta variante.
@@ -357,6 +474,9 @@ type TransferStockJSONRequestBody = TransferInput
 // CreateLocationJSONRequestBody defines body for CreateLocation for application/json ContentType.
 type CreateLocationJSONRequestBody = LocationInput
 
+// SetReorderRuleJSONRequestBody defines body for SetReorderRule for application/json ContentType.
+type SetReorderRuleJSONRequestBody = ReorderRuleInput
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// AdjustStock Registrar un ajuste de inventario
@@ -365,6 +485,9 @@ type ServerInterface interface {
 	// ReceiveStock Registrar una entrada de mercancía
 	// (POST /api/v1/inventory/receipts)
 	ReceiveStock(w http.ResponseWriter, r *http.Request)
+	// ListReorderAlerts Variantes por reponer
+	// (GET /api/v1/inventory/reorder-alerts)
+	ListReorderAlerts(w http.ResponseWriter, r *http.Request, params ListReorderAlertsParams)
 	// TransferStock Trasladar mercancía entre sedes
 	// (POST /api/v1/inventory/transfers)
 	TransferStock(w http.ResponseWriter, r *http.Request)
@@ -374,6 +497,12 @@ type ServerInterface interface {
 	// CreateLocation Crear una sede
 	// (POST /api/v1/locations)
 	CreateLocation(w http.ResponseWriter, r *http.Request)
+	// DeleteReorderRule Quitar el stock mínimo y máximo de una variante en una sede
+	// (DELETE /api/v1/locations/{locationId}/reorder-rules/{variantId})
+	DeleteReorderRule(w http.ResponseWriter, r *http.Request, locationId LocationId, variantId VariantId)
+	// SetReorderRule Definir el stock mínimo y máximo de una variante en una sede
+	// (PUT /api/v1/locations/{locationId}/reorder-rules/{variantId})
+	SetReorderRule(w http.ResponseWriter, r *http.Request, locationId LocationId, variantId VariantId)
 	// ListStock Existencias de una sede
 	// (GET /api/v1/locations/{locationId}/stock)
 	ListStock(w http.ResponseWriter, r *http.Request, locationId LocationId, params ListStockParams)
@@ -419,6 +548,65 @@ func (siw *ServerInterfaceWrapper) ReceiveStock(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ListReorderAlerts operation middleware
+func (siw *ServerInterfaceWrapper) ListReorderAlerts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReorderAlertsParams
+
+	// ------------- Optional query parameter "location_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "location_id", r.URL.Query(), &params.LocationId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "location_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "location_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReorderAlerts(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TransferStock operation middleware
 func (siw *ServerInterfaceWrapper) TransferStock(w http.ResponseWriter, r *http.Request) {
 
@@ -452,6 +640,76 @@ func (siw *ServerInterfaceWrapper) CreateLocation(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateLocation(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteReorderRule operation middleware
+func (siw *ServerInterfaceWrapper) DeleteReorderRule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "locationId" -------------
+	var locationId LocationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "locationId", r.PathValue("locationId"), &locationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "locationId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "variantId" -------------
+	var variantId VariantId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "variantId", r.PathValue("variantId"), &variantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variantId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteReorderRule(w, r, locationId, variantId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetReorderRule operation middleware
+func (siw *ServerInterfaceWrapper) SetReorderRule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "locationId" -------------
+	var locationId LocationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "locationId", r.PathValue("locationId"), &locationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "locationId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "variantId" -------------
+	var variantId VariantId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "variantId", r.PathValue("variantId"), &variantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variantId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetReorderRule(w, r, locationId, variantId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -721,6 +979,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/locations", wrapper.CreateLocation)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/locations/{locationId}/stock", wrapper.ListStock)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/variants/{variantId}/kardex", wrapper.GetVariantKardex)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/locations/{locationId}/reorder-rules/{variantId}", wrapper.DeleteReorderRule)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/locations/{locationId}/reorder-rules/{variantId}", wrapper.SetReorderRule)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/inventory/reorder-alerts", wrapper.ListReorderAlerts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/inventory/receipts", wrapper.ReceiveStock)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/inventory/adjustments", wrapper.AdjustStock)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/inventory/transfers", wrapper.TransferStock)
@@ -925,6 +1186,98 @@ func (response ReceiveStock422JSONResponse) VisitReceiveStockResponse(w http.Res
 type ReceiveStock500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ReceiveStock500JSONResponse) VisitReceiveStockResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReorderAlertsRequestObject struct {
+	Params ListReorderAlertsParams
+}
+
+type ListReorderAlertsResponseObject interface {
+	VisitListReorderAlertsResponse(w http.ResponseWriter) error
+}
+
+type ListReorderAlerts200JSONResponse ReorderAlertPage
+
+func (response ListReorderAlerts200JSONResponse) VisitListReorderAlertsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReorderAlerts400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListReorderAlerts400JSONResponse) VisitListReorderAlertsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReorderAlerts401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListReorderAlerts401JSONResponse) VisitListReorderAlertsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReorderAlerts403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListReorderAlerts403JSONResponse) VisitListReorderAlertsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReorderAlerts422JSONResponse Error
+
+func (response ListReorderAlerts422JSONResponse) VisitListReorderAlertsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReorderAlerts500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListReorderAlerts500JSONResponse) VisitListReorderAlertsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -1211,6 +1564,187 @@ func (response CreateLocation500JSONResponse) VisitCreateLocationResponse(w http
 	return err
 }
 
+type DeleteReorderRuleRequestObject struct {
+	LocationId LocationId `json:"locationId"`
+	VariantId  VariantId  `json:"variantId"`
+}
+
+type DeleteReorderRuleResponseObject interface {
+	VisitDeleteReorderRuleResponse(w http.ResponseWriter) error
+}
+
+type DeleteReorderRule204Response struct {
+}
+
+func (response DeleteReorderRule204Response) VisitDeleteReorderRuleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteReorderRule401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteReorderRule401JSONResponse) VisitDeleteReorderRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteReorderRule403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteReorderRule403JSONResponse) VisitDeleteReorderRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteReorderRule404JSONResponse Error
+
+func (response DeleteReorderRule404JSONResponse) VisitDeleteReorderRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteReorderRule500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteReorderRule500JSONResponse) VisitDeleteReorderRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetReorderRuleRequestObject struct {
+	LocationId LocationId `json:"locationId"`
+	VariantId  VariantId  `json:"variantId"`
+	Body       *SetReorderRuleJSONRequestBody
+}
+
+type SetReorderRuleResponseObject interface {
+	VisitSetReorderRuleResponse(w http.ResponseWriter) error
+}
+
+type SetReorderRule200JSONResponse ReorderRule
+
+func (response SetReorderRule200JSONResponse) VisitSetReorderRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetReorderRule400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SetReorderRule400JSONResponse) VisitSetReorderRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetReorderRule401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SetReorderRule401JSONResponse) VisitSetReorderRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetReorderRule403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SetReorderRule403JSONResponse) VisitSetReorderRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetReorderRule404JSONResponse Error
+
+func (response SetReorderRule404JSONResponse) VisitSetReorderRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetReorderRule422JSONResponse Error
+
+func (response SetReorderRule422JSONResponse) VisitSetReorderRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetReorderRule500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SetReorderRule500JSONResponse) VisitSetReorderRuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListStockRequestObject struct {
 	LocationId LocationId `json:"locationId"`
 	Params     ListStockParams
@@ -1391,6 +1925,9 @@ type StrictServerInterface interface {
 	// ReceiveStock Registrar una entrada de mercancía
 	// (POST /api/v1/inventory/receipts)
 	ReceiveStock(ctx context.Context, request ReceiveStockRequestObject) (ReceiveStockResponseObject, error)
+	// ListReorderAlerts Variantes por reponer
+	// (GET /api/v1/inventory/reorder-alerts)
+	ListReorderAlerts(ctx context.Context, request ListReorderAlertsRequestObject) (ListReorderAlertsResponseObject, error)
 	// TransferStock Trasladar mercancía entre sedes
 	// (POST /api/v1/inventory/transfers)
 	TransferStock(ctx context.Context, request TransferStockRequestObject) (TransferStockResponseObject, error)
@@ -1400,6 +1937,12 @@ type StrictServerInterface interface {
 	// CreateLocation Crear una sede
 	// (POST /api/v1/locations)
 	CreateLocation(ctx context.Context, request CreateLocationRequestObject) (CreateLocationResponseObject, error)
+	// DeleteReorderRule Quitar el stock mínimo y máximo de una variante en una sede
+	// (DELETE /api/v1/locations/{locationId}/reorder-rules/{variantId})
+	DeleteReorderRule(ctx context.Context, request DeleteReorderRuleRequestObject) (DeleteReorderRuleResponseObject, error)
+	// SetReorderRule Definir el stock mínimo y máximo de una variante en una sede
+	// (PUT /api/v1/locations/{locationId}/reorder-rules/{variantId})
+	SetReorderRule(ctx context.Context, request SetReorderRuleRequestObject) (SetReorderRuleResponseObject, error)
 	// ListStock Existencias de una sede
 	// (GET /api/v1/locations/{locationId}/stock)
 	ListStock(ctx context.Context, request ListStockRequestObject) (ListStockResponseObject, error)
@@ -1509,6 +2052,32 @@ func (sh *strictHandler) ReceiveStock(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ListReorderAlerts operation middleware
+func (sh *strictHandler) ListReorderAlerts(w http.ResponseWriter, r *http.Request, params ListReorderAlertsParams) {
+	var request ListReorderAlertsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListReorderAlerts(ctx, request.(ListReorderAlertsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListReorderAlerts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListReorderAlertsResponseObject); ok {
+		if err := validResponse.VisitListReorderAlertsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // TransferStock operation middleware
 func (sh *strictHandler) TransferStock(w http.ResponseWriter, r *http.Request) {
 	var request TransferStockRequestObject
@@ -1588,6 +2157,67 @@ func (sh *strictHandler) CreateLocation(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateLocationResponseObject); ok {
 		if err := validResponse.VisitCreateLocationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteReorderRule operation middleware
+func (sh *strictHandler) DeleteReorderRule(w http.ResponseWriter, r *http.Request, locationId LocationId, variantId VariantId) {
+	var request DeleteReorderRuleRequestObject
+
+	request.LocationId = locationId
+	request.VariantId = variantId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteReorderRule(ctx, request.(DeleteReorderRuleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteReorderRule")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteReorderRuleResponseObject); ok {
+		if err := validResponse.VisitDeleteReorderRuleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetReorderRule operation middleware
+func (sh *strictHandler) SetReorderRule(w http.ResponseWriter, r *http.Request, locationId LocationId, variantId VariantId) {
+	var request SetReorderRuleRequestObject
+
+	request.LocationId = locationId
+	request.VariantId = variantId
+
+	var body SetReorderRuleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetReorderRule(ctx, request.(SetReorderRuleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetReorderRule")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetReorderRuleResponseObject); ok {
+		if err := validResponse.VisitSetReorderRuleResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

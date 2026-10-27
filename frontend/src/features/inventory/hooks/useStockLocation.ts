@@ -1,6 +1,6 @@
 import { pageParam, stringParam, useSearchParamsState } from '@/shared/hooks/useSearchParamsState';
-import { PAGE_SIZE, type Location } from '../../../api/types';
-import { shownLocation } from '../../../model/shownLocation';
+import { PAGE_SIZE, type Location } from '../api/types';
+import { shownLocation } from '../model/shownLocation';
 
 const locationParam = stringParam();
 // Another location starts on its first page.

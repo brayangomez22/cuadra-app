@@ -9,16 +9,18 @@ type Props = {
   productsById: Map<string, Product>;
   loadingProducts: boolean;
   canSeeCost: boolean;
+  canEditReorder: boolean;
 };
 
-/** One row per variant with stock; the average cost only for those who see costs. */
-export function StockTable({ caption, levels, productsById, loadingProducts, canSeeCost }: Props) {
+/** One row per variant with stock and its minimum and maximum; the average cost only for those who see costs. */
+export function StockTable({ caption, levels, productsById, loadingProducts, canSeeCost, canEditReorder }: Props) {
   return (
     <Table caption={caption}>
       <TableHead>
         <TableRow>
           <TableHeaderCell>Producto</TableHeaderCell>
           <TableHeaderCell numeric>Existencia</TableHeaderCell>
+          <TableHeaderCell numeric>Mínimo – máximo</TableHeaderCell>
           {canSeeCost && <TableHeaderCell numeric>Costo promedio</TableHeaderCell>}
         </TableRow>
       </TableHead>
@@ -30,6 +32,7 @@ export function StockTable({ caption, levels, productsById, loadingProducts, can
             product={productsById.get(level.product_id)}
             loading={loadingProducts}
             canSeeCost={canSeeCost}
+            canEditReorder={canEditReorder}
           />
         ))}
       </TableBody>

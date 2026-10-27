@@ -48,6 +48,7 @@ func New(cfg Config) (*Module, error) {
 		Locations:      postgres.NewLocationRepository(cfg.DB),
 		Stock:          postgres.NewStockRepository(cfg.DB),
 		Policies:       postgres.NewPolicyRepository(cfg.DB),
+		Reorder:        postgres.NewReorderRepository(cfg.DB),
 		Variants:       cfg.Variants,
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,

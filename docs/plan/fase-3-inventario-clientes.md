@@ -194,7 +194,7 @@ En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`: las tablas de l
 **Alcance:** componente reutilizable en `shared/ui` que lee códigos de barras (EAN-13, EAN-8, Code 128, UPC) y QR con la cámara del celular o la tablet. Usa la API nativa `BarcodeDetector` cuando existe y una librería de respaldo cuando no (proponer cuál y confirmar antes de agregarla). Linterna, vibración o sonido al leer, y prevención de lecturas duplicadas en ráfaga. Se usa en el POS (agrega al carrito) y en la toma de inventario (T30). Requiere HTTPS.
 **Tests primero:** con un detector simulado, una lectura dispara `onScan` una sola vez aunque el código siga en cámara; si el usuario niega el permiso de cámara se muestra un mensaje claro y la alternativa de digitar el código.
 
-### [ ] T28 · Stock mínimo y alertas de reposición
+### [x] T28 · Stock mínimo y alertas de reposición
 **Alcance:** stock mínimo y máximo por variante y sede; lista de "por agotarse" con cantidad sugerida a pedir (máximo − actual); alerta en el tablero.
 **Tests primero:** una variante aparece en la lista solo cuando su stock es ≤ mínimo; la sugerencia nunca es negativa.
 
@@ -202,7 +202,7 @@ En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`: las tablas de l
 **Depende de:** T18 (River).
 **Alcance:** asistente para cargar productos, categorías, precios e inventario inicial desde una plantilla descargable. Previsualización, validación fila por fila con errores claros ("fila 154: el precio no es un número"), importación en un trabajo en segundo plano (River) y reporte final. **Crítico para el piloto:** nadie va a digitar 8.000 referencias a mano. La plantilla de Excel se genera según la configuración del tenant: incluye columnas para sus atributos de producto, sus unidades y, si el módulo `variants` está activo, una fila por variante (con columnas de ejes) agrupada por producto.
 **Convención que define:** es el primer trabajo de River con lógica de negocio, así que define y escribe en `docs/backend.md` (sección 7, "Trabajos en segundo plano") dónde vive un trabajo, cómo lleva el tenant (en sus argumentos, con `WithTenantTx`), cómo se encola en la misma transacción que lo origina (outbox), cómo se reintenta sin duplicar datos y su span y sus métricas. T34 y los siguientes la siguen.
-**Pendientes que entran a esta tarea:** P49 y P58 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P49, P58 y P79 (`docs/plan/pendientes.md`).
 **Tests primero:** filas inválidas se reportan sin importar las válidas a medias (todo o nada por lote); un SKU duplicado actualiza en vez de duplicar (configurable); 10.000 filas se procesan sin agotar memoria; un archivo con variantes crea un producto con sus N variantes; un atributo obligatorio vacío se reporta como error de la fila.
 
 ### [ ] T30 · Toma física de inventario
