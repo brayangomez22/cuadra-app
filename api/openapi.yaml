@@ -1462,6 +1462,116 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/locations/{locationId}/reorder-rules/{variantId}:
+    parameters:
+      - $ref: "#/components/parameters/LocationId"
+      - $ref: "#/components/parameters/VariantId"
+    put:
+      tags: [inventory]
+      operationId: setReorderRule
+      summary: Definir el stock mínimo y máximo de una variante en una sede
+      description: |
+        Cuando la existencia de la variante en la sede llega al mínimo o baja de él, aparece en las alertas de
+        reposición con la cantidad sugerida a pedir (máximo − existencia). Reemplaza los valores anteriores. Las
+        cantidades van en la unidad base del producto.
+      x-permission: inventory:adjust
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderRuleInput"
+      responses:
+        "200":
+          description: La regla guardada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReorderRule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: La sede (`location_not_found`) o la variante (`variant_not_found`) no existen.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: El mínimo es negativo o mayor que el máximo (`invalid_reorder_range`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [inventory]
+      operationId: deleteReorderRule
+      summary: Quitar el stock mínimo y máximo de una variante en una sede
+      description: La variante deja de aparecer en las alertas de reposición de la sede.
+      x-permission: inventory:adjust
+      responses:
+        "204":
+          description: La regla se quitó.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: La variante no tiene stock mínimo en la sede (`reorder_rule_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/inventory/reorder-alerts:
+    get:
+      tags: [inventory]
+      operationId: listReorderAlerts
+      summary: Variantes por reponer
+      description: |
+        Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
+        (máximo − existencia, nunca negativa), de la que está más por debajo de su mínimo a la que menos. Sin
+        `location_id`, las de todas las sedes.
+      x-permission: inventory:read
+      parameters:
+        - name: location_id
+          in: query
+          description: Solo las alertas de esta sede.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de alertas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReorderAlertPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: La sede no existe (`location_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/v1/inventory/receipts:
     post:
       tags: [inventory]
@@ -2972,9 +3082,84 @@ components:
           $ref: "#/components/schemas/SignedQuantity"
         average_cost:
           $ref: "#/components/schemas/Money"
+        reorder:
+          $ref: "#/components/schemas/StockReorder"
       description: |
         La existencia de una variante en una sede. `quantity` es negativa solo si la empresa permite vender sin
         stock. `average_cost` (costo promedio ponderado, sin IVA) solo se envía a quien tiene `catalog:write`.
+        `reorder` solo viene si la variante tiene stock mínimo y máximo en la sede.
+    StockReorder:
+      type: object
+      required: [min_quantity, max_quantity, needs_reorder]
+      properties:
+        min_quantity:
+          $ref: "#/components/schemas/Quantity"
+        max_quantity:
+          $ref: "#/components/schemas/Quantity"
+        needs_reorder:
+          type: boolean
+          description: La existencia está en el mínimo o por debajo.
+      description: El stock mínimo y máximo de la existencia, y si hay que reponerla.
+    ReorderRuleInput:
+      type: object
+      required: [min_quantity, max_quantity]
+      additionalProperties: false
+      properties:
+        min_quantity:
+          $ref: "#/components/schemas/Quantity"
+        max_quantity:
+          $ref: "#/components/schemas/Quantity"
+      description: Stock mínimo y máximo en la unidad base del producto, con 0 ≤ mínimo ≤ máximo.
+    ReorderRule:
+      type: object
+      required: [variant_id, location_id, min_quantity, max_quantity]
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        min_quantity:
+          $ref: "#/components/schemas/Quantity"
+        max_quantity:
+          $ref: "#/components/schemas/Quantity"
+    ReorderAlert:
+      type: object
+      required: [variant_id, product_id, location_id, quantity, min_quantity, max_quantity, suggested_quantity]
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+          description: El producto de la variante, para mostrar su nombre.
+        location_id:
+          type: string
+          format: uuid
+        quantity:
+          $ref: "#/components/schemas/SignedQuantity"
+        min_quantity:
+          $ref: "#/components/schemas/Quantity"
+        max_quantity:
+          $ref: "#/components/schemas/Quantity"
+        suggested_quantity:
+          $ref: "#/components/schemas/Quantity"
+      description: |
+        Una variante por reponer en una sede: su existencia (de todos los lotes), su mínimo y máximo y cuánto pedir
+        para llegar al máximo. Todo en la unidad base del producto.
+    ReorderAlertPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReorderAlert"
+        total:
+          type: integer
+          description: Cantidad total de alertas que cumplen el filtro, sin paginar.
     StockLevelPage:
       type: object
       required: [items, total]

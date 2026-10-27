@@ -36,6 +36,9 @@ type store struct {
 	variants map[uuid.UUID]catalogVariant
 	// units are the factors of the variants' alternate units.
 	units map[unitKey]decimal.Decimal
+
+	rules          map[levelKey]*domain.ReorderRule
+	reorderFilters []domain.ReorderFilter
 	// stockFilters and kardexFilters record the filters the queries received.
 	stockFilters  []domain.StockFilter
 	kardexFilters []domain.KardexFilter
@@ -238,6 +241,7 @@ func newEnv(t *testing.T) *env {
 			policies:  map[uuid.UUID]domain.StockPolicy{},
 			variants:  map[uuid.UUID]catalogVariant{},
 			units:     map[unitKey]decimal.Decimal{},
+			rules:     map[levelKey]*domain.ReorderRule{},
 		},
 		actor: app.Actor{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())},
 		spans: tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
@@ -253,6 +257,7 @@ func newEnv(t *testing.T) *env {
 		Stock:          fakeStock{e.store},
 		Policies:       fakePolicies{e.store},
 		Variants:       fakeVariants{e.store},
+		Reorder:        fakeReorder{e.store},
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,

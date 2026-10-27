@@ -36,6 +36,9 @@ type stubUseCases struct {
 	transfer    app.TransferInput
 	stockQuery  app.StockQuery
 	kardexQuery app.KardexQuery
+	reorderIn   app.ReorderInput
+	reorderKey  [2]uuid.UUID
+	alertsQuery app.ReorderQuery
 
 	location  *domain.Location
 	locations []*domain.Location
@@ -43,6 +46,10 @@ type stubUseCases struct {
 	out, in   *domain.StockMovement
 	levels    domain.StockLevelPage
 	kardex    domain.MovementPage
+	rule      *domain.ReorderRule
+	// rules is the reorder rule of each variant in levels.
+	rules  map[uuid.UUID]*domain.ReorderRule
+	alerts app.AlertPage
 	// products is the product of each variant the use cases return.
 	products map[uuid.UUID]uuid.UUID
 	err      error
@@ -77,7 +84,7 @@ func (s *stubUseCases) ListStock(_ context.Context, a app.Actor, q app.StockQuer
 	s.called, s.actor, s.stockQuery = true, a, q
 	page := app.LevelPage{Total: s.levels.Total}
 	for _, l := range s.levels.Items {
-		page.Items = append(page.Items, app.Level{StockLevel: l, ProductID: s.products[l.VariantID()]})
+		page.Items = append(page.Items, app.Level{StockLevel: l, ProductID: s.products[l.VariantID()], Reorder: s.rules[l.VariantID()]})
 	}
 	return page, s.err
 }
@@ -89,6 +96,21 @@ func (s *stubUseCases) GetKardex(_ context.Context, a app.Actor, q app.KardexQue
 		page.Items = append(page.Items, s.withProduct(m))
 	}
 	return page, s.err
+}
+
+func (s *stubUseCases) SetReorderRule(_ context.Context, a app.Actor, in app.ReorderInput) (*domain.ReorderRule, error) {
+	s.called, s.actor, s.reorderIn = true, a, in
+	return s.rule, s.err
+}
+
+func (s *stubUseCases) DeleteReorderRule(_ context.Context, a app.Actor, variantID, locationID uuid.UUID) error {
+	s.called, s.actor, s.reorderKey = true, a, [2]uuid.UUID{variantID, locationID}
+	return s.err
+}
+
+func (s *stubUseCases) ListReorderAlerts(_ context.Context, a app.Actor, q app.ReorderQuery) (app.AlertPage, error) {
+	s.called, s.actor, s.alertsQuery = true, a, q
+	return s.alerts, s.err
 }
 
 // withProduct is m with the product products gives its variant, as the use

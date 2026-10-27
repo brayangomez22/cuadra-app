@@ -1,7 +1,7 @@
-import { paths } from '@/app/routes/paths';
 import { QueryState } from '@/shared/query';
-import { Alert, ButtonLink, EmptyState, IconBox, IconPlus, Pagination, Spinner } from '@/shared/ui';
+import { Alert, Pagination, Spinner } from '@/shared/ui';
 import { PAGE_SIZE, type Location } from '../../../../api/types';
+import { EmptyStock } from '../EmptyStock/EmptyStock';
 import { useStockRows } from '../../hooks/useStockRows';
 import { StockTable } from '../StockTable/StockTable';
 import styles from './LocationStock.module.scss';
@@ -17,20 +17,6 @@ type Props = {
 /** A page of a location's stock, or why there is nothing to show. */
 export function LocationStock({ location, offset, canSeeCost, canReceive, onOffsetChange }: Props) {
   const { stock, levels, products, productsById } = useStockRows(location.id, offset);
-  const empty = (
-    <EmptyState
-      icon={<IconBox />}
-      title={`${location.name} aún no tiene existencias`}
-      description="Cuando registre una entrada de mercancía, aquí verá cuánto hay de cada producto."
-      action={
-        canReceive && (
-          <ButtonLink to={paths.inventory.receipt({ sede: location.id })} icon={<IconPlus />}>
-            Registrar entrada
-          </ButtonLink>
-        )
-      }
-    />
-  );
 
   return (
     <QueryState
@@ -38,7 +24,7 @@ export function LocationStock({ location, offset, canSeeCost, canReceive, onOffs
       errorTitle="No pudimos cargar las existencias"
       loading={<Spinner label="Cargando existencias…" className={styles.loading} />}
       isEmpty={levels.length === 0}
-      empty={empty}
+      empty={<EmptyStock location={location} canReceive={canReceive} />}
     >
       {() => (
         <div className={styles.root} aria-busy={stock.isPlaceholderData || undefined}>
@@ -53,6 +39,7 @@ export function LocationStock({ location, offset, canSeeCost, canReceive, onOffs
             productsById={productsById}
             loadingProducts={products.isPending}
             canSeeCost={canSeeCost}
+            canEditReorder={canReceive}
           />
           <Pagination
             label="Páginas de existencias"

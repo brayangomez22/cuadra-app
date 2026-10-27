@@ -24,9 +24,10 @@ var now = time.Date(2026, 10, 10, 20, 30, 15, 123456000, time.UTC)
 
 // Compile-time checks: the adapters satisfy the domain ports.
 var (
-	_ domain.LocationRepository = (*postgres.LocationRepository)(nil)
-	_ domain.StockRepository    = (*postgres.StockRepository)(nil)
-	_ domain.PolicyRepository   = (*postgres.PolicyRepository)(nil)
+	_ domain.LocationRepository    = (*postgres.LocationRepository)(nil)
+	_ domain.StockRepository       = (*postgres.StockRepository)(nil)
+	_ domain.PolicyRepository      = (*postgres.PolicyRepository)(nil)
+	_ domain.ReorderRuleRepository = (*postgres.ReorderRepository)(nil)
 )
 
 func dec(s string) decimal.Decimal { return decimal.RequireFromString(s) }
@@ -38,6 +39,7 @@ type fixture struct {
 	locations *postgres.LocationRepository
 	stock     *postgres.StockRepository
 	policies  *postgres.PolicyRepository
+	reorder   *postgres.ReorderRepository
 }
 
 func newFixture(t *testing.T) fixture {
@@ -48,6 +50,7 @@ func newFixture(t *testing.T) fixture {
 		locations: postgres.NewLocationRepository(d),
 		stock:     postgres.NewStockRepository(d),
 		policies:  postgres.NewPolicyRepository(d),
+		reorder:   postgres.NewReorderRepository(d),
 	}
 }
 

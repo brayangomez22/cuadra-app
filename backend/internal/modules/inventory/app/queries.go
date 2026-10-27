@@ -43,7 +43,8 @@ type KardexQuery struct {
 	Offset     int
 }
 
-// ListStock returns one page of the levels at a location;
+// ListStock returns one page of the levels at a location, each with its
+// reorder rule;
 // ErrLocationNotFound if it does not exist in the actor's tenant.
 func (s *Service) ListStock(ctx context.Context, a Actor, q StockQuery) (_ LevelPage, err error) {
 	ctx, span := s.startSpan(ctx, "ListStock", a, locationAttr(q.LocationID))
@@ -60,6 +61,9 @@ func (s *Service) ListStock(ctx context.Context, a Actor, q StockQuery) (_ Level
 	}
 	items, err := s.levelsWithProducts(ctx, a, page.Items)
 	if err != nil {
+		return LevelPage{}, err
+	}
+	if err := s.withReorder(ctx, a, q.LocationID, items); err != nil {
 		return LevelPage{}, err
 	}
 	return LevelPage{Items: items, Total: page.Total}, nil

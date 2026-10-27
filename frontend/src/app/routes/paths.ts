@@ -46,8 +46,9 @@ export const paths = {
     edit: route('/productos/:productId/editar'),
   },
   inventory: {
-    stock: route('/inventario'),
+    stock: route('/inventario', ['sede']),
     receipt: route('/inventario/entrada', ['producto', 'variante', 'sede']),
+    reorder: route('/inventario/reponer', ['sede']),
     kardex: route('/productos/:productId/kardex', ['variante', 'sede']),
   },
   sales: {

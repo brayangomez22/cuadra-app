@@ -186,6 +186,15 @@ type RefreshToken struct {
 	RevokedAt *time.Time
 }
 
+type ReorderRule struct {
+	TenantID    uuid.UUID
+	VariantID   uuid.UUID
+	LocationID  uuid.UUID
+	MinQuantity decimal.Decimal
+	MaxQuantity decimal.Decimal
+	UpdatedAt   time.Time
+}
+
 type RiverJob struct {
 	ID           int64
 	State        RiverJobState

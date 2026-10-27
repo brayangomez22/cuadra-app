@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/adapters/http/inventoryapi"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/domain"
@@ -28,6 +30,9 @@ type UseCases interface {
 	TransferStock(ctx context.Context, a app.Actor, in app.TransferInput) (out, inMov app.Movement, err error)
 	ListStock(ctx context.Context, a app.Actor, q app.StockQuery) (app.LevelPage, error)
 	GetKardex(ctx context.Context, a app.Actor, q app.KardexQuery) (app.MovementPage, error)
+	SetReorderRule(ctx context.Context, a app.Actor, in app.ReorderInput) (*domain.ReorderRule, error)
+	DeleteReorderRule(ctx context.Context, a app.Actor, variantID, locationID uuid.UUID) error
+	ListReorderAlerts(ctx context.Context, a app.Actor, q app.ReorderQuery) (app.AlertPage, error)
 }
 
 // Handler implements inventoryapi.StrictServerInterface.
@@ -206,6 +211,7 @@ func levelBody(l app.Level, seesCost bool) inventoryapi.StockLevel {
 	body := inventoryapi.StockLevel{
 		VariantId: l.VariantID(), ProductId: l.ProductID,
 		LocationId: l.LocationID(), Quantity: httpx.FormatDecimal(l.Quantity()),
+		Reorder: stockReorder(l),
 	}
 	if seesCost {
 		cost := httpx.FormatMoney(l.AverageCost())

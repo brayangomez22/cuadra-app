@@ -663,6 +663,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/locations/{locationId}/reorder-rules/{variantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                locationId: components["parameters"]["LocationId"];
+                variantId: components["parameters"]["VariantId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Definir el stock mínimo y máximo de una variante en una sede
+         * @description Cuando la existencia de la variante en la sede llega al mínimo o baja de él, aparece en las alertas de
+         *     reposición con la cantidad sugerida a pedir (máximo − existencia). Reemplaza los valores anteriores. Las
+         *     cantidades van en la unidad base del producto.
+         */
+        put: operations["setReorderRule"];
+        post?: never;
+        /**
+         * Quitar el stock mínimo y máximo de una variante en una sede
+         * @description La variante deja de aparecer en las alertas de reposición de la sede.
+         */
+        delete: operations["deleteReorderRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/reorder-alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Variantes por reponer
+         * @description Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
+         *     (máximo − existencia, nunca negativa), de la que está más por debajo de su mínimo a la que menos. Sin
+         *     `location_id`, las de todas las sedes.
+         */
+        get: operations["listReorderAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventory/receipts": {
         parameters: {
             query?: never;
@@ -1445,6 +1496,7 @@ export interface components {
         /**
          * @description La existencia de una variante en una sede. `quantity` es negativa solo si la empresa permite vender sin
          *     stock. `average_cost` (costo promedio ponderado, sin IVA) solo se envía a quien tiene `catalog:write`.
+         *     `reorder` solo viene si la variante tiene stock mínimo y máximo en la sede.
          */
         StockLevel: {
             /** Format: uuid */
@@ -1458,6 +1510,51 @@ export interface components {
             location_id: string;
             quantity: components["schemas"]["SignedQuantity"];
             average_cost?: components["schemas"]["Money"];
+            reorder?: components["schemas"]["StockReorder"];
+        };
+        /** @description El stock mínimo y máximo de la existencia, y si hay que reponerla. */
+        StockReorder: {
+            min_quantity: components["schemas"]["Quantity"];
+            max_quantity: components["schemas"]["Quantity"];
+            /** @description La existencia está en el mínimo o por debajo. */
+            needs_reorder: boolean;
+        };
+        /** @description Stock mínimo y máximo en la unidad base del producto, con 0 ≤ mínimo ≤ máximo. */
+        ReorderRuleInput: {
+            min_quantity: components["schemas"]["Quantity"];
+            max_quantity: components["schemas"]["Quantity"];
+        };
+        ReorderRule: {
+            /** Format: uuid */
+            variant_id: string;
+            /** Format: uuid */
+            location_id: string;
+            min_quantity: components["schemas"]["Quantity"];
+            max_quantity: components["schemas"]["Quantity"];
+        };
+        /**
+         * @description Una variante por reponer en una sede: su existencia (de todos los lotes), su mínimo y máximo y cuánto pedir
+         *     para llegar al máximo. Todo en la unidad base del producto.
+         */
+        ReorderAlert: {
+            /** Format: uuid */
+            variant_id: string;
+            /**
+             * Format: uuid
+             * @description El producto de la variante, para mostrar su nombre.
+             */
+            product_id: string;
+            /** Format: uuid */
+            location_id: string;
+            quantity: components["schemas"]["SignedQuantity"];
+            min_quantity: components["schemas"]["Quantity"];
+            max_quantity: components["schemas"]["Quantity"];
+            suggested_quantity: components["schemas"]["Quantity"];
+        };
+        ReorderAlertPage: {
+            items: components["schemas"]["ReorderAlert"][];
+            /** @description Cantidad total de alertas que cumplen el filtro, sin paginar. */
+            total: number;
         };
         StockLevelPage: {
             items: components["schemas"]["StockLevel"][];
@@ -3467,6 +3564,128 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    setReorderRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                locationId: components["parameters"]["LocationId"];
+                variantId: components["parameters"]["VariantId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderRuleInput"];
+            };
+        };
+        responses: {
+            /** @description La regla guardada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReorderRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description La sede (`location_not_found`) o la variante (`variant_not_found`) no existen. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El mínimo es negativo o mayor que el máximo (`invalid_reorder_range`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteReorderRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                locationId: components["parameters"]["LocationId"];
+                variantId: components["parameters"]["VariantId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La regla se quitó. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description La variante no tiene stock mínimo en la sede (`reorder_rule_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listReorderAlerts: {
+        parameters: {
+            query?: {
+                /** @description Solo las alertas de esta sede. */
+                location_id?: string;
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de alertas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReorderAlertPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description La sede no existe (`location_not_found`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             500: components["responses"]["InternalError"];
         };
     };
