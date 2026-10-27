@@ -41,3 +41,17 @@ func (s *Service) UpdateTenant(ctx context.Context, tenantID, userID uuid.UUID, 
 	s.Logger.InfoContext(ctx, "tenant settings updated", slog.String("default_tax_rate", tenant.DefaultTaxRate().String()))
 	return tenant, nil
 }
+
+// DefaultTaxRate returns the IVA the tenant proposes to a new product. It
+// is for other modules: an import gives it to the rows without IVA.
+func (s *Service) DefaultTaxRate(ctx context.Context, tenantID uuid.UUID) (_ decimal.Decimal, err error) {
+	ctx, span := s.startSpan(ctx, "GetDefaultTaxRate")
+	defer func() { usecase.End(span, err) }()
+	span.SetAttributes(attribute.String("tenant.id", tenantID.String()))
+
+	tenant, err := s.Tenants.GetByID(ctx, tenantID)
+	if err != nil {
+		return decimal.Decimal{}, err
+	}
+	return tenant.DefaultTaxRate(), nil
+}

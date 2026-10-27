@@ -5,6 +5,7 @@ import (
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/imports"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
@@ -41,7 +42,11 @@ func newWiring(cfg Config) (*wiring, error) {
 // modules builds every business module, joined through the ports of each
 // one, and returns their routes.
 func (w *wiring) modules() ([]func(*http.ServeMux), error) {
-	catalogModule, err := w.catalog()
+	// The catalog asks the inventory whether a product has stock movements,
+	// and the inventory reads the catalog's variants: the history is joined
+	// once the inventory exists.
+	history := &ports.CatalogHistory{}
+	catalogModule, err := w.catalog(history)
 	if err != nil {
 		return nil, err
 	}
@@ -53,20 +58,26 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 	if err != nil {
 		return nil, err
 	}
+	history.Inventory = inventoryModule
 	salesModule, err := w.sales(catalogModule, inventoryModule)
+	if err != nil {
+		return nil, err
+	}
+	importsModule, err := w.imports(catalogModule, identityModule, inventoryModule)
 	if err != nil {
 		return nil, err
 	}
 	return []func(*http.ServeMux){
 		identityModule.RegisterRoutes, catalogModule.RegisterRoutes, inventoryModule.RegisterRoutes,
-		salesModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
+		salesModule.RegisterRoutes, importsModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
 	}, nil
 }
 
-func (w *wiring) catalog() (*catalog.Module, error) {
+func (w *wiring) catalog(history *ports.CatalogHistory) (*catalog.Module, error) {
 	return catalog.New(catalog.Config{
 		DB:             w.DB,
 		Authorize:      w.permissions.Authorize,
+		History:        history,
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
@@ -109,6 +120,22 @@ func (w *wiring) sales(c *catalog.Module, i *inventory.Module) (*sales.Module, e
 		Authorize:      w.permissions.Authorize,
 		Catalog:        ports.SalesCatalog{Catalog: c},
 		Stock:          ports.SalesStock{Inventory: i},
+		Logger:         w.Log,
+		TracerProvider: w.TracerProvider,
+		MeterProvider:  w.MeterProvider,
+	})
+}
+
+// imports loads files into the catalog (with the tenant's default IVA) and
+// the stock, and works its job in the process's workers.
+func (w *wiring) imports(c *catalog.Module, id *identity.Module, i *inventory.Module) (*imports.Module, error) {
+	return imports.New(imports.Config{
+		DB:             w.DB,
+		Jobs:           w.Jobs,
+		Workers:        w.Workers,
+		Catalog:        ports.ImportsCatalog{Catalog: c, Identity: id},
+		Stock:          ports.ImportsStock{Inventory: i},
+		Modules:        w.moduleService,
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,

@@ -24,7 +24,10 @@ import (
 type Config struct {
 	DB *db.DB
 	// Authorize is the role → permission matrix; it decides who sees costs.
-	Authorize      auth.Authorizer
+	Authorize auth.Authorizer
+	// History tells whether variants have stock movements; internal/server
+	// adapts the inventory module to it.
+	History        app.StockHistory
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -40,7 +43,7 @@ type Module struct {
 
 // New builds the module on PostgreSQL.
 func New(cfg Config) (*Module, error) {
-	if cfg.DB == nil || cfg.Authorize == nil || cfg.Logger == nil {
+	if cfg.DB == nil || cfg.Authorize == nil || cfg.History == nil || cfg.Logger == nil {
 		return nil, errors.New("catalog: missing module dependency")
 	}
 	products := postgres.NewProductRepository(cfg.DB)
@@ -51,6 +54,7 @@ func New(cfg Config) (*Module, error) {
 		Attributes:     postgres.NewAttributeRepository(cfg.DB),
 		VariantAxes:    postgres.NewVariantAxisRepository(cfg.DB),
 		Seeds:          postgres.NewSeedRepository(cfg.DB),
+		History:        cfg.History,
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Logger:         cfg.Logger,

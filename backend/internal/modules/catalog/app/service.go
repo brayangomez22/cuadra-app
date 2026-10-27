@@ -29,12 +29,14 @@ type Actor struct {
 // Deps are the Service's dependencies. Now defaults to time.Now, the
 // providers to no-ops and Logger to a discarding logger.
 type Deps struct {
-	Products       domain.ProductRepository
-	Categories     domain.CategoryRepository
-	Units          domain.UnitRepository
-	Attributes     domain.AttributeRepository
-	VariantAxes    domain.VariantAxisRepository
-	Seeds          domain.SeedRepository
+	Products    domain.ProductRepository
+	Categories  domain.CategoryRepository
+	Units       domain.UnitRepository
+	Attributes  domain.AttributeRepository
+	VariantAxes domain.VariantAxisRepository
+	Seeds       domain.SeedRepository
+	// History tells whether variants have stock movements (the inventory's).
+	History        StockHistory
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -55,7 +57,7 @@ type Service struct {
 // NewService builds a Service. It fails if a repository is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Products, d.Categories, d.Units, d.Attributes, d.VariantAxes, d.Seeds) {
+	if usecase.AnyNil(d.Products, d.Categories, d.Units, d.Attributes, d.VariantAxes, d.Seeds, d.History) {
 		return nil, errors.New("catalog: missing service dependency")
 	}
 	if d.Now == nil {

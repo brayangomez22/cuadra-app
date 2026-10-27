@@ -367,3 +367,16 @@ func (q *Queries) UpdateStockLevel(ctx context.Context, arg UpdateStockLevelPara
 	}
 	return result.RowsAffected(), nil
 }
+
+const variantsHaveMovements = `-- name: VariantsHaveMovements :one
+SELECT EXISTS (SELECT 1 FROM stock_movements WHERE variant_id = ANY($1::uuid[]))
+`
+
+// VariantsHaveMovements reports whether any of the given variants has a
+// stock movement.
+func (q *Queries) VariantsHaveMovements(ctx context.Context, variantIds []uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, variantsHaveMovements, variantIds)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}

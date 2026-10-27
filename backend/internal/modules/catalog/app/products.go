@@ -90,6 +90,8 @@ func (s *Service) CreateProduct(ctx context.Context, a Actor, in ProductInput) (
 
 // UpdateProduct replaces the product's data and its default variant's. A
 // new price follows ChangeVariantPrice: an inactive product keeps its price.
+// The base unit cannot change once a variant has stock movements or
+// alternate units (domain.ErrBaseUnitLocked).
 // The default variant keeps its axis values, which change through
 // UpdateVariant.
 func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in ProductInput) (_ *domain.Product, err error) {
@@ -102,6 +104,9 @@ func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in P
 	}
 	unit, err := s.resolveUnit(ctx, a, in)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.requireUnitChangeable(ctx, a, p, unit); err != nil {
 		return nil, err
 	}
 	attrs, err := s.resolveAttributes(ctx, a, in.Attributes)

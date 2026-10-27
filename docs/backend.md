@@ -25,6 +25,7 @@ internal/modules/<modulo>/
       errors.go        # errores del dominio → HTTP
       harness_test.go  # stub de los casos de uso y helpers de las peticiones
       <recurso>_test.go
+    jobs/              # trabajos de River del módulo (sección 7), si tiene
     postgres/
       <recurso>_repository.go
       queries/*.sql    # SQL de sqlc; sqlcgen/ es generado
@@ -66,7 +67,7 @@ test/api/                # tests de integración de la API completa, sobre serve
 |---|---|
 | `domain` | importar algo que no sea la librería estándar, `uuid` o `decimal` (tampoco `net/http`) |
 | `app` | importar `adapters`, `pgx`, `net/http` o el SDK de OpenTelemetry (`otel/sdk`) |
-| `catalog`, `identity`, `inventory`, `sales` | importar otro módulo |
+| `catalog`, `identity`, `imports`, `inventory`, `sales` | importar otro módulo |
 | `platform` | importar cualquier módulo |
 | `composition` | que `cmd/` o `test/api` importen un módulo: solo `internal/server` (y su `ports/`) los une, y los demás usan `server.New` |
 
@@ -112,7 +113,7 @@ Antes de escribir algo en un módulo, revisa si ya existe aquí. Un helper nuevo
 |---|---|---|
 | `platform/usecase` | `NewSpans` (spans `<modulo>.<CasoDeUso>`; `StartFor` agrega `tenant.id` y `user.id`), `End` (`RecordError` + `SetStatus`), `Create` con `Counter` e `Histogram` (los instrumentos de un servicio, declarados en una lista), `Meter`, `Logger` y `AnyNil` (dependencias faltantes) | `app/` de cada módulo y `platform/modules`. Solo importa la API de OpenTelemetry |
 | `platform/db` | `Read` (lee un valor dentro de `WithTenantTx`), `Affected` (filas que tocó una escritura), `Violates` y `HasCode` con `UniqueViolation` y `ForeignKeyViolation`, `PageBounds` | los repositorios |
-| `platform/httpx` | `FormatMoney`, `FormatDecimal`, `ParseDecimal` (los formatos decimales del contrato) | los handlers |
+| `platform/httpx` | `FormatMoney`, `FormatDecimal`, `ParseDecimal` (los formatos decimales del contrato); `Describe` (el código y el mensaje de un error según las reglas de un módulo, fuera de una respuesta); `LimitBody` (tamaño máximo del cuerpo) | los handlers; `Describe` también la importación, que reporta los errores del catálogo por fila |
 | `platform/auth` | `RequirePrincipal[<pkg>.StrictHandlerFunc]` (401 si no llegó un principal), `SeesCosts` y `CostPermission` (quién ve costos y márgenes) | los handlers |
 
 `RequirePrincipal` vive en `auth` y no en `httpx` porque `auth` ya importa `httpx`.
@@ -182,7 +183,14 @@ Un **módulo activable** (`variants`, `lots_expiry`...) además se registra en `
 
 ## 7. Trabajos en segundo plano
 
-Todavía no hay un trabajo de River con lógica de negocio. El primero (la importación de T29) define y documenta aquí la convención: dónde vive el trabajo, que el tenant viaja en sus argumentos y se abre con `WithTenantTx`, que se encola en la misma transacción que lo origina (outbox), cómo se reintenta sin duplicar datos y su span y sus métricas. Hasta entonces, no se crean trabajos fuera de esa tarea.
+La convención la definió la importación (T29, `internal/modules/imports`); T34 y los siguientes la siguen.
+
+- **Dónde vive.** El trabajo es un adaptador de entrada, como HTTP: `modules/<modulo>/adapters/jobs/<trabajo>.go` declara sus argumentos (`RunImportArgs` con `Kind()` = `"<modulo>.<trabajo>"`) y su worker, que solo traduce el trabajo a un caso de uso de `app` (`RunImport`). El `module.go` agrega el worker al conjunto del proceso (`river.AddWorkerSafely(cfg.Workers, ...)`); `cmd/api` crea ese conjunto, se lo pasa a `jobs.New` y a `server.New`, y empieza a trabajar después de armar la API.
+- **El tenant viaja en los argumentos.** Un trabajo no tiene petición ni token: sus argumentos llevan `TenantID` y los IDs de lo que procesa, nunca datos de negocio ni personales. Los puso la API al encolar, desde el token. El caso de uso abre sus transacciones con ese tenant (`db.InTenantTx` detrás de un puerto `Transactor` del `app`) y actúa como el usuario que originó el trabajo (lo guarda la entidad: `Import.CreatedBy`).
+- **Se encola en la transacción que lo origina** (outbox). El repositorio guarda el cambio y llama `jobs.Client.InsertTx` con la misma `pgx.Tx` (`ImportRepository.Queue`); el adaptador de trabajos le da esa función (`jobsadapter.Enqueuer`), así `postgres` no conoce River. Si el commit falla, el trabajo no existe; si el trabajo no se puede insertar, el cambio no se guarda. Los argumentos con `InsertOpts` `UniqueOpts{ByArgs: true}` evitan encolar dos veces lo mismo.
+- **Se reintenta sin duplicar.** River reintenta un trabajo que devuelve error. El caso de uso debe poder correr otra vez: guarda un punto de control en la misma transacción que cada parte de su trabajo (`batches_done` con cada lote) y al empezar salta lo hecho; una entidad ya terminada no se procesa de nuevo (`ErrImportFinished` → `nil`). Un error de negocio que reintentar no arregla deja la entidad en estado fallido con su motivo y devuelve `nil`; uno de infraestructura se devuelve. Un trabajo largo declara su `Timeout`.
+- **Span y métricas.** `platform/jobs` abre el span del trabajo, enlazado al de quien lo encoló, y cuenta los trabajos por tipo y resultado. El caso de uso abre además su span `<modulo>.<CasoDeUso>` con `tenant.id`, `user.id` y el ID de la entidad, y cuenta sus hechos de negocio (`cuadra.imports.runs`, `cuadra.imports.products`, `cuadra.imports.duration`).
+- **Tests.** El caso de uso con fakes (un `Transactor` que deshace lo hecho si `fn` falla, para probar el reintento y el lote fallido); el repositorio con integración (que confirmar y encolar van juntos, que el punto de control se deshace con su lote); y el flujo completo en `test/api` con `newAPIWithJobs` y el cliente de trabajos corriendo.
 
 ## 8. Comentarios
 

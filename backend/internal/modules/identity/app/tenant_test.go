@@ -76,3 +76,30 @@ func TestUpdateTenant(t *testing.T) {
 		require.ErrorIs(t, err, domain.ErrTenantNotFound)
 	})
 }
+
+func TestDefaultTaxRate(t *testing.T) {
+	t.Run("devuelve el IVA por defecto de la plantilla de la empresa", func(t *testing.T) {
+		tests := []struct{ template, rate string }{
+			{template: "ferreteria", rate: "0.19"},
+			{template: "drogueria", rate: "0"},
+		}
+		for _, tt := range tests {
+			e := newEnv(t)
+			in := signUpInput()
+			in.BusinessTemplate = tt.template
+			session, err := e.svc.SignUp(t.Context(), in)
+			require.NoError(t, err)
+
+			got, err := e.svc.DefaultTaxRate(t.Context(), session.Profile.Tenant.ID())
+
+			require.NoError(t, err, tt.template)
+			require.Equal(t, tt.rate, got.String(), tt.template)
+		}
+	})
+
+	t.Run("una empresa que no existe responde ErrTenantNotFound", func(t *testing.T) {
+		e := newEnv(t)
+		_, err := e.svc.DefaultTaxRate(t.Context(), uuid.Must(uuid.NewV7()))
+		require.ErrorIs(t, err, domain.ErrTenantNotFound)
+	})
+}

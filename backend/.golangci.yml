@@ -57,6 +57,8 @@ linters:
               desc: app depends on domain and interfaces, never on adapters
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/adapters
               desc: app depends on domain and interfaces, never on adapters
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/imports/adapters
+              desc: app depends on domain and interfaces, never on adapters
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/adapters
               desc: app depends on domain and interfaces, never on adapters
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/adapters
@@ -71,6 +73,8 @@ linters:
           files:
             - "**/internal/modules/catalog/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/imports
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/identity
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory
@@ -81,6 +85,8 @@ linters:
           files:
             - "**/internal/modules/identity/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/imports
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory
@@ -91,6 +97,8 @@ linters:
           files:
             - "**/internal/modules/inventory/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/imports
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/identity
@@ -101,11 +109,25 @@ linters:
           files:
             - "**/internal/modules/sales/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/imports
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/identity
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory
+              desc: a module does not import another one; cmd/api wires them through ports
+        imports:
+          files:
+            - "**/internal/modules/imports/**"
+          deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/identity
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/sales
               desc: a module does not import another one; cmd/api wires them through ports
         composition:
           files:

@@ -56,3 +56,10 @@ SELECT EXISTS (
            SELECT 1
            FROM product_variants v
            WHERE v.product_id <> sqlc.arg(product_id) AND v.barcode = ANY(sqlc.arg(unit_barcodes)::text[]));
+
+-- SKUProducts returns the products with a variant whose SKU is among the
+-- given ones (SKUs are stored trimmed and in uppercase).
+-- name: SKUProducts :many
+SELECT DISTINCT product_id
+FROM product_variants
+WHERE sku = ANY(sqlc.arg(skus)::text[]);

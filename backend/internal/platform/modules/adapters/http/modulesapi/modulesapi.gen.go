@@ -70,6 +70,9 @@ type CashSessionId = openapi_types.UUID
 // CategoryId defines model for CategoryId.
 type CategoryId = openapi_types.UUID
 
+// ImportId defines model for ImportId.
+type ImportId = openapi_types.UUID
+
 // LocationId defines model for LocationId.
 type LocationId = openapi_types.UUID
 

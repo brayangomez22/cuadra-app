@@ -20,6 +20,10 @@ type ProductRepository interface {
 	Update(ctx context.Context, p *Product) error
 	// Search returns one page of the tenant's products matching f.
 	Search(ctx context.Context, tenantID uuid.UUID, f ProductFilter) (ProductPage, error)
+	// BySKU returns the tenant's products with a variant whose SKU is among
+	// skus (compared as stored: trimmed and in uppercase), with all their
+	// variants.
+	BySKU(ctx context.Context, tenantID uuid.UUID, skus []string) ([]*Product, error)
 }
 
 // ProductFilter selects products. Zero values select everything: no text,

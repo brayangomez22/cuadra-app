@@ -55,6 +55,13 @@ tags:
       Caja del cajero: apertura con base, ingresos y egresos con motivo, y cierre con arqueo por denominación. Cada
       usuario tiene como máximo una caja abierta, en una sede, y las ventas que confirma quedan en ella. Por defecto no
       se puede vender sin caja abierta. El arqueo es ciego: el esperado y la diferencia solo aparecen en el cierre.
+  - name: imports
+    description: |
+      Carga inicial del catálogo y del inventario desde una hoja de cálculo (`.xlsx` o `.csv`, hasta 10 MB y 20.000
+      filas). La plantilla (`/import-template`) tiene las columnas de la empresa: una por atributo y, con el módulo
+      `variants`, una por eje, con una fila por variante y las filas de un producto seguidas. Subir el archivo lo
+      valida fila por fila sin escribir nada; si no tiene errores se confirma, y un trabajo en segundo plano lo
+      escribe por lotes. El stock inicial solo entra a las variantes que la importación crea.
 
 # Authorization is declared here and enforced by the API before the request
 # is validated: every operation requires a bearer token unless it says
@@ -499,6 +506,56 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/products-with-variants:
+    post:
+      tags: [catalog]
+      operationId: createProductWithVariants
+      summary: Crear un producto con sus variantes
+      description: |
+        Crea un producto activo con todas sus variantes en una sola operación: se guarda todo o nada. La primera
+        variante es la variante por defecto. Todas usan los mismos ejes, con valores distintos. Requiere el módulo
+        `variants` activo; si no lo está, responde 404.
+      x-permission: catalog:write
+      x-module: variants
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductWithVariantsInput"
+      responses:
+        "201":
+          description: Producto creado (activo), con sus variantes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Un SKU o un código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Algún dato no cumple las reglas (los mismos códigos de crear un producto), un valor no está en los ejes de
+            la empresa (`axis_value_not_allowed`, `unknown_axis`), las variantes no usan los mismos ejes
+            (`variant_axes_mismatch`) o repiten valores (`duplicate_variant`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/v1/products/{productId}:
     parameters:
       - $ref: "#/components/parameters/ProductId"
@@ -553,7 +610,10 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
-          description: El SKU o el código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`).
+          description: |
+            El SKU o el código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`), o se cambió la unidad
+            base de un producto con movimientos de stock o con unidades alternativas (`base_unit_locked`): su stock y
+            sus factores están contados en la unidad actual.
           content:
             application/json:
               schema:
@@ -2118,6 +2178,183 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/imports:
+    post:
+      tags: [imports]
+      operationId: uploadImport
+      summary: Subir un archivo de importación
+      description: |
+        Lee y valida el archivo sin escribir nada en el catálogo: cada fila contra las columnas de la empresa y cada
+        producto contra el catálogo. El formato sale de la extensión del archivo (`.xlsx` o `.csv`; un `.csv` puede
+        separar con `;` y usar coma decimal, o con `,` y punto decimal). Sin errores, la importación queda
+        `validated` y se puede confirmar; con alguno, `rejected` (corrija el archivo y vuelva a subirlo). La
+        respuesta trae los primeros 50 errores y los primeros 10 productos.
+      x-permission: imports:run
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ImportUpload"
+      responses:
+        "201":
+          description: La importación, validada o rechazada, con su previsualización.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          description: El archivo pasa de 10 MB (`file_too_large`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            La sede no existe o está inactiva (`location_not_found`), el archivo no es `.xlsx` ni `.csv`
+            (`unsupported_format`) o no se puede leer (`unreadable_file`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/import-template:
+    get:
+      tags: [imports]
+      operationId: getImportTemplate
+      summary: Descargar la plantilla de importación
+      description: |
+        Un archivo vacío con las columnas de la empresa. El `.xlsx` trae además una hoja de ayuda con las unidades,
+        las opciones de los atributos de lista y los valores de los ejes.
+      x-permission: imports:run
+      parameters:
+        - name: format
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ImportFormat"
+      responses:
+        "200":
+          description: La plantilla.
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/imports/{importId}:
+    parameters:
+      - $ref: "#/components/parameters/ImportId"
+    get:
+      tags: [imports]
+      operationId: getImport
+      summary: Ver una importación
+      description: Su estado y sus conteos. Mientras corre (`queued`, `running`) los conteos avanzan por lotes.
+      x-permission: imports:run
+      responses:
+        "200":
+          description: La importación.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Import"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/imports/{importId}/confirm:
+    parameters:
+      - $ref: "#/components/parameters/ImportId"
+    post:
+      tags: [imports]
+      operationId: confirmImport
+      summary: Confirmar una importación
+      description: |
+        Pone en cola una importación `validated`; un trabajo en segundo plano la escribe por lotes. Si un lote falla
+        al escribirse, se deshace ese lote, la importación queda `failed` con su error y los lotes anteriores se
+        conservan: al volver a subir el archivo con `on_existing_sku=update` se completa.
+      x-permission: imports:run
+      responses:
+        "200":
+          description: La importación en cola.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Import"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: La importación no está validada (`import_not_validated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/imports/{importId}/errors:
+    parameters:
+      - $ref: "#/components/parameters/ImportId"
+    get:
+      tags: [imports]
+      operationId: listImportErrors
+      summary: Errores de una importación
+      description: Los errores de sus filas, por número de fila (se guardan los primeros 1.000; `total` los cuenta todos).
+      x-permission: imports:run
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de errores.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportErrorPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   headers:
     SetRefreshCookie:
@@ -2153,6 +2390,13 @@ components:
         type: integer
         minimum: 0
         default: 0
+    ImportId:
+      name: importId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     ProductId:
       name: productId
       in: path
@@ -2824,6 +3068,39 @@ components:
           $ref: "#/components/schemas/Money"
         axis_values:
           $ref: "#/components/schemas/AxisValues"
+    ProductWithVariantsInput:
+      type: object
+      description: |
+        Un producto nuevo con todas sus variantes; la primera es la variante por defecto. Los atributos se validan
+        contra las definiciones de la empresa (`/product-attributes`).
+      required: [name, base_unit_id, tax_rate, attributes, variants]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: Camiseta básica cuello redondo
+        description:
+          type: string
+          maxLength: 2000
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        base_unit_id:
+          type: string
+          format: uuid
+        tax_rate:
+          $ref: "#/components/schemas/TaxRate"
+        attributes:
+          $ref: "#/components/schemas/ProductAttributes"
+        variants:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ProductVariantInput"
     ProductVariantUpdate:
       type: object
       required: [sku, cost, price, axis_values, active]
@@ -3749,3 +4026,162 @@ components:
           description: Si la empresa exige caja abierta para vender.
         session:
           $ref: "#/components/schemas/CashSession"
+    ImportFormat:
+      type: string
+      enum: [xlsx, csv]
+      default: xlsx
+    ImportStatus:
+      type: string
+      description: |
+        `rejected` (el archivo tiene errores), `validated` (se puede confirmar), `queued` (confirmada, esperando el
+        trabajo), `running`, `completed` o `failed` (un lote no se pudo escribir; ver sus errores).
+      enum: [rejected, validated, queued, running, completed, failed]
+    ExistingSkuPolicy:
+      type: string
+      description: |
+        Qué hacer con un producto cuyo SKU ya está en el catálogo: `update` reemplaza sus datos y agrega las variantes
+        nuevas; `skip` lo deja como está.
+      enum: [update, skip]
+    ImportUpload:
+      type: object
+      required: [file, location_id]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: La hoja de cálculo (`.xlsx` o `.csv`), hasta 10 MB.
+        location_id:
+          type: string
+          format: uuid
+          description: La sede que recibe el stock inicial.
+        on_existing_sku:
+          # No default: the validator cannot rewrite a multipart body with it.
+          allOf:
+            - $ref: "#/components/schemas/ExistingSkuPolicy"
+          description: Qué hacer con un SKU que ya está en el catálogo; si no se envía, `update`.
+    ImportCounts:
+      type: object
+      required: [rows, products, created, updated, skipped, errors]
+      description: Filas y productos del archivo; productos creados, actualizados y omitidos hasta ahora; errores.
+      properties:
+        rows:
+          type: integer
+        products:
+          type: integer
+        created:
+          type: integer
+        updated:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: integer
+    Import:
+      type: object
+      required: [id, file_name, format, status, on_existing_sku, location_id, counts, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        file_name:
+          type: string
+        format:
+          $ref: "#/components/schemas/ImportFormat"
+        status:
+          $ref: "#/components/schemas/ImportStatus"
+        on_existing_sku:
+          $ref: "#/components/schemas/ExistingSkuPolicy"
+        location_id:
+          type: string
+          format: uuid
+        counts:
+          $ref: "#/components/schemas/ImportCounts"
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+    ImportRowError:
+      type: object
+      required: [row, column, code, message]
+      description: Un problema de una fila del archivo (la fila 1 es el encabezado).
+      properties:
+        row:
+          type: integer
+          example: 154
+        column:
+          type: string
+          description: La columna del problema, o vacío si es del producto entero.
+          example: precio
+        code:
+          type: string
+          example: not_a_number
+        message:
+          type: string
+          example: "Fila 154, columna «precio»: no es un número."
+    ImportVariantPreview:
+      type: object
+      required: [row, sku, price, axis_values]
+      properties:
+        row:
+          type: integer
+        sku:
+          type: string
+        price:
+          type: string
+          description: El precio como lo leyó la importación.
+        axis_values:
+          type: object
+          additionalProperties:
+            type: string
+        initial_stock:
+          type: string
+          nullable: true
+    ImportProductPreview:
+      type: object
+      required: [row, name, category, unit, variants]
+      properties:
+        row:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        unit:
+          type: string
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportVariantPreview"
+    ImportPreview:
+      type: object
+      required: [import, errors, sample]
+      properties:
+        import:
+          $ref: "#/components/schemas/Import"
+        errors:
+          type: array
+          description: Los primeros 50 errores; el resto en `/imports/{importId}/errors`.
+          items:
+            $ref: "#/components/schemas/ImportRowError"
+        sample:
+          type: array
+          description: Los primeros 10 productos del archivo.
+          items:
+            $ref: "#/components/schemas/ImportProductPreview"
+    ImportErrorPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportRowError"
+        total:
+          type: integer

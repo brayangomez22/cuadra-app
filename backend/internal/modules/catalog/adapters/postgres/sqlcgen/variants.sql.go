@@ -181,6 +181,34 @@ func (q *Queries) ListVariants(ctx context.Context, productIds []uuid.UUID) ([]L
 	return items, nil
 }
 
+const sKUProducts = `-- name: SKUProducts :many
+SELECT DISTINCT product_id
+FROM product_variants
+WHERE sku = ANY($1::text[])
+`
+
+// SKUProducts returns the products with a variant whose SKU is among the
+// given ones (SKUs are stored trimmed and in uppercase).
+func (q *Queries) SKUProducts(ctx context.Context, skus []string) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, sKUProducts, skus)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var product_id uuid.UUID
+		if err := rows.Scan(&product_id); err != nil {
+			return nil, err
+		}
+		items = append(items, product_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const saveVariant = `-- name: SaveVariant :execrows
 INSERT INTO product_variants (id, tenant_id, product_id, sku, barcode, cost, price, axis_values, is_default, active, created_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)

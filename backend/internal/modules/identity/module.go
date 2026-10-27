@@ -3,10 +3,14 @@
 package identity
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -83,6 +87,12 @@ func New(cfg Config) (*Module, error) {
 // RegisterRoutes mounts the module's operations (tag "auth") on mux.
 func (m *Module) RegisterRoutes(mux *http.ServeMux) {
 	httpadapter.Register(mux, m.service, m.log)
+}
+
+// DefaultTaxRate returns the IVA tenantID proposes to a new product (see
+// app.Service.DefaultTaxRate). It is for the imports module.
+func (m *Module) DefaultTaxRate(ctx context.Context, tenantID uuid.UUID) (decimal.Decimal, error) {
+	return m.service.DefaultTaxRate(ctx, tenantID)
 }
 
 // Permissions is the permission matrix of the core and the registered

@@ -14,7 +14,7 @@ Este directorio es lo único que cambia de fase en fase. `CLAUDE.md` contiene la
 |---|---|---|---|---|---|
 | 1 | Núcleo | T01–T17 | `fase-1-nucleo.md` | ✅ completa | Cimientos técnicos (CI, observabilidad, BD multi-tenant, OpenAPI), identidad, catálogo, inventario, UI base y dominio de ventas |
 | 2 | Vender | T18–T25 (+ T24a–T24k) | `fase-2-vender.md` | ✅ completa | River, Sentry, API y pantalla del POS, tirilla, caja, dashboards y E2E |
-| 3 | Inventario, clientes y compras | T26–T34 (+ T26a–T26r) | `fase-3-inventario-clientes.md` | 🟡 activa | Fraccionamiento, escáner con cámara, stock mínimo, importación de Excel, toma física, clientes, fiados, compras y demo |
+| 3 | Inventario, clientes y compras | T26–T34 (+ T26a–T26r, T29a) | `fase-3-inventario-clientes.md` | 🟡 activa | Fraccionamiento, escáner con cámara, stock mínimo, importación de Excel, toma física, clientes, fiados, compras y demo |
 | 4 | Facturación, control y reportes | T35–T44 | `fase-4-facturacion-control.md` | ⚪ | DIAN, seguridad, feature flags, analítica, usuarios y auditoría, reportes, tablero y primeros pasos |
 | 5 | Producción y piloto | T45–T50 | `fase-5-produccion-piloto.md` | ⚪ | Terraform, CD, monitoreo en producción, backups, exportación de datos y legal → **arranca el piloto** |
 | 6 | Portafolio | T51–T53 | `fase-6-portafolio.md` | ⚪ | Pruebas de carga, README final y laboratorio de Kubernetes (opcional) |
