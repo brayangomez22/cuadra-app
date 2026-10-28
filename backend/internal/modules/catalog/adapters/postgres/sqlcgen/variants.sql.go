@@ -13,33 +13,46 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const barcodeTakenElsewhere = `-- name: BarcodeTakenElsewhere :one
-SELECT EXISTS (
-           SELECT 1
-           FROM variant_units vu
-           JOIN product_variants v ON v.tenant_id = vu.tenant_id AND v.id = vu.variant_id
-           WHERE v.product_id <> $1 AND vu.barcode = ANY($2::text[]))
-    OR EXISTS (
-           SELECT 1
-           FROM product_variants v
-           WHERE v.product_id <> $1 AND v.barcode = ANY($3::text[]))
+const barcodesTakenElsewhere = `-- name: BarcodesTakenElsewhere :many
+SELECT vu.barcode::text AS barcode
+FROM variant_units vu
+JOIN product_variants v ON v.tenant_id = vu.tenant_id AND v.id = vu.variant_id
+WHERE v.product_id <> $1 AND vu.barcode = ANY($2::text[])
+UNION
+SELECT v.barcode::text AS barcode
+FROM product_variants v
+WHERE v.product_id <> $1 AND v.barcode = ANY($3::text[])
+ORDER BY barcode
 `
 
-type BarcodeTakenElsewhereParams struct {
+type BarcodesTakenElsewhereParams struct {
 	ProductID       uuid.UUID
 	VariantBarcodes []string
 	UnitBarcodes    []string
 }
 
-// BarcodeTakenElsewhere reports whether a barcode of a product is used in
-// the other table by another product of the tenant: one of its variants'
-// by an alternate unit, or one of its units' by a variant. Each table's
-// unique key covers the rest.
-func (q *Queries) BarcodeTakenElsewhere(ctx context.Context, arg BarcodeTakenElsewhereParams) (*bool, error) {
-	row := q.db.QueryRow(ctx, barcodeTakenElsewhere, arg.ProductID, arg.VariantBarcodes, arg.UnitBarcodes)
-	var column_1 *bool
-	err := row.Scan(&column_1)
-	return column_1, err
+// BarcodesTakenElsewhere returns the barcodes of a product used in the
+// other table by another product of the tenant: one of its variants' by an
+// alternate unit, or one of its units' by a variant. Each table's unique key
+// covers the rest.
+func (q *Queries) BarcodesTakenElsewhere(ctx context.Context, arg BarcodesTakenElsewhereParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, barcodesTakenElsewhere, arg.ProductID, arg.VariantBarcodes, arg.UnitBarcodes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var barcode string
+		if err := rows.Scan(&barcode); err != nil {
+			return nil, err
+		}
+		items = append(items, barcode)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const createVariantUnit = `-- name: CreateVariantUnit :exec

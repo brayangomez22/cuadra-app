@@ -43,6 +43,29 @@ func TestCreateProductWithVariants(t *testing.T) {
 
 		requireError(t, rec, http.StatusUnprocessableEntity, "duplicate_variant")
 	})
+
+	t.Run("un SKU o un código de barras tomado responde 409 con el código en details", func(t *testing.T) {
+		tests := []struct {
+			err         error
+			code, field string
+			value       string
+		}{
+			{domain.ErrSKUTaken, "sku_taken", "sku", "CAM-M"},
+			{domain.ErrBarcodeTaken, "barcode_taken", "barcode", "7700000000002"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.code, func(t *testing.T) {
+				uc := &stubUseCases{err: &domain.CodeTakenError{Code: tt.value, Err: tt.err}}
+
+				rec := serve(t, uc, owner, http.MethodPost, "/api/v1/products-with-variants", withVariantsBody)
+
+				requireError(t, rec, http.StatusConflict, tt.code)
+				body := decodeMap(t, rec)["error"].(map[string]any)
+				require.Equal(t, map[string]any{tt.field: tt.value}, body["details"])
+				require.Contains(t, body["message"], "«"+tt.value+"»")
+			})
+		}
+	})
 }
 
 func TestUpdateProductBaseUnitLocked(t *testing.T) {

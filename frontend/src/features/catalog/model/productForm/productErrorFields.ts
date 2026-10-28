@@ -33,7 +33,8 @@ type Options = {
   /**
    * The product and its variants go in one request (POST /products-with-variants):
    * the API does not say which variant an error is of, so their codes go to
-   * the form's message.
+   * the form's message; a SKU or barcode in use names its code, and
+   * useSaveProduct marks its row (model/variantMatrix/takenCodeRow).
    */
   together?: boolean;
 };

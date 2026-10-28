@@ -115,7 +115,8 @@ type ErrorDetail struct {
 	Code string `json:"code"`
 
 	// Details Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `variant_id` en
-	// `insufficient_stock`). Nunca trae datos personales.
+	// `insufficient_stock`, o el código que choca en `details.sku` de `sku_taken` y `details.barcode` de
+	// `barcode_taken`). Nunca trae datos personales.
 	Details *map[string]string `json:"details,omitempty"`
 
 	// Message Mensaje en español que se puede mostrar al usuario.
@@ -226,7 +227,8 @@ type ImportVariantPreview struct {
 	AxisValues   map[string]string `json:"axis_values"`
 	InitialStock *string           `json:"initial_stock,omitempty"`
 
-	// Price El precio como lo leyó la importación.
+	// Price El precio como lo leyó la importación: el monto o, si la celda no es un número válido, su texto tal cual
+	// (vacío si la celda está vacía), para mostrar lo que dice el archivo.
 	Price string `json:"price"`
 	Row   int    `json:"row"`
 	Sku   string `json:"sku"`

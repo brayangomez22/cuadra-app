@@ -38,7 +38,7 @@ func productPreview(g domain.Group) importsapi.ImportProductPreview {
 	variants := make([]importsapi.ImportVariantPreview, 0, len(g.Variants))
 	for _, v := range g.Variants {
 		body := importsapi.ImportVariantPreview{
-			Row: v.Row, Sku: v.SKU, Price: httpx.FormatDecimal(v.Price), AxisValues: map[string]string{},
+			Row: v.Row, Sku: v.SKU, Price: previewPrice(v.VariantFields), AxisValues: map[string]string{},
 		}
 		for axis, value := range v.Axes {
 			body.AxisValues[axis] = value
@@ -52,6 +52,15 @@ func productPreview(g domain.Group) importsapi.ImportProductPreview {
 	return importsapi.ImportProductPreview{
 		Row: g.Row, Name: g.Product.Name, Category: g.Product.Category, Unit: g.Product.Unit, Variants: variants,
 	}
+}
+
+// previewPrice is the price as the import read it: the amount, or the cell
+// as written when it is not one.
+func previewPrice(v domain.VariantFields) string {
+	if v.PriceText != "" {
+		return v.PriceText
+	}
+	return httpx.FormatDecimal(v.Price)
 }
 
 func rowErrorsBody(errs []domain.RowError) []importsapi.ImportRowError {

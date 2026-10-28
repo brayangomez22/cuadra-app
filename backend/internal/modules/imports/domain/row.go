@@ -49,7 +49,10 @@ type VariantFields struct {
 	Barcode string
 	Cost    decimal.Decimal
 	Price   decimal.Decimal
-	Axes    map[string]string
+	// PriceText is the price cell as written when it is not a valid amount,
+	// so the preview shows what the file says; empty otherwise.
+	PriceText string
+	Axes      map[string]string
 }
 
 // RowError is a problem of one row (Row 1 is the header). Column names the

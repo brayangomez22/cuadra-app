@@ -172,6 +172,29 @@ func TestHeaderParse(t *testing.T) {
 	})
 }
 
+func TestHeaderParsePriceText(t *testing.T) {
+	tests := []struct {
+		name  string
+		l     domain.Layout
+		price string
+		want  string
+	}{
+		{"ferretería: un precio en letras conserva el texto", hardwareLayout(), "diez mil", "diez mil"},
+		{"almacén de ropa: un precio negativo conserva el texto", clothingLayout(), "-5", "-5"},
+		{"un precio válido no guarda texto", clothingLayout(), "25000", ""},
+		{"una celda vacía no guarda texto", hardwareLayout(), " ", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := header(t, tt.l, tt.l.Headers()...)
+			cells := cellsOf(h, map[string]string{"producto": "Producto", "unidad": "und", "sku": "SKU-1", "precio": tt.price})
+
+			row, _ := h.Parse(2, cells, domain.PlainNumbers)
+			require.Equal(t, tt.want, row.Variant.PriceText)
+		})
+	}
+}
+
 func TestParseNumber(t *testing.T) {
 	tests := []struct {
 		in    string

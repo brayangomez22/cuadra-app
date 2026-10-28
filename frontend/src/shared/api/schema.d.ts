@@ -1138,7 +1138,8 @@ export interface components {
             message: string;
             /**
              * @description Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `variant_id` en
-             *     `insufficient_stock`). Nunca trae datos personales.
+             *     `insufficient_stock`, o el código que choca en `details.sku` de `sku_taken` y `details.barcode` de
+             *     `barcode_taken`). Nunca trae datos personales.
              */
             details?: {
                 [key: string]: string;
@@ -2157,7 +2158,10 @@ export interface components {
         ImportVariantPreview: {
             row: number;
             sku: string;
-            /** @description El precio como lo leyó la importación. */
+            /**
+             * @description El precio como lo leyó la importación: el monto o, si la celda no es un número válido, su texto tal cual
+             *     (vacío si la celda está vacía), para mostrar lo que dice el archivo.
+             */
             price: string;
             axis_values: {
                 [key: string]: string;
@@ -2772,7 +2776,10 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Un SKU o un código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`). */
+            /**
+             * @description Un SKU o un código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`). El código que choca
+             *     viene en `details.sku` o `details.barcode`, para que el cliente marque la variante que lo tiene.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;

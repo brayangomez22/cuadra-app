@@ -22,4 +22,11 @@ describe('sampleRows', () => {
 
     expect(sampleRows([{ ...product!, variants: [variant] }])[0]?.price).toBe('veinte mil');
   });
+
+  it('un precio vacío en el archivo se muestra vacío, no como $ 0', () => {
+    const [product] = sample;
+    const variant = { ...product!.variants[0]!, price: '' };
+
+    expect(sampleRows([{ ...product!, variants: [variant] }])[0]?.price).toBe('');
+  });
 });
