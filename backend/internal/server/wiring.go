@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/imports"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory"
@@ -50,7 +51,11 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 	if err != nil {
 		return nil, err
 	}
-	identityModule, err := w.identity(catalogModule)
+	customersModule, err := w.customers()
+	if err != nil {
+		return nil, err
+	}
+	identityModule, err := w.identity(catalogModule, customersModule)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +64,7 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 		return nil, err
 	}
 	history.Inventory = inventoryModule
-	salesModule, err := w.sales(catalogModule, inventoryModule)
+	salesModule, err := w.sales(catalogModule, inventoryModule, customersModule)
 	if err != nil {
 		return nil, err
 	}
@@ -68,8 +73,8 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 		return nil, err
 	}
 	return []func(*http.ServeMux){
-		identityModule.RegisterRoutes, catalogModule.RegisterRoutes, inventoryModule.RegisterRoutes,
-		salesModule.RegisterRoutes, importsModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
+		identityModule.RegisterRoutes, catalogModule.RegisterRoutes, customersModule.RegisterRoutes,
+		inventoryModule.RegisterRoutes, salesModule.RegisterRoutes, importsModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
 	}, nil
 }
 
@@ -84,10 +89,19 @@ func (w *wiring) catalog(history *ports.CatalogHistory) (*catalog.Module, error)
 	})
 }
 
-// identity signs tenants up with the catalog and the modules of their
-// business template.
-func (w *wiring) identity(c *catalog.Module) (*identity.Module, error) {
-	setup, err := ports.NewTenantSetup(w.registry, c, w.moduleService)
+func (w *wiring) customers() (*customers.Module, error) {
+	return customers.New(customers.Config{
+		DB:             w.DB,
+		Logger:         w.Log,
+		TracerProvider: w.TracerProvider,
+		MeterProvider:  w.MeterProvider,
+	})
+}
+
+// identity signs tenants up with the catalog, the customer segments and the
+// modules of their business template.
+func (w *wiring) identity(c *catalog.Module, cu *customers.Module) (*identity.Module, error) {
+	setup, err := ports.NewTenantSetup(w.registry, c, cu, w.moduleService)
 	if err != nil {
 		return nil, err
 	}
@@ -114,12 +128,15 @@ func (w *wiring) inventory(c *catalog.Module) (*inventory.Module, error) {
 	})
 }
 
-func (w *wiring) sales(c *catalog.Module, i *inventory.Module) (*sales.Module, error) {
+// sales sells the catalog's variants from the inventory's stock, to the
+// customers module's customers.
+func (w *wiring) sales(c *catalog.Module, i *inventory.Module, cu *customers.Module) (*sales.Module, error) {
 	return sales.New(sales.Config{
 		DB:             w.DB,
 		Authorize:      w.permissions.Authorize,
 		Catalog:        ports.SalesCatalog{Catalog: c},
 		Stock:          ports.SalesStock{Inventory: i},
+		Customers:      ports.SalesCustomers{Customers: cu},
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,

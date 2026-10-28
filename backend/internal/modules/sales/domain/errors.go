@@ -62,6 +62,8 @@ var (
 	ErrProductInactive   = errors.New("sales: product is inactive")
 	ErrLocationNotFound  = errors.New("sales: location not found")
 	ErrLocationInactive  = errors.New("sales: location is inactive")
+	ErrCustomerNotFound  = errors.New("sales: customer not found")
+	ErrCustomerInactive  = errors.New("sales: customer is inactive")
 	ErrInsufficientStock = errors.New("sales: insufficient stock")
 	ErrQuantityPrecision = errors.New("sales: quantity in the base unit needs more than four decimals")
 	ErrInvalidUnitFactor = errors.New("sales: invalid unit factor")

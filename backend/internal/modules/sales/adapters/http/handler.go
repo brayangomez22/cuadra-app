@@ -74,7 +74,7 @@ func (h *Handler) actor(ctx context.Context) app.Actor {
 func (h *Handler) ConfirmSale(ctx context.Context, req salesapi.ConfirmSaleRequestObject) (salesapi.ConfirmSaleResponseObject, error) {
 	// The POS latency SLO measures charging a sale (docs/slo.md).
 	httpx.SetOperation(ctx, "pos.confirm_sale")
-	in := app.ConfirmSaleInput{LocationID: req.Body.LocationId}
+	in := app.ConfirmSaleInput{LocationID: req.Body.LocationId, CustomerID: req.Body.CustomerId}
 	for _, l := range req.Body.Lines {
 		qty, err := httpx.ParseDecimal(l.Quantity, domain.ErrInvalidQuantity)
 		if err != nil {
@@ -166,7 +166,7 @@ func saleBody(s *domain.Sale) salesapi.Sale {
 	totals := s.Totals()
 	body := salesapi.Sale{
 		Id: s.ID(), Number: s.Number(), LocationId: s.LocationID(), UserId: s.UserID(),
-		Status: salesapi.SaleStatus(s.Status()), CashSessionId: s.CashSessionID(),
+		Status: salesapi.SaleStatus(s.Status()), CashSessionId: s.CashSessionID(), CustomerId: s.CustomerID(),
 		Lines: make([]salesapi.SaleLine, 0, len(s.Lines())), Payments: make([]salesapi.SalePayment, 0, len(s.Payments())),
 		Totals: salesapi.SaleTotals{
 			Subtotal: httpx.FormatMoney(totals.Subtotal), Discounts: httpx.FormatMoney(totals.Discounts),

@@ -44,6 +44,7 @@ api/openapi.yaml             # contrato de la API: fuente de verdad
 backend/
   cmd/api/main.go            # arranca la API: configuración, telemetría, base de datos y servidor
   internal/
+    kernel/                  # value objects puros que validan varios domain (taxid: el NIT)
     platform/                # infraestructura compartida: config, db, telemetry, jobs, auth, httpx
     server/                  # composición: arma los módulos, los une por puertos (ports/) y monta el handler
     modules/<modulo>/        # un módulo por contexto: identity, catalog, inventory, sales...
@@ -70,7 +71,7 @@ PRODUCT.md                   # contexto de producto y usuarios para el diseño d
 
 ## Reglas de arquitectura (hexagonal) — obligatorias
 
-1. `domain/` **no importa** nada del proyecto fuera de sí mismo, ni `pgx`, `net/http`, `sqlc` u OpenTelemetry. Solo librería estándar, `decimal` y `uuid`.
+1. `domain/` **no importa** nada del proyecto fuera de sí mismo (salvo los value objects puros de `internal/kernel`), ni `pgx`, `net/http`, `sqlc` u OpenTelemetry. Solo librería estándar, `decimal`, `uuid` e `internal/kernel`.
 2. `app/` depende de `domain/` y de interfaces. Nunca de adapters concretos. Puede usar la API de OpenTelemetry (`go.opentelemetry.io/otel`) para spans y métricas, nunca el SDK.
 3. Las reglas de negocio viven en `domain/` (métodos de entidades y value objects). Los handlers solo traducen HTTP ↔ caso de uso; **cero lógica de negocio en handlers o repositorios**.
 4. Un módulo **no importa** el `domain/` ni los `adapters/` de otro módulo. Si necesita algo de otro módulo, define en su propio `app/` una interfaz pequeña (puerto) y el wiring de `internal/server` la satisface (con un adaptador de `internal/server/ports`).
@@ -81,7 +82,7 @@ PRODUCT.md                   # contexto de producto y usuarios para el diseño d
 
 **Antes de crear o mover archivos del backend, lee `docs/backend.md`.** Resumen:
 
-- Las reglas de arquitectura de arriba las verifica `depguard` en el CI: `domain` solo importa la librería estándar, `uuid` y `decimal`; `app` no importa adapters, `pgx`, `net/http` ni el SDK de OpenTelemetry; un módulo no importa otro; `platform/` no importa módulos; `cmd/` y `test/api` no importan módulos (solo `internal/server` los une). `make lint-guards` comprueba que cada regla siga rechazando su import prohibido.
+- Las reglas de arquitectura de arriba las verifica `depguard` en el CI: `domain` solo importa la librería estándar, `uuid`, `decimal` e `internal/kernel` (que solo importa la librería estándar); `app` no importa adapters, `pgx`, `net/http` ni el SDK de OpenTelemetry; un módulo no importa otro; `platform/` no importa módulos; `cmd/` y `test/api` no importan módulos (solo `internal/server` los une). `make lint-guards` comprueba que cada regla siga rechazando su import prohibido.
 - Límites en error: 300 líneas por archivo de código y 400 por test (`make lint-size`), `funlen` 50 líneas / 35 sentencias, `gocognit` 15, `cyclop` 10, `nestif` 4, `dupl` 100, `interfacebloat` 10, sin `return nil, nil` (`nilnil`), y `thelper` y `testifylint` en los tests. En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`.
 - `forbidigo` rechaza `uuid.New` (v4), floats en `domain/` y adapters, `time.Now` en `domain/` y `fmt.Print` en `internal/`; `sloglint` exige logs con contexto, mensaje fijo y atributos `snake_case`. Tests de `internal/modules/` verifican que cada módulo tenga sus reglas de `depguard`, que cada caso de uso abra su span y que las métricas se llamen `cuadra.<modulo>.<cosa>`, con unidad y sin `tenant`/`user` como atributo.
 - Un módulo nuevo sigue los pasos de `docs/backend.md` ("Agregar un módulo"); los trabajos en segundo plano, su sección 7.

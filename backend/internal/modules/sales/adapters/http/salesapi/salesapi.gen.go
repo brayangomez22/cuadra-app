@@ -252,7 +252,9 @@ type CloseCashSessionInput struct {
 
 // ConfirmSaleInput defines model for ConfirmSaleInput.
 type ConfirmSaleInput struct {
-	Lines []SaleLineInput `json:"lines"`
+	// CustomerId El cliente activo a quien se vende (`/customers`). Sin él, la venta es a consumidor final.
+	CustomerId *openapi_types.UUID `json:"customer_id,omitempty"`
+	Lines      []SaleLineInput     `json:"lines"`
 
 	// LocationId Sede donde se vende y de donde sale el stock.
 	LocationId openapi_types.UUID `json:"location_id"`
@@ -350,11 +352,14 @@ type Sale struct {
 	// Change Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
-	Change      Money              `json:"change"`
-	ConfirmedAt time.Time          `json:"confirmed_at"`
-	Id          openapi_types.UUID `json:"id"`
-	Lines       []SaleLine         `json:"lines"`
-	LocationId  openapi_types.UUID `json:"location_id"`
+	Change      Money     `json:"change"`
+	ConfirmedAt time.Time `json:"confirmed_at"`
+
+	// CustomerId El cliente; no viene si la venta fue a consumidor final.
+	CustomerId *openapi_types.UUID `json:"customer_id,omitempty"`
+	Id         openapi_types.UUID  `json:"id"`
+	Lines      []SaleLine          `json:"lines"`
+	LocationId openapi_types.UUID  `json:"location_id"`
 
 	// Number Consecutivo de la venta en su sede.
 	Number int64 `json:"number"`
@@ -613,6 +618,9 @@ type CategoryId = openapi_types.UUID
 // CountEntryId defines model for CountEntryId.
 type CountEntryId = openapi_types.UUID
 
+// CustomerId defines model for CustomerId.
+type CustomerId = openapi_types.UUID
+
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID
 
@@ -633,6 +641,9 @@ type ProductId = openapi_types.UUID
 
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
+
+// SegmentId defines model for SegmentId.
+type SegmentId = openapi_types.UUID
 
 // StockCountId defines model for StockCountId.
 type StockCountId = openapi_types.UUID

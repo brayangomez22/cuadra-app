@@ -61,13 +61,18 @@ test/api/                # tests de integración de la API completa, sobre serve
 
 `main` y los tests de `test/api` arman la API con el mismo `server.New`: así los tests prueban el armado real y no una copia. Los tests de `internal/server` son unitarios (rutas y compuertas con módulos de prueba).
 
+### Núcleo compartido: `internal/kernel`
+
+Un value object puro que validan los `domain/` de más de un módulo vive en `internal/kernel/<tema>` (`taxid`: el NIT y su dígito de verificación, que usan `identity` y `customers` y después la facturación). Solo importa la librería estándar y no tiene estado ni I/O; no es un lugar para helpers ni para entidades. Un tipo entra aquí solo cuando lo necesita un segundo módulo.
+
 ### Fronteras (`depguard`, en error)
 
 | Regla | Qué impide |
 |---|---|
-| `domain` | importar algo que no sea la librería estándar, `uuid` o `decimal` (tampoco `net/http`) |
+| `domain` | importar algo que no sea la librería estándar, `uuid`, `decimal` o `internal/kernel` (tampoco `net/http`) |
+| `kernel` | que `internal/kernel` importe algo fuera de la librería estándar |
 | `app` | importar `adapters`, `pgx`, `net/http` o el SDK de OpenTelemetry (`otel/sdk`) |
-| `catalog`, `identity`, `imports`, `inventory`, `sales` | importar otro módulo |
+| `catalog`, `customers`, `identity`, `imports`, `inventory`, `sales` | importar otro módulo |
 | `platform` | importar cualquier módulo |
 | `composition` | que `cmd/` o `test/api` importen un módulo: solo `internal/server` (y su `ports/`) los une, y los demás usan `server.New` |
 

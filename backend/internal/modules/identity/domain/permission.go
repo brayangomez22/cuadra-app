@@ -15,7 +15,10 @@ type Permission string
 const (
 	PermCatalogRead          Permission = "catalog:read"
 	PermCatalogWrite         Permission = "catalog:write"
-	PermImportsRun           Permission = "imports:run" // load the catalog and the stock from a file
+	PermCustomersRead        Permission = "customers:read"
+	PermCustomersWrite       Permission = "customers:write"  // create and edit customers, also from the POS
+	PermCustomersManage      Permission = "customers:manage" // the tenant's customer segments
+	PermImportsRun           Permission = "imports:run"      // load the catalog and the stock from a file
 	PermInventoryRead        Permission = "inventory:read"
 	PermInventoryAdjust      Permission = "inventory:adjust"
 	PermInventoryCount       Permission = "inventory:count"        // record what is counted in a stock count
@@ -59,17 +62,20 @@ var coreRoles = []struct {
 }{
 	{RoleAdmin, []Permission{
 		PermCatalogRead, PermCatalogWrite, PermImportsRun,
+		PermCustomersRead, PermCustomersWrite, PermCustomersManage,
 		PermInventoryRead, PermInventoryAdjust, PermInventoryCount, PermInventoryCountManage,
 		PermSalesCreate, PermSalesDiscount, PermSalesRead, PermSalesVoid,
 		PermUsersManage,
 	}},
 	{RoleCashier, []Permission{
 		PermCatalogRead,
+		PermCustomersRead, PermCustomersWrite,
 		PermInventoryRead, PermInventoryCount,
 		PermSalesCreate, PermSalesRead,
 	}},
 	{RoleWarehouse, []Permission{
 		PermCatalogRead,
+		PermCustomersRead,
 		PermInventoryRead, PermInventoryAdjust, PermInventoryCount,
 	}},
 }
@@ -79,6 +85,9 @@ var coreRoles = []struct {
 var corePermissions = []Permission{
 	PermCatalogRead,
 	PermCatalogWrite,
+	PermCustomersRead,
+	PermCustomersWrite,
+	PermCustomersManage,
 	PermImportsRun,
 	PermInventoryRead,
 	PermInventoryAdjust,

@@ -127,6 +127,33 @@ type Category struct {
 	CreatedAt time.Time
 }
 
+type Customer struct {
+	ID                  uuid.UUID
+	TenantID            uuid.UUID
+	PersonType          string
+	DocumentType        string
+	DocumentNumber      string
+	Name                string
+	TradeName           *string
+	Email               *string
+	Phone               *string
+	Address             *string
+	City                *string
+	SegmentID           *uuid.UUID
+	TaxResponsibilities []string
+	Active              bool
+	SearchName          string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+type CustomerSegment struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	Name      string
+	CreatedAt time.Time
+}
+
 type Import struct {
 	ID            uuid.UUID
 	TenantID      uuid.UUID

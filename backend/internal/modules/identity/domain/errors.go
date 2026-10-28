@@ -1,12 +1,16 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/brayangomez22/cuadra-app/backend/internal/kernel/taxid"
+)
 
 // Domain errors of the identity module. The HTTP adapter maps them to status codes.
 var (
 	ErrInvalidEmail          = errors.New("identity: invalid email")
-	ErrInvalidNIT            = errors.New("identity: invalid NIT")
-	ErrInvalidNITCheckDigit  = errors.New("identity: NIT check digit does not match")
+	ErrInvalidNIT            = taxid.ErrInvalidNIT
+	ErrInvalidNITCheckDigit  = taxid.ErrInvalidNITCheckDigit
 	ErrInvalidRole           = errors.New("identity: invalid role")
 	ErrInvalidPermission     = errors.New("identity: invalid permission")
 	ErrDuplicatePermission   = errors.New("identity: permission registered twice")

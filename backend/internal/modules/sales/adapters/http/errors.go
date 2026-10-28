@@ -21,6 +21,8 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrProductNotFound, Status: http.StatusUnprocessableEntity, Code: "product_not_found", Message: "Uno de los productos no existe."},
 	{Err: domain.ErrProductInactive, Status: http.StatusUnprocessableEntity, Code: "product_inactive", Message: "Uno de los productos está inactivo y no se puede vender."},
 	{Err: domain.ErrLocationNotFound, Status: http.StatusUnprocessableEntity, Code: "location_not_found", Message: "La sede no existe."},
+	{Err: domain.ErrCustomerNotFound, Status: http.StatusUnprocessableEntity, Code: "customer_not_found", Message: "El cliente no existe."},
+	{Err: domain.ErrCustomerInactive, Status: http.StatusUnprocessableEntity, Code: "customer_inactive", Message: "El cliente está inactivo. Actívelo o venda a otro cliente."},
 	{Err: domain.ErrLocationInactive, Status: http.StatusUnprocessableEntity, Code: "location_inactive", Message: "La sede está inactiva. Actívela antes de vender en ella."},
 	{Err: domain.ErrInsufficientPayment, Status: http.StatusUnprocessableEntity, Code: "insufficient_payment", Message: "Los pagos no alcanzan para cubrir el total."},
 	{Err: domain.ErrNonCashOverpayment, Status: http.StatusUnprocessableEntity, Code: "non_cash_overpayment", Message: "Solo el efectivo da cambio: los demás pagos no pueden superar el total."},
