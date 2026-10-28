@@ -49,7 +49,7 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
 | Core genérico: variantes, unidades y atributos por tenant, módulos, permisos y plantillas | T24a–T24k |
 | Estructura y tamaño del frontend (refactor por feature, guardas de ESLint, Prettier, rutas tipadas, kit compartido) | T26b–T26j |
 | Estructura y tamaño del backend (reglas hexagonales en `depguard`, umbrales de complejidad y tamaño, kit de `platform/`) | T26k–T26r |
-| Clientes y cartera | T31 (clientes), T32 (crédito, abonos, cartera por edades) |
+| Clientes y cartera | T31 (clientes), T31a (pantallas de clientes y POS), T32 (crédito, abonos, cartera por edades) |
 | Compras y proveedores | T33 · órdenes de compra y cuentas por pagar: V2-2 |
 | Facturación electrónica DIAN | T35 (selección del proveedor), T36 (emisión), T37 (notas crédito) |
 | Reportes y tablero | T42 (reportes del negocio), T43 (tablero del dueño) |

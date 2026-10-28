@@ -994,6 +994,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Buscar clientes
+         * @description Lista los clientes de la empresa. Con `q` busca por nombre o nombre comercial (cada palabra debe aparecer, sin
+         *     importar tildes ni mayúsculas) o por el número de documento, que sale primero si coincide exacto. Sin `q`,
+         *     ordena por nombre. Es la búsqueda del POS. Una venta sin cliente es a consumidor final: no hay un cliente
+         *     guardado con ese nombre.
+         */
+        get: operations["listCustomers"];
+        put?: never;
+        /**
+         * Crear un cliente
+         * @description Crea un cliente. También se usa desde el POS para crearlo al vuelo. El documento es único en la
+         *     empresa por tipo y número.
+         */
+        post: operations["createCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/{customerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: components["parameters"]["CustomerId"];
+            };
+            cookie?: never;
+        };
+        /** Ver un cliente */
+        get: operations["getCustomer"];
+        /**
+         * Editar un cliente
+         * @description Reemplaza los datos del cliente. Un cliente no se borra: se desactiva (`active: false`) y deja de aparecer en
+         *     la búsqueda del POS, pero sus ventas lo siguen nombrando.
+         */
+        put: operations["updateCustomer"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customer-segments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar los segmentos de cliente
+         * @description Los segmentos en que la empresa agrupa a sus clientes (público, mayorista, convenio...), ordenados por
+         *     nombre. Al registrarse, la empresa recibe los de su tipo de negocio.
+         */
+        get: operations["listCustomerSegments"];
+        put?: never;
+        /** Crear un segmento de cliente */
+        post: operations["createCustomerSegment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customer-segments/{segmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                segmentId: components["parameters"]["SegmentId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Renombrar un segmento de cliente
+         * @description Los clientes del segmento siguen en él.
+         */
+        put: operations["renameCustomerSegment"];
+        post?: never;
+        /**
+         * Borrar un segmento de cliente
+         * @description Solo se puede borrar un segmento sin clientes, ni siquiera inactivos.
+         */
+        delete: operations["deleteCustomerSegment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales": {
         parameters: {
             query?: never;
@@ -2120,12 +2220,109 @@ export interface components {
             out: components["schemas"]["StockMovement"];
             in: components["schemas"]["StockMovement"];
         };
+        /**
+         * @description Persona natural (`natural`) o jurídica (`legal`). Una persona jurídica se identifica con NIT.
+         * @enum {string}
+         */
+        PersonType: "natural" | "legal";
+        /**
+         * @description Cédula de ciudadanía (`cc`), NIT (`nit`), cédula de extranjería (`ce`) o pasaporte (`passport`).
+         * @enum {string}
+         */
+        DocumentType: "cc" | "nit" | "ce" | "passport";
+        /**
+         * @description Responsabilidad fiscal del RUT que pide la factura electrónica: gran contribuyente (`O-13`), autorretenedor
+         *     (`O-15`), agente de retención de IVA (`O-23`), régimen simple (`O-47`) o ninguna de ellas (`R-99-PN`).
+         * @enum {string}
+         */
+        TaxResponsibility: "O-13" | "O-15" | "O-23" | "O-47" | "R-99-PN";
+        /** @description Sin repetir. `R-99-PN` no se combina con las demás. Sin ninguna, el cliente queda con `R-99-PN`. */
+        TaxResponsibilities: components["schemas"]["TaxResponsibility"][];
+        /**
+         * @description Un cliente de la empresa. `document_number` está en su forma canónica: el NIT con su dígito de verificación
+         *     (`900123456-8`), la cédula solo con dígitos y el pasaporte en mayúsculas.
+         */
+        Customer: {
+            /** Format: uuid */
+            id: string;
+            person_type: components["schemas"]["PersonType"];
+            document_type: components["schemas"]["DocumentType"];
+            /** @example 900123456-8 */
+            document_number: string;
+            /** @description Nombre completo o razón social. */
+            name: string;
+            /** @description Nombre comercial, si es distinto de la razón social. */
+            trade_name?: string;
+            email?: string;
+            phone?: string;
+            address?: string;
+            city?: string;
+            /** Format: uuid */
+            segment_id?: string;
+            tax_responsibilities: components["schemas"]["TaxResponsibility"][];
+            active: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description Los datos de un cliente. El NIT se escribe con su dígito de verificación (con o sin guion y puntos). Los
+         *     campos de contacto vacíos se guardan como ausentes.
+         */
+        CustomerInput: {
+            person_type: components["schemas"]["PersonType"];
+            document_type: components["schemas"]["DocumentType"];
+            /** @example 900.123.456-8 */
+            document_number: string;
+            name: string;
+            trade_name?: string;
+            email?: string;
+            phone?: string;
+            address?: string;
+            city?: string;
+            /**
+             * Format: uuid
+             * @description Un segmento de la empresa (`/customer-segments`). Sin él, el cliente no tiene segmento.
+             */
+            segment_id?: string;
+            tax_responsibilities?: components["schemas"]["TaxResponsibilities"];
+            /**
+             * @description Un cliente inactivo no aparece en la búsqueda del POS ni se le puede vender.
+             * @default true
+             */
+            active: boolean;
+        };
+        CustomerPage: {
+            items: components["schemas"]["Customer"][];
+            /** @description Cantidad total de clientes que cumplen el filtro, sin paginar. */
+            total: number;
+        };
+        CustomerSegment: {
+            /** Format: uuid */
+            id: string;
+            /** @example Mayorista */
+            name: string;
+        };
+        CustomerSegmentInput: {
+            /**
+             * @description Único en la empresa, sin importar las mayúsculas.
+             * @example Mayorista
+             */
+            name: string;
+        };
+        CustomerSegmentList: {
+            items: components["schemas"]["CustomerSegment"][];
+        };
         ConfirmSaleInput: {
             /**
              * Format: uuid
              * @description Sede donde se vende y de donde sale el stock.
              */
             location_id: string;
+            /**
+             * Format: uuid
+             * @description El cliente activo a quien se vende (`/customers`). Sin él, la venta es a consumidor final.
+             */
+            customer_id?: string;
             lines: components["schemas"]["SaleLineInput"][];
             payments: components["schemas"]["PaymentInput"][];
         };
@@ -2266,6 +2463,11 @@ export interface components {
              * @description Quién vendió.
              */
             user_id: string;
+            /**
+             * Format: uuid
+             * @description El cliente; no viene si la venta fue a consumidor final.
+             */
+            customer_id?: string;
             /**
              * Format: uuid
              * @description La caja donde se cobró; no viene si se vendió sin caja.
@@ -2550,6 +2752,22 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /**
+         * @description Algún dato del cliente no cumple las reglas: el tipo de persona (`invalid_person_type`), el documento no es
+         *     válido para su tipo (`invalid_document`), el
+         *     dígito de verificación del NIT no coincide (`invalid_nit_check_digit`), una persona jurídica sin NIT
+         *     (`legal_person_requires_nit`), el nombre (`invalid_customer_name`), un dato de contacto (`invalid_customer_contact`),
+         *     las responsabilidades fiscales (`invalid_tax_responsibilities`) o un segmento que no existe
+         *     (`customer_segment_not_found`).
+         */
+        InvalidCustomer: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description El recurso no existe (`code` = `not_found` u otro más específico). */
         NotFound: {
             headers: {
@@ -2605,6 +2823,8 @@ export interface components {
         CategoryId: string;
         UnitId: string;
         AttributeId: string;
+        CustomerId: string;
+        SegmentId: string;
         AxisId: string;
         LocationId: string;
         SaleId: string;
@@ -4880,6 +5100,302 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    listCustomers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Texto a buscar.
+                 * @example gómez
+                 */
+                q?: string;
+                /** @description Solo los clientes de este segmento. */
+                segment_id?: string;
+                /** @description Clientes activos (por defecto), inactivos o todos. */
+                status?: "active" | "inactive" | "all";
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de clientes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerInput"];
+            };
+        };
+        responses: {
+            /** @description Cliente creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Customer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Ya existe un cliente con ese documento (`customer_document_taken`); el mensaje dice cuál. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["InvalidCustomer"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: components["parameters"]["CustomerId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El cliente. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Customer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: components["parameters"]["CustomerId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerInput"];
+            };
+        };
+        responses: {
+            /** @description El cliente actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Customer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Ya existe otro cliente con ese documento (`customer_document_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["InvalidCustomer"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listCustomerSegments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Los segmentos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerSegmentList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createCustomerSegment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerSegmentInput"];
+            };
+        };
+        responses: {
+            /** @description Segmento creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerSegment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Ya existe un segmento con ese nombre, sin importar las mayúsculas (`customer_segment_name_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El nombre no es válido (`invalid_customer_segment_name`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    renameCustomerSegment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                segmentId: components["parameters"]["SegmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerSegmentInput"];
+            };
+        };
+        responses: {
+            /** @description El segmento renombrado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerSegment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Ya existe otro segmento con ese nombre (`customer_segment_name_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El nombre no es válido (`invalid_customer_segment_name`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteCustomerSegment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                segmentId: components["parameters"]["SegmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Segmento borrado. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description El segmento tiene clientes (`customer_segment_in_use`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
     listSales: {
         parameters: {
             query?: {
@@ -4961,7 +5477,7 @@ export interface operations {
             };
             /**
              * @description Algún dato no cumple las reglas (`product_not_found` y `product_inactive`, también para una
-             *     variante; `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
+             *     variante; `customer_not_found`, `customer_inactive`, `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
              *     `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`). Una
              *     línea en una unidad que la variante no tiene (`unit_not_available`) o cuya cantidad en unidad base necesita
              *     más de 4 decimales (`quantity_precision`).

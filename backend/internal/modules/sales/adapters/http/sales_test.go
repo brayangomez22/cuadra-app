@@ -120,6 +120,8 @@ func TestConfirmSale(t *testing.T) {
 			{domain.ErrProductInactive, http.StatusUnprocessableEntity, "product_inactive"},
 			{domain.ErrLocationInactive, http.StatusUnprocessableEntity, "location_inactive"},
 			{domain.ErrLocationNotFound, http.StatusUnprocessableEntity, "location_not_found"},
+			{domain.ErrCustomerNotFound, http.StatusUnprocessableEntity, "customer_not_found"},
+			{domain.ErrCustomerInactive, http.StatusUnprocessableEntity, "customer_inactive"},
 			{domain.ErrInsufficientStock, http.StatusConflict, "insufficient_stock"},
 		}
 		body := `{"location_id":"` + newID().String() + `","lines":[{"variant_id":"` + newID().String() + `","quantity":"1"}],"payments":[]}`

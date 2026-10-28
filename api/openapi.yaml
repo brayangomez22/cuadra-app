@@ -45,6 +45,11 @@ tags:
       Ventas del punto de venta. El precio, el nombre y el IVA de cada línea salen del catálogo en el momento de la
       venta; el cliente solo envía producto, cantidad, descuento y pagos. Los montos viajan como string decimal con
       2 decimales. Cada venta confirmada recibe un consecutivo por sede, sin huecos.
+  - name: customers
+    description: |
+      Clientes de la empresa y sus segmentos (configurables: público, mayorista, convenio...). Guardan lo que pide la
+      factura electrónica: tipo de persona, documento (el NIT con dígito de verificación) y responsabilidades fiscales.
+      Una venta sin cliente es a consumidor final.
   - name: modules
     description: |
       Módulos que la empresa puede activar según su tipo de negocio (variantes, lotes, listas de precios...). Las
@@ -2145,6 +2150,292 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/customers:
+    get:
+      tags: [customers]
+      operationId: listCustomers
+      summary: Buscar clientes
+      description: |
+        Lista los clientes de la empresa. Con `q` busca por nombre o nombre comercial (cada palabra debe aparecer, sin
+        importar tildes ni mayúsculas) o por el número de documento, que sale primero si coincide exacto. Sin `q`,
+        ordena por nombre. Es la búsqueda del POS. Una venta sin cliente es a consumidor final: no hay un cliente
+        guardado con ese nombre.
+      x-permission: customers:read
+      parameters:
+        - name: q
+          in: query
+          description: Texto a buscar.
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          example: gómez
+        - name: segment_id
+          in: query
+          description: Solo los clientes de este segmento.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Clientes activos (por defecto), inactivos o todos.
+          required: false
+          schema:
+            type: string
+            enum: [active, inactive, all]
+            default: active
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de clientes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [customers]
+      operationId: createCustomer
+      summary: Crear un cliente
+      description: |
+        Crea un cliente. También se usa desde el POS para crearlo al vuelo. El documento es único en la
+        empresa por tipo y número.
+      x-permission: customers:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "201":
+          description: Cliente creado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Ya existe un cliente con ese documento (`customer_document_taken`); el mensaje dice cuál.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/InvalidCustomer"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/customers/{customerId}:
+    parameters:
+      - $ref: "#/components/parameters/CustomerId"
+    get:
+      tags: [customers]
+      operationId: getCustomer
+      summary: Ver un cliente
+      x-permission: customers:read
+      responses:
+        "200":
+          description: El cliente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags: [customers]
+      operationId: updateCustomer
+      summary: Editar un cliente
+      description: |
+        Reemplaza los datos del cliente. Un cliente no se borra: se desactiva (`active: false`) y deja de aparecer en
+        la búsqueda del POS, pero sus ventas lo siguen nombrando.
+      x-permission: customers:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "200":
+          description: El cliente actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Ya existe otro cliente con ese documento (`customer_document_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/InvalidCustomer"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/customer-segments:
+    get:
+      tags: [customers]
+      operationId: listCustomerSegments
+      summary: Listar los segmentos de cliente
+      description: |
+        Los segmentos en que la empresa agrupa a sus clientes (público, mayorista, convenio...), ordenados por
+        nombre. Al registrarse, la empresa recibe los de su tipo de negocio.
+      x-permission: customers:read
+      responses:
+        "200":
+          description: Los segmentos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerSegmentList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [customers]
+      operationId: createCustomerSegment
+      summary: Crear un segmento de cliente
+      x-permission: customers:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerSegmentInput"
+      responses:
+        "201":
+          description: Segmento creado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerSegment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Ya existe un segmento con ese nombre, sin importar las mayúsculas (`customer_segment_name_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: El nombre no es válido (`invalid_customer_segment_name`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/customer-segments/{segmentId}:
+    parameters:
+      - $ref: "#/components/parameters/SegmentId"
+    put:
+      tags: [customers]
+      operationId: renameCustomerSegment
+      summary: Renombrar un segmento de cliente
+      description: Los clientes del segmento siguen en él.
+      x-permission: customers:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerSegmentInput"
+      responses:
+        "200":
+          description: El segmento renombrado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerSegment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Ya existe otro segmento con ese nombre (`customer_segment_name_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: El nombre no es válido (`invalid_customer_segment_name`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [customers]
+      operationId: deleteCustomerSegment
+      summary: Borrar un segmento de cliente
+      description: Solo se puede borrar un segmento sin clientes, ni siquiera inactivos.
+      x-permission: customers:manage
+      responses:
+        "204":
+          description: Segmento borrado.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: El segmento tiene clientes (`customer_segment_in_use`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/v1/sales:
     get:
       tags: [sales]
@@ -2234,7 +2525,7 @@ paths:
         "422":
           description: |
             Algún dato no cumple las reglas (`product_not_found` y `product_inactive`, también para una
-            variante; `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
+            variante; `customer_not_found`, `customer_inactive`, `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
             `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`). Una
             línea en una unidad que la variante no tiene (`unit_not_available`) o cuya cantidad en unidad base necesita
             más de 4 decimales (`quantity_precision`).
@@ -2836,6 +3127,20 @@ components:
       schema:
         type: string
         format: uuid
+    CustomerId:
+      name: customerId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SegmentId:
+      name: segmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     AxisId:
       name: axisId
       in: path
@@ -2894,6 +3199,18 @@ components:
             $ref: "#/components/schemas/Error"
     StockCountNotFound:
       description: El conteo no existe (`stock_count_not_found`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InvalidCustomer:
+      description: |
+        Algún dato del cliente no cumple las reglas: el tipo de persona (`invalid_person_type`), el documento no es
+        válido para su tipo (`invalid_document`), el
+        dígito de verificación del NIT no coincide (`invalid_nit_check_digit`), una persona jurídica sin NIT
+        (`legal_person_requires_nit`), el nombre (`invalid_customer_name`), un dato de contacto (`invalid_customer_contact`),
+        las responsabilidades fiscales (`invalid_tax_responsibilities`) o un segmento que no existe
+        (`customer_segment_not_found`).
       content:
         application/json:
           schema:
@@ -4184,6 +4501,157 @@ components:
           $ref: "#/components/schemas/StockMovement"
         in:
           $ref: "#/components/schemas/StockMovement"
+    PersonType:
+      type: string
+      description: Persona natural (`natural`) o jurídica (`legal`). Una persona jurídica se identifica con NIT.
+      enum: [natural, legal]
+    DocumentType:
+      type: string
+      description: |
+        Cédula de ciudadanía (`cc`), NIT (`nit`), cédula de extranjería (`ce`) o pasaporte (`passport`).
+      enum: [cc, nit, ce, passport]
+    TaxResponsibility:
+      type: string
+      description: |
+        Responsabilidad fiscal del RUT que pide la factura electrónica: gran contribuyente (`O-13`), autorretenedor
+        (`O-15`), agente de retención de IVA (`O-23`), régimen simple (`O-47`) o ninguna de ellas (`R-99-PN`).
+      enum: [O-13, O-15, O-23, O-47, R-99-PN]
+    TaxResponsibilities:
+      type: array
+      description: |
+        Sin repetir. `R-99-PN` no se combina con las demás. Sin ninguna, el cliente queda con `R-99-PN`.
+      maxItems: 5
+      items:
+        $ref: "#/components/schemas/TaxResponsibility"
+    Customer:
+      type: object
+      description: |
+        Un cliente de la empresa. `document_number` está en su forma canónica: el NIT con su dígito de verificación
+        (`900123456-8`), la cédula solo con dígitos y el pasaporte en mayúsculas.
+      required: [id, person_type, document_type, document_number, name, tax_responsibilities, active, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        person_type:
+          $ref: "#/components/schemas/PersonType"
+        document_type:
+          $ref: "#/components/schemas/DocumentType"
+        document_number:
+          type: string
+          example: 900123456-8
+        name:
+          type: string
+          description: Nombre completo o razón social.
+        trade_name:
+          type: string
+          description: Nombre comercial, si es distinto de la razón social.
+        email:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        segment_id:
+          type: string
+          format: uuid
+        tax_responsibilities:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaxResponsibility"
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    CustomerInput:
+      type: object
+      description: |
+        Los datos de un cliente. El NIT se escribe con su dígito de verificación (con o sin guion y puntos). Los
+        campos de contacto vacíos se guardan como ausentes.
+      required: [person_type, document_type, document_number, name]
+      additionalProperties: false
+      properties:
+        person_type:
+          $ref: "#/components/schemas/PersonType"
+        document_type:
+          $ref: "#/components/schemas/DocumentType"
+        document_number:
+          type: string
+          minLength: 1
+          maxLength: 30
+          example: 900.123.456-8
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        trade_name:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+        address:
+          type: string
+          maxLength: 200
+        city:
+          type: string
+          maxLength: 100
+        segment_id:
+          type: string
+          format: uuid
+          description: Un segmento de la empresa (`/customer-segments`). Sin él, el cliente no tiene segmento.
+        tax_responsibilities:
+          $ref: "#/components/schemas/TaxResponsibilities"
+        active:
+          type: boolean
+          default: true
+          description: Un cliente inactivo no aparece en la búsqueda del POS ni se le puede vender.
+    CustomerPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        total:
+          type: integer
+          description: Cantidad total de clientes que cumplen el filtro, sin paginar.
+    CustomerSegment:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Mayorista
+    CustomerSegmentInput:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Único en la empresa, sin importar las mayúsculas.
+          minLength: 1
+          maxLength: 60
+          example: Mayorista
+    CustomerSegmentList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerSegment"
     ConfirmSaleInput:
       type: object
       required: [location_id, lines, payments]
@@ -4193,6 +4661,10 @@ components:
           type: string
           format: uuid
           description: Sede donde se vende y de donde sale el stock.
+        customer_id:
+          type: string
+          format: uuid
+          description: El cliente activo a quien se vende (`/customers`). Sin él, la venta es a consumidor final.
         lines:
           type: array
           minItems: 1
@@ -4396,6 +4868,10 @@ components:
           type: string
           format: uuid
           description: Quién vendió.
+        customer_id:
+          type: string
+          format: uuid
+          description: El cliente; no viene si la venta fue a consumidor final.
         cash_session_id:
           type: string
           format: uuid

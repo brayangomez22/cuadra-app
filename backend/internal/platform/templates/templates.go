@@ -63,8 +63,7 @@ type Template struct {
 	// VariantAxes are the axes the tenant's variants vary on (size,
 	// color...).
 	VariantAxes []Axis
-	// CustomerSegments are declared and validated; they are seeded once
-	// customers exist (T31).
+	// CustomerSegments are the groups the tenant's customers start in.
 	CustomerSegments []string
 }
 

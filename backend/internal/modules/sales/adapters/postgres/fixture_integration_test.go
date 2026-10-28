@@ -60,11 +60,14 @@ func (f fixture) exec(t *testing.T, tenantID uuid.UUID, sql string, args ...any)
 // variants; variant is a second variant with its own id.
 type tenant struct {
 	id, location, product, variant uuid.UUID
+	// customer is a customer of the tenant: sales reference customers with
+	// a foreign key.
+	customer uuid.UUID
 }
 
 func (f fixture) createTenant(t *testing.T) tenant {
 	t.Helper()
-	tn := tenant{id: newID(), product: newID(), variant: newID()}
+	tn := tenant{id: newID(), product: newID(), variant: newID(), customer: newID()}
 	f.exec(t, tn.id, "INSERT INTO tenants (id, name, nit, status, business_template, created_at) VALUES ($1, 'Ferretería', '900123456-8', 'active', 'ferreteria', $2)", tn.id, now)
 	f.exec(t, tn.id, "INSERT INTO units_of_measure (id, tenant_id, code, name, created_at) VALUES ($1, $2, 'und', 'Unidad', $3)",
 		newID(), tn.id, now)
@@ -77,6 +80,9 @@ func (f fixture) createTenant(t *testing.T) tenant {
 	f.exec(t, tn.id, `INSERT INTO product_variants (id, tenant_id, product_id, sku, cost, price, axis_values, is_default, active, created_at)
 		VALUES ($1, $2, $3, $4, 12000, 15000, '{"presentación": "25kg"}', false, true, $5)`,
 		tn.variant, tn.id, tn.product, "SKU-"+strings.ToUpper(tn.variant.String()), now)
+	f.exec(t, tn.id, `INSERT INTO customers (id, tenant_id, person_type, document_type, document_number, name,
+		tax_responsibilities, active, created_at, updated_at)
+		VALUES ($1, $2, 'natural', 'cc', '1020304050', 'Cliente', '{R-99-PN}', true, $3, $3)`, tn.customer, tn.id, now)
 	tn.location = f.createLocation(t, tn.id)
 	return tn
 }
@@ -96,7 +102,7 @@ func (f fixture) createLocation(t *testing.T, tenantID uuid.UUID) uuid.UUID {
 // 50000 by Nequi and 80000 in cash.
 func confirmed(t *testing.T, tn tenant, location uuid.UUID, confirmedAt time.Time) *domain.Sale {
 	t.Helper()
-	customer := newID()
+	customer := tn.customer
 	return confirmedWith(t, tn, domain.NewSaleParams{
 		ID: newID(), TenantID: tn.id, LocationID: location, UserID: newID(), CustomerID: &customer, CreatedAt: confirmedAt,
 	})

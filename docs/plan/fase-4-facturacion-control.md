@@ -15,7 +15,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T36 · Emisión de documentos electrónicos
 **Depende de:** T18 (outbox + River), T20, T31, T35.
 **Alcance:** puerto `ElectronicInvoicer` en el módulo de ventas y adaptador del proveedor elegido. Al confirmar la venta se encola su emisión (outbox) como factura electrónica o como documento equivalente POS según el caso. Máquina de estados (`pending` → `sent` → `accepted` / `rejected`), reintentos con backoff ante caídas del proveedor, almacenamiento del CUFE/CUDE, del XML y de la representación gráfica (PDF con QR), y envío al correo del cliente. Configuración por tenant de resoluciones de numeración y prefijos. Panel de documentos con su estado y reintento manual. Métricas: documentos por estado y latencia de aceptación; alerta si la tasa de rechazo supera un umbral.
-**Pendientes que entran a esta tarea:** P03 y P61 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P03, P61, P91, P92 y P93 (`docs/plan/pendientes.md`).
 **Tests primero:** con el proveedor caído la venta se confirma igual y el documento queda pendiente para reintento; un rechazo guarda el motivo y no se reintenta automáticamente; la numeración respeta la resolución vigente y alerta cuando se acerca al final del rango.
 **Revisa tú:** todo. Es el componente con más riesgo legal del producto.
 

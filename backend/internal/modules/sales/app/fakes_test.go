@@ -48,6 +48,24 @@ type store struct {
 	// set, runs before the check (to close the session meanwhile).
 	ensured      []uuid.UUID
 	onEnsureOpen func()
+	// customers are the customers of each tenant and whether they are
+	// active.
+	customers map[catalogKey]bool
+}
+
+type fakeCustomers struct{ *store }
+
+func (f fakeCustomers) CheckCustomer(_ context.Context, tenantID, _, id uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	active, ok := f.customers[catalogKey{tenantID, id}]
+	switch {
+	case !ok:
+		return domain.ErrCustomerNotFound
+	case !active:
+		return domain.ErrCustomerInactive
+	}
+	return nil
 }
 
 type fakeCatalog struct{ *store }

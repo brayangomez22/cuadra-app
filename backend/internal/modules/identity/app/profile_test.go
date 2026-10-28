@@ -63,14 +63,14 @@ func TestMe(t *testing.T) {
 		profile, err := e.svc.Me(t.Context(), tenant.ID(), user.ID())
 		require.NoError(t, err)
 		require.Equal(t, []domain.Permission{
-			domain.PermCatalogRead, domain.PermInventoryRead, domain.PermInventoryAdjust, domain.PermInventoryCount,
+			domain.PermCatalogRead, domain.PermCustomersRead, domain.PermInventoryRead, domain.PermInventoryAdjust, domain.PermInventoryCount,
 		}, profile.Permissions)
 
 		e.modules.activate(tenant.ID(), "lots_expiry")
 		profile, err = e.svc.Me(t.Context(), tenant.ID(), user.ID())
 		require.NoError(t, err)
 		require.Equal(t, []domain.Permission{
-			domain.PermCatalogRead, domain.PermInventoryRead, domain.PermInventoryAdjust, domain.PermInventoryCount, "lots:manage",
+			domain.PermCatalogRead, domain.PermCustomersRead, domain.PermInventoryRead, domain.PermInventoryAdjust, domain.PermInventoryCount, "lots:manage",
 		}, profile.Permissions)
 	})
 }

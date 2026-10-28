@@ -237,6 +237,9 @@ type CategoryId = openapi_types.UUID
 // CountEntryId defines model for CountEntryId.
 type CountEntryId = openapi_types.UUID
 
+// CustomerId defines model for CustomerId.
+type CustomerId = openapi_types.UUID
+
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID
 
@@ -254,6 +257,9 @@ type RefreshCookie = string
 
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
+
+// SegmentId defines model for SegmentId.
+type SegmentId = openapi_types.UUID
 
 // StockCountId defines model for StockCountId.
 type StockCountId = openapi_types.UUID

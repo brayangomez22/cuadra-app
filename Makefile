@@ -41,7 +41,7 @@ lint-size: ## Fail if a Go file passes 300 lines (400 for tests)
 
 # Each depguard rule and forbidigo message of .golangci.yml must reject what
 # backend/testdata/guards breaks it with.
-DEPGUARD_RULES := domain app catalog platform composition
+DEPGUARD_RULES := domain kernel app catalog platform composition
 FORBIDIGO_MSGS := "UUID v7" "decimal.Decimal" "recibe la hora"
 
 lint-guards: ## Check that depguard and forbidigo still reject what testdata/guards breaks them with

@@ -26,8 +26,17 @@ type cart struct {
 	prices   []ResolvedPrice
 }
 
-// buildCart checks the input against the tenant's policy, cash session and
-// catalog, and resolves the price of each line.
+// checkCustomer checks that the sale's customer, if any, can buy: it is the
+// tenant's and active. A sale without one is to the final consumer.
+func (s *Service) checkCustomer(ctx context.Context, a Actor, id *uuid.UUID) error {
+	if id == nil {
+		return nil
+	}
+	return s.Customers.CheckCustomer(ctx, a.TenantID, a.UserID, *id)
+}
+
+// buildCart checks the input against the tenant's policy, cash session,
+// customers and catalog, and resolves the price of each line.
 func (s *Service) buildCart(ctx context.Context, a Actor, in ConfirmSaleInput) (cart, error) {
 	if len(in.Lines) == 0 {
 		return cart{}, domain.ErrSaleWithoutLines
@@ -43,6 +52,9 @@ func (s *Service) buildCart(ctx context.Context, a Actor, in ConfirmSaleInput) (
 	}
 	if ok {
 		c.session = session
+	}
+	if err := s.checkCustomer(ctx, a, in.CustomerID); err != nil {
+		return cart{}, err
 	}
 	if c.variants, err = s.variants(ctx, a.TenantID, in.Lines); err != nil {
 		return cart{}, err

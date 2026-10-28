@@ -32,11 +32,12 @@ func newEnv(t *testing.T, rules ...app.PriceRule) *env {
 	t.Helper()
 	e := &env{
 		store: &store{
-			variants: map[catalogKey]app.VariantInfo{},
-			policies: map[uuid.UUID]domain.SalesPolicy{},
-			sales:    map[uuid.UUID]*domain.Sale{},
-			numbers:  map[uuid.UUID]int64{},
-			sessions: map[uuid.UUID]*domain.CashSession{},
+			variants:  map[catalogKey]app.VariantInfo{},
+			policies:  map[uuid.UUID]domain.SalesPolicy{},
+			sales:     map[uuid.UUID]*domain.Sale{},
+			numbers:   map[uuid.UUID]int64{},
+			sessions:  map[uuid.UUID]*domain.CashSession{},
+			customers: map[catalogKey]bool{},
 		},
 		actor:   app.Actor{TenantID: newID(), UserID: newID()},
 		spans:   tracetest.NewSpanRecorder(),
@@ -53,6 +54,7 @@ func newEnv(t *testing.T, rules ...app.PriceRule) *env {
 		Sales:          fakeSales{e.store},
 		Policies:       fakePolicies{e.store},
 		CashSessions:   fakeCash{e.store},
+		Customers:      fakeCustomers{e.store},
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,
@@ -63,6 +65,15 @@ func newEnv(t *testing.T, rules ...app.PriceRule) *env {
 	// one. The cash tests require it with requireCashSession.
 	e.store.policies[e.actor.TenantID] = domain.SalesPolicy{CashSessionOptional: true}
 	return e
+}
+
+// addCustomer puts a customer in the actor's tenant and returns its id.
+func (e *env) addCustomer(active bool) uuid.UUID {
+	e.store.mu.Lock()
+	defer e.store.mu.Unlock()
+	id := newID()
+	e.store.customers[catalogKey{e.actor.TenantID, id}] = active
+	return id
 }
 
 // requireCashSession makes the tenant require an open cash session to sell,

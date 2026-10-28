@@ -185,7 +185,8 @@ func TestPermissionMatrix(t *testing.T) {
 
 		cashier := m.Permissions(domain.RoleCashier, []string{"lots_expiry", "work_orders"})
 		require.Equal(t, []domain.Permission{
-			domain.PermCatalogRead, domain.PermInventoryRead, domain.PermInventoryCount, domain.PermSalesCreate, domain.PermSalesRead, "work_orders:write",
+			domain.PermCatalogRead, domain.PermCustomersRead, domain.PermCustomersWrite, domain.PermInventoryRead, domain.PermInventoryCount,
+			domain.PermSalesCreate, domain.PermSalesRead, "work_orders:write",
 		}, cashier)
 	})
 

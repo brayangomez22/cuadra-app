@@ -1,11 +1,11 @@
-package domain_test
+package taxid_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/kernel/taxid"
 )
 
 // Public NITs of well-known Colombian companies, taken from their RUT.
@@ -27,7 +27,7 @@ func TestParseNIT(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				got, err := domain.ParseNIT(tt.in)
+				got, err := taxid.ParseNIT(tt.in)
 				require.NoError(t, err)
 				require.Equal(t, tt.want, got.String())
 				require.False(t, got.IsZero())
@@ -37,8 +37,8 @@ func TestParseNIT(t *testing.T) {
 
 	t.Run("rechaza NIT con dígito de verificación incorrecto", func(t *testing.T) {
 		for _, in := range []string{"890903938-7", "899999068-0", "800197268-5", "8909006081"} {
-			_, err := domain.ParseNIT(in)
-			require.ErrorIs(t, err, domain.ErrInvalidNITCheckDigit, in)
+			_, err := taxid.ParseNIT(in)
+			require.ErrorIs(t, err, taxid.ErrInvalidNITCheckDigit, in)
 		}
 	})
 
@@ -57,8 +57,8 @@ func TestParseNIT(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				_, err := domain.ParseNIT(tt.in)
-				require.ErrorIs(t, err, domain.ErrInvalidNIT)
+				_, err := taxid.ParseNIT(tt.in)
+				require.ErrorIs(t, err, taxid.ErrInvalidNIT)
 			})
 		}
 	})

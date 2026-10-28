@@ -27,6 +27,9 @@ type Config struct {
 	// Catalog and Stock are the catalog and the inventory, adapted by internal/server.
 	Catalog app.VariantCatalog
 	Stock   app.StockReserver
+	// Customers checks the customer of a sale; internal/server adapts the
+	// customers module to it.
+	Customers app.CustomerDirectory
 	// Prices gives the unit price of each line: the chain of the price rules
 	// of the active modules. Nil sells each variant at its price.
 	Prices         app.PriceResolver
@@ -51,6 +54,7 @@ func New(cfg Config) (*Module, error) {
 		Catalog:        cfg.Catalog,
 		Prices:         cfg.Prices,
 		Stock:          cfg.Stock,
+		Customers:      cfg.Customers,
 		Sales:          postgres.NewSaleRepository(cfg.DB),
 		Policies:       postgres.NewPolicyRepository(cfg.DB),
 		CashSessions:   postgres.NewCashSessionRepository(cfg.DB),

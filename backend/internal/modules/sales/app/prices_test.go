@@ -131,7 +131,7 @@ func TestConfirmSalePrices(t *testing.T) {
 		listed := e.addProduct("Camiseta básica", "10000", "0.19", true)
 		rule.applies[listed] = true
 		plain := e.addProduct("Cemento gris 50kg", "30000", "0.19", true)
-		customer := newID()
+		customer := e.addCustomer(true)
 		location := newID()
 
 		sale, err := e.svc.ConfirmSale(t.Context(), e.actor, app.ConfirmSaleInput{

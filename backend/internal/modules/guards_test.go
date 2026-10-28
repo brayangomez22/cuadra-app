@@ -92,12 +92,12 @@ func TestDepguardCoversEveryModule(t *testing.T) {
 	})
 
 	t.Run("un módulo nuevo sin reglas se detecta", func(t *testing.T) {
-		modules := append(moduleDirs(t), "customers")
+		modules := append(moduleDirs(t), "example")
 
 		missing := missingGuards(loadRules(t), modules)
 
-		require.Contains(t, missing, "regla customers sobre **/internal/modules/customers/**")
-		require.Contains(t, missing, "la regla sales no prohíbe importar customers")
-		require.Contains(t, missing, "la regla app no prohíbe customers/adapters")
+		require.Contains(t, missing, "regla example sobre **/internal/modules/example/**")
+		require.Contains(t, missing, "la regla sales no prohíbe importar example")
+		require.Contains(t, missing, "la regla app no prohíbe example/adapters")
 	})
 }
