@@ -17,3 +17,11 @@
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   }
 }
+
+// The customer above the search and the lines of the sale.
+.sale {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}

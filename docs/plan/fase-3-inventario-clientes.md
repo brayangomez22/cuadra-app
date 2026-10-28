@@ -229,13 +229,15 @@ En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`: las tablas de l
 **División:** T31 hizo el dominio, el contrato, la API y la integración con ventas; la UI pasó a **T31a**.
 **Tests primero:** NIT con DV inválido rechazado; no hay dos clientes con el mismo documento en el mismo tenant.
 
-### [ ] T31a · Clientes: pantallas y POS
+### [x] T31a · Clientes: pantallas y POS
 **Depende de:** T31.
+**Pendientes que entran a esta tarea:** P89 y P90 (`docs/plan/pendientes.md`), en la misma rama a pedido de Brayan.
 **Alcance:** el frontend de clientes sobre el contrato de T31 (`/customers`, `/customer-segments`), en una feature nueva `features/customers` (sección 11 de `docs/frontend.md`). (1) **Lista y búsqueda** en `/clientes` (texto, segmento y estado, paginada) y **formulario** de crear y editar (persona natural o jurídica, tipo y número de documento, nombre y nombre comercial, contacto, segmento, responsabilidades fiscales y activo), con los errores de la API en su campo (`invalid_nit_check_digit`, `customer_document_taken`...). Entrada en el menú con `customers:read`. (2) **Segmentos de cliente** como sección de `/configuracion` (`customers:manage`), con crear, renombrar y borrar (`customer_segment_in_use`). (3) **POS:** selector de cliente (búsqueda rápida, «Consumidor final» por defecto) y creación al vuelo en un diálogo con los campos mínimos; la venta envía `customer_id` y el recibo muestra el cliente. Responsive de 360 a 1920 px.
 **Tests primero:** el formulario muestra el error del DV junto al número; una persona jurídica solo ofrece NIT; el POS vende a consumidor final sin elegir cliente; crear un cliente desde el POS lo deja elegido en la venta.
 
 ### [ ] T32 · Crédito y cartera (fiados)
 **Alcance:** cupo de crédito por cliente y plazo en días; venta a crédito desde el POS (valida cupo disponible, con autorización de un rol superior para excederlo); cuentas por cobrar; abonos parciales o totales con medio de pago; estado de cuenta del cliente; cartera vencida por edades (0–30, 31–60, 61–90, +90 días).
+**Pendientes que entran a esta tarea:** P94 y P95 (`docs/plan/pendientes.md`).
 **Tests primero:** una venta que excede el cupo se rechaza sin autorización; un abono reduce el saldo y nunca lo deja negativo; las edades de cartera se calculan con la fecha de vencimiento en `America/Bogota`.
 
 ### [ ] T33 · Proveedores y registro de compras

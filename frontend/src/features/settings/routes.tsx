@@ -33,6 +33,10 @@ export const settingsRoutes: RouteObject[] = [
             children: [{ path: paths.settings.variantAxes.pattern, ...screen('VariantAxesSettings') }],
           },
           {
+            ...gate({ permission: 'customers:manage' }),
+            children: [{ path: paths.settings.customerSegments.pattern, ...screen('CustomerSegmentsSettings') }],
+          },
+          {
             ...gate({ permission: 'tenant:manage' }),
             children: [
               { path: paths.settings.general.pattern, ...screen('GeneralSettings') },

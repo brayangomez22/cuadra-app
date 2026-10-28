@@ -3,6 +3,7 @@ import { createIcon } from './createIcon';
 export { IconDownload, IconUpload } from './fileIcons';
 export { IconCamera, IconFlashlight } from './scannerIcons';
 export { IconClipboardCheck } from './countIcons';
+export { IconUsers } from './peopleIcons';
 
 export const IconClose = createIcon(<path d="M18 6 6 18M6 6l12 12" />);
 export const IconCheck = createIcon(<path d="M20 6 9 17l-5-5" />);

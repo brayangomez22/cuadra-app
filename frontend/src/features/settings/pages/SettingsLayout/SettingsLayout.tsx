@@ -20,7 +20,7 @@ export function SettingsLayout() {
   return (
     <Page
       title="Configuración"
-      description="Cómo trabaja su negocio en Cuadra: unidades, campos de producto y módulos."
+      description="Cómo trabaja su negocio en Cuadra: unidades, campos de producto, segmentos de cliente y módulos."
     >
       <div className={styles.root}>
         <nav ref={nav} aria-label="Secciones de configuración" className={styles.nav}>

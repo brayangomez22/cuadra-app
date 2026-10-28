@@ -29,6 +29,7 @@ export function SaleCheckout({ checkout, total, locations, user }: Props) {
           business={{ name: user.tenant_name, nit: user.tenant_nit }}
           location={locations.find((l) => l.id === sale.location_id)?.name ?? ''}
           cashier={user.name}
+          customer={checkout.soldTo ?? undefined}
           paper={paper}
         />
       )}

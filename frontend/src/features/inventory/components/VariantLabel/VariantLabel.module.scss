@@ -1,10 +1,12 @@
 @use '@/styles/abstracts' as *;
 
+// In a table squeezed by a phone, the name keeps room for a few words a
+// line: the table scrolls in its own box instead.
 .root {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  min-inline-size: 0;
+  min-inline-size: 14ch;
 }
 
 .skeleton {
@@ -15,4 +17,5 @@
   font-family: var(--font-family-mono);
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+  white-space: nowrap;
 }

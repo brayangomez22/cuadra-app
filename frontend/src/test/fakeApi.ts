@@ -72,6 +72,9 @@ const permissionsByRole: Record<Me['role'], string[]> = {
   owner: [
     'catalog:read',
     'catalog:write',
+    'customers:read',
+    'customers:write',
+    'customers:manage',
     'imports:run',
     'inventory:read',
     'inventory:adjust',
@@ -87,6 +90,9 @@ const permissionsByRole: Record<Me['role'], string[]> = {
   admin: [
     'catalog:read',
     'catalog:write',
+    'customers:read',
+    'customers:write',
+    'customers:manage',
     'imports:run',
     'inventory:read',
     'inventory:adjust',
@@ -98,8 +104,16 @@ const permissionsByRole: Record<Me['role'], string[]> = {
     'sales:void',
     'users:manage',
   ],
-  cashier: ['catalog:read', 'inventory:read', 'inventory:count', 'sales:create', 'sales:read'],
-  warehouse: ['catalog:read', 'inventory:read', 'inventory:adjust', 'inventory:count'],
+  cashier: [
+    'catalog:read',
+    'customers:read',
+    'customers:write',
+    'inventory:read',
+    'inventory:count',
+    'sales:create',
+    'sales:read',
+  ],
+  warehouse: ['catalog:read', 'customers:read', 'inventory:read', 'inventory:adjust', 'inventory:count'],
 };
 
 export function aUser(role: Me['role'] = 'owner'): Me {

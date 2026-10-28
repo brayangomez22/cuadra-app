@@ -52,6 +52,17 @@ describe('AppLayout', () => {
     expect(menu.getByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current');
   });
 
+  it('en una página de una opción más específica marca solo esa', async () => {
+    fakeApi(signedIn());
+    // Toma física vive bajo /inventario: solo ella queda marcada.
+    renderApp('/inventario/conteos');
+
+    const menu = await mainMenu();
+
+    expect(menu.getByRole('link', { name: 'Toma física' })).toHaveAttribute('aria-current', 'page');
+    expect(menu.getByRole('link', { name: 'Inventario' })).not.toHaveAttribute('aria-current');
+  });
+
   it('muestra la empresa, el usuario y su rol', async () => {
     fakeApi(signedIn(aUser('cashier')));
     renderApp('/');

@@ -4,3 +4,14 @@
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;
 }
+
+// The line sent to recount from the approval's error: an accent on its edge
+// and the "En revisión" badge, not color alone.
+.row[aria-current='true'] {
+  background: var(--color-bg-subtle);
+
+  // The table's first cell keeps a transparent edge for this, as a selected row's.
+  td:first-child {
+    border-inline-start-color: var(--color-border-accent);
+  }
+}

@@ -1,6 +1,6 @@
+import { FormSection } from '@/shared/ui';
 import { useState } from 'react';
 import type { Product, ProductVariant, UnitOfMeasure, VariantUnit } from '../../../../api/types';
-import { FormSection } from '../FormSection/FormSection';
 import { UnitDialog } from '../UnitDialog/UnitDialog';
 import { VariantUnitList } from '../VariantUnitList/VariantUnitList';
 import styles from './UnitsSection.module.scss';

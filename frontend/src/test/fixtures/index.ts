@@ -1,9 +1,11 @@
 // The fixtures several features share: the products (catalog, inventory and
 // sales test with them), their units, the tenant's attributes and axes
-// (catalog and settings) and the locations. A fixture only one feature uses
+// (catalog and settings), the locations and the customers and their segments
+// (customers, settings and sales). A fixture only one feature uses
 // lives in that feature's testing/.
 export { attributes } from './attributes';
 export { axes } from './axes';
+export { aBoutique, aBuilder, customerIds, customerInput, searchCustomers, segmentIds, segments } from './customers';
 export { aGarment, variantBarcode, variantId } from './garment';
 export { ids } from './ids';
 export { aLocation } from './locations';

@@ -108,4 +108,47 @@ describe('CountReviewPage', () => {
     expect(await screen.findByRole('heading', { name: 'Toma física' })).toBeInTheDocument();
     expect(api.calls(`POST /api/v1/stock-counts/${countId}/approve`)).toHaveLength(1);
   });
+  describe('sin stock para ajustar (P90)', () => {
+    const noStock = () =>
+      reviewApi(
+        apiError(409, {
+          code: 'insufficient_stock',
+          message: 'Un ajuste dejaría sin stock un producto.',
+          details: { variant_id: ids.pipe },
+        }),
+      );
+
+    async function approve() {
+      await userEvent.click(await screen.findByRole('button', { name: 'Aprobar conteo' }));
+      await userEvent.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: 'Aprobar y ajustar' }),
+      );
+      return within(await screen.findByRole('dialog', { name: 'Aprobar el conteo' }));
+    }
+
+    it('al aprobar nombra el producto que se quedaría sin stock', async () => {
+      noStock();
+      renderApp(url);
+
+      const dialog = await approve();
+
+      expect(await dialog.findByText(/No hay stock para ajustar Tubo PVC presión 1\/2 pulgada/)).toBeInTheDocument();
+      expect(dialog.getByRole('button', { name: 'Recontar Tubo PVC presión 1/2 pulgada' })).toBeInTheDocument();
+    });
+
+    it('recontar desde el error lo deja marcado en revisión', async () => {
+      const api = noStock();
+      renderApp(url);
+
+      const dialog = await approve();
+      await userEvent.click(await dialog.findByRole('button', { name: /^Recontar Tubo PVC/ }));
+
+      await waitFor(() => expect(api.calls(recountCalls)).toHaveLength(1));
+      expect(await api.calls(recountCalls)[0]!.json()).toEqual({ variant_ids: [ids.pipe] });
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      await waitFor(() => expect(query(api.calls(linesCalls).at(-1)!).get('status')).toBe('review'));
+      const row = await screen.findByRole('row', { name: /Tubo PVC/ });
+      expect(row).toHaveAttribute('aria-current', 'true');
+    });
+  });
 });

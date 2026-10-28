@@ -58,6 +58,11 @@ export const paths = {
     count: route('/inventario/conteos/:countId'),
     countReview: route('/inventario/conteos/:countId/diferencias', ['estado', 'pagina']),
   },
+  customers: {
+    list: route('/clientes'),
+    new: route('/clientes/nuevo'),
+    edit: route('/clientes/:customerId/editar'),
+  },
   sales: {
     pos: route('/vender'),
     cash: route('/caja'),
@@ -70,6 +75,7 @@ export const paths = {
     units: route('/configuracion/unidades'),
     attributes: route('/configuracion/atributos'),
     variantAxes: route('/configuracion/ejes'),
+    customerSegments: route('/configuracion/segmentos'),
     modules: route('/configuracion/modulos'),
   },
   dev: {
