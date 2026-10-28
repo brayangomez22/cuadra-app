@@ -36,7 +36,7 @@ func saveVariants(ctx context.Context, q *sqlcgen.Queries, p *domain.Product) er
 			CreatedAt:  v.CreatedAt(),
 		})
 		if err != nil {
-			return err
+			return codeTaken(err, v.SKU(), v.Barcode())
 		}
 		if affected == 0 {
 			return domain.ErrVariantNotFound
@@ -66,28 +66,29 @@ func createVariantUnits(ctx context.Context, q *sqlcgen.Queries, p *domain.Produ
 				TenantID: p.TenantID(), VariantID: v.ID(), UnitID: u.Unit().ID,
 				Factor: u.Factor(), Price: u.Price(), Barcode: nullable(u.Barcode()),
 			}); err != nil {
-				return err
+				return codeTaken(err, "", u.Barcode())
 			}
 		}
 	}
 	return nil
 }
 
-// checkBarcodesElsewhere fails with domain.ErrBarcodeTaken when a barcode
-// of p's variants or units is taken in the other table by another product.
+// checkBarcodesElsewhere fails with domain.ErrBarcodeTaken, naming the
+// barcode, when a barcode of p's variants or units is taken in the other
+// table by another product.
 func checkBarcodesElsewhere(ctx context.Context, q *sqlcgen.Queries, p *domain.Product) error {
 	variantCodes, unitCodes := barcodesOf(p)
 	if len(variantCodes) == 0 && len(unitCodes) == 0 {
 		return nil
 	}
-	taken, err := q.BarcodeTakenElsewhere(ctx, sqlcgen.BarcodeTakenElsewhereParams{
+	taken, err := q.BarcodesTakenElsewhere(ctx, sqlcgen.BarcodesTakenElsewhereParams{
 		ProductID: p.ID(), VariantBarcodes: variantCodes, UnitBarcodes: unitCodes,
 	})
 	if err != nil {
 		return err
 	}
-	if taken != nil && *taken {
-		return domain.ErrBarcodeTaken
+	if len(taken) > 0 {
+		return &domain.CodeTakenError{Code: taken[0], Err: domain.ErrBarcodeTaken}
 	}
 	return nil
 }
@@ -105,6 +106,18 @@ func barcodesOf(p *domain.Product) (variantCodes, unitCodes []string) {
 		}
 	}
 	return variantCodes, unitCodes
+}
+
+// codeTaken names the code of a unique violation on a variant's SKU or on
+// a variant's or a unit's barcode; any other error comes back as it is.
+func codeTaken(err error, sku, barcode string) error {
+	switch {
+	case db.Violates(err, db.UniqueViolation, variantsSKUKey):
+		return &domain.CodeTakenError{Code: sku, Err: domain.ErrSKUTaken}
+	case db.Violates(err, db.UniqueViolation, variantsBarcodeKey), db.Violates(err, db.UniqueViolation, variantUnitsBarcodeKey):
+		return &domain.CodeTakenError{Code: barcode, Err: domain.ErrBarcodeTaken}
+	}
+	return err
 }
 
 // productWriteError translates the constraint violations of a product write.

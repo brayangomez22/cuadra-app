@@ -539,7 +539,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
-          description: Un SKU o un código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`).
+          description: |
+            Un SKU o un código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`). El código que choca
+            viene en `details.sku` o `details.barcode`, para que el cliente marque la variante que lo tiene.
           content:
             application/json:
               schema:
@@ -2548,7 +2550,8 @@ components:
           type: object
           description: |
             Datos del error para el cliente, solo en los códigos que lo documentan (por ejemplo, `variant_id` en
-            `insufficient_stock`). Nunca trae datos personales.
+            `insufficient_stock`, o el código que choca en `details.sku` de `sku_taken` y `details.barcode` de
+            `barcode_taken`). Nunca trae datos personales.
           additionalProperties:
             type: string
     HealthStatus:
@@ -4137,7 +4140,9 @@ components:
           type: string
         price:
           type: string
-          description: El precio como lo leyó la importación.
+          description: |
+            El precio como lo leyó la importación: el monto o, si la celda no es un número válido, su texto tal cual
+            (vacío si la celda está vacía), para mostrar lo que dice el archivo.
         axis_values:
           type: object
           additionalProperties:

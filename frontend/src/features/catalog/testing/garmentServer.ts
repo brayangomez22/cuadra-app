@@ -28,7 +28,8 @@ const defaultId = variantId('S', 'Rojo');
 
 const idOf = ({ axis_values: { talla = '', color = '' } }: VariantBody) => variantId(talla, color);
 
-const taken = (sku: string) => apiError(409, { code: 'sku_taken', message: `Ya existe un producto con el SKU ${sku}` });
+const taken = (sku: string) =>
+  apiError(409, { code: 'sku_taken', message: `Ya existe un producto con el SKU ${sku}`, details: { sku } });
 
 type Options = {
   /** The variant whose SKU is rejected as taken. */

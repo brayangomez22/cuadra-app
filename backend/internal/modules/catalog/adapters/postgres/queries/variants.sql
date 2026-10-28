@@ -42,20 +42,20 @@ WHERE variant_id = ANY(sqlc.arg(variant_ids)::uuid[]);
 INSERT INTO variant_units (tenant_id, variant_id, unit_id, factor, price, barcode)
 VALUES ($1, $2, $3, $4, $5, $6);
 
--- BarcodeTakenElsewhere reports whether a barcode of a product is used in
--- the other table by another product of the tenant: one of its variants'
--- by an alternate unit, or one of its units' by a variant. Each table's
--- unique key covers the rest.
--- name: BarcodeTakenElsewhere :one
-SELECT EXISTS (
-           SELECT 1
-           FROM variant_units vu
-           JOIN product_variants v ON v.tenant_id = vu.tenant_id AND v.id = vu.variant_id
-           WHERE v.product_id <> sqlc.arg(product_id) AND vu.barcode = ANY(sqlc.arg(variant_barcodes)::text[]))
-    OR EXISTS (
-           SELECT 1
-           FROM product_variants v
-           WHERE v.product_id <> sqlc.arg(product_id) AND v.barcode = ANY(sqlc.arg(unit_barcodes)::text[]));
+-- BarcodesTakenElsewhere returns the barcodes of a product used in the
+-- other table by another product of the tenant: one of its variants' by an
+-- alternate unit, or one of its units' by a variant. Each table's unique key
+-- covers the rest.
+-- name: BarcodesTakenElsewhere :many
+SELECT vu.barcode::text AS barcode
+FROM variant_units vu
+JOIN product_variants v ON v.tenant_id = vu.tenant_id AND v.id = vu.variant_id
+WHERE v.product_id <> sqlc.arg(product_id) AND vu.barcode = ANY(sqlc.arg(variant_barcodes)::text[])
+UNION
+SELECT v.barcode::text AS barcode
+FROM product_variants v
+WHERE v.product_id <> sqlc.arg(product_id) AND v.barcode = ANY(sqlc.arg(unit_barcodes)::text[])
+ORDER BY barcode;
 
 -- SKUProducts returns the products with a variant whose SKU is among the
 -- given ones (SKUs are stored trimmed and in uppercase).

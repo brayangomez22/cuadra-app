@@ -1,6 +1,7 @@
 package httpadapter
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
@@ -11,8 +12,16 @@ import (
 var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrProductNotFound, Status: http.StatusNotFound, Code: "product_not_found", Message: "El producto no existe."},
 	{Err: domain.ErrVariantNotFound, Status: http.StatusNotFound, Code: "variant_not_found", Message: "La variante no existe en este producto."},
-	{Err: domain.ErrSKUTaken, Status: http.StatusConflict, Code: "sku_taken", Message: "Ya existe un producto o una variante con ese SKU."},
-	{Err: domain.ErrBarcodeTaken, Status: http.StatusConflict, Code: "barcode_taken", Message: "Ya existe un producto, una variante o una unidad con ese código de barras."},
+	{Err: domain.ErrSKUTaken, Status: http.StatusConflict, Code: "sku_taken",
+		Message: "Ya existe un producto o una variante con ese SKU.",
+		Describe: describeCode("sku", func(code string) string {
+			return "Ya existe un producto o una variante con el SKU «" + code + "»."
+		})},
+	{Err: domain.ErrBarcodeTaken, Status: http.StatusConflict, Code: "barcode_taken",
+		Message: "Ya existe un producto, una variante o una unidad con ese código de barras.",
+		Describe: describeCode("barcode", func(code string) string {
+			return "Ya existe un producto, una variante o una unidad con el código de barras «" + code + "»."
+		})},
 	{Err: domain.ErrCategoryInUse, Status: http.StatusConflict, Code: "category_in_use", Message: "La categoría tiene productos o subcategorías. Muévelos antes de borrarla."},
 	{Err: domain.ErrBaseUnitLocked, Status: http.StatusConflict, Code: "base_unit_locked", Message: "El producto ya tiene movimientos de stock o unidades alternativas contados en su unidad base: no se puede cambiar."},
 	{Err: domain.ErrNoVariants, Status: http.StatusUnprocessableEntity, Code: "no_variants", Message: "Agregue al menos una variante al producto."},
@@ -91,4 +100,16 @@ var errorRules = []httpx.ErrorRule{
 func DescribeError(err error) (code, message string, ok bool) {
 	_, detail, ok := httpx.Describe(errorRules, err)
 	return detail.Code, detail.Message, ok
+}
+
+// describeCode names the SKU or barcode of a *CodeTakenError in the message
+// and in details[field].
+func describeCode(field string, format func(code string) string) func(error) (string, map[string]string, bool) {
+	return func(err error) (string, map[string]string, bool) {
+		var taken *domain.CodeTakenError
+		if !errors.As(err, &taken) {
+			return "", nil, false
+		}
+		return format(taken.Code), map[string]string{field: taken.Code}, true
+	}
 }

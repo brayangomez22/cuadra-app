@@ -98,7 +98,11 @@ func (r *rowReader) variant() VariantFields {
 	if r.text(ColumnPrice) == "" {
 		r.fail(ColumnPrice, CodeRequired)
 	}
-	v.Price, _ = r.amount(ColumnPrice)
+	if price, ok := r.amount(ColumnPrice); ok {
+		v.Price = price
+	} else {
+		v.PriceText = r.text(ColumnPrice)
+	}
 	v.Cost, _ = r.amount(ColumnCost)
 	for _, axis := range r.header.layout.Axes {
 		if value := r.text(AxisPrefix + axis.Name); value != "" {

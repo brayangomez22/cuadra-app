@@ -10,6 +10,7 @@ import { defaultRow } from '../../../model/productForm/productDefaults';
 import { attributeErrorField, productErrorFields } from '../../../model/productForm/productErrorFields';
 import type { ProductFormValues, VariantRow } from '../../../model/productForm/productSchema';
 import { resolveRows, type ResolvedRow } from '../../../model/variantMatrix/resolveRows';
+import { takenCodeRow } from '../../../model/variantMatrix/takenCodeRow';
 import { defaultVariantInput, toProductInput } from '../../../model/productForm/toProductInput';
 import { toProductWithVariantsInput } from '../../../model/productForm/toProductWithVariantsInput';
 import { defaultVariant } from '../../../model/variants/variants';
@@ -45,9 +46,11 @@ export function useSaveProduct({ form, current, definitions, rows }: Input) {
   const { formError, handleError, clearFormError } = useApiFormErrors(form.setError, fields);
   const { saveMatrix, markRows, failedVariants, clearFailed } = useSaveMatrix({ form });
 
-  function showError(error: unknown) {
+  function showError(error: unknown, rows: ResolvedRow[] | undefined) {
     const attribute = attributeErrorField(error, definitions);
+    const takenRow = together && rows ? takenCodeRow(error, rows) : undefined;
     if (attribute) form.setError(attribute, { message: describeError(error).message }, { shouldFocus: true });
+    else if (takenRow) markRows([takenRow]);
     else handleError(error);
   }
 
@@ -60,7 +63,7 @@ export function useSaveProduct({ form, current, definitions, rows }: Input) {
       const saved = await saveProduct(current, body);
       return rows ? await saveMatrix(saved, rows, defaultIndex) : saved;
     } catch (error) {
-      showError(error);
+      showError(error, rows);
       return undefined;
     }
   }

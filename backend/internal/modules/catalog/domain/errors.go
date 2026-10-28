@@ -1,6 +1,9 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Domain errors of the catalog module. The HTTP adapter maps them to status codes.
 var (
@@ -63,7 +66,9 @@ var (
 	ErrUnknownAxis         = errors.New("catalog: variant axis not defined in the tenant")
 	ErrAxisValueNotAllowed = errors.New("catalog: value not allowed by the variant axis")
 
-	// Errors reported by the repositories and the use cases.
+	// Errors reported by the repositories and the use cases. ErrSKUTaken
+	// and ErrBarcodeTaken come wrapped in a *CodeTakenError that names the
+	// code.
 	ErrProductNotFound  = errors.New("catalog: product not found")
 	ErrCategoryNotFound = errors.New("catalog: category not found")
 	ErrSKUTaken         = errors.New("catalog: SKU already used in the tenant")
@@ -83,3 +88,14 @@ var (
 	ErrAxisInUse            = errors.New("catalog: variant axis is used by variants")
 	ErrAxisValueInUse       = errors.New("catalog: a removed axis value is used by variants")
 )
+
+// CodeTakenError is an ErrSKUTaken or ErrBarcodeTaken that names the SKU or
+// the barcode already in use.
+type CodeTakenError struct {
+	Code string
+	Err  error
+}
+
+func (e *CodeTakenError) Error() string { return fmt.Sprintf("%v: %q", e.Err, e.Code) }
+
+func (e *CodeTakenError) Unwrap() error { return e.Err }

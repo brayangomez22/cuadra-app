@@ -1,7 +1,7 @@
 ---
 description: Cierra la tarea actual — verifica, hace commit, push, abre el PR con auto-merge (GitHub hace el merge cuando el CI pasa completo) y vuelve a main
 argument-hint: (opcional) mensaje de commit si quieres reemplazar el propuesto
-allowed-tools: Read(.git/cierre-tarea.md), Bash(git status:*), Bash(git diff:*), Bash(git branch:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Bash(git push -u origin:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh run view:*), Bash(gh pr merge --auto --squash --delete-branch), Bash(git switch main), Bash(git pull), Bash(make check), Bash(npm run lint:*), Bash(npm test:*), Bash(rm .git/cierre-tarea.md)
+allowed-tools: Read(.git/cierre-tarea.md), Bash(git status:*), Bash(git diff:*), Bash(git branch:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Bash(git push -u origin:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh run view:*), Bash(gh pr merge --auto --squash --delete-branch), Bash(git switch main), Bash(git pull), Bash(.claude/scripts/worktree-fingerprint.sh), Bash(make check), Bash(npm run format:check), Bash(npm run lint:*), Bash(npm test:*), Bash(rm .git/cierre-tarea.md)
 ---
 
 Brayan ya revisó el diff y quiere cerrar la tarea actual. Esta es la autorización explícita para hacer commit, push, abrir el PR y activarle el **auto-merge**: GitHub hace el merge (squash) solo cuando pasan los checks requeridos de `main`, que son los 5 jobs del CI. No se espera el CI en esta sesión.
@@ -12,7 +12,10 @@ Brayan ya revisó el diff y quiere cerrar la tarea actual. Esta es la autorizaci
    - La rama actual (`git branch --show-current`) sigue el formato `feat/TXX-...` o, para pendientes sin tarea (`docs/plan/pendientes.md`), `chore/...`. **Nunca** trabajes sobre `main`.
    - Hay cambios para commitear (`git status --porcelain`).
    - Entre los archivos nuevos o modificados no hay secretos ni basura: `.env` (sí se permite `.env.example`), llaves, certificados, dumps de base de datos, binarios compilados, `node_modules/` ni archivos de más de 1 MB. Si encuentras algo sospechoso, lístalo y pregunta.
-2. **Verificación:** corre `make check` y, si hay cambios en `frontend/`, también `npm run lint && npm run lint:styles && npm test` dentro de `frontend/`. Si algo falla, **no** hagas commit: muestra el error y propón cómo arreglarlo.
+2. **Verificación:**
+   - Calcula la huella actual con `.claude/scripts/worktree-fingerprint.sh` y compárala con la de la sección `Verificación` de `.git/cierre-tarea.md`.
+   - **Si coinciden** (y la sección incluye los checks del frontend cuando hay cambios en `frontend/`): el código no cambió desde que `/tarea` lo verificó. Salta este paso y dilo: "Verificado en /tarea; sin cambios desde entonces (huella `<hash corto>`)".
+   - **Si no coinciden, si falta la huella o si falta el archivo:** corre `make check` y, si hay cambios en `frontend/`, también `npm run format:check && npm run lint && npm run lint:styles && npm test` dentro de `frontend/`. Si algo falla, **no** hagas commit: muestra el error y propón cómo arreglarlo.
 3. **Commit:**
    - Mensaje: usa `$ARGUMENTS` si se proporcionó. Si no, usa el de la sección `Commit` de `.git/cierre-tarea.md`, en Conventional Commits en inglés, con el scope del módulo (`feat(inventory): ...`).
    - Agrega una línea en blanco y `Refs: TXX` al final del mensaje (en una rama `chore/`, los IDs de los pendientes: `Refs: P15, P16`).

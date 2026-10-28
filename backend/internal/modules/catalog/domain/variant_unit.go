@@ -123,7 +123,7 @@ func checkUnits(base UnitRef, variants []*ProductVariant) error {
 				continue
 			}
 			if seen[u.barcode] {
-				return ErrBarcodeTaken
+				return &CodeTakenError{Code: u.barcode, Err: ErrBarcodeTaken}
 			}
 			seen[u.barcode] = true
 		}

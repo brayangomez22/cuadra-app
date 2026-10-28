@@ -55,18 +55,22 @@ describe('ProductFormPage: variantes', () => {
     expect(api.calls(`POST /api/v1/products/${ids.garment}/variants`)).toHaveLength(0);
   });
 
-  it('si la API rechaza un SKU, no queda nada guardado y reintentar vuelve a crear el producto', async () => {
+  it('si la API rechaza un SKU, marca su fila, no queda nada guardado y reintentar vuelve a crear el producto', async () => {
     const api = productFormApi(garmentServer({ failSku: 'CAM-M-AZUL' }), withVariants());
     const { router } = renderApp('/productos/nuevo');
     await fillGarment();
 
     await saveProduct();
 
-    expect(await screen.findByText('Ya existe un producto con el SKU CAM-M-AZUL')).toBeInTheDocument();
+    const matrix = within(screen.getByRole('table', { name: 'Variantes del producto' }));
+    await waitFor(() =>
+      expect(matrix.getByLabelText('SKU de Azul · M')).toHaveAccessibleDescription(
+        expect.stringContaining('Ya existe un producto con el SKU CAM-M-AZUL'),
+      ),
+    );
     expect(screen.queryByText(/El producto se guardó/)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Nuevo producto' })).toBeInTheDocument();
 
-    const matrix = within(screen.getByRole('table', { name: 'Variantes del producto' }));
     await userEvent.type(matrix.getByLabelText('SKU de Azul · M'), 'CAM-M-AZUL-2');
     await saveProduct();
 

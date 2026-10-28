@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/imports/app"
@@ -53,6 +54,27 @@ func TestUploadImport(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 		require.Equal(t, "Fila 154, columna «precio»: no es un número.", body.Errors[0].Message)
 		require.Equal(t, "Fila 7: Ya existe ese código de barras.", body.Errors[1].Message)
+	})
+
+	t.Run("la muestra trae el precio con formato o, si no es un número, el texto de la celda", func(t *testing.T) {
+		uc := &stubUseCases{preview: app.Preview{Import: anImport(t), Sample: []domain.Group{{
+			Row: 2, Product: domain.ProductFields{Name: "Camiseta"},
+			Variants: []domain.VariantLine{
+				{Row: 2, VariantFields: domain.VariantFields{SKU: "CAM-S", Price: decimal.RequireFromString("25000")}},
+				{Row: 3, VariantFields: domain.VariantFields{SKU: "CAM-M", PriceText: "veinte mil"}},
+			},
+		}}}}
+
+		rec := serve(t, uc, uploadRequest(t, "productos.csv", []byte("x"), map[string]string{"location_id": location.String()}))
+
+		var body struct {
+			Sample []struct {
+				Variants []struct{ Price string } `json:"variants"`
+			} `json:"sample"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+		require.Equal(t, "25000", body.Sample[0].Variants[0].Price)
+		require.Equal(t, "veinte mil", body.Sample[0].Variants[1].Price)
 	})
 
 	t.Run("un archivo que no es .xlsx ni .csv responde 422 unsupported_format", func(t *testing.T) {

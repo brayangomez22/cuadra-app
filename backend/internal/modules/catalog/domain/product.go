@@ -180,9 +180,9 @@ func checkVariantPair(v, other *ProductVariant) error {
 	case maps.Equal(v.axisValues, other.axisValues):
 		return ErrDuplicateVariant
 	case v.sku == other.sku:
-		return ErrSKUTaken
+		return &CodeTakenError{Code: v.sku, Err: ErrSKUTaken}
 	case v.barcode != "" && v.barcode == other.barcode:
-		return ErrBarcodeTaken
+		return &CodeTakenError{Code: v.barcode, Err: ErrBarcodeTaken}
 	}
 	return nil
 }
