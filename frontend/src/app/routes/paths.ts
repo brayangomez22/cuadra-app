@@ -54,6 +54,9 @@ export const paths = {
     receipt: route('/inventario/entrada', ['producto', 'variante', 'sede']),
     reorder: route('/inventario/reponer', ['sede']),
     kardex: route('/productos/:productId/kardex', ['variante', 'sede']),
+    counts: route('/inventario/conteos', ['sede', 'pagina']),
+    count: route('/inventario/conteos/:countId'),
+    countReview: route('/inventario/conteos/:countId/diferencias', ['estado', 'pagina']),
   },
   sales: {
     pos: route('/vender'),

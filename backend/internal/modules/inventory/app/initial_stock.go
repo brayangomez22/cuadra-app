@@ -20,7 +20,7 @@ type InitialStockLine struct {
 }
 
 // ReceiveInitialStock registers the initial stock of variants at a
-// location, one entry of goods (purchase_in) per line, as an import loads
+// location, one initial entry (initial_in) per line, as an import loads
 // it. With a ctx from db.InTenantTx it joins the import's batch, so the
 // entries are written with the products they belong to.
 func (s *Service) ReceiveInitialStock(ctx context.Context, a Actor, locationID uuid.UUID, lines []InitialStockLine) (err error) {
@@ -34,7 +34,7 @@ func (s *Service) ReceiveInitialStock(ctx context.Context, a Actor, locationID u
 	for _, l := range lines {
 		err := s.Stock.Apply(ctx, a.TenantID, l.VariantID, []uuid.UUID{locationID},
 			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
-				m, err := levels[0].Receive(l.Quantity, l.UnitCost, s.info(a))
+				m, err := levels[0].ReceiveInitial(l.Quantity, l.UnitCost, s.info(a))
 				if err != nil {
 					return nil, err
 				}

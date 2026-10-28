@@ -21,8 +21,16 @@ import (
 // defaultPageSize is the contract's default limit.
 const defaultPageSize = 20
 
-// UseCases are the inventory use cases the handlers call (*app.Service).
+// UseCases are every inventory use case the handlers call (*app.Service).
 type UseCases interface {
+	StockUseCases
+	CountUseCases
+	CountEntryUseCases
+}
+
+// StockUseCases are the use cases of locations, stock movements and reorder
+// rules.
+type StockUseCases interface {
 	CreateLocation(ctx context.Context, a app.Actor, name string) (*domain.Location, error)
 	ListLocations(ctx context.Context, a app.Actor) ([]*domain.Location, error)
 	ReceiveStock(ctx context.Context, a app.Actor, in app.ReceiptInput) (app.Movement, error)
@@ -35,10 +43,13 @@ type UseCases interface {
 	ListReorderAlerts(ctx context.Context, a app.Actor, q app.ReorderQuery) (app.AlertPage, error)
 }
 
-// Handler implements inventoryapi.StrictServerInterface.
+// Handler implements inventoryapi.StrictServerInterface: the stock
+// operations itself, the stock counts through its embedded handlers.
 type Handler struct {
-	uc  UseCases
+	uc  StockUseCases
 	can auth.Authorizer
+	countHandler
+	entryHandler
 }
 
 var _ inventoryapi.StrictServerInterface = (*Handler)(nil)
@@ -46,7 +57,7 @@ var _ inventoryapi.StrictServerInterface = (*Handler)(nil)
 // Register mounts the inventory operations on mux, with the module's error
 // mapping. can decides who sees costs.
 func Register(mux *http.ServeMux, uc UseCases, can auth.Authorizer, log *slog.Logger) {
-	h := &Handler{uc: uc, can: can}
+	h := &Handler{uc: uc, can: can, countHandler: countHandler{uc: uc, can: can}, entryHandler: entryHandler{uc: uc, can: can}}
 	errs := httpx.NewErrorMapper(log, errorRules...)
 	inventoryapi.HandlerWithOptions(
 		inventoryapi.NewStrictHandlerWithOptions(h, []inventoryapi.StrictMiddlewareFunc{auth.RequirePrincipal[inventoryapi.StrictHandlerFunc]}, inventoryapi.StrictHTTPServerOptions{

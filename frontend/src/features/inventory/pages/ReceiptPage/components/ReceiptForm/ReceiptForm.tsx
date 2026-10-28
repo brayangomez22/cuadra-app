@@ -6,7 +6,7 @@ import { Alert, Button, Field } from '@/shared/ui';
 import { useReceiptForm, type ReceiptSetup } from '../../hooks/useReceiptForm';
 import { AmountFields } from '../AmountFields/AmountFields';
 import { ProductField } from '../ProductField/ProductField';
-import { UnitField } from '../UnitField/UnitField';
+import { UnitField } from '../../../../components/UnitField/UnitField';
 import styles from './ReceiptForm.module.scss';
 
 /** The product, the location, the unit when the variant has others, the quantity and the cost. */
@@ -28,7 +28,7 @@ export function ReceiptForm(setup: ReceiptSetup) {
             placeholder="Elija la sede"
           />
         </Field>
-        {alternateUnits && <UnitField onChange={chooseUnit} />}
+        {alternateUnits && <UnitField hint="En la que llega la mercancía." onChange={chooseUnit} />}
         <AmountFields />
         <div className={styles.footer}>
           <Button type="submit" size="lg" loading={isPending}>

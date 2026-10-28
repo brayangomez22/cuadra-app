@@ -211,12 +211,17 @@ En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`: las tablas de l
 **Pendientes que entran a esta tarea:** P80 (`docs/plan/pendientes.md`).
 **Tests primero:** un archivo con errores muestra cada error con su fila y no deja confirmar; confirmar muestra el avance hasta el reporte final; crear un producto con variantes hace una sola request; E2E de Playwright con un archivo pequeño de dos tipos de negocio.
 
-### [ ] T30 · Toma física de inventario
+### [x] T30 · Toma física de inventario
 **Depende de:** T11, T27.
 **Alcance:** sesiones de conteo por sede, total o parcial (por categoría o ubicación). **Conteo ciego**: quien cuenta no ve el stock esperado. Varios contadores a la vez desde el celular, escaneando o buscando. El negocio **sigue vendiendo durante el conteo**: el sistema toma una foto del stock al inicio y descuenta los movimientos ocurridos durante la sesión. Pantalla de diferencias (cantidad y valor al costo) con recuento de ítems dudosos, y aprobación por owner o admin que genera los ajustes con motivo "conteo físico". Reporte de exactitud del inventario. Si el módulo `lots_expiry` está activo, se cuenta por lote.
 **Pendientes que entran a esta tarea:** P81 (`docs/plan/pendientes.md`).
 **Tests primero:** diferencia = contado − (stock al inicio + entradas − salidas durante el conteo); dos contadores sobre la misma variante suman o se marcan para revisión según la configuración; los ajustes solo se crean al aprobar y quedan en el kardex con referencia a la sesión.
 **Por qué importa:** si el sistema no cuadra con lo que hay en el estante, el dueño deja de confiar en él.
+
+### [x] T30a · Frontend de la toma física
+**Depende de:** T30, T27.
+**Alcance:** las pantallas de la toma física sobre el contrato de T30 (`/stock-counts`), en `features/inventory`. (1) **Conteos** (owner y admin con `inventory:count_manage`; quien cuenta ve los abiertos): lista por sede y estado con la exactitud de los aprobados (el reporte de exactitud), e iniciar un conteo total o parcial por categorías, en modo suma o revisión. (2) **Contar** (cualquiera con `inventory:count`, pensado para el celular): buscar o escanear (el `BarcodeScanner` de T27, que queda abierto para leer un producto tras otro), escribir la cantidad (con unidad alternativa si la variante la tiene) y ver y borrar lo propio; nunca muestra el stock esperado. (3) **Diferencias** (owner y admin): las líneas por estado (en revisión, con diferencia, sin contar, exactas) con lo esperado, lo contado, la diferencia y su valor al costo (solo con permiso de costos), el resumen, pedir recuento de las dudosas, aprobar (con confirmación y el error de `insufficient_stock` llevado a su fila) y cancelar. Menú «Toma física» dentro de Inventario.
+**Tests primero:** quien cuenta no ve lo esperado; el escáner registra la variante leída; aprobar con líneas en revisión muestra el error y no cierra; las diferencias no muestran valores sin permiso de costos; responsive de 360 a 1920 px.
 
 ### [ ] T31 · Clientes
 **Alcance:** dominio, API y UI. Persona natural o empresa, tipo y número de documento (CC, NIT con DV, CE, pasaporte), datos de contacto, segmento de cliente configurable por tenant (sembrado desde la plantilla de su tipo de negocio) y responsabilidades fiscales necesarias para la factura electrónica. Búsqueda rápida desde el POS y creación al vuelo. Cliente genérico "consumidor final".

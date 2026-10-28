@@ -55,6 +55,18 @@ func (q *Queries) BarcodesTakenElsewhere(ctx context.Context, arg BarcodesTakenE
 	return items, nil
 }
 
+const countCategories = `-- name: CountCategories :one
+SELECT count(*) FROM categories WHERE id = ANY($1::uuid[])
+`
+
+// CountCategories counts how many of the given categories exist.
+func (q *Queries) CountCategories(ctx context.Context, categoryIds []uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countCategories, categoryIds)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createVariantUnit = `-- name: CreateVariantUnit :exec
 INSERT INTO variant_units (tenant_id, variant_id, unit_id, factor, price, barcode)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -293,6 +305,41 @@ func (q *Queries) VariantProducts(ctx context.Context, variantIds []uuid.UUID) (
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const variantsInCategories = `-- name: VariantsInCategories :many
+WITH RECURSIVE tree AS (
+    SELECT id FROM categories WHERE id = ANY($1::uuid[])
+    UNION
+    SELECT c.id FROM categories c JOIN tree t ON c.parent_id = t.id
+)
+SELECT v.id
+FROM product_variants v
+JOIN products p ON p.id = v.product_id
+WHERE p.category_id IN (SELECT id FROM tree)
+ORDER BY v.id
+`
+
+// VariantsInCategories returns the variants, active or not, of the products
+// in the given categories or in any of their subcategories.
+func (q *Queries) VariantsInCategories(ctx context.Context, categoryIds []uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, variantsInCategories, categoryIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

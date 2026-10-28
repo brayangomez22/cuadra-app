@@ -53,6 +53,8 @@ type stubUseCases struct {
 	// products is the product of each variant the use cases return.
 	products map[uuid.UUID]uuid.UUID
 	err      error
+
+	countStub
 }
 
 func (s *stubUseCases) CreateLocation(_ context.Context, a app.Actor, name string) (*domain.Location, error) {
@@ -122,10 +124,10 @@ func (s *stubUseCases) withProduct(m *domain.StockMovement) app.Movement {
 	return app.Movement{StockMovement: m, ProductID: s.products[m.VariantID()]}
 }
 
-// seeCostOnlyOwner grants catalog:write only to owners, like a reduced
-// permission matrix.
+// seeCostOnlyOwner grants catalog:write and inventory:count_manage only to
+// owners, like a reduced permission matrix.
 func seeCostOnlyOwner(role, permission string) bool {
-	return role == "owner" || permission != "catalog:write"
+	return role == "owner" || (permission != "catalog:write" && permission != "inventory:count_manage")
 }
 
 var owner = auth.Principal{TenantID: newID(), UserID: newID(), Role: "owner"}

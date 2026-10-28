@@ -13,17 +13,19 @@ type Permission string
 
 // Permissions of the core, checked by the HTTP middleware RequirePermission.
 const (
-	PermCatalogRead     Permission = "catalog:read"
-	PermCatalogWrite    Permission = "catalog:write"
-	PermImportsRun      Permission = "imports:run" // load the catalog and the stock from a file
-	PermInventoryRead   Permission = "inventory:read"
-	PermInventoryAdjust Permission = "inventory:adjust"
-	PermSalesCreate     Permission = "sales:create"
-	PermSalesDiscount   Permission = "sales:discount" // discount without the tenant's limit
-	PermSalesRead       Permission = "sales:read"
-	PermSalesVoid       Permission = "sales:void"
-	PermUsersManage     Permission = "users:manage"
-	PermTenantManage    Permission = "tenant:manage"
+	PermCatalogRead          Permission = "catalog:read"
+	PermCatalogWrite         Permission = "catalog:write"
+	PermImportsRun           Permission = "imports:run" // load the catalog and the stock from a file
+	PermInventoryRead        Permission = "inventory:read"
+	PermInventoryAdjust      Permission = "inventory:adjust"
+	PermInventoryCount       Permission = "inventory:count"        // record what is counted in a stock count
+	PermInventoryCountManage Permission = "inventory:count_manage" // start, review, approve or cancel stock counts
+	PermSalesCreate          Permission = "sales:create"
+	PermSalesDiscount        Permission = "sales:discount" // discount without the tenant's limit
+	PermSalesRead            Permission = "sales:read"
+	PermSalesVoid            Permission = "sales:void"
+	PermUsersManage          Permission = "users:manage"
+	PermTenantManage         Permission = "tenant:manage"
 )
 
 // permissionFormat is "<namespace>:<action>": lowercase letters, digits and
@@ -57,18 +59,18 @@ var coreRoles = []struct {
 }{
 	{RoleAdmin, []Permission{
 		PermCatalogRead, PermCatalogWrite, PermImportsRun,
-		PermInventoryRead, PermInventoryAdjust,
+		PermInventoryRead, PermInventoryAdjust, PermInventoryCount, PermInventoryCountManage,
 		PermSalesCreate, PermSalesDiscount, PermSalesRead, PermSalesVoid,
 		PermUsersManage,
 	}},
 	{RoleCashier, []Permission{
 		PermCatalogRead,
-		PermInventoryRead,
+		PermInventoryRead, PermInventoryCount,
 		PermSalesCreate, PermSalesRead,
 	}},
 	{RoleWarehouse, []Permission{
 		PermCatalogRead,
-		PermInventoryRead, PermInventoryAdjust,
+		PermInventoryRead, PermInventoryAdjust, PermInventoryCount,
 	}},
 }
 
@@ -80,6 +82,8 @@ var corePermissions = []Permission{
 	PermImportsRun,
 	PermInventoryRead,
 	PermInventoryAdjust,
+	PermInventoryCount,
+	PermInventoryCountManage,
 	PermSalesCreate,
 	PermSalesDiscount,
 	PermSalesRead,

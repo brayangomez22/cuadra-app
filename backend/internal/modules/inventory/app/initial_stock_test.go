@@ -34,7 +34,7 @@ func TestReceiveInitialStock(t *testing.T) {
 					require.True(t, l.Quantity.Equal(level.Quantity))
 					require.True(t, l.UnitCost.Equal(level.AverageCost))
 				}
-				require.EqualValues(t, 2, e.counter(t, "cuadra.inventory.movements", "type", string(domain.MovementPurchaseIn)))
+				require.EqualValues(t, 2, e.counter(t, "cuadra.inventory.movements", "type", string(domain.MovementInitialIn)))
 				e.span(t, "inventory.ReceiveInitialStock")
 			})
 		}

@@ -65,10 +65,22 @@ func (l *StockLevel) Quantity() decimal.Decimal { return l.quantity }
 // AverageCost returns the weighted average unit cost, without IVA.
 func (l *StockLevel) AverageCost() decimal.Decimal { return l.averageCost }
 
-// Receive registers an entry of qty units bought at unitCost (purchase_in),
-// including the initial stock, and updates the weighted average cost.
+// Receive registers an entry of qty units bought at unitCost (purchase_in)
+// and updates the weighted average cost.
 func (l *StockLevel) Receive(qty, unitCost decimal.Decimal, info MovementInfo) (*StockMovement, error) {
 	c, err := l.planIn(MovementPurchaseIn, qty, unitCost, info)
+	if err != nil {
+		return nil, err
+	}
+	return l.apply(c), nil
+}
+
+// ReceiveInitial registers the initial stock of qty units at unitCost
+// (initial_in), the stock a business has when it starts using the system. It
+// updates the weighted average cost like Receive, but the kardex does not
+// show it as a purchase.
+func (l *StockLevel) ReceiveInitial(qty, unitCost decimal.Decimal, info MovementInfo) (*StockMovement, error) {
+	c, err := l.planIn(MovementInitialIn, qty, unitCost, info)
 	if err != nil {
 		return nil, err
 	}

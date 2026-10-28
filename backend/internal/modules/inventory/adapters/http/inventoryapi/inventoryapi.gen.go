@@ -20,19 +20,85 @@ import (
 
 // Defines values for DocumentRefKind.
 const (
-	Purchase DocumentRefKind = "purchase"
-	Sale     DocumentRefKind = "sale"
-	Transfer DocumentRefKind = "transfer"
+	DocumentRefKindPurchase   DocumentRefKind = "purchase"
+	DocumentRefKindSale       DocumentRefKind = "sale"
+	DocumentRefKindStockCount DocumentRefKind = "stock_count"
+	DocumentRefKindTransfer   DocumentRefKind = "transfer"
 )
 
 // Valid indicates whether the value is a known member of the DocumentRefKind enum.
 func (e DocumentRefKind) Valid() bool {
 	switch e {
-	case Purchase:
+	case DocumentRefKindPurchase:
 		return true
-	case Sale:
+	case DocumentRefKindSale:
 		return true
-	case Transfer:
+	case DocumentRefKindStockCount:
+		return true
+	case DocumentRefKindTransfer:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StockCountLineStatus.
+const (
+	StockCountLineStatusDifference StockCountLineStatus = "difference"
+	StockCountLineStatusExact      StockCountLineStatus = "exact"
+	StockCountLineStatusReview     StockCountLineStatus = "review"
+	StockCountLineStatusUncounted  StockCountLineStatus = "uncounted"
+)
+
+// Valid indicates whether the value is a known member of the StockCountLineStatus enum.
+func (e StockCountLineStatus) Valid() bool {
+	switch e {
+	case StockCountLineStatusDifference:
+		return true
+	case StockCountLineStatusExact:
+		return true
+	case StockCountLineStatusReview:
+		return true
+	case StockCountLineStatusUncounted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StockCountMode.
+const (
+	StockCountModeReview StockCountMode = "review"
+	StockCountModeSum    StockCountMode = "sum"
+)
+
+// Valid indicates whether the value is a known member of the StockCountMode enum.
+func (e StockCountMode) Valid() bool {
+	switch e {
+	case StockCountModeReview:
+		return true
+	case StockCountModeSum:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StockCountStatus.
+const (
+	Approved StockCountStatus = "approved"
+	Canceled StockCountStatus = "canceled"
+	Open     StockCountStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the StockCountStatus enum.
+func (e StockCountStatus) Valid() bool {
+	switch e {
+	case Approved:
+		return true
+	case Canceled:
+		return true
+	case Open:
 		return true
 	default:
 		return false
@@ -42,6 +108,7 @@ func (e DocumentRefKind) Valid() bool {
 // Defines values for StockMovementType.
 const (
 	Adjustment  StockMovementType = "adjustment"
+	InitialIn   StockMovementType = "initial_in"
 	PurchaseIn  StockMovementType = "purchase_in"
 	SaleOut     StockMovementType = "sale_out"
 	SaleVoid    StockMovementType = "sale_void"
@@ -53,6 +120,8 @@ const (
 func (e StockMovementType) Valid() bool {
 	switch e {
 	case Adjustment:
+		return true
+	case InitialIn:
 		return true
 	case PurchaseIn:
 		return true
@@ -81,6 +150,46 @@ type AdjustmentInput struct {
 	// Reason Example: Unidad dañada en la bodega
 	Reason    string             `json:"reason"`
 	VariantId openapi_types.UUID `json:"variant_id"`
+}
+
+// CountEntry Lo que una persona contó de una variante, en la unidad base del producto.
+type CountEntry struct {
+	CountedAt time.Time          `json:"counted_at"`
+	CountedBy openapi_types.UUID `json:"counted_by"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// ProductId El producto de la variante, para mostrar su nombre.
+	ProductId openapi_types.UUID `json:"product_id"`
+
+	// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	Quantity  Quantity           `json:"quantity"`
+	VariantId openapi_types.UUID `json:"variant_id"`
+}
+
+// CountEntryInput defines model for CountEntryInput.
+type CountEntryInput struct {
+	// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	Quantity Quantity `json:"quantity"`
+
+	// UnitId Una unidad alternativa de la variante en la que va `quantity`. Sin ella, la unidad base.
+	UnitId    *openapi_types.UUID `json:"unit_id,omitempty"`
+	VariantId openapi_types.UUID  `json:"variant_id"`
+}
+
+// CountEntryPage defines model for CountEntryPage.
+type CountEntryPage struct {
+	Items []CountEntry `json:"items"`
+
+	// Total Cantidad total de conteos que cumplen el filtro, sin paginar.
+	Total int `json:"total"`
 }
 
 // DocumentRef defines model for DocumentRef.
@@ -164,6 +273,11 @@ type ReceiptInput struct {
 	VariantId openapi_types.UUID  `json:"variant_id"`
 }
 
+// RecountInput defines model for RecountInput.
+type RecountInput struct {
+	VariantIds []openapi_types.UUID `json:"variant_ids"`
+}
+
 // ReorderAlert Una variante por reponer en una sede: su existencia (de todos los lotes), su mínimo y máximo y cuánto pedir
 // para llegar al máximo. Todo en la unidad base del producto.
 type ReorderAlert struct {
@@ -245,10 +359,143 @@ type ReorderRuleInput struct {
 	MinQuantity Quantity `json:"min_quantity"`
 }
 
+// SignedMoney Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+//
+// Example: -4800.00
+type SignedMoney = string
+
 // SignedQuantity Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).
 //
 // Example: -3
 type SignedQuantity = string
+
+// StockCount Un conteo físico. Solo los aprobados traen `summary`.
+type StockCount struct {
+	// CategoryIds Vacío en un conteo total.
+	CategoryIds []openapi_types.UUID `json:"category_ids"`
+	ClosedAt    *time.Time           `json:"closed_at,omitempty"`
+
+	// ClosedBy Quién lo aprobó o canceló.
+	ClosedBy *openapi_types.UUID `json:"closed_by,omitempty"`
+
+	// CountedLines Variantes que ya se contaron en su ronda vigente.
+	CountedLines int                `json:"counted_lines"`
+	Id           openapi_types.UUID `json:"id"`
+
+	// Lines Variantes en el conteo.
+	Lines      int                `json:"lines"`
+	LocationId openapi_types.UUID `json:"location_id"`
+
+	// Mode Qué pasa si dos personas cuentan la misma variante: `sum` suma lo de ambas (contaron partes distintas);
+	// `review` exige que coincidan y, si no, la marca para recontar.
+	Mode      StockCountMode     `json:"mode"`
+	StartedAt time.Time          `json:"started_at"`
+	StartedBy openapi_types.UUID `json:"started_by"`
+
+	// Status Abierto mientras se cuenta; luego aprobado (sus ajustes están en el kardex) o cancelado.
+	Status StockCountStatus `json:"status"`
+
+	// Summary La exactitud de un conteo. Los valores (diferencias al costo) solo se envían a quien puede ver costos:
+	// `net_difference_value` suma las diferencias con su signo y `absolute_difference_value`, sin él.
+	Summary *StockCountSummary `json:"summary,omitempty"`
+}
+
+// StockCountInput Un conteo nuevo. Sin `mode`, se usa `sum`.
+type StockCountInput struct {
+	// CategoryIds Las categorías de un conteo parcial (con sus subcategorías). Sin ellas, el conteo es total.
+	CategoryIds *[]openapi_types.UUID `json:"category_ids,omitempty"`
+	LocationId  openapi_types.UUID    `json:"location_id"`
+
+	// Mode Qué pasa si dos personas cuentan la misma variante: `sum` suma lo de ambas (contaron partes distintas);
+	// `review` exige que coincidan y, si no, la marca para recontar.
+	Mode *StockCountMode `json:"mode,omitempty"`
+}
+
+// StockCountLine Una variante del conteo. `expected_quantity` es el stock al inicio más las entradas menos las salidas hasta
+// que se contó. `counted_quantity` y `difference` (contado − esperado) se omiten si está sin contar o en revisión,
+// y `difference_value` (la diferencia al costo del inicio) además si no se pueden ver costos.
+type StockCountLine struct {
+	// CountedQuantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	CountedQuantity *Quantity `json:"counted_quantity,omitempty"`
+
+	// Difference Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).
+	//
+	// Example: -3
+	Difference *SignedQuantity `json:"difference,omitempty"`
+
+	// DifferenceValue Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	DifferenceValue *SignedMoney `json:"difference_value,omitempty"`
+
+	// ExpectedQuantity Cantidad con signo (negativa si sale), como decimal en string (hasta 4 decimales).
+	//
+	// Example: -3
+	ExpectedQuantity SignedQuantity `json:"expected_quantity"`
+
+	// ProductId El producto de la variante, para mostrar su nombre.
+	ProductId openapi_types.UUID `json:"product_id"`
+
+	// Status Sin contar, coincide, con diferencia o en revisión (los contadores no coinciden).
+	Status    StockCountLineStatus `json:"status"`
+	VariantId openapi_types.UUID   `json:"variant_id"`
+}
+
+// StockCountLinePage defines model for StockCountLinePage.
+type StockCountLinePage struct {
+	Items []StockCountLine `json:"items"`
+
+	// Summary La exactitud de un conteo. Los valores (diferencias al costo) solo se envían a quien puede ver costos:
+	// `net_difference_value` suma las diferencias con su signo y `absolute_difference_value`, sin él.
+	Summary StockCountSummary `json:"summary"`
+
+	// Total Cantidad total de líneas que cumplen el filtro, sin paginar.
+	Total int `json:"total"`
+}
+
+// StockCountLineStatus Sin contar, coincide, con diferencia o en revisión (los contadores no coinciden).
+type StockCountLineStatus string
+
+// StockCountMode Qué pasa si dos personas cuentan la misma variante: `sum` suma lo de ambas (contaron partes distintas);
+// `review` exige que coincidan y, si no, la marca para recontar.
+type StockCountMode string
+
+// StockCountPage defines model for StockCountPage.
+type StockCountPage struct {
+	Items []StockCount `json:"items"`
+
+	// Total Cantidad total de conteos que cumplen el filtro, sin paginar.
+	Total int `json:"total"`
+}
+
+// StockCountStatus Abierto mientras se cuenta; luego aprobado (sus ajustes están en el kardex) o cancelado.
+type StockCountStatus string
+
+// StockCountSummary La exactitud de un conteo. Los valores (diferencias al costo) solo se envían a quien puede ver costos:
+// `net_difference_value` suma las diferencias con su signo y `absolute_difference_value`, sin él.
+type StockCountSummary struct {
+	// AbsoluteDifferenceValue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	AbsoluteDifferenceValue *Money `json:"absolute_difference_value,omitempty"`
+
+	// Accuracy Fracción de las líneas contadas que coincidieron (de 0 a 1). Se omite si no se contó ninguna.
+	//
+	// Example: 0.9500
+	Accuracy     *string `json:"accuracy,omitempty"`
+	CountedLines int     `json:"counted_lines"`
+	ExactLines   int     `json:"exact_lines"`
+	Lines        int     `json:"lines"`
+
+	// NetDifferenceValue Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	NetDifferenceValue *SignedMoney `json:"net_difference_value,omitempty"`
+}
 
 // StockLevel La existencia de una variante en una sede. `quantity` es negativa solo si la empresa permite vender sin
 // stock. `average_cost` (costo promedio ponderado, sin IVA) solo se envía a quien tiene `catalog:write`.
@@ -388,6 +635,9 @@ type CashSessionId = openapi_types.UUID
 // CategoryId defines model for CategoryId.
 type CategoryId = openapi_types.UUID
 
+// CountEntryId defines model for CountEntryId.
+type CountEntryId = openapi_types.UUID
+
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID
 
@@ -409,6 +659,9 @@ type ProductId = openapi_types.UUID
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
 
+// StockCountId defines model for StockCountId.
+type StockCountId = openapi_types.UUID
+
 // UnitId defines model for UnitId.
 type UnitId = openapi_types.UUID
 
@@ -426,6 +679,9 @@ type InternalError = Error
 
 // NotFound Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type NotFound = Error
+
+// StockCountNotFound Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
+type StockCountNotFound = Error
 
 // Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Unauthorized = Error
@@ -446,6 +702,45 @@ type ListReorderAlertsParams struct {
 type ListStockParams struct {
 	// VariantId Solo la existencia de esta variante.
 	VariantId *openapi_types.UUID `form:"variant_id,omitempty" json:"variant_id,omitempty"`
+
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// ListStockCountsParams defines parameters for ListStockCounts.
+type ListStockCountsParams struct {
+	// LocationId Solo los conteos de esta sede.
+	LocationId *openapi_types.UUID `form:"location_id,omitempty" json:"location_id,omitempty"`
+
+	// Status Solo los conteos en este estado.
+	Status *StockCountStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// ListCountEntriesParams defines parameters for ListCountEntries.
+type ListCountEntriesParams struct {
+	// VariantId Solo lo contado de esta variante.
+	VariantId *openapi_types.UUID `form:"variant_id,omitempty" json:"variant_id,omitempty"`
+
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// ListStockCountLinesParams defines parameters for ListStockCountLines.
+type ListStockCountLinesParams struct {
+	// Status Solo las líneas en este estado.
+	Status *StockCountLineStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// Limit Cantidad máxima de resultados.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
@@ -481,6 +776,15 @@ type CreateLocationJSONRequestBody = LocationInput
 // SetReorderRuleJSONRequestBody defines body for SetReorderRule for application/json ContentType.
 type SetReorderRuleJSONRequestBody = ReorderRuleInput
 
+// StartStockCountJSONRequestBody defines body for StartStockCount for application/json ContentType.
+type StartStockCountJSONRequestBody = StockCountInput
+
+// RecordCountEntryJSONRequestBody defines body for RecordCountEntry for application/json ContentType.
+type RecordCountEntryJSONRequestBody = CountEntryInput
+
+// RequestRecountJSONRequestBody defines body for RequestRecount for application/json ContentType.
+type RequestRecountJSONRequestBody = RecountInput
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// AdjustStock Registrar un ajuste de inventario
@@ -510,6 +814,36 @@ type ServerInterface interface {
 	// ListStock Existencias de una sede
 	// (GET /api/v1/locations/{locationId}/stock)
 	ListStock(w http.ResponseWriter, r *http.Request, locationId LocationId, params ListStockParams)
+	// ListStockCounts Conteos físicos
+	// (GET /api/v1/stock-counts)
+	ListStockCounts(w http.ResponseWriter, r *http.Request, params ListStockCountsParams)
+	// StartStockCount Iniciar un conteo físico
+	// (POST /api/v1/stock-counts)
+	StartStockCount(w http.ResponseWriter, r *http.Request)
+	// GetStockCount Un conteo físico
+	// (GET /api/v1/stock-counts/{stockCountId})
+	GetStockCount(w http.ResponseWriter, r *http.Request, stockCountId StockCountId)
+	// ApproveStockCount Aprobar un conteo
+	// (POST /api/v1/stock-counts/{stockCountId}/approve)
+	ApproveStockCount(w http.ResponseWriter, r *http.Request, stockCountId StockCountId)
+	// CancelStockCount Cancelar un conteo
+	// (POST /api/v1/stock-counts/{stockCountId}/cancel)
+	CancelStockCount(w http.ResponseWriter, r *http.Request, stockCountId StockCountId)
+	// ListCountEntries Lo contado en un conteo
+	// (GET /api/v1/stock-counts/{stockCountId}/entries)
+	ListCountEntries(w http.ResponseWriter, r *http.Request, stockCountId StockCountId, params ListCountEntriesParams)
+	// RecordCountEntry Registrar lo contado de una variante
+	// (POST /api/v1/stock-counts/{stockCountId}/entries)
+	RecordCountEntry(w http.ResponseWriter, r *http.Request, stockCountId StockCountId)
+	// DeleteCountEntry Borrar algo contado
+	// (DELETE /api/v1/stock-counts/{stockCountId}/entries/{countEntryId})
+	DeleteCountEntry(w http.ResponseWriter, r *http.Request, stockCountId StockCountId, countEntryId CountEntryId)
+	// ListStockCountLines Diferencias de un conteo
+	// (GET /api/v1/stock-counts/{stockCountId}/lines)
+	ListStockCountLines(w http.ResponseWriter, r *http.Request, stockCountId StockCountId, params ListStockCountLinesParams)
+	// RequestRecount Pedir el recuento de variantes dudosas
+	// (POST /api/v1/stock-counts/{stockCountId}/recount)
+	RequestRecount(w http.ResponseWriter, r *http.Request, stockCountId StockCountId)
 	// GetVariantKardex Kardex de una variante
 	// (GET /api/v1/variants/{variantId}/kardex)
 	GetVariantKardex(w http.ResponseWriter, r *http.Request, variantId VariantId, params GetVariantKardexParams)
@@ -791,6 +1125,393 @@ func (siw *ServerInterfaceWrapper) ListStock(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// ListStockCounts operation middleware
+func (siw *ServerInterfaceWrapper) ListStockCounts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListStockCountsParams
+
+	// ------------- Optional query parameter "location_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "location_id", r.URL.Query(), &params.LocationId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "location_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "location_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListStockCounts(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartStockCount operation middleware
+func (siw *ServerInterfaceWrapper) StartStockCount(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartStockCount(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStockCount operation middleware
+func (siw *ServerInterfaceWrapper) GetStockCount(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "stockCountId" -------------
+	var stockCountId StockCountId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stockCountId", r.PathValue("stockCountId"), &stockCountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stockCountId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStockCount(w, r, stockCountId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveStockCount operation middleware
+func (siw *ServerInterfaceWrapper) ApproveStockCount(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "stockCountId" -------------
+	var stockCountId StockCountId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stockCountId", r.PathValue("stockCountId"), &stockCountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stockCountId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveStockCount(w, r, stockCountId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelStockCount operation middleware
+func (siw *ServerInterfaceWrapper) CancelStockCount(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "stockCountId" -------------
+	var stockCountId StockCountId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stockCountId", r.PathValue("stockCountId"), &stockCountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stockCountId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelStockCount(w, r, stockCountId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCountEntries operation middleware
+func (siw *ServerInterfaceWrapper) ListCountEntries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "stockCountId" -------------
+	var stockCountId StockCountId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stockCountId", r.PathValue("stockCountId"), &stockCountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stockCountId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCountEntriesParams
+
+	// ------------- Optional query parameter "variant_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "variant_id", r.URL.Query(), &params.VariantId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "variant_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variant_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCountEntries(w, r, stockCountId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordCountEntry operation middleware
+func (siw *ServerInterfaceWrapper) RecordCountEntry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "stockCountId" -------------
+	var stockCountId StockCountId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stockCountId", r.PathValue("stockCountId"), &stockCountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stockCountId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordCountEntry(w, r, stockCountId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCountEntry operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCountEntry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "stockCountId" -------------
+	var stockCountId StockCountId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stockCountId", r.PathValue("stockCountId"), &stockCountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stockCountId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "countEntryId" -------------
+	var countEntryId CountEntryId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "countEntryId", r.PathValue("countEntryId"), &countEntryId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "countEntryId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCountEntry(w, r, stockCountId, countEntryId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListStockCountLines operation middleware
+func (siw *ServerInterfaceWrapper) ListStockCountLines(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "stockCountId" -------------
+	var stockCountId StockCountId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stockCountId", r.PathValue("stockCountId"), &stockCountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stockCountId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListStockCountLinesParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListStockCountLines(w, r, stockCountId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestRecount operation middleware
+func (siw *ServerInterfaceWrapper) RequestRecount(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "stockCountId" -------------
+	var stockCountId StockCountId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "stockCountId", r.PathValue("stockCountId"), &stockCountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stockCountId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestRecount(w, r, stockCountId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetVariantKardex operation middleware
 func (siw *ServerInterfaceWrapper) GetVariantKardex(w http.ResponseWriter, r *http.Request) {
 
@@ -989,6 +1710,16 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/inventory/receipts", wrapper.ReceiveStock)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/inventory/adjustments", wrapper.AdjustStock)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/inventory/transfers", wrapper.TransferStock)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/stock-counts", wrapper.ListStockCounts)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/stock-counts", wrapper.StartStockCount)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/stock-counts/{stockCountId}", wrapper.GetStockCount)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/stock-counts/{stockCountId}/entries", wrapper.ListCountEntries)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/stock-counts/{stockCountId}/entries", wrapper.RecordCountEntry)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/stock-counts/{stockCountId}/entries/{countEntryId}", wrapper.DeleteCountEntry)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/stock-counts/{stockCountId}/lines", wrapper.ListStockCountLines)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/stock-counts/{stockCountId}/recount", wrapper.RequestRecount)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/stock-counts/{stockCountId}/approve", wrapper.ApproveStockCount)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/stock-counts/{stockCountId}/cancel", wrapper.CancelStockCount)
 
 	return m
 }
@@ -1000,6 +1731,8 @@ type ForbiddenJSONResponse Error
 type InternalErrorJSONResponse Error
 
 type NotFoundJSONResponse Error
+
+type StockCountNotFoundJSONResponse Error
 
 type UnauthorizedJSONResponse Error
 
@@ -1842,6 +2575,961 @@ func (response ListStock500JSONResponse) VisitListStockResponse(w http.ResponseW
 	return err
 }
 
+type ListStockCountsRequestObject struct {
+	Params ListStockCountsParams
+}
+
+type ListStockCountsResponseObject interface {
+	VisitListStockCountsResponse(w http.ResponseWriter) error
+}
+
+type ListStockCounts200JSONResponse StockCountPage
+
+func (response ListStockCounts200JSONResponse) VisitListStockCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStockCounts400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListStockCounts400JSONResponse) VisitListStockCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStockCounts401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListStockCounts401JSONResponse) VisitListStockCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStockCounts403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListStockCounts403JSONResponse) VisitListStockCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStockCounts500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListStockCounts500JSONResponse) VisitListStockCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartStockCountRequestObject struct {
+	Body *StartStockCountJSONRequestBody
+}
+
+type StartStockCountResponseObject interface {
+	VisitStartStockCountResponse(w http.ResponseWriter) error
+}
+
+type StartStockCount201JSONResponse StockCount
+
+func (response StartStockCount201JSONResponse) VisitStartStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartStockCount400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response StartStockCount400JSONResponse) VisitStartStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartStockCount401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response StartStockCount401JSONResponse) VisitStartStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartStockCount403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response StartStockCount403JSONResponse) VisitStartStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartStockCount409JSONResponse Error
+
+func (response StartStockCount409JSONResponse) VisitStartStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartStockCount422JSONResponse Error
+
+func (response StartStockCount422JSONResponse) VisitStartStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartStockCount500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response StartStockCount500JSONResponse) VisitStartStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStockCountRequestObject struct {
+	StockCountId StockCountId `json:"stockCountId"`
+}
+
+type GetStockCountResponseObject interface {
+	VisitGetStockCountResponse(w http.ResponseWriter) error
+}
+
+type GetStockCount200JSONResponse StockCount
+
+func (response GetStockCount200JSONResponse) VisitGetStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStockCount401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetStockCount401JSONResponse) VisitGetStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStockCount403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetStockCount403JSONResponse) VisitGetStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStockCount404JSONResponse struct{ StockCountNotFoundJSONResponse }
+
+func (response GetStockCount404JSONResponse) VisitGetStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetStockCount500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetStockCount500JSONResponse) VisitGetStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveStockCountRequestObject struct {
+	StockCountId StockCountId `json:"stockCountId"`
+}
+
+type ApproveStockCountResponseObject interface {
+	VisitApproveStockCountResponse(w http.ResponseWriter) error
+}
+
+type ApproveStockCount200JSONResponse StockCount
+
+func (response ApproveStockCount200JSONResponse) VisitApproveStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveStockCount401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ApproveStockCount401JSONResponse) VisitApproveStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveStockCount403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ApproveStockCount403JSONResponse) VisitApproveStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveStockCount404JSONResponse struct{ StockCountNotFoundJSONResponse }
+
+func (response ApproveStockCount404JSONResponse) VisitApproveStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveStockCount409JSONResponse Error
+
+func (response ApproveStockCount409JSONResponse) VisitApproveStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveStockCount500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ApproveStockCount500JSONResponse) VisitApproveStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelStockCountRequestObject struct {
+	StockCountId StockCountId `json:"stockCountId"`
+}
+
+type CancelStockCountResponseObject interface {
+	VisitCancelStockCountResponse(w http.ResponseWriter) error
+}
+
+type CancelStockCount200JSONResponse StockCount
+
+func (response CancelStockCount200JSONResponse) VisitCancelStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelStockCount401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CancelStockCount401JSONResponse) VisitCancelStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelStockCount403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CancelStockCount403JSONResponse) VisitCancelStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelStockCount404JSONResponse struct{ StockCountNotFoundJSONResponse }
+
+func (response CancelStockCount404JSONResponse) VisitCancelStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelStockCount409JSONResponse Error
+
+func (response CancelStockCount409JSONResponse) VisitCancelStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelStockCount500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CancelStockCount500JSONResponse) VisitCancelStockCountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCountEntriesRequestObject struct {
+	StockCountId StockCountId `json:"stockCountId"`
+	Params       ListCountEntriesParams
+}
+
+type ListCountEntriesResponseObject interface {
+	VisitListCountEntriesResponse(w http.ResponseWriter) error
+}
+
+type ListCountEntries200JSONResponse CountEntryPage
+
+func (response ListCountEntries200JSONResponse) VisitListCountEntriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCountEntries400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListCountEntries400JSONResponse) VisitListCountEntriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCountEntries401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListCountEntries401JSONResponse) VisitListCountEntriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCountEntries403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListCountEntries403JSONResponse) VisitListCountEntriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCountEntries404JSONResponse struct{ StockCountNotFoundJSONResponse }
+
+func (response ListCountEntries404JSONResponse) VisitListCountEntriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCountEntries500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListCountEntries500JSONResponse) VisitListCountEntriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCountEntryRequestObject struct {
+	StockCountId StockCountId `json:"stockCountId"`
+	Body         *RecordCountEntryJSONRequestBody
+}
+
+type RecordCountEntryResponseObject interface {
+	VisitRecordCountEntryResponse(w http.ResponseWriter) error
+}
+
+type RecordCountEntry201JSONResponse CountEntry
+
+func (response RecordCountEntry201JSONResponse) VisitRecordCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCountEntry400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RecordCountEntry400JSONResponse) VisitRecordCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCountEntry401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RecordCountEntry401JSONResponse) VisitRecordCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCountEntry403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RecordCountEntry403JSONResponse) VisitRecordCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCountEntry404JSONResponse struct{ StockCountNotFoundJSONResponse }
+
+func (response RecordCountEntry404JSONResponse) VisitRecordCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCountEntry409JSONResponse Error
+
+func (response RecordCountEntry409JSONResponse) VisitRecordCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCountEntry422JSONResponse Error
+
+func (response RecordCountEntry422JSONResponse) VisitRecordCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordCountEntry500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RecordCountEntry500JSONResponse) VisitRecordCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCountEntryRequestObject struct {
+	StockCountId StockCountId `json:"stockCountId"`
+	CountEntryId CountEntryId `json:"countEntryId"`
+}
+
+type DeleteCountEntryResponseObject interface {
+	VisitDeleteCountEntryResponse(w http.ResponseWriter) error
+}
+
+type DeleteCountEntry204Response struct {
+}
+
+func (response DeleteCountEntry204Response) VisitDeleteCountEntryResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCountEntry401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteCountEntry401JSONResponse) VisitDeleteCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCountEntry403JSONResponse Error
+
+func (response DeleteCountEntry403JSONResponse) VisitDeleteCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCountEntry404JSONResponse Error
+
+func (response DeleteCountEntry404JSONResponse) VisitDeleteCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCountEntry409JSONResponse Error
+
+func (response DeleteCountEntry409JSONResponse) VisitDeleteCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCountEntry500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteCountEntry500JSONResponse) VisitDeleteCountEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStockCountLinesRequestObject struct {
+	StockCountId StockCountId `json:"stockCountId"`
+	Params       ListStockCountLinesParams
+}
+
+type ListStockCountLinesResponseObject interface {
+	VisitListStockCountLinesResponse(w http.ResponseWriter) error
+}
+
+type ListStockCountLines200JSONResponse StockCountLinePage
+
+func (response ListStockCountLines200JSONResponse) VisitListStockCountLinesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStockCountLines400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListStockCountLines400JSONResponse) VisitListStockCountLinesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStockCountLines401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListStockCountLines401JSONResponse) VisitListStockCountLinesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStockCountLines403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListStockCountLines403JSONResponse) VisitListStockCountLinesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStockCountLines404JSONResponse struct{ StockCountNotFoundJSONResponse }
+
+func (response ListStockCountLines404JSONResponse) VisitListStockCountLinesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStockCountLines500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListStockCountLines500JSONResponse) VisitListStockCountLinesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestRecountRequestObject struct {
+	StockCountId StockCountId `json:"stockCountId"`
+	Body         *RequestRecountJSONRequestBody
+}
+
+type RequestRecountResponseObject interface {
+	VisitRequestRecountResponse(w http.ResponseWriter) error
+}
+
+type RequestRecount204Response struct {
+}
+
+func (response RequestRecount204Response) VisitRequestRecountResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RequestRecount400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RequestRecount400JSONResponse) VisitRequestRecountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestRecount401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RequestRecount401JSONResponse) VisitRequestRecountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestRecount403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RequestRecount403JSONResponse) VisitRequestRecountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestRecount404JSONResponse struct{ StockCountNotFoundJSONResponse }
+
+func (response RequestRecount404JSONResponse) VisitRequestRecountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestRecount409JSONResponse Error
+
+func (response RequestRecount409JSONResponse) VisitRequestRecountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestRecount422JSONResponse Error
+
+func (response RequestRecount422JSONResponse) VisitRequestRecountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestRecount500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RequestRecount500JSONResponse) VisitRequestRecountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetVariantKardexRequestObject struct {
 	VariantId VariantId `json:"variantId"`
 	Params    GetVariantKardexParams
@@ -1950,6 +3638,36 @@ type StrictServerInterface interface {
 	// ListStock Existencias de una sede
 	// (GET /api/v1/locations/{locationId}/stock)
 	ListStock(ctx context.Context, request ListStockRequestObject) (ListStockResponseObject, error)
+	// ListStockCounts Conteos físicos
+	// (GET /api/v1/stock-counts)
+	ListStockCounts(ctx context.Context, request ListStockCountsRequestObject) (ListStockCountsResponseObject, error)
+	// StartStockCount Iniciar un conteo físico
+	// (POST /api/v1/stock-counts)
+	StartStockCount(ctx context.Context, request StartStockCountRequestObject) (StartStockCountResponseObject, error)
+	// GetStockCount Un conteo físico
+	// (GET /api/v1/stock-counts/{stockCountId})
+	GetStockCount(ctx context.Context, request GetStockCountRequestObject) (GetStockCountResponseObject, error)
+	// ApproveStockCount Aprobar un conteo
+	// (POST /api/v1/stock-counts/{stockCountId}/approve)
+	ApproveStockCount(ctx context.Context, request ApproveStockCountRequestObject) (ApproveStockCountResponseObject, error)
+	// CancelStockCount Cancelar un conteo
+	// (POST /api/v1/stock-counts/{stockCountId}/cancel)
+	CancelStockCount(ctx context.Context, request CancelStockCountRequestObject) (CancelStockCountResponseObject, error)
+	// ListCountEntries Lo contado en un conteo
+	// (GET /api/v1/stock-counts/{stockCountId}/entries)
+	ListCountEntries(ctx context.Context, request ListCountEntriesRequestObject) (ListCountEntriesResponseObject, error)
+	// RecordCountEntry Registrar lo contado de una variante
+	// (POST /api/v1/stock-counts/{stockCountId}/entries)
+	RecordCountEntry(ctx context.Context, request RecordCountEntryRequestObject) (RecordCountEntryResponseObject, error)
+	// DeleteCountEntry Borrar algo contado
+	// (DELETE /api/v1/stock-counts/{stockCountId}/entries/{countEntryId})
+	DeleteCountEntry(ctx context.Context, request DeleteCountEntryRequestObject) (DeleteCountEntryResponseObject, error)
+	// ListStockCountLines Diferencias de un conteo
+	// (GET /api/v1/stock-counts/{stockCountId}/lines)
+	ListStockCountLines(ctx context.Context, request ListStockCountLinesRequestObject) (ListStockCountLinesResponseObject, error)
+	// RequestRecount Pedir el recuento de variantes dudosas
+	// (POST /api/v1/stock-counts/{stockCountId}/recount)
+	RequestRecount(ctx context.Context, request RequestRecountRequestObject) (RequestRecountResponseObject, error)
 	// GetVariantKardex Kardex de una variante
 	// (GET /api/v1/variants/{variantId}/kardex)
 	GetVariantKardex(ctx context.Context, request GetVariantKardexRequestObject) (GetVariantKardexResponseObject, error)
@@ -2249,6 +3967,288 @@ func (sh *strictHandler) ListStock(w http.ResponseWriter, r *http.Request, locat
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListStockResponseObject); ok {
 		if err := validResponse.VisitListStockResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListStockCounts operation middleware
+func (sh *strictHandler) ListStockCounts(w http.ResponseWriter, r *http.Request, params ListStockCountsParams) {
+	var request ListStockCountsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListStockCounts(ctx, request.(ListStockCountsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListStockCounts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListStockCountsResponseObject); ok {
+		if err := validResponse.VisitListStockCountsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// StartStockCount operation middleware
+func (sh *strictHandler) StartStockCount(w http.ResponseWriter, r *http.Request) {
+	var request StartStockCountRequestObject
+
+	var body StartStockCountJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.StartStockCount(ctx, request.(StartStockCountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "StartStockCount")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(StartStockCountResponseObject); ok {
+		if err := validResponse.VisitStartStockCountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetStockCount operation middleware
+func (sh *strictHandler) GetStockCount(w http.ResponseWriter, r *http.Request, stockCountId StockCountId) {
+	var request GetStockCountRequestObject
+
+	request.StockCountId = stockCountId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStockCount(ctx, request.(GetStockCountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStockCount")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStockCountResponseObject); ok {
+		if err := validResponse.VisitGetStockCountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApproveStockCount operation middleware
+func (sh *strictHandler) ApproveStockCount(w http.ResponseWriter, r *http.Request, stockCountId StockCountId) {
+	var request ApproveStockCountRequestObject
+
+	request.StockCountId = stockCountId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApproveStockCount(ctx, request.(ApproveStockCountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApproveStockCount")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApproveStockCountResponseObject); ok {
+		if err := validResponse.VisitApproveStockCountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CancelStockCount operation middleware
+func (sh *strictHandler) CancelStockCount(w http.ResponseWriter, r *http.Request, stockCountId StockCountId) {
+	var request CancelStockCountRequestObject
+
+	request.StockCountId = stockCountId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CancelStockCount(ctx, request.(CancelStockCountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CancelStockCount")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CancelStockCountResponseObject); ok {
+		if err := validResponse.VisitCancelStockCountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCountEntries operation middleware
+func (sh *strictHandler) ListCountEntries(w http.ResponseWriter, r *http.Request, stockCountId StockCountId, params ListCountEntriesParams) {
+	var request ListCountEntriesRequestObject
+
+	request.StockCountId = stockCountId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCountEntries(ctx, request.(ListCountEntriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCountEntries")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCountEntriesResponseObject); ok {
+		if err := validResponse.VisitListCountEntriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RecordCountEntry operation middleware
+func (sh *strictHandler) RecordCountEntry(w http.ResponseWriter, r *http.Request, stockCountId StockCountId) {
+	var request RecordCountEntryRequestObject
+
+	request.StockCountId = stockCountId
+
+	var body RecordCountEntryJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RecordCountEntry(ctx, request.(RecordCountEntryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecordCountEntry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RecordCountEntryResponseObject); ok {
+		if err := validResponse.VisitRecordCountEntryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCountEntry operation middleware
+func (sh *strictHandler) DeleteCountEntry(w http.ResponseWriter, r *http.Request, stockCountId StockCountId, countEntryId CountEntryId) {
+	var request DeleteCountEntryRequestObject
+
+	request.StockCountId = stockCountId
+	request.CountEntryId = countEntryId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCountEntry(ctx, request.(DeleteCountEntryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCountEntry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCountEntryResponseObject); ok {
+		if err := validResponse.VisitDeleteCountEntryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListStockCountLines operation middleware
+func (sh *strictHandler) ListStockCountLines(w http.ResponseWriter, r *http.Request, stockCountId StockCountId, params ListStockCountLinesParams) {
+	var request ListStockCountLinesRequestObject
+
+	request.StockCountId = stockCountId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListStockCountLines(ctx, request.(ListStockCountLinesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListStockCountLines")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListStockCountLinesResponseObject); ok {
+		if err := validResponse.VisitListStockCountLinesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RequestRecount operation middleware
+func (sh *strictHandler) RequestRecount(w http.ResponseWriter, r *http.Request, stockCountId StockCountId) {
+	var request RequestRecountRequestObject
+
+	request.StockCountId = stockCountId
+
+	var body RequestRecountJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RequestRecount(ctx, request.(RequestRecountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RequestRecount")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RequestRecountResponseObject); ok {
+		if err := validResponse.VisitRequestRecountResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -2,11 +2,13 @@ package ports
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog"
+	catalogdomain "github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
 	inventorydomain "github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/domain"
 )
 
@@ -41,4 +43,15 @@ func (c InventoryCatalog) UnitFactor(ctx context.Context, tenantID, variantID, u
 		return u.Factor(), nil
 	}
 	return decimal.Decimal{}, inventorydomain.ErrUnitNotAvailable
+}
+
+// VariantsInCategories returns the variants of the products in the
+// categories and their subcategories, from the catalog. A category that does
+// not exist is inventorydomain.ErrCategoryNotFound.
+func (c InventoryCatalog) VariantsInCategories(ctx context.Context, tenantID uuid.UUID, categoryIDs []uuid.UUID) ([]uuid.UUID, error) {
+	variants, err := c.Catalog.VariantsInCategories(ctx, tenantID, categoryIDs)
+	if errors.Is(err, catalogdomain.ErrCategoryNotFound) {
+		return nil, inventorydomain.ErrCategoryNotFound
+	}
+	return variants, err
 }

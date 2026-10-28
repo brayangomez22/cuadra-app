@@ -65,3 +65,11 @@ func (m *Module) ProductsOfVariants(ctx context.Context, tenantID uuid.UUID, var
 func (m *Module) VariantProducts(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
 	return m.products.VariantProducts(ctx, tenantID, variantIDs)
 }
+
+// VariantsInCategories returns the variants, active or not, of the products
+// in categoryIDs or in their subcategories; domain.ErrCategoryNotFound if a
+// category does not exist in tenantID. It is for the inventory, which counts
+// the stock of some categories.
+func (m *Module) VariantsInCategories(ctx context.Context, tenantID uuid.UUID, categoryIDs []uuid.UUID) ([]uuid.UUID, error) {
+	return m.products.VariantsInCategories(ctx, tenantID, categoryIDs)
+}

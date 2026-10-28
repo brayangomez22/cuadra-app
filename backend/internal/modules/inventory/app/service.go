@@ -35,6 +35,8 @@ type Deps struct {
 	Policies       domain.PolicyRepository
 	Variants       ProductVariants
 	Reorder        domain.ReorderRuleRepository
+	Counts         domain.StockCountRepository
+	CountEntries   domain.CountEntryRepository
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -52,6 +54,11 @@ type ProductVariants interface {
 	// holds; domain.ErrUnitNotAvailable if the variant does not exist in
 	// tenantID or has no such alternate unit.
 	UnitFactor(ctx context.Context, tenantID, variantID, unitID uuid.UUID) (decimal.Decimal, error)
+	// VariantsInCategories returns the variants of the products in
+	// categoryIDs or in their subcategories, active or not, for a partial
+	// stock count; domain.ErrCategoryNotFound if a category does not exist
+	// in tenantID.
+	VariantsInCategories(ctx context.Context, tenantID uuid.UUID, categoryIDs []uuid.UUID) ([]uuid.UUID, error)
 }
 
 // Service runs the inventory use cases.
@@ -62,12 +69,15 @@ type Service struct {
 	movements         metric.Int64Counter
 	insufficientStock metric.Int64Counter
 	reorderChanges    metric.Int64Counter
+	stockCounts       metric.Int64Counter
+	countEntries      metric.Int64Counter
+	countAccuracy     metric.Float64Histogram
 }
 
 // NewService builds a Service. It fails if a repository is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Locations, d.Stock, d.Policies, d.Variants, d.Reorder) {
+	if usecase.AnyNil(d.Locations, d.Stock, d.Policies, d.Variants, d.Reorder, d.Counts, d.CountEntries) {
 		return nil, errors.New("inventory: missing service dependency")
 	}
 	if d.Now == nil {
@@ -83,6 +93,13 @@ func NewService(d Deps) (*Service, error) {
 			"Stock exits rejected for lack of stock, by the movement type attempted.", "{rejection}"),
 		usecase.Counter(&s.reorderChanges, "cuadra.inventory.reorder_rule_changes",
 			"Reorder rules set or deleted, by action.", "{change}"),
+		usecase.Counter(&s.stockCounts, "cuadra.inventory.stock_counts",
+			"Stock counts started, approved or canceled, by result.", "{count}"),
+		usecase.Counter(&s.countEntries, "cuadra.inventory.count_entries",
+			"Entries recorded by counters during stock counts.", "{entry}"),
+		usecase.Histogram(&s.countAccuracy, "cuadra.inventory.count_accuracy",
+			"Share of the counted lines that matched the expected stock, per approved count.", "1",
+			0.5, 0.8, 0.9, 0.95, 0.98, 0.99, 1),
 	)
 	if err != nil {
 		return nil, err

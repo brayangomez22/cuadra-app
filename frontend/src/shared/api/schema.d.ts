@@ -800,6 +800,200 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/stock-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Conteos físicos
+         * @description Los conteos físicos de la empresa, del más reciente al más antiguo. Los aprobados traen su exactitud
+         *     (`summary`); los valores de las diferencias solo se envían a quien puede ver costos.
+         */
+        get: operations["listStockCounts"];
+        put?: never;
+        /**
+         * Iniciar un conteo físico
+         * @description Abre un conteo en una sede y toma la foto de su stock: de todas las variantes con existencia en la sede o,
+         *     con `category_ids`, de las variantes de esas categorías y sus subcategorías. El negocio puede seguir vendiendo:
+         *     lo esperado de cada variante descuenta los movimientos ocurridos hasta que se contó. Una sede tiene a lo sumo
+         *     un conteo abierto.
+         */
+        post: operations["startStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock-counts/{stockCountId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Un conteo físico
+         * @description El conteo con su avance. Nunca trae el stock esperado (el conteo es ciego).
+         */
+        get: operations["getStockCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock-counts/{stockCountId}/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Lo contado en un conteo
+         * @description Lo que se ha contado en la ronda vigente de cada variante, del más reciente al más antiguo. Quien no administra
+         *     conteos (`inventory:count_manage`) solo ve lo que contó él.
+         */
+        get: operations["listCountEntries"];
+        put?: never;
+        /**
+         * Registrar lo contado de una variante
+         * @description Varias personas pueden contar a la vez. Con `unit_id` la cantidad va en esa unidad alternativa de la variante
+         *     y se guarda en la unidad base. En un conteo total se puede contar una variante que no estaba en la foto (entra
+         *     con cero al inicio); en uno parcial, solo las de sus categorías.
+         */
+        post: operations["recordCountEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock-counts/{stockCountId}/entries/{countEntryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+                countEntryId: components["parameters"]["CountEntryId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar algo contado
+         * @description Corrige un error mientras el conteo está abierto. Cada quien borra lo suyo; quien administra conteos, cualquiera.
+         */
+        delete: operations["deleteCountEntry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock-counts/{stockCountId}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Diferencias de un conteo
+         * @description Cada variante del conteo con lo esperado (stock al inicio más entradas menos salidas hasta que se contó), lo
+         *     contado y la diferencia: primero las que están en revisión y luego las de mayor diferencia en valor. `summary`
+         *     resume todas las líneas. Los valores solo se envían a quien puede ver costos.
+         */
+        get: operations["listStockCountLines"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock-counts/{stockCountId}/recount": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pedir el recuento de variantes dudosas
+         * @description Lo contado hasta ahora de esas variantes deja de valer y se cuentan de nuevo.
+         */
+        post: operations["requestRecount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock-counts/{stockCountId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aprobar un conteo
+         * @description Cierra el conteo y registra un ajuste (motivo «Conteo físico», con referencia al conteo) por cada variante
+         *     con diferencia, todos o ninguno. Las variantes sin contar no se ajustan. Los ajustes siguen la regla de stock
+         *     negativo de la empresa.
+         */
+        post: operations["approveStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock-counts/{stockCountId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancelar un conteo
+         * @description Cierra el conteo sin ajustar el stock.
+         */
+        post: operations["cancelStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales": {
         parameters: {
             query?: never;
@@ -1715,7 +1909,7 @@ export interface components {
         };
         DocumentRef: {
             /** @enum {string} */
-            kind: "purchase" | "sale" | "transfer";
+            kind: "purchase" | "sale" | "transfer" | "stock_count";
             /** Format: uuid */
             id: string;
         };
@@ -1736,7 +1930,7 @@ export interface components {
             /** Format: uuid */
             location_id: string;
             /** @enum {string} */
-            type: "purchase_in" | "sale_out" | "sale_void" | "adjustment" | "transfer_out" | "transfer_in";
+            type: "purchase_in" | "initial_in" | "sale_out" | "sale_void" | "adjustment" | "transfer_out" | "transfer_in";
             quantity: components["schemas"]["SignedQuantity"];
             unit_cost?: components["schemas"]["Money"];
             balance_after: components["schemas"]["SignedQuantity"];
@@ -1756,6 +1950,138 @@ export interface components {
             items: components["schemas"]["StockMovement"][];
             /** @description Cantidad total de movimientos que cumplen el filtro, sin paginar. */
             total: number;
+        };
+        /**
+         * @description Abierto mientras se cuenta; luego aprobado (sus ajustes están en el kardex) o cancelado.
+         * @enum {string}
+         */
+        StockCountStatus: "open" | "approved" | "canceled";
+        /**
+         * @description Qué pasa si dos personas cuentan la misma variante: `sum` suma lo de ambas (contaron partes distintas);
+         *     `review` exige que coincidan y, si no, la marca para recontar.
+         * @enum {string}
+         */
+        StockCountMode: "sum" | "review";
+        /** @description Un conteo nuevo. Sin `mode`, se usa `sum`. */
+        StockCountInput: {
+            /** Format: uuid */
+            location_id: string;
+            /** @description Las categorías de un conteo parcial (con sus subcategorías). Sin ellas, el conteo es total. */
+            category_ids?: string[];
+            mode?: components["schemas"]["StockCountMode"];
+        };
+        /**
+         * @description La exactitud de un conteo. Los valores (diferencias al costo) solo se envían a quien puede ver costos:
+         *     `net_difference_value` suma las diferencias con su signo y `absolute_difference_value`, sin él.
+         */
+        StockCountSummary: {
+            lines: number;
+            counted_lines: number;
+            exact_lines: number;
+            /**
+             * @description Fracción de las líneas contadas que coincidieron (de 0 a 1). Se omite si no se contó ninguna.
+             * @example 0.9500
+             */
+            accuracy?: string;
+            net_difference_value?: components["schemas"]["SignedMoney"];
+            absolute_difference_value?: components["schemas"]["Money"];
+        };
+        /** @description Un conteo físico. Solo los aprobados traen `summary`. */
+        StockCount: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            location_id: string;
+            /** @description Vacío en un conteo total. */
+            category_ids: string[];
+            mode: components["schemas"]["StockCountMode"];
+            status: components["schemas"]["StockCountStatus"];
+            /** Format: uuid */
+            started_by: string;
+            /** Format: date-time */
+            started_at: string;
+            /**
+             * Format: uuid
+             * @description Quién lo aprobó o canceló.
+             */
+            closed_by?: string;
+            /** Format: date-time */
+            closed_at?: string;
+            /** @description Variantes en el conteo. */
+            lines: number;
+            /** @description Variantes que ya se contaron en su ronda vigente. */
+            counted_lines: number;
+            summary?: components["schemas"]["StockCountSummary"];
+        };
+        StockCountPage: {
+            items: components["schemas"]["StockCount"][];
+            /** @description Cantidad total de conteos que cumplen el filtro, sin paginar. */
+            total: number;
+        };
+        CountEntryInput: {
+            /** Format: uuid */
+            variant_id: string;
+            quantity: components["schemas"]["Quantity"];
+            /**
+             * Format: uuid
+             * @description Una unidad alternativa de la variante en la que va `quantity`. Sin ella, la unidad base.
+             */
+            unit_id?: string;
+        };
+        /** @description Lo que una persona contó de una variante, en la unidad base del producto. */
+        CountEntry: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            variant_id: string;
+            /**
+             * Format: uuid
+             * @description El producto de la variante, para mostrar su nombre.
+             */
+            product_id: string;
+            quantity: components["schemas"]["Quantity"];
+            /** Format: uuid */
+            counted_by: string;
+            /** Format: date-time */
+            counted_at: string;
+        };
+        CountEntryPage: {
+            items: components["schemas"]["CountEntry"][];
+            /** @description Cantidad total de conteos que cumplen el filtro, sin paginar. */
+            total: number;
+        };
+        /**
+         * @description Sin contar, coincide, con diferencia o en revisión (los contadores no coinciden).
+         * @enum {string}
+         */
+        StockCountLineStatus: "uncounted" | "exact" | "difference" | "review";
+        /**
+         * @description Una variante del conteo. `expected_quantity` es el stock al inicio más las entradas menos las salidas hasta
+         *     que se contó. `counted_quantity` y `difference` (contado − esperado) se omiten si está sin contar o en revisión,
+         *     y `difference_value` (la diferencia al costo del inicio) además si no se pueden ver costos.
+         */
+        StockCountLine: {
+            /** Format: uuid */
+            variant_id: string;
+            /**
+             * Format: uuid
+             * @description El producto de la variante, para mostrar su nombre.
+             */
+            product_id: string;
+            status: components["schemas"]["StockCountLineStatus"];
+            expected_quantity: components["schemas"]["SignedQuantity"];
+            counted_quantity?: components["schemas"]["Quantity"];
+            difference?: components["schemas"]["SignedQuantity"];
+            difference_value?: components["schemas"]["SignedMoney"];
+        };
+        StockCountLinePage: {
+            items: components["schemas"]["StockCountLine"][];
+            /** @description Cantidad total de líneas que cumplen el filtro, sin paginar. */
+            total: number;
+            summary: components["schemas"]["StockCountSummary"];
+        };
+        RecountInput: {
+            variant_ids: string[];
         };
         ReceiptInput: {
             /** Format: uuid */
@@ -2215,6 +2541,15 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description El conteo no existe (`stock_count_not_found`). */
+        StockCountNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description El recurso no existe (`code` = `not_found` u otro más específico). */
         NotFound: {
             headers: {
@@ -2264,6 +2599,8 @@ export interface components {
         ProductId: string;
         /** @example variants */
         ModuleId: string;
+        StockCountId: string;
+        CountEntryId: string;
         VariantId: string;
         CategoryId: string;
         UnitId: string;
@@ -4134,6 +4471,405 @@ export interface operations {
              *     `location_not_found`, `location_inactive`).
              */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listStockCounts: {
+        parameters: {
+            query?: {
+                /** @description Solo los conteos de esta sede. */
+                location_id?: string;
+                /** @description Solo los conteos en este estado. */
+                status?: components["schemas"]["StockCountStatus"];
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de conteos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockCountPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    startStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockCountInput"];
+            };
+        };
+        responses: {
+            /** @description El conteo abierto. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockCount"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description La sede ya tiene un conteo abierto (`stock_count_in_progress`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description La sede no existe o está inactiva (`location_not_found`, `location_inactive`), o una categoría no existe
+             *     (`category_not_found`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El conteo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockCount"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["StockCountNotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listCountEntries: {
+        parameters: {
+            query?: {
+                /** @description Solo lo contado de esta variante. */
+                variant_id?: string;
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de conteos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CountEntryPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["StockCountNotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    recordCountEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CountEntryInput"];
+            };
+        };
+        responses: {
+            /** @description Lo contado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CountEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["StockCountNotFound"];
+            /** @description El conteo ya se aprobó o se canceló (`stock_count_not_open`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description La variante no existe o no está en el conteo (`variant_not_found`, `variant_not_in_count`), la unidad no
+             *     es de la variante (`unit_not_available`) o la cantidad no es válida (`invalid_quantity`,
+             *     `quantity_precision`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteCountEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+                countEntryId: components["parameters"]["CountEntryId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Se borró. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Lo contó otra persona (`count_entry_not_yours`) o falta el permiso (`forbidden`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El conteo (`stock_count_not_found`) o lo contado (`count_entry_not_found`) no existen. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El conteo ya se aprobó o se canceló (`stock_count_not_open`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listStockCountLines: {
+        parameters: {
+            query?: {
+                /** @description Solo las líneas en este estado. */
+                status?: components["schemas"]["StockCountLineStatus"];
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de líneas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockCountLinePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["StockCountNotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    requestRecount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecountInput"];
+            };
+        };
+        responses: {
+            /** @description Las variantes quedaron por contar. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["StockCountNotFound"];
+            /** @description El conteo ya se aprobó o se canceló (`stock_count_not_open`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Una variante no está en el conteo (`variant_not_in_count`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    approveStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El conteo aprobado, con su exactitud. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockCount"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["StockCountNotFound"];
+            /**
+             * @description El conteo ya se cerró (`stock_count_not_open`), tiene variantes en revisión (`stock_count_needs_review`) o
+             *     un ajuste dejaría el stock negativo (`insufficient_stock`, con `details.variant_id`).
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    cancelStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stockCountId: components["parameters"]["StockCountId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El conteo cancelado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockCount"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["StockCountNotFound"];
+            /** @description El conteo ya se cerró (`stock_count_not_open`). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
