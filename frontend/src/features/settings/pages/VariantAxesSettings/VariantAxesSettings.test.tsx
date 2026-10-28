@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { apiError, json } from '@/test/fakeApi';
-import { axes } from '@/test/fixtures';
+import { axes, page } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 import { axesApi } from '../../testing/settingsApi';
 
@@ -72,9 +72,16 @@ describe('VariantAxesSettings', () => {
     expect(await api.calls(`PUT /api/v1/variant-axes/${size.id}`)[0]!.json()).toEqual({ values: ['S', 'M'] });
   });
 
-  it('borra un eje después de confirmar', async () => {
+  it('borra un eje después de confirmar y lo quita de la lista', async () => {
     const color = axes[1]!;
-    const api = axesApi({ [`DELETE /api/v1/variant-axes/${color.id}`]: new Response(null, { status: 204 }) });
+    let deleted = false;
+    const api = axesApi({
+      'GET /api/v1/variant-axes': () => json(200, page(deleted ? axes.filter((a) => a.id !== color.id) : axes)),
+      [`DELETE /api/v1/variant-axes/${color.id}`]: () => {
+        deleted = true;
+        return new Response(null, { status: 204 });
+      },
+    });
     renderApp('/configuracion/ejes');
 
     const row = within((await screen.findByRole('cell', { name: 'color' })).closest('tr')!);
@@ -84,5 +91,7 @@ describe('VariantAxesSettings', () => {
     );
 
     await waitFor(() => expect(api.calls(`DELETE /api/v1/variant-axes/${color.id}`)).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByRole('cell', { name: 'color' })).not.toBeInTheDocument());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

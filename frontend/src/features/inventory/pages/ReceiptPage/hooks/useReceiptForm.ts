@@ -6,9 +6,14 @@ import { useApiFormErrors } from '@/shared/forms/useApiFormErrors';
 import { toDecimalInput } from '@/shared/format';
 import { useToast } from '@/shared/ui';
 import { useReceiveGoods } from '../../../api/receipts';
-import { receiptErrorFields, receiptSchema, type ReceiptInput, type ReceiptValues } from '../../../model/receiptSchema';
-import { receivedMessage } from '../../../model/receivedMessage';
-import { suggestedCost } from '../../../model/suggestedCost';
+import {
+  receiptErrorFields,
+  receiptSchema,
+  type ReceiptInput,
+  type ReceiptValues,
+} from '../../../model/receipt/receiptSchema';
+import { receivedMessage } from '../../../model/receipt/receivedMessage';
+import { suggestedCost } from '../../../model/receipt/suggestedCost';
 
 export type ReceiptSetup = {
   locations: { value: string; label: string }[];

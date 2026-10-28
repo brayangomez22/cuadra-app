@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { catalogKeys, type VariantAxis } from '@/features/catalog';
 import { api } from '@/shared/api/client';
-import { unwrap } from '@/shared/api/errors';
+import { unwrap, unwrapEmpty } from '@/shared/api/errors';
 import type { components } from '@/shared/api/schema';
 
 type Schemas = components['schemas'];
@@ -30,7 +30,7 @@ export function useDeleteVariantAxis() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (axis: VariantAxis) =>
-      unwrap(await api.DELETE('/api/v1/variant-axes/{axisId}', { params: { path: { axisId: axis.id } } })),
+      unwrapEmpty(await api.DELETE('/api/v1/variant-axes/{axisId}', { params: { path: { axisId: axis.id } } })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: catalogKeys.variantAxes }),
   });
 }

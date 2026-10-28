@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { catalogKeys, type UnitOfMeasure } from '@/features/catalog';
 import { api } from '@/shared/api/client';
-import { unwrap } from '@/shared/api/errors';
+import { unwrap, unwrapEmpty } from '@/shared/api/errors';
 import type { components } from '@/shared/api/schema';
 
 type UnitInput = components['schemas']['UnitInput'];
@@ -22,7 +22,7 @@ export function useDeleteUnit() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (unit: UnitOfMeasure) =>
-      unwrap(await api.DELETE('/api/v1/units/{unitId}', { params: { path: { unitId: unit.id } } })),
+      unwrapEmpty(await api.DELETE('/api/v1/units/{unitId}', { params: { path: { unitId: unit.id } } })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: catalogKeys.units }),
   });
 }

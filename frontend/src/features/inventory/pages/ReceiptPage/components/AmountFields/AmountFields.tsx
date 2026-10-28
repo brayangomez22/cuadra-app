@@ -1,8 +1,8 @@
 import { useFormContext, useWatch } from 'react-hook-form';
 import { useFieldError } from '@/shared/forms/useFieldError';
 import { Field, Input } from '@/shared/ui';
-import { receiptHints } from '../../../../model/receiptHints';
-import type { ReceiptInput } from '../../../../model/receiptSchema';
+import { receiptHints } from '../../../../model/receipt/receiptHints';
+import type { ReceiptInput } from '../../../../model/receipt/receiptSchema';
 import styles from './AmountFields.module.scss';
 
 /** The quantity and the unit cost, both in the unit the goods arrive in. */

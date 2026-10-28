@@ -1,6 +1,6 @@
 import { variantName, type Sellable } from '@/features/catalog';
 import { formatQuantity } from '@/shared/format';
-import type { StockMovement } from '../api/types';
+import type { StockMovement } from '../../api/types';
 
 type Received = {
   item: Sellable;

@@ -48,6 +48,11 @@ export function unwrap<T>(result: { data?: T; error?: unknown; response: Respons
   throw new ApiError(result.response.status, result.error);
 }
 
+/** Like unwrap, for responses without a body (a 204 has data undefined): only an error status throws. */
+export function unwrapEmpty(result: { error?: unknown; response: Response }): void {
+  if (!result.response.ok) throw new ApiError(result.response.status, result.error);
+}
+
 /**
  * What to show for a failed request: the API's code and Spanish message, or
  * the no-connection message when the request did not reach the API.

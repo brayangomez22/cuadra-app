@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
-import { unwrap } from '@/shared/api/errors';
+import { unwrap, unwrapEmpty } from '@/shared/api/errors';
 import { inventoryKeys } from './keys';
 import { PAGE_SIZE } from './types';
 
@@ -48,11 +48,8 @@ export function useSetReorderRule(target: RuleTarget) {
 export function useDeleteReorderRule(target: RuleTarget) {
   const invalidate = useInvalidateStock();
   return useMutation({
-    // A 204 has no body (data is undefined): only an error status throws.
-    mutationFn: async () => {
-      const result = await api.DELETE('/api/v1/locations/{locationId}/reorder-rules/{variantId}', rulePath(target));
-      if (!result.response.ok) unwrap(result);
-    },
+    mutationFn: async () =>
+      unwrapEmpty(await api.DELETE('/api/v1/locations/{locationId}/reorder-rules/{variantId}', rulePath(target))),
     onSuccess: invalidate,
   });
 }

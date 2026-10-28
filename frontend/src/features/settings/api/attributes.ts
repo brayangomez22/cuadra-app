@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { catalogKeys, type AttributeDefinition } from '@/features/catalog';
 import { api } from '@/shared/api/client';
-import { unwrap } from '@/shared/api/errors';
+import { unwrap, unwrapEmpty } from '@/shared/api/errors';
 import type { components } from '@/shared/api/schema';
 
 type Schemas = components['schemas'];
@@ -31,7 +31,7 @@ export function useDeleteAttribute() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (attribute: AttributeDefinition) =>
-      unwrap(
+      unwrapEmpty(
         await api.DELETE('/api/v1/product-attributes/{attributeId}', {
           params: { path: { attributeId: attribute.id } },
         }),
