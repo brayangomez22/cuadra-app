@@ -99,8 +99,18 @@ export function aMixedSale(overrides: Partial<Sale> = {}): Sale {
   });
 }
 
-export function renderReceipt(sale = aMixedSale()) {
-  render(<Receipt sale={sale} business={business} location="Bodega principal" cashier="Ana Gómez" paper="80" />);
+/** customer is who bought, as the POS chose it; without one, the sale is to a final consumer. */
+export function renderReceipt(sale = aMixedSale(), customer?: { name: string; document: string }) {
+  render(
+    <Receipt
+      sale={sale}
+      business={business}
+      location="Bodega principal"
+      cashier="Ana Gómez"
+      customer={customer}
+      paper="80"
+    />,
+  );
   return within(screen.getByRole('article', { name: `Tirilla de la venta N.º ${sale.number}` }));
 }
 

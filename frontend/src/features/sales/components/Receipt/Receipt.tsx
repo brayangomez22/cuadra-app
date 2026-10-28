@@ -15,6 +15,8 @@ type Props = {
   location: string;
   /** The name of who charged. */
   cashier: string;
+  /** Who bought, with the document as it reads ("CC 1020304050"); without it, a final consumer. */
+  customer?: { name: string; document: string };
   /** Width of the thermal roll, in millimeters. */
   paper: Paper;
   className?: string;
@@ -25,7 +27,7 @@ type Props = {
  * are, without computing anything: the sale is the source of truth. Prices are
  * before IVA, and the IVA goes grouped by rate below the subtotal.
  */
-export function Receipt({ sale, business, location, cashier, paper, className }: Props) {
+export function Receipt({ sale, business, location, cashier, customer, paper, className }: Props) {
   const label = `Tirilla de la venta N.º ${sale.number}`;
   return (
     <article className={clsx(styles.root, className)} data-paper={paper} aria-label={label}>
@@ -41,6 +43,8 @@ export function Receipt({ sale, business, location, cashier, paper, className }:
         <Figure term="Venta N.º" value={String(sale.number)} />
         <Figure term="Fecha" value={formatDateTime(sale.confirmed_at)} />
         <Figure term="Cajero" value={cashier} />
+        <Figure term="Cliente" value={customer?.name ?? 'Consumidor final'} />
+        {customer && <Figure term="Documento" value={customer.document} />}
       </dl>
 
       <ReceiptLines lines={sale.lines} />

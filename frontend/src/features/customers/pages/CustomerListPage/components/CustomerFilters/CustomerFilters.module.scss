@@ -1,0 +1,32 @@
+@use '@/styles/abstracts' as *;
+
+// One column on a phone; on a tablet the search takes its own row above the
+// two filters; from a laptop up, the three in a row.
+.root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: end;
+
+  @include respond-to(sm) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include respond-to(lg) {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 14rem) minmax(0, 12rem);
+  }
+}
+
+.field {
+  min-inline-size: 0;
+}
+
+.search {
+  @include respond-to(sm) {
+    grid-column: 1 / -1;
+  }
+
+  @include respond-to(lg) {
+    grid-column: auto;
+  }
+}

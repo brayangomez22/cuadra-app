@@ -14,19 +14,26 @@ describe('SettingsLayout', () => {
   it('al dueño le muestra todas las secciones; los ejes, solo con el módulo variants', async () => {
     settingsApi(aUser('owner'));
     renderApp('/configuracion/unidades');
-    expect(await sections()).toEqual(['General', 'Unidades', 'Atributos', 'Módulos']);
+    expect(await sections()).toEqual(['General', 'Unidades', 'Atributos', 'Segmentos de cliente', 'Módulos']);
   });
 
   it('con el módulo variants activo aparece la sección de ejes de variante', async () => {
     settingsApi({ ...aUser('owner'), business_template: 'ropa_calzado', modules: ['variants'] });
     renderApp('/configuracion/unidades');
-    expect(await sections()).toEqual(['General', 'Unidades', 'Atributos', 'Ejes de variante', 'Módulos']);
+    expect(await sections()).toEqual([
+      'General',
+      'Unidades',
+      'Atributos',
+      'Ejes de variante',
+      'Segmentos de cliente',
+      'Módulos',
+    ]);
   });
 
   it('al administrador no le muestra la configuración de la empresa ni los módulos', async () => {
     settingsApi(aUser('admin'));
     renderApp('/configuracion/unidades');
-    expect(await sections()).toEqual(['Unidades', 'Atributos']);
+    expect(await sections()).toEqual(['Unidades', 'Atributos', 'Segmentos de cliente']);
   });
 
   it('lleva a la vista la sección actual, que en un celular puede quedar fuera de la fila', async () => {

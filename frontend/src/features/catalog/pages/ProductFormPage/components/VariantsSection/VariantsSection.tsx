@@ -1,5 +1,5 @@
+import { FormSection } from '@/shared/ui';
 import type { Product, VariantAxis } from '../../../../api/types';
-import { FormSection } from '../FormSection/FormSection';
 import { VariantEditor } from '../VariantEditor/VariantEditor';
 import { VariantList } from '../VariantList/VariantList';
 

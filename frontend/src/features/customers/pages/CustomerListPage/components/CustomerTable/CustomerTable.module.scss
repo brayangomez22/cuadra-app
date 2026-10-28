@@ -1,0 +1,22 @@
+.name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.meta {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.document {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.contact {
+  display: block;
+  overflow-wrap: anywhere;
+}

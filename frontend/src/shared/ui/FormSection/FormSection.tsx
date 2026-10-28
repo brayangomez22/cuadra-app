@@ -3,7 +3,7 @@ import styles from './FormSection.module.scss';
 
 type Props = { title: string; hint?: ReactNode; children: ReactNode };
 
-/** A section of the product form: a region named by its title. */
+/** A section of a long form (a product, a customer): a region named by its title. */
 export function FormSection({ title, hint, children }: Props) {
   const id = useId();
   return (

@@ -1,0 +1,68 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+// The results keep their room so the dialog does not jump while searching.
+.results {
+  min-block-size: var(--size-row);
+}
+
+.message {
+  color: var(--color-text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  list-style: none;
+  overflow: hidden;
+
+  // display: flex would show the empty list that aria-controls needs.
+  &[hidden] {
+    display: none;
+  }
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-block-size: var(--size-row);
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border-inline-start: 0.25rem solid transparent;
+  cursor: pointer;
+
+  @include hover {
+    background: var(--color-bg-subtle);
+  }
+
+  & + & {
+    border-block-start: 1px solid var(--color-border-default);
+  }
+
+  // The option the arrows chose: the accent bar says it, not color alone.
+  &[aria-selected='true'] {
+    border-inline-start-color: var(--color-border-accent);
+    background: var(--color-bg-subtle);
+  }
+}
+
+.name {
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}

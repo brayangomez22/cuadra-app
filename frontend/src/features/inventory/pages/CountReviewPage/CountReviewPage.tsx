@@ -26,7 +26,7 @@ export function CountReviewPage() {
     <Page
       title="Diferencias del conteo"
       description={location && `Conteo de ${location.name}`}
-      actions={open && <CloseCountActions countId={countId} />}
+      actions={open && <CloseCountActions countId={countId} nameOf={review.nameOf} onRecounted={review.showRecount} />}
     >
       <QueryState
         queries={[count, review.lines]}
@@ -50,6 +50,7 @@ export function CountReviewPage() {
                 productsById={review.productsById}
                 loadingProducts={review.products.isPending}
                 canRecount={open}
+                marked={review.marked}
               />
               <Pagination
                 label="Páginas de las diferencias"

@@ -1,10 +1,9 @@
 import { useFormContext, useWatch } from 'react-hook-form';
-import { Field, Input } from '@/shared/ui';
+import { Field, FormGrid, FormSection, Input } from '@/shared/ui';
 import { useFieldError } from '@/shared/forms/useFieldError';
 import { SelectController } from '@/shared/forms/SelectController/SelectController';
 import type { ProductFormInput } from '../../../../model/productForm/productSchema';
 import { taxRateOptions } from '../../../../model/productForm/taxRates';
-import { FormGrid, FormSection } from '../FormSection/FormSection';
 
 type Props = {
   /** With the variant matrix, the cost and price are what the variants without theirs take. */

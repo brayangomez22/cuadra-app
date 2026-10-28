@@ -1,5 +1,5 @@
 import { aUser, fakeApi, json, signedIn, type Me } from '@/test/fakeApi';
-import { attributes, axes, page, units } from '@/test/fixtures';
+import { attributes, axes, page, segments, units } from '@/test/fixtures';
 
 type Routes = Parameters<typeof fakeApi>[0];
 
@@ -28,6 +28,12 @@ export function settingsApi(user: Me) {
     'GET /api/v1/units': json(200, page(units)),
     'GET /api/v1/product-attributes': json(200, page(attributes)),
     'GET /api/v1/variant-axes': json(200, page(axes)),
+    'GET /api/v1/customer-segments': json(200, { items: segments }),
     'GET /api/v1/modules': json(200, { items: [] }),
   });
+}
+
+/** The customer segments section: a hardware store's builders and a clothing store's wholesale buyers. */
+export function segmentsApi(routes: Routes = {}) {
+  return fakeApi({ ...signedIn(), 'GET /api/v1/customer-segments': json(200, { items: segments }), ...routes });
 }

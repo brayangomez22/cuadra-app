@@ -9,10 +9,12 @@ type Props = {
   productsById: Map<string, Product>;
   loadingProducts: boolean;
   canRecount: boolean;
+  /** The line sent to recount from the approval's error. */
+  marked?: string;
 };
 
 /** One row per product of the count: those under review first, then the largest differences (the API's order). */
-export function LinesTable({ countId, lines, productsById, loadingProducts, canRecount }: Props) {
+export function LinesTable({ countId, lines, productsById, loadingProducts, canRecount, marked }: Props) {
   return (
     <Table caption="Diferencias del conteo">
       <TableHead>
@@ -35,6 +37,7 @@ export function LinesTable({ countId, lines, productsById, loadingProducts, canR
             product={productsById.get(line.product_id)}
             loading={loadingProducts}
             canRecount={canRecount}
+            marked={line.variant_id === marked}
           />
         ))}
       </TableBody>

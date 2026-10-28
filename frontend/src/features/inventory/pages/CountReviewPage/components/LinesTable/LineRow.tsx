@@ -8,10 +8,18 @@ import { lineStatusLabels } from '../../../../model/stockCount/statusLabels';
 import { RecountButton } from './RecountButton';
 import styles from './LinesTable.module.scss';
 
-type Props = { countId: string; line: StockCountLine; product?: Product; loading: boolean; canRecount: boolean };
+type Props = {
+  countId: string;
+  line: StockCountLine;
+  product?: Product;
+  loading: boolean;
+  canRecount: boolean;
+  /** The line the approval could not adjust, now sent to recount. */
+  marked?: boolean;
+};
 
 /** A product of the count: expected, counted and the difference in quantity and at cost. */
-export function LineRow({ countId, line, product, loading, canRecount }: Props) {
+export function LineRow({ countId, line, product, loading, canRecount, marked = false }: Props) {
   const status = lineStatusLabels[line.status];
   const unit = product?.unit.code;
   const amount = (value: string | undefined, signed = false) =>
@@ -19,7 +27,7 @@ export function LineRow({ countId, line, product, loading, canRecount }: Props) 
   const doubtful = line.status === 'review' || line.status === 'difference';
 
   return (
-    <TableRow>
+    <TableRow className={styles.row} aria-current={marked || undefined}>
       <TableCell>
         <VariantLabel
           product={product}
