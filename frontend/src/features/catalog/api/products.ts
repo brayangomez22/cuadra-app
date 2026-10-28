@@ -4,7 +4,7 @@ import { api } from '@/shared/api/client';
 import { unwrap } from '@/shared/api/errors';
 import { useMutationToast } from '@/shared/hooks/useMutationToast';
 import { catalogKeys } from './keys';
-import type { Product, ProductInput, ProductQuery } from './types';
+import type { Product, ProductInput, ProductQuery, ProductWithVariantsInput } from './types';
 
 export const PAGE_SIZE = 20;
 
@@ -38,6 +38,11 @@ export async function saveProduct(current: Product | undefined, body: ProductInp
       ? await api.PUT('/api/v1/products/{productId}', { params: { path: { productId: current.id } }, body })
       : await api.POST('/api/v1/products', { body }),
   );
+}
+
+/** Creates a product with all its variants in one request: all of it is stored or nothing is. */
+export async function createProductWithVariants(body: ProductWithVariantsInput) {
+  return unwrap(await api.POST('/api/v1/products-with-variants', { body }));
 }
 
 /**

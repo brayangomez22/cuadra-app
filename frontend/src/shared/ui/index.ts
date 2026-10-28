@@ -8,6 +8,7 @@ export { Dialog, DialogClose } from './Dialog';
 export { Drawer, DrawerClose } from './Drawer';
 export { EmptyState } from './EmptyState';
 export { Field, useFieldControl } from './Field';
+export { FileInput } from './FileInput';
 export { IconButton } from './IconButton';
 export * from './icons';
 export { Inline } from './Inline';

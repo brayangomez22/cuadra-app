@@ -2108,8 +2108,11 @@ export interface components {
              * @description La sede que recibe el stock inicial.
              */
             location_id: string;
-            /** @description Qué hacer con un SKU que ya está en el catálogo; si no se envía, `update`. */
-            on_existing_sku?: components["schemas"]["ExistingSkuPolicy"];
+            /**
+             * @description Qué hacer con un SKU que ya está en el catálogo (`ExistingSkuPolicy`); si no se envía, `update`.
+             * @enum {string}
+             */
+            on_existing_sku?: "update" | "skip";
         };
         /** @description Filas y productos del archivo; productos creados, actualizados y omitidos hasta ahora; errores. */
         ImportCounts: {

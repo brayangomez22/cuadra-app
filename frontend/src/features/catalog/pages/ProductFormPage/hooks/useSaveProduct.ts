@@ -4,13 +4,14 @@ import { paths } from '@/app/routes/paths';
 import { describeError } from '@/shared/api/errors';
 import { useApiFormErrors } from '@/shared/forms/useApiFormErrors';
 import { useToast } from '@/shared/ui';
-import { saveProduct, useStoreProduct } from '../../../api/products';
+import { createProductWithVariants, saveProduct, useStoreProduct } from '../../../api/products';
 import type { AttributeDefinition, Product } from '../../../api/types';
 import { defaultRow } from '../../../model/productForm/productDefaults';
 import { attributeErrorField, productErrorFields } from '../../../model/productForm/productErrorFields';
 import type { ProductFormValues, VariantRow } from '../../../model/productForm/productSchema';
 import { resolveRows, type ResolvedRow } from '../../../model/variantMatrix/resolveRows';
 import { defaultVariantInput, toProductInput } from '../../../model/productForm/toProductInput';
+import { toProductWithVariantsInput } from '../../../model/productForm/toProductWithVariantsInput';
 import { defaultVariant } from '../../../model/variants/variants';
 import type { ProductFormApi } from './useProductForm';
 import { useSaveMatrix } from './useSaveMatrix';
@@ -22,23 +23,27 @@ type Input = {
   definitions: AttributeDefinition[];
   /** The rows of the variant matrix as typed; empty without it. */
   rows: VariantRow[];
-  onPartial: (product: Product) => void;
 };
 
 /**
- * Saves the form: the product, then the rows of the variant matrix. When it
- * is all saved, it goes back to the list; when the API rejects something, it
- * marks it on its field and stays.
+ * Saves the form. A new product with the variant matrix goes with all its
+ * rows in one request; otherwise, the product and then the rows that changed.
+ * When it is all saved, it goes back to the list; when the API rejects
+ * something, it marks it on its field and stays.
  */
-export function useSaveProduct({ form, current, definitions, rows, onPartial }: Input) {
+export function useSaveProduct({ form, current, definitions, rows }: Input) {
   const navigate = useNavigate();
   const store = useStoreProduct();
   const { toast } = useToast();
   const matrix = rows.length > 0;
+  const together = matrix && !current;
   const defaultIndex = defaultRow(rows, current);
-  const fields = useMemo(() => productErrorFields({ matrix, defaultIndex }), [matrix, defaultIndex]);
+  const fields = useMemo(
+    () => productErrorFields({ matrix, defaultIndex, together }),
+    [matrix, defaultIndex, together],
+  );
   const { formError, handleError, clearFormError } = useApiFormErrors(form.setError, fields);
-  const { saveMatrix, markRows, failedVariants, clearFailed } = useSaveMatrix({ form, onPartial });
+  const { saveMatrix, markRows, failedVariants, clearFailed } = useSaveMatrix({ form });
 
   function showError(error: unknown) {
     const attribute = attributeErrorField(error, definitions);
@@ -51,6 +56,7 @@ export function useSaveProduct({ form, current, definitions, rows, onPartial }: 
     const keptPrice = current?.active === false ? defaultVariant(current).price : undefined;
     const body = toProductInput(values, defaultVariantInput(values, rows?.[defaultIndex], keptPrice));
     try {
+      if (rows && together) return await createProductWithVariants(toProductWithVariantsInput(values, rows));
       const saved = await saveProduct(current, body);
       return rows ? await saveMatrix(saved, rows, defaultIndex) : saved;
     } catch (error) {

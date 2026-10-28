@@ -3,6 +3,7 @@ import { RequireAuth } from '@/features/auth';
 import { authRoutes } from '@/features/auth/routes';
 import { catalogRoutes } from '@/features/catalog/routes';
 import { devRoutes } from '@/features/dev/routes';
+import { importRoutes } from '@/features/imports/routes';
 import { inventoryRoutes } from '@/features/inventory/routes';
 import { salesRoutes } from '@/features/sales/routes';
 import { settingsRoutes } from '@/features/settings/routes';
@@ -32,6 +33,7 @@ export const routes: RouteObject[] = [
             children: [
               { path: paths.home.pattern, element: <HomePage /> },
               ...catalogRoutes,
+              ...importRoutes,
               ...inventoryRoutes,
               ...salesRoutes,
               ...settingsRoutes,

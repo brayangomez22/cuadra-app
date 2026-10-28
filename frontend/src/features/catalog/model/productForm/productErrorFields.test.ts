@@ -26,6 +26,14 @@ describe('productErrorFields', () => {
     expect(fields.invalid_product_name).toBe('name');
   });
 
+  it('con el producto y sus variantes juntos, los códigos de variante van al mensaje del formulario', () => {
+    const fields = productErrorFields({ matrix: true, defaultIndex: 0, together: true });
+
+    expect(fields.sku_taken).toBeUndefined();
+    expect(fields.barcode_taken).toBeUndefined();
+    expect(fields.invalid_product_name).toBe('name');
+  });
+
   it('un código que no es de un campo no tiene destino', () => {
     expect(productErrorFields({ matrix: false, defaultIndex: 0 }).forbidden).toBeUndefined();
   });

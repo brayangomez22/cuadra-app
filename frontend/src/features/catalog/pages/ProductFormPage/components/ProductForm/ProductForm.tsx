@@ -1,8 +1,6 @@
-import { useState } from 'react';
 import { FormProvider, useWatch } from 'react-hook-form';
 import { paths } from '@/app/routes/paths';
 import { Badge, Button, ButtonLink, Page } from '@/shared/ui';
-import type { Product } from '../../../../api/types';
 import { useProductForm } from '../../hooks/useProductForm';
 import type { ProductFormData } from '../../hooks/useProductFormData';
 import { useSaveProduct } from '../../hooks/useSaveProduct';
@@ -15,10 +13,9 @@ import styles from './ProductForm.module.scss';
 export function ProductForm({ data }: { data: ProductFormData }) {
   const form = useProductForm(data);
   const rows = useWatch({ control: form.control, name: 'variants' });
-  // After saving in part or (de)activating, the product as the API answered it.
-  const [created, setCreated] = useState<Product>();
-  const current = created ?? data.product;
-  const save = useSaveProduct({ form, current, definitions: data.definitions, rows, onPartial: setCreated });
+  // Saving or (de)activating keeps the product the API answered in the cache, and data.product with it.
+  const current = data.product;
+  const save = useSaveProduct({ form, current, definitions: data.definitions, rows });
   return (
     <Page
       title={current ? 'Editar producto' : 'Nuevo producto'}
@@ -30,14 +27,7 @@ export function ProductForm({ data }: { data: ProductFormData }) {
           </span>
         )
       }
-      actions={
-        current && (
-          <ProductStatusButton
-            product={current}
-            onChange={(updated) => setCreated((previous) => previous && updated)}
-          />
-        )
-      }
+      actions={current && <ProductStatusButton product={current} />}
     >
       <FormProvider {...form}>
         <form className={styles.root} noValidate onSubmit={(event) => void save.submit(event)}>

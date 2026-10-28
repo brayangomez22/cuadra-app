@@ -11,3 +11,4 @@ export type AttributeDefinition = components['schemas']['AttributeDefinition'];
 export type VariantAxis = components['schemas']['VariantAxis'];
 export type ProductQuery = NonNullable<operations['listProducts']['parameters']['query']>;
 export type ProductStatus = NonNullable<ProductQuery['status']>;
+export type ProductWithVariantsInput = components['schemas']['ProductWithVariantsInput'];

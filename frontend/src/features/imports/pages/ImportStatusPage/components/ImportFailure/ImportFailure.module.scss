@@ -1,0 +1,12 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}

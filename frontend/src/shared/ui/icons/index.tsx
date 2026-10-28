@@ -1,5 +1,6 @@
 import { createIcon } from './createIcon';
 
+export { IconDownload, IconUpload } from './fileIcons';
 export { IconCamera, IconFlashlight } from './scannerIcons';
 
 export const IconClose = createIcon(<path d="M18 6 6 18M6 6l12 12" />);

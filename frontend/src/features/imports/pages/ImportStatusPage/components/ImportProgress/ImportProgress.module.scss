@@ -1,0 +1,48 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-inline-size: var(--size-form-wide);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.bar {
+  inline-size: 100%;
+  block-size: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--color-bg-subtle);
+  accent-color: var(--color-action-primary);
+  appearance: none;
+
+  &::-webkit-progress-bar {
+    background: var(--color-bg-subtle);
+  }
+
+  &::-webkit-progress-value {
+    background: var(--color-action-primary);
+  }
+
+  &::-moz-progress-bar {
+    background: var(--color-action-primary);
+  }
+}
+
+.text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  @include numeric;
+}
+
+.hint {
+  color: var(--color-text-muted);
+}

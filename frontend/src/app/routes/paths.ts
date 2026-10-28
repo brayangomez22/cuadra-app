@@ -45,6 +45,10 @@ export const paths = {
     new: route('/productos/nuevo'),
     edit: route('/productos/:productId/editar'),
   },
+  imports: {
+    new: route('/productos/importar'),
+    status: route('/productos/importar/:importId'),
+  },
   inventory: {
     stock: route('/inventario', ['sede']),
     receipt: route('/inventario/entrada', ['producto', 'variante', 'sede']),

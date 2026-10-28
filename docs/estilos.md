@@ -292,6 +292,7 @@ Se importan desde `@/shared/ui`. El catálogo visual con todos los estados está
 | `IconButton` | `label` obligatorio: es el nombre accesible y el tooltip. |
 | `Field` | Label, control, ayuda (`hint`) y error. Asocia el label y describe el control con la ayuda y el error (`aria-describedby`, `aria-invalid`). El error lleva ícono y texto. Los campos son obligatorios por defecto: `optional` agrega «(opcional)» al label. Un control propio se conecta con `useFieldControl(props)`. |
 | `Input` | `align="end"` para precios y cantidades. |
+| `FileInput` | El selector de archivo nativo (el navegador muestra el nombre elegido y, en el celular, ofrece la cámara o los archivos), con el aspecto de los controles, dentro de un `Field`. `onFile(file \| null)` entrega un solo archivo; `accept` filtra lo que se ofrece, pero la validación de la extensión y el tamaño va en el esquema del formulario. |
 | `Textarea` | Texto de varias líneas (una descripción), dentro de un `Field` como `Input`. |
 | `Select` | Radix Select: `options`, `value` u `defaultValue`, `onValueChange`, `placeholder`. |
 | `Checkbox` | Nativo, con `label` y `hint` propios (no va dentro de `Field`). |
@@ -308,7 +309,7 @@ Se importan desde `@/shared/ui`. El catálogo visual con todos los estados está
 | `Badge` | `tone` `neutral`, `success`, `warning`, `danger` o `info`. El texto debe decir el estado por sí solo. |
 | `EmptyState` | `icon`, `title`, `description`, `action` y `headingLevel`. |
 | `Spinner` / `Skeleton` | `Spinner` anuncia "Cargando…" (o su `label`); `decorative` si el control ya anuncia `aria-busy`. `Skeleton` es decorativo. |
-| Íconos | `IconClose`, `IconCheck`, `IconChevronDown`, `IconPlus`, `IconSearch`, `IconAlert`, `IconInfo`, `IconSuccess`, `IconBox`, `IconMenu`, `IconLogout`, `IconHome`, `IconCart`, `IconTag`, `IconCash`, `IconSettings`, `IconEdit`, `IconTrash`, `IconCamera` e `IconFlashlight`: SVG propios de 1em en `currentColor`, siempre decorativos. Un ícono nuevo se agrega en `shared/ui/icons` con `createIcon`, en `index.tsx` o en un archivo por tema (`scannerIcons.tsx`). |
+| Íconos | `IconClose`, `IconCheck`, `IconChevronDown`, `IconPlus`, `IconSearch`, `IconAlert`, `IconInfo`, `IconSuccess`, `IconBox`, `IconMenu`, `IconLogout`, `IconHome`, `IconCart`, `IconTag`, `IconCash`, `IconSettings`, `IconEdit`, `IconTrash`, `IconCamera`, `IconFlashlight`, `IconUpload` e `IconDownload`: SVG propios de 1em en `currentColor`, siempre decorativos. Un ícono nuevo se agrega en `shared/ui/icons` con `createIcon`, en `index.tsx` o en un archivo por tema (`scannerIcons.tsx`, `fileIcons.tsx`). |
 
 ## 7. Particularidades de este producto
 

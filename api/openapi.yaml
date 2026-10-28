@@ -4055,10 +4055,12 @@ components:
           format: uuid
           description: La sede que recibe el stock inicial.
         on_existing_sku:
-          # No default: the validator cannot rewrite a multipart body with it.
-          allOf:
-            - $ref: "#/components/schemas/ExistingSkuPolicy"
-          description: Qué hacer con un SKU que ya está en el catálogo; si no se envía, `update`.
+          # The values of ExistingSkuPolicy, inline: the validator cannot decode a multipart
+          # field declared with allOf or $ref, and rejects the whole form. No default: it
+          # cannot rewrite a multipart body with it.
+          type: string
+          enum: [update, skip]
+          description: Qué hacer con un SKU que ya está en el catálogo (`ExistingSkuPolicy`); si no se envía, `update`.
     ImportCounts:
       type: object
       required: [rows, products, created, updated, skipped, errors]

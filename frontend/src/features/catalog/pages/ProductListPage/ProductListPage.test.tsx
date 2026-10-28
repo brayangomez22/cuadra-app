@@ -148,6 +148,25 @@ describe('ProductListPage', () => {
     expect(screen.queryByRole('link', { name: 'Nuevo producto' })).not.toBeInTheDocument();
   });
 
+  it('el botón de importar solo aparece con el permiso imports:run', async () => {
+    fakeApi({ ...signedIn(), 'GET /api/v1/products': json(200, page([aProduct()])) });
+    renderApp('/productos');
+
+    expect(await screen.findByRole('link', { name: 'Importar desde Excel' })).toHaveAttribute(
+      'href',
+      '/productos/importar',
+    );
+  });
+
+  it('el bodeguero no ve el botón de importar', async () => {
+    fakeApi({ ...signedIn(aUser('warehouse')), 'GET /api/v1/products': json(200, page([aProduct()])) });
+    renderApp('/productos');
+
+    await productsTable();
+
+    expect(screen.queryByRole('link', { name: 'Importar desde Excel' })).not.toBeInTheDocument();
+  });
+
   it('muestra un error con la opción de reintentar si la API falla', async () => {
     let attempt = 0;
     fakeApi({
