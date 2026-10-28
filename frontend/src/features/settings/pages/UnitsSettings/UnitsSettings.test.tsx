@@ -78,9 +78,16 @@ describe('UnitsSettings', () => {
     expect(await api.calls(`PUT /api/v1/units/${meters.id}`)[0]!.json()).toEqual({ code: 'm', name: 'Metro lineal' });
   });
 
-  it('borra una unidad después de confirmar', async () => {
+  it('borra una unidad después de confirmar y la quita de la lista', async () => {
     const bulto = unitOf('bulto');
-    const api = unitsApi({ [`DELETE /api/v1/units/${bulto.id}`]: new Response(null, { status: 204 }) });
+    let deleted = false;
+    const api = unitsApi({
+      'GET /api/v1/units': () => json(200, page(deleted ? units.filter((u) => u.id !== bulto.id) : units)),
+      [`DELETE /api/v1/units/${bulto.id}`]: () => {
+        deleted = true;
+        return new Response(null, { status: 204 });
+      },
+    });
     renderApp('/configuracion/unidades');
 
     await userEvent.click((await row('Bulto')).getByRole('button', { name: 'Borrar Bulto' }));
@@ -90,6 +97,8 @@ describe('UnitsSettings', () => {
     );
 
     await waitFor(() => expect(api.calls(`DELETE /api/v1/units/${bulto.id}`)).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByRole('cell', { name: 'Bulto' })).not.toBeInTheDocument());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('una unidad en uso no se borra y explica por qué', async () => {

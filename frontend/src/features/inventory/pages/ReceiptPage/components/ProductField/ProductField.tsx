@@ -1,6 +1,6 @@
 import { Controller, useFormContext } from 'react-hook-form';
 import { ProductPicker, type Sellable } from '@/features/catalog';
-import type { ReceiptInput } from '../../../../model/receiptSchema';
+import type { ReceiptInput } from '../../../../model/receipt/receiptSchema';
 
 /** The product (a variant, or one of its units by barcode); once picked, the quantity is next. */
 export function ProductField({ onChange }: { onChange: (item: Sellable | null) => void }) {

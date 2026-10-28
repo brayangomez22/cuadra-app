@@ -16,5 +16,5 @@ Las existencias por sede, el kardex de cada variante, las entradas de mercancía
 - `api/`: `locations`, `stock`, `kardex`, `receipts` y `reorder`, con `keys` y `types`. La caché solo vive aquí: crear una sede relee la lista, y una entrada o un cambio del mínimo y el máximo invalidan todo el inventario.
 - `components/`: `CreateLocationDialog` (lo usan la página y su estado vacío, con `hooks/useCreateLocationForm`), `VariantLabel` (nombre, enlace al kardex y SKU de una fila) y `ReorderSummary`.
 - `hooks/`: `useStockLocation` (sede y página en la URL) y `useRowProducts` (los nombres de una página de filas en una sola petición), que comparten las existencias y lo que hay por reponer.
-- `model/`: `shownLocation` y `shownVariant` (qué muestra la URL), `rowVariant`, `receiptSchema`, `suggestedCost`, `receiptHints` y `receivedMessage` (la entrada), `movementLabels` y `reorder/reorderRuleSchema`.
+- `model/`: `shownLocation` y `shownVariant` (qué muestra la URL), `rowVariant` y `movementLabels`; `receipt/` (la entrada: `receiptSchema`, `suggestedCost`, `receiptHints` y `receivedMessage`) y `reorder/reorderRuleSchema`.
 - `testing/`: `fixtures` (`aStockLevel`, `aMovement`, `withoutCosts`), `reorderApi` (`aReorderAlert`, `aReorderRule`), `receiptApi` y `receiptSteps`. `aLocation` sigue en `src/test/fixtures.ts` porque lo usan las ventas.

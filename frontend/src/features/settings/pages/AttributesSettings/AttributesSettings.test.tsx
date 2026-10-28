@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { apiError, json } from '@/test/fakeApi';
-import { attributes } from '@/test/fixtures';
+import { attributes, page } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 import { attributesApi } from '../../testing/settingsApi';
 
@@ -134,10 +134,16 @@ describe('AttributesSettings', () => {
     expect(await dialog.findByText('Hay productos con la opción PVC del atributo Material.')).toBeInTheDocument();
   });
 
-  it('borra un atributo después de confirmar', async () => {
+  it('borra un atributo después de confirmar y lo quita de la lista', async () => {
     const weight = attributes[2]!;
+    let deleted = false;
     const api = attributesApi({
-      [`DELETE /api/v1/product-attributes/${weight.id}`]: new Response(null, { status: 204 }),
+      'GET /api/v1/product-attributes': () =>
+        json(200, page(deleted ? attributes.filter((a) => a.id !== weight.id) : attributes)),
+      [`DELETE /api/v1/product-attributes/${weight.id}`]: () => {
+        deleted = true;
+        return new Response(null, { status: 204 });
+      },
     });
     renderApp('/configuracion/atributos');
 
@@ -148,5 +154,7 @@ describe('AttributesSettings', () => {
     );
 
     await waitFor(() => expect(api.calls(`DELETE /api/v1/product-attributes/${weight.id}`)).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByRole('cell', { name: 'Peso' })).not.toBeInTheDocument());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

@@ -3,7 +3,7 @@ import type { Sellable } from '@/features/catalog';
 import { useFieldError } from '@/shared/forms/useFieldError';
 import { formatQuantity } from '@/shared/format';
 import { Field, Select } from '@/shared/ui';
-import type { ReceiptInput } from '../../../../model/receiptSchema';
+import type { ReceiptInput } from '../../../../model/receipt/receiptSchema';
 
 // The Select's value for the product's unit: a unit id is never empty.
 const BASE_UNIT = 'base';

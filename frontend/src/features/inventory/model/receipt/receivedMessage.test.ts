@@ -1,6 +1,6 @@
 import { defaultVariant } from '@/features/catalog';
 import { aGarment, aProduct, boxOf12, unitOf, variantId, withUnits } from '@/test/fixtures';
-import { aMovement } from '../testing/fixtures';
+import { aMovement } from '../../testing/fixtures';
 import { receivedMessage } from './receivedMessage';
 
 const tubes = withUnits(aProduct(), [boxOf12]);
