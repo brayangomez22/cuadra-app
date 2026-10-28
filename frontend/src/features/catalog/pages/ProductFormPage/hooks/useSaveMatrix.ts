@@ -5,14 +5,8 @@ import type { Product } from '../../../api/types';
 import type { ResolvedRow, RowError } from '../../../model/variantMatrix/resolveRows';
 import type { ProductFormApi } from './useProductForm';
 
-type Input = {
-  form: ProductFormApi;
-  /** A new product whose variants failed in part exists already: saving again edits it. */
-  onPartial: (product: Product) => void;
-};
-
-/** Saves the variant matrix after the product and marks the rows the API rejected. */
-export function useSaveMatrix({ form, onPartial }: Input) {
+/** Saves the variant matrix of a product that exists and marks the rows the API rejected. */
+export function useSaveMatrix({ form }: { form: ProductFormApi }) {
   const store = useStoreProduct();
   const [failedVariants, setFailedVariants] = useState(0);
   const { setError, setValue } = form;
@@ -31,7 +25,6 @@ export function useSaveMatrix({ form, onPartial }: Input) {
     });
     if (result.errors.length === 0) return result.product;
     store(result.product);
-    onPartial(result.product);
     setFailedVariants(result.errors.length);
     markRows(result.errors);
     return undefined;

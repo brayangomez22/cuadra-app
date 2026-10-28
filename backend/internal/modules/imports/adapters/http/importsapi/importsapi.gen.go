@@ -22,16 +22,16 @@ import (
 
 // Defines values for ExistingSkuPolicy.
 const (
-	Skip   ExistingSkuPolicy = "skip"
-	Update ExistingSkuPolicy = "update"
+	ExistingSkuPolicySkip   ExistingSkuPolicy = "skip"
+	ExistingSkuPolicyUpdate ExistingSkuPolicy = "update"
 )
 
 // Valid indicates whether the value is a known member of the ExistingSkuPolicy enum.
 func (e ExistingSkuPolicy) Valid() bool {
 	switch e {
-	case Skip:
+	case ExistingSkuPolicySkip:
 		return true
-	case Update:
+	case ExistingSkuPolicyUpdate:
 		return true
 	default:
 		return false
@@ -80,6 +80,24 @@ func (e ImportStatus) Valid() bool {
 	case Running:
 		return true
 	case Validated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportUploadOnExistingSku.
+const (
+	ImportUploadOnExistingSkuSkip   ImportUploadOnExistingSku = "skip"
+	ImportUploadOnExistingSkuUpdate ImportUploadOnExistingSku = "update"
+)
+
+// Valid indicates whether the value is a known member of the ImportUploadOnExistingSku enum.
+func (e ImportUploadOnExistingSku) Valid() bool {
+	switch e {
+	case ImportUploadOnExistingSkuSkip:
+		return true
+	case ImportUploadOnExistingSkuUpdate:
 		return true
 	default:
 		return false
@@ -196,9 +214,12 @@ type ImportUpload struct {
 	// LocationId La sede que recibe el stock inicial.
 	LocationId openapi_types.UUID `json:"location_id"`
 
-	// OnExistingSku Qué hacer con un SKU que ya está en el catálogo; si no se envía, `update`.
-	OnExistingSku *ExistingSkuPolicy `json:"on_existing_sku,omitempty"`
+	// OnExistingSku Qué hacer con un SKU que ya está en el catálogo (`ExistingSkuPolicy`); si no se envía, `update`.
+	OnExistingSku *ImportUploadOnExistingSku `json:"on_existing_sku,omitempty"`
 }
+
+// ImportUploadOnExistingSku Qué hacer con un SKU que ya está en el catálogo (`ExistingSkuPolicy`); si no se envía, `update`.
+type ImportUploadOnExistingSku string
 
 // ImportVariantPreview defines model for ImportVariantPreview.
 type ImportVariantPreview struct {

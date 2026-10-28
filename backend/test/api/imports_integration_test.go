@@ -61,15 +61,22 @@ func (f *importFlow) do(t *testing.T, method, path, contentType, body string) *h
 }
 
 type importBody struct {
-	ID     string `json:"id"`
-	Status string `json:"status"`
-	Counts struct {
+	ID            string `json:"id"`
+	Status        string `json:"status"`
+	OnExistingSKU string `json:"on_existing_sku"`
+	Counts        struct {
 		Rows, Products, Created, Updated, Skipped, Errors int
 	} `json:"counts"`
 }
 
 // upload sends a CSV file and returns the preview.
 func (f *importFlow) upload(t *testing.T, csv string) (importBody, []map[string]any) {
+	t.Helper()
+	return f.uploadWith(t, csv, "")
+}
+
+// uploadWith uploads the file with the form's on_existing_sku, when policy is not empty.
+func (f *importFlow) uploadWith(t *testing.T, csv, policy string) (importBody, []map[string]any) {
 	t.Helper()
 	var buf bytes.Buffer
 	form := multipart.NewWriter(&buf)
@@ -78,6 +85,9 @@ func (f *importFlow) upload(t *testing.T, csv string) (importBody, []map[string]
 	_, err = part.Write([]byte(csv))
 	require.NoError(t, err)
 	require.NoError(t, form.WriteField("location_id", f.locationID))
+	if policy != "" {
+		require.NoError(t, form.WriteField("on_existing_sku", policy))
+	}
 	require.NoError(t, form.Close())
 
 	rec := f.do(t, http.MethodPost, "/api/v1/imports", form.FormDataContentType(), buf.String())
@@ -161,6 +171,10 @@ func TestImportFlow(t *testing.T) {
 		require.Equal(t, 2, redone.Counts.Updated)
 		stock = f.do(t, http.MethodGet, "/api/v1/locations/"+f.locationID+"/stock?variant_id="+page.Items[0].Variants[0].ID, "", "")
 		require.Contains(t, stock.Body.String(), `"quantity":"10"`, "the initial stock is not received twice")
+
+		skipped, _ := f.uploadWith(t, file, "skip")
+		require.Equal(t, "skip", skipped.OnExistingSKU)
+		require.Equal(t, 2, f.run(t, skipped.ID, 30*time.Second).Counts.Skipped)
 	})
 }
 

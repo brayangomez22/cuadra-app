@@ -205,7 +205,7 @@ En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`: las tablas de l
 **Pendientes que entran a esta tarea:** P49, P58 y P79 (`docs/plan/pendientes.md`).
 **Tests primero:** filas inválidas se reportan sin importar las válidas a medias (todo o nada por lote); un SKU duplicado actualiza en vez de duplicar (configurable); 10.000 filas se procesan sin agotar memoria; un archivo con variantes crea un producto con sus N variantes; un atributo obligatorio vacío se reporta como error de la fila.
 
-### [ ] T29a · Frontend de la importación
+### [x] T29a · Frontend de la importación
 **Depende de:** T29.
 **Alcance:** la pantalla de la importación inicial sobre la API de T29 (dividida de T29 por tamaño): asistente para descargar la plantilla (`.xlsx` o `.csv`), elegir la sede y qué hacer con los SKU existentes, subir el archivo, previsualizar los primeros productos y los errores por fila, confirmar, seguir el avance y ver el reporte final con todos los errores. Y el formulario de producto con variantes deja de reconciliar varias requests y usa `POST /products-with-variants`.
 **Pendientes que entran a esta tarea:** P80 (`docs/plan/pendientes.md`).

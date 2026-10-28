@@ -27,15 +27,28 @@ const productFieldByCode: Record<string, Path<ProductFormInput>> = {
   invalid_tax_rate: 'tax_rate',
 };
 
+type Options = {
+  matrix: boolean;
+  defaultIndex: number;
+  /**
+   * The product and its variants go in one request (POST /products-with-variants):
+   * the API does not say which variant an error is of, so their codes go to
+   * the form's message.
+   */
+  together?: boolean;
+};
+
 /**
  * The field of each error code of saving a product. With the variant matrix,
  * the default variant's fields are those of its row.
  */
-export function productErrorFields({ matrix, defaultIndex }: { matrix: boolean; defaultIndex: number }) {
-  const variantFields = Object.entries(variantFieldByCode).map(([code, field]) => [
-    code,
-    matrix ? (`variants.${String(defaultIndex)}.${field}` as const) : field,
-  ]);
+export function productErrorFields({ matrix, defaultIndex, together = false }: Options) {
+  const variantFields = together
+    ? []
+    : Object.entries(variantFieldByCode).map(([code, field]) => [
+        code,
+        matrix ? (`variants.${String(defaultIndex)}.${field}` as const) : field,
+      ]);
   return { ...productFieldByCode, ...Object.fromEntries(variantFields) } as FieldsByErrorCode<ProductFormInput>;
 }
 

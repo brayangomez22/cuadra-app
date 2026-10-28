@@ -10,12 +10,19 @@ export function toProductInput(values: ProductFormValues, variant: DefaultVarian
   return {
     sku: variant.sku,
     ...(variant.barcode && { barcode: variant.barcode }),
+    ...productFields(values),
+    cost: variant.cost,
+    price: variant.price,
+  };
+}
+
+/** The fields of the product itself, without those of its variants. */
+export function productFields(values: ProductFormValues) {
+  return {
     name: values.name,
     ...(values.description && { description: values.description }),
     category_id: values.category_id === NO_CATEGORY ? null : values.category_id,
     base_unit_id: values.base_unit_id,
-    cost: variant.cost,
-    price: variant.price,
     tax_rate: values.tax_rate,
     // The values replace the product's: an optional attribute left empty has none.
     attributes: Object.fromEntries(Object.entries(values.attributes).filter(([, value]) => value !== '')),

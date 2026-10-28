@@ -1,0 +1,6 @@
+@use '@/styles/abstracts' as *;
+
+.loading {
+  align-self: center;
+  padding-block: var(--space-8);
+}

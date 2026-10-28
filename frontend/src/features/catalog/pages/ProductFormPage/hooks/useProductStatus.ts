@@ -1,18 +1,11 @@
 import { useSetProductStatus } from '../../../api/products';
 import type { Product } from '../../../api/types';
 
-type Input = {
-  current?: Product;
-  /** Called with the product as the API answered it. */
-  onChange: (product: Product) => void;
-};
-
-/** Activates an inactive product or deactivates an active one. */
-export function useProductStatus({ current, onChange }: Input) {
+/** Activates an inactive product or deactivates an active one; the product in the cache shows the change. */
+export function useProductStatus(current: Product) {
   const status = useSetProductStatus();
   function toggle() {
-    if (!current) return;
-    status.mutate({ id: current.id, active: !current.active }, { onSuccess: onChange });
+    status.mutate({ id: current.id, active: !current.active });
   }
   return { toggle, isPending: status.isPending };
 }

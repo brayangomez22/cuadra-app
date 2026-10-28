@@ -72,6 +72,7 @@ const permissionsByRole: Record<Me['role'], string[]> = {
   owner: [
     'catalog:read',
     'catalog:write',
+    'imports:run',
     'inventory:read',
     'inventory:adjust',
     'sales:create',
@@ -84,6 +85,7 @@ const permissionsByRole: Record<Me['role'], string[]> = {
   admin: [
     'catalog:read',
     'catalog:write',
+    'imports:run',
     'inventory:read',
     'inventory:adjust',
     'sales:create',

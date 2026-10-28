@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { newBusiness } from '../support/business';
+import { chooseOption, createLocation, signUp } from '../support/signUp';
 
 // The critical flow of Cuadra, end to end: a business signs up, signs in again,
 // creates a product, receives stock, sells with a mixed payment and finds the
@@ -48,15 +49,7 @@ for (const flow of flows) {
         : { name: flow.product.name, sku: flow.product.sku };
 
       await test.step('registro', async () => {
-        await page.goto('/registro');
-        await page.getByLabel('Nombre de la empresa').fill(business.tenantName);
-        await page.getByLabel('NIT', { exact: true }).fill(business.nit);
-        await page.getByLabel('Su nombre').fill(business.ownerName);
-        await page.getByLabel('Correo', { exact: true }).fill(business.email);
-        await page.getByLabel('Contraseña', { exact: true }).fill(business.password);
-        await page.getByRole('radio', { name: flow.template }).check();
-        await page.getByRole('button', { name: 'Crear cuenta' }).click();
-        await expect(page).toHaveURL('/');
+        await signUp(page, business, flow.template);
         await page.getByRole('button', { name: 'Cerrar sesión' }).click();
         await expect(page.getByRole('heading', { name: 'Ingresar a Cuadra' })).toBeVisible();
       });
@@ -87,10 +80,7 @@ for (const flow of flows) {
       });
 
       await test.step('registrar entrada de inventario', async () => {
-        await page.goto('/inventario');
-        await page.getByRole('button', { name: 'Crear sede' }).click();
-        await page.getByLabel('Nombre de la sede').fill('Principal');
-        await page.getByRole('dialog').getByRole('button', { name: 'Crear sede' }).click();
+        await createLocation(page, 'Principal');
         await page.getByRole('link', { name: 'Registrar entrada' }).first().click();
         await page.getByLabel('Producto', { exact: true }).fill(sold.sku);
         await page.getByRole('list', { name: 'Resultados' }).getByRole('button', { name: sold.name }).click();
@@ -148,12 +138,6 @@ for (const flow of flows) {
       });
     });
   });
-}
-
-/** Picks an option of a Radix Select by the label of its field. */
-async function chooseOption(page: Page, label: string, option: RegExp) {
-  await page.getByRole('combobox', { name: label }).click();
-  await page.getByRole('option', { name: option }).click();
 }
 
 function escape(text: string): string {

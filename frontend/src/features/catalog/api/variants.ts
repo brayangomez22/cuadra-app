@@ -1,6 +1,6 @@
-// Saving the variant matrix. Creating a product with variants takes several
-// requests (docs/decisiones.md, T24i): the product with its default variant,
-// the default variant's axes and one request per new variant. Each row is
+// Saving the variant matrix of a product that exists. A new product comes
+// with all its variants in one request (createProductWithVariants, T29); an
+// edit takes one request per variant that changes or is added. Each row is
 // reconciled with the product (model/variantTarget), so after a partial
 // failure saving again only sends what is missing.
 import { api } from '@/shared/api/client';

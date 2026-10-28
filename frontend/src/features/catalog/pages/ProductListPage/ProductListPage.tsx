@@ -1,8 +1,8 @@
-import { paths } from '@/app/routes/paths';
 import { useCan } from '@/features/auth';
 import { QueryState } from '@/shared/query';
-import { ButtonLink, IconPlus, Page, Pagination, Spinner } from '@/shared/ui';
+import { Page, Pagination, Spinner } from '@/shared/ui';
 import { PAGE_SIZE, useProducts } from '../../api/products';
+import { ProductListActions } from './components/ProductListActions/ProductListActions';
 import { NoProducts } from './components/NoProducts/NoProducts';
 import { ProductFilters } from './components/ProductFilters/ProductFilters';
 import { ProductTable } from './components/ProductTable/ProductTable';
@@ -13,6 +13,7 @@ import styles from './ProductListPage.module.scss';
 export function ProductListPage() {
   const can = useCan();
   const canWrite = can('catalog:write');
+  const canImport = can('imports:run');
   const params = useProductListParams();
   const { q, status, offset } = params;
   const products = useProducts({ q: q || undefined, status, limit: PAGE_SIZE, offset });
@@ -20,13 +21,7 @@ export function ProductListPage() {
     <Page
       title="Productos"
       description="Su catálogo: precios, IVA y unidades."
-      actions={
-        canWrite && (
-          <ButtonLink to={paths.products.new()} icon={<IconPlus />}>
-            Nuevo producto
-          </ButtonLink>
-        )
-      }
+      actions={(canWrite || canImport) && <ProductListActions canWrite={canWrite} canImport={canImport} />}
     >
       <ProductFilters
         text={params.text}

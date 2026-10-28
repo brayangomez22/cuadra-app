@@ -5,7 +5,7 @@ Los productos y sus variantes: la lista, el formulario (con atributos, matriz de
 ## Páginas (`pages.ts`, que `routes.tsx` carga en diferido)
 
 - `ProductListPage` (`/productos`): búsqueda, filtro de estado y páginas en la URL (`useProductListParams`).
-- `ProductFormPage` (`/productos/nuevo`, `/productos/:id/editar`): `useProductFormData` carga todo y `ProductForm` compone las secciones (`GeneralSection`, `AttributesSection`, `PriceSection`, `VariantsSection`, `UnitsSection`). `useSaveProduct` guarda el producto y reconcilia la matriz (`useSaveMatrix`).
+- `ProductFormPage` (`/productos/nuevo`, `/productos/:id/editar`): `useProductFormData` carga todo y `ProductForm` compone las secciones (`GeneralSection`, `AttributesSection`, `PriceSection`, `VariantsSection`, `UnitsSection`). `useSaveProduct` crea un producto nuevo con su matriz en una sola request (`POST /products-with-variants`); al editar, guarda el producto y reconcilia la matriz variante por variante (`useSaveMatrix`).
 
 ## API pública (`index.ts`)
 
