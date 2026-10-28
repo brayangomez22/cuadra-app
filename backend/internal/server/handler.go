@@ -37,6 +37,10 @@ type handlerConfig struct {
 	Routes []func(*http.ServeMux)
 }
 
+// maxRequestBytes is the largest request body the API reads: an import's
+// file (10 MB) and its form.
+const maxRequestBytes = 11 << 20
+
 // newHandler builds the API's routes and middleware chain. otelhttp is the
 // outermost layer so every log written while serving a request carries its
 // trace context.
@@ -89,7 +93,7 @@ func newHandler(cfg handlerConfig) (http.Handler, error) {
 	if cfg.Docs {
 		apispec.RegisterDocs(root)
 	}
-	root.Handle("/", enforce(gate(validate(api))))
+	root.Handle("/", enforce(gate(httpx.LimitBody(maxRequestBytes)(validate(api)))))
 
 	handler := httpx.RequestID(httpx.Logging(cfg.Log)(httpx.Recover(cfg.Log)(root)))
 	traced := otelhttp.NewHandler(handler, "http.server", otelhttp.WithTracerProvider(cfg.TracerProvider))

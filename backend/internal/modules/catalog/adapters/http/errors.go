@@ -14,6 +14,9 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrSKUTaken, Status: http.StatusConflict, Code: "sku_taken", Message: "Ya existe un producto o una variante con ese SKU."},
 	{Err: domain.ErrBarcodeTaken, Status: http.StatusConflict, Code: "barcode_taken", Message: "Ya existe un producto, una variante o una unidad con ese código de barras."},
 	{Err: domain.ErrCategoryInUse, Status: http.StatusConflict, Code: "category_in_use", Message: "La categoría tiene productos o subcategorías. Muévelos antes de borrarla."},
+	{Err: domain.ErrBaseUnitLocked, Status: http.StatusConflict, Code: "base_unit_locked", Message: "El producto ya tiene movimientos de stock o unidades alternativas contados en su unidad base: no se puede cambiar."},
+	{Err: domain.ErrNoVariants, Status: http.StatusUnprocessableEntity, Code: "no_variants", Message: "Agregue al menos una variante al producto."},
+	{Err: domain.ErrVariantsOfSeveralProducts, Status: http.StatusUnprocessableEntity, Code: "variants_of_several_products", Message: "Los SKU del producto ya pertenecen a productos distintos del catálogo."},
 	{Err: domain.ErrProductInactive, Status: http.StatusUnprocessableEntity, Code: "product_inactive", Message: "El producto está inactivo. Actívelo antes de cambiarle el precio."},
 	{Err: domain.ErrCategoryCycle, Status: http.StatusUnprocessableEntity, Code: "category_cycle", Message: "Una categoría no puede quedar dentro de sus propias subcategorías."},
 	{Err: domain.ErrInvalidCategoryParent, Status: http.StatusUnprocessableEntity, Code: "invalid_category_parent", Message: "Una categoría no puede ser su propia categoría padre."},
@@ -81,4 +84,11 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrAxisNameTaken, Status: http.StatusConflict, Code: "axis_name_taken", Message: "Ya existe un eje con ese nombre."},
 	{Err: domain.ErrAxisInUse, Status: http.StatusConflict, Code: "axis_in_use", Message: "Hay variantes que usan este eje. Cámbielas antes de borrarlo."},
 	{Err: domain.ErrAxisValueInUse, Status: http.StatusConflict, Code: "axis_value_in_use", Message: "Hay variantes con uno de los valores que quitó. Cámbielas antes de quitarlo."},
+}
+
+// DescribeError returns the code and the Spanish message the API gives for
+// a catalog error; ok is false for an error that is not the catalog's.
+func DescribeError(err error) (code, message string, ok bool) {
+	_, detail, ok := httpx.Describe(errorRules, err)
+	return detail.Code, detail.Message, ok
 }

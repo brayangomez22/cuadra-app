@@ -89,3 +89,31 @@ func (f fakeProducts) Search(_ context.Context, tenantID uuid.UUID, filter domai
 	}
 	return domain.ProductPage{Items: matches, Total: len(matches)}, nil
 }
+
+// BySKU returns the products of tenantID with a variant whose SKU is among
+// skus, compared as the catalog stores them (in uppercase).
+func (f fakeProducts) BySKU(_ context.Context, tenantID uuid.UUID, skus []string) ([]*domain.Product, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []*domain.Product
+	for _, p := range f.products {
+		if p.TenantID() != tenantID {
+			continue
+		}
+		if slices.ContainsFunc(p.Variants(), func(v *domain.ProductVariant) bool {
+			return slices.ContainsFunc(skus, func(s string) bool { return strings.EqualFold(strings.TrimSpace(s), v.SKU()) })
+		}) {
+			out = append(out, cloneProduct(p))
+		}
+	}
+	return out, nil
+}
+
+// fakeHistory reports the variants marked in store.moved.
+type fakeHistory struct{ *store }
+
+func (f fakeHistory) HasMovements(_ context.Context, _ uuid.UUID, variantIDs []uuid.UUID) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.ContainsFunc(variantIDs, func(id uuid.UUID) bool { return f.moved[id] }), nil
+}

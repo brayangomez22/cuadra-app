@@ -69,3 +69,8 @@ SELECT id, tenant_id, variant_id, location_id, type, quantity, unit_cost, balanc
 FROM stock_movements
 WHERE reference_kind = sqlc.arg(reference_kind)::text AND reference_id = sqlc.arg(reference_id)::uuid
 ORDER BY occurred_at, id;
+
+-- VariantsHaveMovements reports whether any of the given variants has a
+-- stock movement.
+-- name: VariantsHaveMovements :one
+SELECT EXISTS (SELECT 1 FROM stock_movements WHERE variant_id = ANY(sqlc.arg(variant_ids)::uuid[]));

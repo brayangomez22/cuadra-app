@@ -27,6 +27,7 @@ var now = time.Date(2026, 10, 10, 15, 0, 0, 0, time.UTC)
 type stubUseCases struct {
 	actor     app.Actor
 	input     app.ProductInput
+	withVars  app.ProductWithVariantsInput
 	variant   app.VariantUpdate
 	filter    domain.ProductFilter
 	id        uuid.UUID
@@ -56,6 +57,11 @@ type stubUseCases struct {
 
 func (s *stubUseCases) CreateProduct(_ context.Context, a app.Actor, in app.ProductInput) (*domain.Product, error) {
 	s.actor, s.input = a, in
+	return s.product, s.err
+}
+
+func (s *stubUseCases) CreateProductWithVariants(_ context.Context, a app.Actor, in app.ProductWithVariantsInput) (*domain.Product, error) {
+	s.actor, s.withVars = a, in
 	return s.product, s.err
 }
 

@@ -20,6 +20,8 @@ type store struct {
 	axes       map[uuid.UUID]*domain.VariantAxis
 	// searches records the filters received by Search.
 	searches []domain.ProductFilter
+	// moved are the variants with stock movements, for fakeHistory.
+	moved map[uuid.UUID]bool
 }
 
 func cloneProduct(p *domain.Product) *domain.Product {

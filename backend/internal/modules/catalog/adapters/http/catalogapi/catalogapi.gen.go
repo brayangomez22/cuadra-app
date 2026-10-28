@@ -386,6 +386,29 @@ type ProductVariantUpdate struct {
 	Sku string `json:"sku"`
 }
 
+// ProductWithVariantsInput Un producto nuevo con todas sus variantes; la primera es la variante por defecto. Los atributos se validan
+// contra las definiciones de la empresa (`/product-attributes`).
+type ProductWithVariantsInput struct {
+	// Attributes Los valores del producto para los atributos de la empresa, por clave. Cada valor se valida contra la
+	// definición de su atributo.
+	//
+	//
+	// Example: {"importado":true,"marca":"Acme"}
+	Attributes  ProductAttributes   `json:"attributes"`
+	BaseUnitId  openapi_types.UUID  `json:"base_unit_id"`
+	CategoryId  *openapi_types.UUID `json:"category_id,omitempty"`
+	Description *string             `json:"description,omitempty"`
+
+	// Name Example: Camiseta básica cuello redondo
+	Name string `json:"name"`
+
+	// TaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
+	//
+	// Example: 0.19
+	TaxRate  TaxRate               `json:"tax_rate"`
+	Variants []ProductVariantInput `json:"variants"`
+}
+
 // TaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
 //
 // Example: 0.19
@@ -517,6 +540,9 @@ type CashSessionId = openapi_types.UUID
 // CategoryId defines model for CategoryId.
 type CategoryId = openapi_types.UUID
 
+// ImportId defines model for ImportId.
+type ImportId = openapi_types.UUID
+
 // Limit defines model for Limit.
 type Limit = int
 
@@ -596,6 +622,9 @@ type UpdateAttributeJSONRequestBody = AttributeDefinitionUpdate
 // CreateProductJSONRequestBody defines body for CreateProduct for application/json ContentType.
 type CreateProductJSONRequestBody = ProductInput
 
+// CreateProductWithVariantsJSONRequestBody defines body for CreateProductWithVariants for application/json ContentType.
+type CreateProductWithVariantsJSONRequestBody = ProductWithVariantsInput
+
 // UpdateProductJSONRequestBody defines body for UpdateProduct for application/json ContentType.
 type UpdateProductJSONRequestBody = ProductInput
 
@@ -652,6 +681,9 @@ type ServerInterface interface {
 	// CreateProduct Crear un producto
 	// (POST /api/v1/products)
 	CreateProduct(w http.ResponseWriter, r *http.Request)
+	// CreateProductWithVariants Crear un producto con sus variantes
+	// (POST /api/v1/products-with-variants)
+	CreateProductWithVariants(w http.ResponseWriter, r *http.Request)
 	// GetProduct Ver un producto
 	// (GET /api/v1/products/{productId})
 	GetProduct(w http.ResponseWriter, r *http.Request, productId ProductId)
@@ -974,6 +1006,20 @@ func (siw *ServerInterfaceWrapper) CreateProduct(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateProduct(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProductWithVariants operation middleware
+func (siw *ServerInterfaceWrapper) CreateProductWithVariants(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProductWithVariants(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1518,6 +1564,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/products", wrapper.ListProducts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/products", wrapper.CreateProduct)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/products-with-variants", wrapper.CreateProductWithVariants)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/products/{productId}", wrapper.GetProduct)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/products/{productId}", wrapper.UpdateProduct)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/products/{productId}/deactivate", wrapper.DeactivateProduct)
@@ -2481,6 +2528,126 @@ func (response CreateProduct422JSONResponse) VisitCreateProductResponse(w http.R
 type CreateProduct500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response CreateProduct500JSONResponse) VisitCreateProductResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateProductWithVariantsRequestObject struct {
+	Body *CreateProductWithVariantsJSONRequestBody
+}
+
+type CreateProductWithVariantsResponseObject interface {
+	VisitCreateProductWithVariantsResponse(w http.ResponseWriter) error
+}
+
+type CreateProductWithVariants201JSONResponse Product
+
+func (response CreateProductWithVariants201JSONResponse) VisitCreateProductWithVariantsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateProductWithVariants400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateProductWithVariants400JSONResponse) VisitCreateProductWithVariantsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateProductWithVariants401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateProductWithVariants401JSONResponse) VisitCreateProductWithVariantsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateProductWithVariants403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateProductWithVariants403JSONResponse) VisitCreateProductWithVariantsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateProductWithVariants404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateProductWithVariants404JSONResponse) VisitCreateProductWithVariantsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateProductWithVariants409JSONResponse Error
+
+func (response CreateProductWithVariants409JSONResponse) VisitCreateProductWithVariantsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateProductWithVariants422JSONResponse Error
+
+func (response CreateProductWithVariants422JSONResponse) VisitCreateProductWithVariantsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateProductWithVariants500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateProductWithVariants500JSONResponse) VisitCreateProductWithVariantsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -4147,6 +4314,9 @@ type StrictServerInterface interface {
 	// CreateProduct Crear un producto
 	// (POST /api/v1/products)
 	CreateProduct(ctx context.Context, request CreateProductRequestObject) (CreateProductResponseObject, error)
+	// CreateProductWithVariants Crear un producto con sus variantes
+	// (POST /api/v1/products-with-variants)
+	CreateProductWithVariants(ctx context.Context, request CreateProductWithVariantsRequestObject) (CreateProductWithVariantsResponseObject, error)
 	// GetProduct Ver un producto
 	// (GET /api/v1/products/{productId})
 	GetProduct(ctx context.Context, request GetProductRequestObject) (GetProductResponseObject, error)
@@ -4514,6 +4684,37 @@ func (sh *strictHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateProductResponseObject); ok {
 		if err := validResponse.VisitCreateProductResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProductWithVariants operation middleware
+func (sh *strictHandler) CreateProductWithVariants(w http.ResponseWriter, r *http.Request) {
+	var request CreateProductWithVariantsRequestObject
+
+	var body CreateProductWithVariantsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProductWithVariants(ctx, request.(CreateProductWithVariantsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProductWithVariants")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProductWithVariantsResponseObject); ok {
+		if err := validResponse.VisitCreateProductWithVariantsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

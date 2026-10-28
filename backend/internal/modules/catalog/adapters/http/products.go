@@ -15,6 +15,7 @@ import (
 // ProductUseCases are the use cases of the products.
 type ProductUseCases interface {
 	CreateProduct(ctx context.Context, a app.Actor, in app.ProductInput) (*domain.Product, error)
+	CreateProductWithVariants(ctx context.Context, a app.Actor, in app.ProductWithVariantsInput) (*domain.Product, error)
 	UpdateProduct(ctx context.Context, a app.Actor, id uuid.UUID, in app.ProductInput) (*domain.Product, error)
 	GetProduct(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Product, error)
 	SearchProducts(ctx context.Context, a app.Actor, f domain.ProductFilter) (domain.ProductPage, error)

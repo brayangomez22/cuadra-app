@@ -8,11 +8,13 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/riverqueue/river"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/jobs"
 )
 
 // Config are the dependencies of the API.
@@ -20,6 +22,10 @@ type Config struct {
 	DB *db.DB
 	// Tokens issues and verifies the access tokens.
 	Tokens *auth.JWT
+	// Jobs enqueues background jobs; the modules add their workers to
+	// Workers, the bundle Jobs works (before it starts).
+	Jobs    *jobs.Client
+	Workers *river.Workers
 	// Docs serves /docs and /openapi.json (development only).
 	Docs           bool
 	Log            *slog.Logger

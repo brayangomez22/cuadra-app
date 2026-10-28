@@ -15,6 +15,7 @@ type Permission string
 const (
 	PermCatalogRead     Permission = "catalog:read"
 	PermCatalogWrite    Permission = "catalog:write"
+	PermImportsRun      Permission = "imports:run" // load the catalog and the stock from a file
 	PermInventoryRead   Permission = "inventory:read"
 	PermInventoryAdjust Permission = "inventory:adjust"
 	PermSalesCreate     Permission = "sales:create"
@@ -55,7 +56,7 @@ var coreRoles = []struct {
 	permissions []Permission
 }{
 	{RoleAdmin, []Permission{
-		PermCatalogRead, PermCatalogWrite,
+		PermCatalogRead, PermCatalogWrite, PermImportsRun,
 		PermInventoryRead, PermInventoryAdjust,
 		PermSalesCreate, PermSalesDiscount, PermSalesRead, PermSalesVoid,
 		PermUsersManage,
@@ -76,6 +77,7 @@ var coreRoles = []struct {
 var corePermissions = []Permission{
 	PermCatalogRead,
 	PermCatalogWrite,
+	PermImportsRun,
 	PermInventoryRead,
 	PermInventoryAdjust,
 	PermSalesCreate,

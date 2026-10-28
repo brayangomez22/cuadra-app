@@ -22,8 +22,17 @@ var (
 	ErrInvalidCategoryName   = errors.New("catalog: invalid category name")
 	ErrInvalidCategoryParent = errors.New("catalog: invalid category parent")
 	ErrProductInactive       = errors.New("catalog: product is inactive")
-	ErrInvalidVariantID      = errors.New("catalog: invalid variant id")
-	ErrInvalidAxisValues     = errors.New("catalog: invalid variant axis values")
+	// ErrBaseUnitLocked reports a change of the base unit of a product
+	// whose stock or alternate units are counted in it: 100 m would become
+	// 100 of the new unit.
+	ErrBaseUnitLocked = errors.New("catalog: the base unit of a product with stock movements or alternate units cannot change")
+	// ErrNoVariants reports a product created without variants.
+	ErrNoVariants = errors.New("catalog: a product needs at least one variant")
+	// ErrVariantsOfSeveralProducts reports an imported product whose SKUs
+	// belong to different products of the catalog.
+	ErrVariantsOfSeveralProducts = errors.New("catalog: the SKUs belong to different products")
+	ErrInvalidVariantID          = errors.New("catalog: invalid variant id")
+	ErrInvalidAxisValues         = errors.New("catalog: invalid variant axis values")
 	// ErrInvalidVariants reports a stored product without exactly one
 	// default variant.
 	ErrInvalidVariants      = errors.New("catalog: a product needs exactly one default variant")

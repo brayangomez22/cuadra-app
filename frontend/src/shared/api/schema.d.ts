@@ -257,6 +257,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/products-with-variants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear un producto con sus variantes
+         * @description Crea un producto activo con todas sus variantes en una sola operación: se guarda todo o nada. La primera
+         *     variante es la variante por defecto. Todas usan los mismos ejes, con valores distintos. Requiere el módulo
+         *     `variants` activo; si no lo está, responde 404.
+         */
+        post: operations["createProductWithVariants"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/products/{productId}": {
         parameters: {
             query?: never;
@@ -981,6 +1003,119 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Subir un archivo de importación
+         * @description Lee y valida el archivo sin escribir nada en el catálogo: cada fila contra las columnas de la empresa y cada
+         *     producto contra el catálogo. El formato sale de la extensión del archivo (`.xlsx` o `.csv`; un `.csv` puede
+         *     separar con `;` y usar coma decimal, o con `,` y punto decimal). Sin errores, la importación queda
+         *     `validated` y se puede confirmar; con alguno, `rejected` (corrija el archivo y vuelva a subirlo). La
+         *     respuesta trae los primeros 50 errores y los primeros 10 productos.
+         */
+        post: operations["uploadImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/import-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descargar la plantilla de importación
+         * @description Un archivo vacío con las columnas de la empresa. El `.xlsx` trae además una hoja de ayuda con las unidades,
+         *     las opciones de los atributos de lista y los valores de los ejes.
+         */
+        get: operations["getImportTemplate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/{importId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importId: components["parameters"]["ImportId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Ver una importación
+         * @description Su estado y sus conteos. Mientras corre (`queued`, `running`) los conteos avanzan por lotes.
+         */
+        get: operations["getImport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/{importId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importId: components["parameters"]["ImportId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirmar una importación
+         * @description Pone en cola una importación `validated`; un trabajo en segundo plano la escribe por lotes. Si un lote falla
+         *     al escribirse, se deshace ese lote, la importación queda `failed` con su error y los lotes anteriores se
+         *     conservan: al volver a subir el archivo con `on_existing_sku=update` se completa.
+         */
+        post: operations["confirmImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/{importId}/errors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importId: components["parameters"]["ImportId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Errores de una importación
+         * @description Los errores de sus filas, por número de fila (se guardan los primeros 1.000; `total` los cuenta todos).
+         */
+        get: operations["listImportErrors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1342,6 +1477,22 @@ export interface components {
             cost: components["schemas"]["Money"];
             price: components["schemas"]["Money"];
             axis_values: components["schemas"]["AxisValues"];
+        };
+        /**
+         * @description Un producto nuevo con todas sus variantes; la primera es la variante por defecto. Los atributos se validan
+         *     contra las definiciones de la empresa (`/product-attributes`).
+         */
+        ProductWithVariantsInput: {
+            /** @example Camiseta básica cuello redondo */
+            name: string;
+            description?: string;
+            /** Format: uuid */
+            category_id?: string | null;
+            /** Format: uuid */
+            base_unit_id: string;
+            tax_rate: components["schemas"]["TaxRate"];
+            attributes: components["schemas"]["ProductAttributes"];
+            variants: components["schemas"]["ProductVariantInput"][];
         };
         ProductVariantUpdate: {
             /** @description Código interno, único en la empresa. Se guarda en mayúsculas. */
@@ -1929,6 +2080,105 @@ export interface components {
             required: boolean;
             session?: components["schemas"]["CashSession"];
         };
+        /**
+         * @default xlsx
+         * @enum {string}
+         */
+        ImportFormat: "xlsx" | "csv";
+        /**
+         * @description `rejected` (el archivo tiene errores), `validated` (se puede confirmar), `queued` (confirmada, esperando el
+         *     trabajo), `running`, `completed` o `failed` (un lote no se pudo escribir; ver sus errores).
+         * @enum {string}
+         */
+        ImportStatus: "rejected" | "validated" | "queued" | "running" | "completed" | "failed";
+        /**
+         * @description Qué hacer con un producto cuyo SKU ya está en el catálogo: `update` reemplaza sus datos y agrega las variantes
+         *     nuevas; `skip` lo deja como está.
+         * @enum {string}
+         */
+        ExistingSkuPolicy: "update" | "skip";
+        ImportUpload: {
+            /**
+             * Format: binary
+             * @description La hoja de cálculo (`.xlsx` o `.csv`), hasta 10 MB.
+             */
+            file: string;
+            /**
+             * Format: uuid
+             * @description La sede que recibe el stock inicial.
+             */
+            location_id: string;
+            /** @description Qué hacer con un SKU que ya está en el catálogo; si no se envía, `update`. */
+            on_existing_sku?: components["schemas"]["ExistingSkuPolicy"];
+        };
+        /** @description Filas y productos del archivo; productos creados, actualizados y omitidos hasta ahora; errores. */
+        ImportCounts: {
+            rows: number;
+            products: number;
+            created: number;
+            updated: number;
+            skipped: number;
+            errors: number;
+        };
+        Import: {
+            /** Format: uuid */
+            id: string;
+            file_name: string;
+            format: components["schemas"]["ImportFormat"];
+            status: components["schemas"]["ImportStatus"];
+            on_existing_sku: components["schemas"]["ExistingSkuPolicy"];
+            /** Format: uuid */
+            location_id: string;
+            counts: components["schemas"]["ImportCounts"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            started_at?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+        };
+        /** @description Un problema de una fila del archivo (la fila 1 es el encabezado). */
+        ImportRowError: {
+            /** @example 154 */
+            row: number;
+            /**
+             * @description La columna del problema, o vacío si es del producto entero.
+             * @example precio
+             */
+            column: string;
+            /** @example not_a_number */
+            code: string;
+            /** @example Fila 154, columna «precio»: no es un número. */
+            message: string;
+        };
+        ImportVariantPreview: {
+            row: number;
+            sku: string;
+            /** @description El precio como lo leyó la importación. */
+            price: string;
+            axis_values: {
+                [key: string]: string;
+            };
+            initial_stock?: string | null;
+        };
+        ImportProductPreview: {
+            row: number;
+            name: string;
+            category: string;
+            unit: string;
+            variants: components["schemas"]["ImportVariantPreview"][];
+        };
+        ImportPreview: {
+            import: components["schemas"]["Import"];
+            /** @description Los primeros 50 errores; el resto en `/imports/{importId}/errors`. */
+            errors: components["schemas"]["ImportRowError"][];
+            /** @description Los primeros 10 productos del archivo. */
+            sample: components["schemas"]["ImportProductPreview"][];
+        };
+        ImportErrorPage: {
+            items: components["schemas"]["ImportRowError"][];
+            total: number;
+        };
     };
     responses: {
         /** @description La request no cumple el contrato (`code` = `invalid_request`). */
@@ -2003,6 +2253,7 @@ export interface components {
         Limit: number;
         /** @description Cantidad de resultados a saltar. */
         Offset: number;
+        ImportId: string;
         ProductId: string;
         /** @example variants */
         ModuleId: string;
@@ -2492,6 +2743,57 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    createProductWithVariants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductWithVariantsInput"];
+            };
+        };
+        responses: {
+            /** @description Producto creado (activo), con sus variantes. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Product"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Un SKU o un código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description Algún dato no cumple las reglas (los mismos códigos de crear un producto), un valor no está en los ejes de
+             *     la empresa (`axis_value_not_allowed`, `unknown_axis`), las variantes no usan los mismos ejes
+             *     (`variant_axes_mismatch`) o repiten valores (`duplicate_variant`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
     getProduct: {
         parameters: {
             query?: never;
@@ -2547,7 +2849,11 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description El SKU o el código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`). */
+            /**
+             * @description El SKU o el código de barras ya existen en la empresa (`sku_taken`, `barcode_taken`), o se cambió la unidad
+             *     base de un producto con movimientos de stock o con unidades alternativas (`base_unit_locked`): su stock y
+             *     sus factores están contados en la unidad actual.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4274,6 +4580,177 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    uploadImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ImportUpload"];
+            };
+        };
+        responses: {
+            /** @description La importación, validada o rechazada, con su previsualización. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description El archivo pasa de 10 MB (`file_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description La sede no existe o está inactiva (`location_not_found`), el archivo no es `.xlsx` ni `.csv`
+             *     (`unsupported_format`) o no se puede leer (`unreadable_file`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getImportTemplate: {
+        parameters: {
+            query?: {
+                format?: components["schemas"]["ImportFormat"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La plantilla. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    "text/csv": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importId: components["parameters"]["ImportId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La importación. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Import"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    confirmImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importId: components["parameters"]["ImportId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La importación en cola. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Import"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description La importación no está validada (`import_not_validated`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listImportErrors: {
+        parameters: {
+            query?: {
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path: {
+                importId: components["parameters"]["ImportId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de errores. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportErrorPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
         };
     };

@@ -127,6 +127,38 @@ type Category struct {
 	CreatedAt time.Time
 }
 
+type Import struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedBy     uuid.UUID
+	LocationID    uuid.UUID
+	FileName      string
+	Format        string
+	Policy        string
+	Status        string
+	TotalRows     int32
+	TotalProducts int32
+	Created       int32
+	Updated       int32
+	Skipped       int32
+	Errors        int32
+	BatchesDone   int32
+	File          []byte
+	CreatedAt     time.Time
+	StartedAt     *time.Time
+	FinishedAt    *time.Time
+}
+
+type ImportError struct {
+	ID         int64
+	TenantID   uuid.UUID
+	ImportID   uuid.UUID
+	RowNumber  int32
+	ColumnName string
+	Code       string
+	Message    string
+}
+
 type InventorySetting struct {
 	TenantID           uuid.UUID
 	AllowNegativeStock bool

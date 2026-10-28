@@ -55,7 +55,24 @@ func (m *ErrorMapper) RequestError(w http.ResponseWriter, r *http.Request, err e
 // matches. Unmapped errors are bugs or infrastructure failures: they are
 // logged and recorded on the request span, but never sent to the client.
 func (m *ErrorMapper) ResponseError(w http.ResponseWriter, r *http.Request, err error) {
-	for _, rule := range m.rules {
+	if status, detail, ok := Describe(m.rules, err); ok {
+		WriteJSON(w, status, ErrorBody{Error: detail})
+		return
+	}
+
+	span := trace.SpanFromContext(r.Context())
+	span.RecordError(err)
+	span.SetStatus(codes.Error, "unhandled error")
+	m.log.ErrorContext(r.Context(), "unhandled error", slog.Any("error", err))
+	WriteError(w, http.StatusInternalServerError, "internal_error", InternalErrorMessage)
+}
+
+// Describe returns the status and the detail of the first of rules that
+// matches err; ok is false when none does. Besides the mapper, it lets a
+// module describe its errors to the user outside a response (the rows an
+// import rejects).
+func Describe(rules []ErrorRule, err error) (status int, detail ErrorDetail, ok bool) {
+	for _, rule := range rules {
 		if !errors.Is(err, rule.Err) {
 			continue
 		}
@@ -65,13 +82,7 @@ func (m *ErrorMapper) ResponseError(w http.ResponseWriter, r *http.Request, err 
 				detail.Message, detail.Details = msg, details
 			}
 		}
-		WriteJSON(w, rule.Status, ErrorBody{Error: detail})
-		return
+		return rule.Status, detail, true
 	}
-
-	span := trace.SpanFromContext(r.Context())
-	span.RecordError(err)
-	span.SetStatus(codes.Error, "unhandled error")
-	m.log.ErrorContext(r.Context(), "unhandled error", slog.Any("error", err))
-	WriteError(w, http.StatusInternalServerError, "internal_error", InternalErrorMessage)
+	return 0, ErrorDetail{}, false
 }

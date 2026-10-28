@@ -260,7 +260,9 @@ type ProductDetails struct {
 }
 
 // UpdateDetails replaces the product's details with the same rules as
-// NewProduct. On error the product is left unchanged.
+// NewProduct. The base unit cannot change while a variant has alternate
+// units, whose factors are counted in it (ErrBaseUnitLocked). On error the
+// product is left unchanged.
 func (p *Product) UpdateDetails(d ProductDetails) error {
 	updated, err := productHeader(ProductSnapshot{
 		ID:          p.id,
@@ -279,6 +281,9 @@ func (p *Product) UpdateDetails(d ProductDetails) error {
 	}
 	if err := checkUnits(updated.baseUnit, p.variants); err != nil {
 		return err
+	}
+	if updated.baseUnit.ID != p.baseUnit.ID && p.hasAlternateUnits() {
+		return ErrBaseUnitLocked
 	}
 	updated.variants = p.variants
 	*p = *updated

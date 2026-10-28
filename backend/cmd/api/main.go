@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/riverqueue/river"
 	"go.opentelemetry.io/otel"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
@@ -67,10 +68,12 @@ func run() error {
 	}
 	defer database.Close()
 
-	// Workers run in this process. Modules register theirs here when they add a
-	// job kind; until then the client only enqueues.
+	// Workers run in this process: the modules add theirs to the bundle
+	// while the API is built, before the client starts working.
+	workers := river.NewWorkers()
 	jobClient, err := jobs.New(jobs.Config{
 		DB:             database,
+		Workers:        workers,
 		Logger:         log,
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),
@@ -78,7 +81,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler, err := newAPIHandler(cfg, database, log)
+	handler, err := newAPIHandler(cfg, database, log, jobClient, workers)
 	if err != nil {
 		return err
 	}
@@ -130,15 +133,17 @@ func setUpTelemetry(ctx context.Context, cfg config.Config) (log *slog.Logger, f
 }
 
 // newAPIHandler builds the API (internal/server) with the access tokens of
-// cfg.
-func newAPIHandler(cfg config.Config, database *db.DB, log *slog.Logger) (http.Handler, error) {
+// cfg; the modules enqueue with jobClient and add their workers to workers.
+func newAPIHandler(cfg config.Config, database *db.DB, log *slog.Logger, jobClient *jobs.Client, workers *river.Workers) (http.Handler, error) {
 	tokens, err := auth.NewJWT(cfg.JWTSecret, accessTokenTTL)
 	if err != nil {
 		return nil, err
 	}
 	return server.New(server.Config{
-		DB:     database,
-		Tokens: tokens,
+		DB:      database,
+		Tokens:  tokens,
+		Jobs:    jobClient,
+		Workers: workers,
 		// The API docs are for developers only; other environments do not serve them.
 		Docs:           cfg.Env == "development",
 		Log:            log,

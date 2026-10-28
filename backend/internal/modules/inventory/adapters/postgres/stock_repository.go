@@ -156,3 +156,15 @@ func rehydrateLevel(s domain.StockLevelSnapshot) (*domain.StockLevel, error) {
 	}
 	return l, nil
 }
+
+// HasMovements reports whether any of variantIDs has a stock movement in
+// tenantID.
+func (r *StockRepository) HasMovements(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) (bool, error) {
+	moved, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) (bool, error) {
+		return sqlcgen.New(tx).VariantsHaveMovements(ctx, variantIDs)
+	})
+	if err != nil {
+		return false, fmt.Errorf("inventory: variants have movements: %w", err)
+	}
+	return moved, nil
+}

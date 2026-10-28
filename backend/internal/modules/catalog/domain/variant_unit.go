@@ -191,3 +191,9 @@ func (p *Product) replaceUnits(i int, params []VariantUnitParams) error {
 func (u VariantUnit) PriceWithTax(rate TaxRate) decimal.Decimal {
 	return u.price.Mul(decimal.NewFromInt(1).Add(rate.Rate())).Round(2)
 }
+
+// hasAlternateUnits reports whether a variant of the product has
+// alternate units.
+func (p *Product) hasAlternateUnits() bool {
+	return slices.ContainsFunc(p.variants, func(v *ProductVariant) bool { return len(v.units) > 0 })
+}
