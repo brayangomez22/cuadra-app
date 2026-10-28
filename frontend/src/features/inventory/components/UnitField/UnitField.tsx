@@ -3,14 +3,22 @@ import type { Sellable } from '@/features/catalog';
 import { useFieldError } from '@/shared/forms/useFieldError';
 import { formatQuantity } from '@/shared/format';
 import { Field, Select } from '@/shared/ui';
-import type { ReceiptInput } from '../../../../model/receipt/receiptSchema';
+
+/** The fields UnitField reads: the chosen variant and its unit (empty: the product's). */
+type UnitFieldValues = { item: Sellable | null; unit_id: string };
 
 // The Select's value for the product's unit: a unit id is never empty.
 const BASE_UNIT = 'base';
 
-/** The unit the goods arrive in, only when the variant has alternate units. */
-export function UnitField({ onChange }: { onChange: (item: Sellable | null, unitId: string) => void }) {
-  const { control } = useFormContext<ReceiptInput>();
+type Props = {
+  /** What the unit is for: "En la que llega la mercancía." */
+  hint: string;
+  onChange: (item: Sellable | null, unitId: string) => void;
+};
+
+/** The unit a quantity is in, only when the variant has alternate units. */
+export function UnitField({ hint, onChange }: Props) {
+  const { control } = useFormContext<UnitFieldValues>();
   const item = useWatch({ control, name: 'item' });
   const unitId = useWatch({ control, name: 'unit_id' });
   const errorOf = useFieldError(control, 'unit_id');
@@ -25,7 +33,7 @@ export function UnitField({ onChange }: { onChange: (item: Sellable | null, unit
     })),
   ];
   return (
-    <Field label="Unidad" hint="En la que llega la mercancía." error={errorOf('unit_id')}>
+    <Field label="Unidad" hint={hint} error={errorOf('unit_id')}>
       <Select
         options={options}
         value={unitId || BASE_UNIT}

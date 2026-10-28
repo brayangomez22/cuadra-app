@@ -1,0 +1,64 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--color-border-default);
+}
+
+// Name and amount on the first line, the time below; the delete button at the end.
+.item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  column-gap: var(--space-3);
+  min-block-size: var(--size-row);
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--color-border-default);
+}
+
+.name {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.amount {
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+
+  @include numeric;
+}
+
+.time {
+  grid-column: 1;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.remove {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+.skeleton {
+  inline-size: 60%;
+  block-size: var(--font-size-md);
+}

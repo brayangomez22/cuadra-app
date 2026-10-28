@@ -63,3 +63,21 @@ ORDER BY barcode;
 SELECT DISTINCT product_id
 FROM product_variants
 WHERE sku = ANY(sqlc.arg(skus)::text[]);
+
+-- CountCategories counts how many of the given categories exist.
+-- name: CountCategories :one
+SELECT count(*) FROM categories WHERE id = ANY(sqlc.arg(category_ids)::uuid[]);
+
+-- VariantsInCategories returns the variants, active or not, of the products
+-- in the given categories or in any of their subcategories.
+-- name: VariantsInCategories :many
+WITH RECURSIVE tree AS (
+    SELECT id FROM categories WHERE id = ANY(sqlc.arg(category_ids)::uuid[])
+    UNION
+    SELECT c.id FROM categories c JOIN tree t ON c.parent_id = t.id
+)
+SELECT v.id
+FROM product_variants v
+JOIN products p ON p.id = v.product_id
+WHERE p.category_id IN (SELECT id FROM tree)
+ORDER BY v.id;

@@ -1,0 +1,6 @@
+@use '@/styles/abstracts' as *;
+
+.difference {
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}

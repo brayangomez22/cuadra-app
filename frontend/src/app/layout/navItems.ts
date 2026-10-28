@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import type { Gated } from '@/features/auth';
-import { IconBox, IconCart, IconCash, IconHome, IconSettings, IconTag } from '@/shared/ui';
+import { IconBox, IconCart, IconCash, IconClipboardCheck, IconHome, IconSettings, IconTag } from '@/shared/ui';
 import { paths } from '../routes/paths';
 
 /**
@@ -21,6 +21,7 @@ export const navItems: NavItem[] = [
   { to: paths.sales.cash(), label: 'Caja', icon: IconCash, permission: 'sales:create' },
   { to: paths.products.list(), label: 'Productos', icon: IconTag, permission: 'catalog:read' },
   { to: paths.inventory.stock(), label: 'Inventario', icon: IconBox, permission: 'inventory:read' },
+  { to: paths.inventory.counts(), label: 'Toma física', icon: IconClipboardCheck, permission: 'inventory:count' },
   // Owners and admins configure the catalog; the owner also the business.
   { to: paths.settings.home(), label: 'Configuración', icon: IconSettings, permission: 'catalog:write' },
 ];

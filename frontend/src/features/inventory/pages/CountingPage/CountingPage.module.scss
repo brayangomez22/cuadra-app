@@ -1,0 +1,14 @@
+@use '@/styles/abstracts' as *;
+
+// One column, phone first: the form, then what was counted.
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-inline-size: var(--size-form-wide);
+}
+
+.loading {
+  align-self: center;
+  padding-block: var(--space-8);
+}

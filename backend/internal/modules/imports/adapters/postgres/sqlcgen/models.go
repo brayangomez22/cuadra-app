@@ -354,6 +354,44 @@ type StockBefore struct {
 	Levels    int64
 }
 
+type StockCount struct {
+	ID                      uuid.UUID
+	TenantID                uuid.UUID
+	LocationID              uuid.UUID
+	CategoryIds             []uuid.UUID
+	Mode                    string
+	Status                  string
+	StartedBy               uuid.UUID
+	StartedAt               time.Time
+	ClosedBy                *uuid.UUID
+	ClosedAt                *time.Time
+	LinesTotal              *int32
+	LinesCounted            *int32
+	LinesExact              *int32
+	NetDifferenceValue      pgtype.Numeric
+	AbsoluteDifferenceValue pgtype.Numeric
+}
+
+type StockCountEntry struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CountID   uuid.UUID
+	VariantID uuid.UUID
+	Round     int32
+	Quantity  decimal.Decimal
+	CountedBy uuid.UUID
+	CountedAt time.Time
+}
+
+type StockCountLine struct {
+	TenantID      uuid.UUID
+	CountID       uuid.UUID
+	VariantID     uuid.UUID
+	StartQuantity decimal.Decimal
+	StartCost     decimal.Decimal
+	Round         int32
+}
+
 type StockLevel struct {
 	TenantID    uuid.UUID
 	VariantID   uuid.UUID

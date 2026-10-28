@@ -14,6 +14,19 @@ export const inventoryRoutes: RouteObject[] = [
     ],
   },
   {
+    element: <RequirePermission permission="inventory:count" />,
+    children: [
+      { path: paths.inventory.counts.pattern, ...lazyPage(async () => (await import('./pages')).StockCountsPage) },
+      { path: paths.inventory.count.pattern, ...lazyPage(async () => (await import('./pages')).CountingPage) },
+    ],
+  },
+  {
+    element: <RequirePermission permission="inventory:count_manage" />,
+    children: [
+      { path: paths.inventory.countReview.pattern, ...lazyPage(async () => (await import('./pages')).CountReviewPage) },
+    ],
+  },
+  {
     element: <RequirePermission permission="inventory:adjust" />,
     children: [
       { path: paths.inventory.receipt.pattern, ...lazyPage(async () => (await import('./pages')).ReceiptPage) },

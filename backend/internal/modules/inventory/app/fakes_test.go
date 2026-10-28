@@ -42,6 +42,8 @@ type store struct {
 	// stockFilters and kardexFilters record the filters the queries received.
 	stockFilters  []domain.StockFilter
 	kardexFilters []domain.KardexFilter
+
+	countStore
 }
 
 func cloneLocation(l *domain.Location) *domain.Location {
@@ -228,6 +230,8 @@ type env struct {
 	actor   app.Actor
 	spans   *tracetest.SpanRecorder
 	metrics *sdkmetric.ManualReader
+	// now is the service's clock; advance moves it.
+	now time.Time
 }
 
 var testNow = time.Date(2026, 10, 10, 15, 0, 0, 0, time.UTC)
@@ -236,13 +240,15 @@ func newEnv(t *testing.T) *env {
 	t.Helper()
 	e := &env{
 		store: &store{
-			locations: map[uuid.UUID]*domain.Location{},
-			levels:    map[levelKey]domain.StockLevelSnapshot{},
-			policies:  map[uuid.UUID]domain.StockPolicy{},
-			variants:  map[uuid.UUID]catalogVariant{},
-			units:     map[unitKey]decimal.Decimal{},
-			rules:     map[levelKey]*domain.ReorderRule{},
+			locations:  map[uuid.UUID]*domain.Location{},
+			levels:     map[levelKey]domain.StockLevelSnapshot{},
+			policies:   map[uuid.UUID]domain.StockPolicy{},
+			variants:   map[uuid.UUID]catalogVariant{},
+			units:      map[unitKey]decimal.Decimal{},
+			rules:      map[levelKey]*domain.ReorderRule{},
+			countStore: newCountStore(),
 		},
+		now:   testNow,
 		actor: app.Actor{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())},
 		spans: tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
 	}
@@ -258,7 +264,9 @@ func newEnv(t *testing.T) *env {
 		Policies:       fakePolicies{e.store},
 		Variants:       fakeVariants{e.store},
 		Reorder:        fakeReorder{e.store},
-		Now:            func() time.Time { return testNow },
+		Counts:         fakeCounts{e.store},
+		CountEntries:   fakeEntries{e.store},
+		Now:            func() time.Time { return e.now },
 		TracerProvider: tp,
 		MeterProvider:  mp,
 	})

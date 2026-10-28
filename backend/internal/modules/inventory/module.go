@@ -51,6 +51,8 @@ func New(cfg Config) (*Module, error) {
 		Stock:          stock,
 		Policies:       postgres.NewPolicyRepository(cfg.DB),
 		Reorder:        postgres.NewReorderRepository(cfg.DB),
+		Counts:         postgres.NewStockCountRepository(cfg.DB),
+		CountEntries:   postgres.NewCountEntryRepository(cfg.DB),
 		Variants:       cfg.Variants,
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,

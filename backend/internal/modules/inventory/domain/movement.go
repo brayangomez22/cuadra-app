@@ -16,9 +16,10 @@ type MovementType string
 
 // Movement types. Inbound types have a positive quantity, outbound types a
 // negative one; an adjustment can be either. sale_void gives back the stock
-// of a voided sale.
+// of a voided sale; initial_in is the initial stock a business loads.
 const (
 	MovementPurchaseIn  MovementType = "purchase_in"
+	MovementInitialIn   MovementType = "initial_in"
 	MovementSaleOut     MovementType = "sale_out"
 	MovementSaleVoid    MovementType = "sale_void"
 	MovementAdjustment  MovementType = "adjustment"
@@ -30,7 +31,7 @@ const (
 func ParseMovementType(s string) (MovementType, error) {
 	t := MovementType(s)
 	switch t {
-	case MovementPurchaseIn, MovementSaleOut, MovementSaleVoid, MovementAdjustment, MovementTransferOut, MovementTransferIn:
+	case MovementPurchaseIn, MovementInitialIn, MovementSaleOut, MovementSaleVoid, MovementAdjustment, MovementTransferOut, MovementTransferIn:
 		return t, nil
 	}
 	return "", ErrInvalidMovementType
@@ -45,7 +46,7 @@ func (t MovementType) isTransfer() bool {
 // validQuantity reports whether q has the sign the movement type requires.
 func (t MovementType) validQuantity(q decimal.Decimal) bool {
 	switch t {
-	case MovementPurchaseIn, MovementSaleVoid, MovementTransferIn:
+	case MovementPurchaseIn, MovementInitialIn, MovementSaleVoid, MovementTransferIn:
 		return q.IsPositive()
 	case MovementSaleOut, MovementTransferOut:
 		return q.IsNegative()
@@ -58,11 +59,13 @@ func (t MovementType) validQuantity(q decimal.Decimal) bool {
 type DocumentKind string
 
 // Document kinds. DocumentTransfer is reserved for the pair of movements
-// that Transfer creates.
+// that Transfer creates; DocumentStockCount marks the adjustments of an
+// approved stock count.
 const (
-	DocumentPurchase DocumentKind = "purchase"
-	DocumentSale     DocumentKind = "sale"
-	DocumentTransfer DocumentKind = "transfer"
+	DocumentPurchase   DocumentKind = "purchase"
+	DocumentSale       DocumentKind = "sale"
+	DocumentTransfer   DocumentKind = "transfer"
+	DocumentStockCount DocumentKind = "stock_count"
 )
 
 // DocumentRef points to the document that caused a movement (a sale, a
@@ -75,7 +78,7 @@ type DocumentRef struct {
 
 func (r DocumentRef) valid() bool {
 	switch r.Kind {
-	case DocumentPurchase, DocumentSale, DocumentTransfer:
+	case DocumentPurchase, DocumentSale, DocumentTransfer, DocumentStockCount:
 		return r.ID != uuid.Nil
 	}
 	return false

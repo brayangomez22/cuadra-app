@@ -75,6 +75,8 @@ const permissionsByRole: Record<Me['role'], string[]> = {
     'imports:run',
     'inventory:read',
     'inventory:adjust',
+    'inventory:count',
+    'inventory:count_manage',
     'sales:create',
     'sales:discount',
     'sales:read',
@@ -88,14 +90,16 @@ const permissionsByRole: Record<Me['role'], string[]> = {
     'imports:run',
     'inventory:read',
     'inventory:adjust',
+    'inventory:count',
+    'inventory:count_manage',
     'sales:create',
     'sales:discount',
     'sales:read',
     'sales:void',
     'users:manage',
   ],
-  cashier: ['catalog:read', 'inventory:read', 'sales:create', 'sales:read'],
-  warehouse: ['catalog:read', 'inventory:read', 'inventory:adjust'],
+  cashier: ['catalog:read', 'inventory:read', 'inventory:count', 'sales:create', 'sales:read'],
+  warehouse: ['catalog:read', 'inventory:read', 'inventory:adjust', 'inventory:count'],
 };
 
 export function aUser(role: Me['role'] = 'owner'): Me {

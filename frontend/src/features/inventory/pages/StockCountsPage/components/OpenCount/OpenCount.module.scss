@@ -1,0 +1,31 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-default);
+  border-inline-start: var(--space-1) solid var(--color-border-accent);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.progress {
+  margin: 0;
+  font-size: var(--font-size-lg);
+
+  @include numeric;
+}
+
+.meta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}

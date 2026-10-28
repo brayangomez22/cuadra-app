@@ -1765,6 +1765,386 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/stock-counts:
+    get:
+      tags: [inventory]
+      operationId: listStockCounts
+      summary: Conteos físicos
+      description: |
+        Los conteos físicos de la empresa, del más reciente al más antiguo. Los aprobados traen su exactitud
+        (`summary`); los valores de las diferencias solo se envían a quien puede ver costos.
+      x-permission: inventory:count
+      parameters:
+        - name: location_id
+          in: query
+          description: Solo los conteos de esta sede.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Solo los conteos en este estado.
+          required: false
+          schema:
+            $ref: "#/components/schemas/StockCountStatus"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de conteos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockCountPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [inventory]
+      operationId: startStockCount
+      summary: Iniciar un conteo físico
+      description: |
+        Abre un conteo en una sede y toma la foto de su stock: de todas las variantes con existencia en la sede o,
+        con `category_ids`, de las variantes de esas categorías y sus subcategorías. El negocio puede seguir vendiendo:
+        lo esperado de cada variante descuenta los movimientos ocurridos hasta que se contó. Una sede tiene a lo sumo
+        un conteo abierto.
+      x-permission: inventory:count_manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockCountInput"
+      responses:
+        "201":
+          description: El conteo abierto.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockCount"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: La sede ya tiene un conteo abierto (`stock_count_in_progress`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            La sede no existe o está inactiva (`location_not_found`, `location_inactive`), o una categoría no existe
+            (`category_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/stock-counts/{stockCountId}:
+    parameters:
+      - $ref: "#/components/parameters/StockCountId"
+    get:
+      tags: [inventory]
+      operationId: getStockCount
+      summary: Un conteo físico
+      description: El conteo con su avance. Nunca trae el stock esperado (el conteo es ciego).
+      x-permission: inventory:count
+      responses:
+        "200":
+          description: El conteo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockCount"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/StockCountNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/stock-counts/{stockCountId}/entries:
+    parameters:
+      - $ref: "#/components/parameters/StockCountId"
+    get:
+      tags: [inventory]
+      operationId: listCountEntries
+      summary: Lo contado en un conteo
+      description: |
+        Lo que se ha contado en la ronda vigente de cada variante, del más reciente al más antiguo. Quien no administra
+        conteos (`inventory:count_manage`) solo ve lo que contó él.
+      x-permission: inventory:count
+      parameters:
+        - name: variant_id
+          in: query
+          description: Solo lo contado de esta variante.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de conteos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountEntryPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/StockCountNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [inventory]
+      operationId: recordCountEntry
+      summary: Registrar lo contado de una variante
+      description: |
+        Varias personas pueden contar a la vez. Con `unit_id` la cantidad va en esa unidad alternativa de la variante
+        y se guarda en la unidad base. En un conteo total se puede contar una variante que no estaba en la foto (entra
+        con cero al inicio); en uno parcial, solo las de sus categorías.
+      x-permission: inventory:count
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CountEntryInput"
+      responses:
+        "201":
+          description: Lo contado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/StockCountNotFound"
+        "409":
+          description: El conteo ya se aprobó o se canceló (`stock_count_not_open`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            La variante no existe o no está en el conteo (`variant_not_found`, `variant_not_in_count`), la unidad no
+            es de la variante (`unit_not_available`) o la cantidad no es válida (`invalid_quantity`,
+            `quantity_precision`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/stock-counts/{stockCountId}/entries/{countEntryId}:
+    parameters:
+      - $ref: "#/components/parameters/StockCountId"
+      - $ref: "#/components/parameters/CountEntryId"
+    delete:
+      tags: [inventory]
+      operationId: deleteCountEntry
+      summary: Borrar algo contado
+      description: Corrige un error mientras el conteo está abierto. Cada quien borra lo suyo; quien administra conteos, cualquiera.
+      x-permission: inventory:count
+      responses:
+        "204":
+          description: Se borró.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Lo contó otra persona (`count_entry_not_yours`) o falta el permiso (`forbidden`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: El conteo (`stock_count_not_found`) o lo contado (`count_entry_not_found`) no existen.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: El conteo ya se aprobó o se canceló (`stock_count_not_open`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/stock-counts/{stockCountId}/lines:
+    parameters:
+      - $ref: "#/components/parameters/StockCountId"
+    get:
+      tags: [inventory]
+      operationId: listStockCountLines
+      summary: Diferencias de un conteo
+      description: |
+        Cada variante del conteo con lo esperado (stock al inicio más entradas menos salidas hasta que se contó), lo
+        contado y la diferencia: primero las que están en revisión y luego las de mayor diferencia en valor. `summary`
+        resume todas las líneas. Los valores solo se envían a quien puede ver costos.
+      x-permission: inventory:count_manage
+      parameters:
+        - name: status
+          in: query
+          description: Solo las líneas en este estado.
+          required: false
+          schema:
+            $ref: "#/components/schemas/StockCountLineStatus"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de líneas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockCountLinePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/StockCountNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/stock-counts/{stockCountId}/recount:
+    parameters:
+      - $ref: "#/components/parameters/StockCountId"
+    post:
+      tags: [inventory]
+      operationId: requestRecount
+      summary: Pedir el recuento de variantes dudosas
+      description: Lo contado hasta ahora de esas variantes deja de valer y se cuentan de nuevo.
+      x-permission: inventory:count_manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecountInput"
+      responses:
+        "204":
+          description: Las variantes quedaron por contar.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/StockCountNotFound"
+        "409":
+          description: El conteo ya se aprobó o se canceló (`stock_count_not_open`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Una variante no está en el conteo (`variant_not_in_count`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/stock-counts/{stockCountId}/approve:
+    parameters:
+      - $ref: "#/components/parameters/StockCountId"
+    post:
+      tags: [inventory]
+      operationId: approveStockCount
+      summary: Aprobar un conteo
+      description: |
+        Cierra el conteo y registra un ajuste (motivo «Conteo físico», con referencia al conteo) por cada variante
+        con diferencia, todos o ninguno. Las variantes sin contar no se ajustan. Los ajustes siguen la regla de stock
+        negativo de la empresa.
+      x-permission: inventory:count_manage
+      responses:
+        "200":
+          description: El conteo aprobado, con su exactitud.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockCount"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/StockCountNotFound"
+        "409":
+          description: |
+            El conteo ya se cerró (`stock_count_not_open`), tiene variantes en revisión (`stock_count_needs_review`) o
+            un ajuste dejaría el stock negativo (`insufficient_stock`, con `details.variant_id`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/stock-counts/{stockCountId}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/StockCountId"
+    post:
+      tags: [inventory]
+      operationId: cancelStockCount
+      summary: Cancelar un conteo
+      description: Cierra el conteo sin ajustar el stock.
+      x-permission: inventory:count_manage
+      responses:
+        "200":
+          description: El conteo cancelado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockCount"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/StockCountNotFound"
+        "409":
+          description: El conteo ya se cerró (`stock_count_not_open`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/v1/sales:
     get:
       tags: [sales]
@@ -2414,6 +2794,20 @@ components:
         type: string
         maxLength: 64
       example: variants
+    StockCountId:
+      name: stockCountId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CountEntryId:
+      name: countEntryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     VariantId:
       name: variantId
       in: path
@@ -2494,6 +2888,12 @@ components:
             $ref: "#/components/schemas/Error"
     Forbidden:
       description: El usuario no tiene permiso para esta acción (`code` = `forbidden`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    StockCountNotFound:
+      description: El conteo no existe (`stock_count_not_found`).
       content:
         application/json:
           schema:
@@ -3457,7 +3857,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [purchase, sale, transfer]
+          enum: [purchase, sale, transfer, stock_count]
         id:
           type: string
           format: uuid
@@ -3480,7 +3880,7 @@ components:
           format: uuid
         type:
           type: string
-          enum: [purchase_in, sale_out, sale_void, adjustment, transfer_out, transfer_in]
+          enum: [purchase_in, initial_in, sale_out, sale_void, adjustment, transfer_out, transfer_in]
         quantity:
           $ref: "#/components/schemas/SignedQuantity"
         unit_cost:
@@ -3515,6 +3915,211 @@ components:
         total:
           type: integer
           description: Cantidad total de movimientos que cumplen el filtro, sin paginar.
+    StockCountStatus:
+      type: string
+      enum: [open, approved, canceled]
+      description: Abierto mientras se cuenta; luego aprobado (sus ajustes están en el kardex) o cancelado.
+    StockCountMode:
+      type: string
+      enum: [sum, review]
+      description: |
+        Qué pasa si dos personas cuentan la misma variante: `sum` suma lo de ambas (contaron partes distintas);
+        `review` exige que coincidan y, si no, la marca para recontar.
+    StockCountInput:
+      type: object
+      required: [location_id]
+      additionalProperties: false
+      properties:
+        location_id:
+          type: string
+          format: uuid
+        category_ids:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            format: uuid
+          description: Las categorías de un conteo parcial (con sus subcategorías). Sin ellas, el conteo es total.
+        mode:
+          $ref: "#/components/schemas/StockCountMode"
+      description: Un conteo nuevo. Sin `mode`, se usa `sum`.
+    StockCountSummary:
+      type: object
+      required: [lines, counted_lines, exact_lines]
+      properties:
+        lines:
+          type: integer
+        counted_lines:
+          type: integer
+        exact_lines:
+          type: integer
+        accuracy:
+          type: string
+          pattern: '^(0(\.\d{1,4})?|1(\.0{1,4})?)$'
+          description: Fracción de las líneas contadas que coincidieron (de 0 a 1). Se omite si no se contó ninguna.
+          example: "0.9500"
+        net_difference_value:
+          $ref: "#/components/schemas/SignedMoney"
+        absolute_difference_value:
+          $ref: "#/components/schemas/Money"
+      description: |
+        La exactitud de un conteo. Los valores (diferencias al costo) solo se envían a quien puede ver costos:
+        `net_difference_value` suma las diferencias con su signo y `absolute_difference_value`, sin él.
+    StockCount:
+      type: object
+      required: [id, location_id, category_ids, mode, status, started_by, started_at, lines, counted_lines]
+      properties:
+        id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        category_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Vacío en un conteo total.
+        mode:
+          $ref: "#/components/schemas/StockCountMode"
+        status:
+          $ref: "#/components/schemas/StockCountStatus"
+        started_by:
+          type: string
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        closed_by:
+          type: string
+          format: uuid
+          description: Quién lo aprobó o canceló.
+        closed_at:
+          type: string
+          format: date-time
+        lines:
+          type: integer
+          description: Variantes en el conteo.
+        counted_lines:
+          type: integer
+          description: Variantes que ya se contaron en su ronda vigente.
+        summary:
+          $ref: "#/components/schemas/StockCountSummary"
+      description: Un conteo físico. Solo los aprobados traen `summary`.
+    StockCountPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockCount"
+        total:
+          type: integer
+          description: Cantidad total de conteos que cumplen el filtro, sin paginar.
+    CountEntryInput:
+      type: object
+      required: [variant_id, quantity]
+      additionalProperties: false
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+        unit_id:
+          type: string
+          format: uuid
+          description: Una unidad alternativa de la variante en la que va `quantity`. Sin ella, la unidad base.
+    CountEntry:
+      type: object
+      required: [id, variant_id, product_id, quantity, counted_by, counted_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+          description: El producto de la variante, para mostrar su nombre.
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+        counted_by:
+          type: string
+          format: uuid
+        counted_at:
+          type: string
+          format: date-time
+      description: Lo que una persona contó de una variante, en la unidad base del producto.
+    CountEntryPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountEntry"
+        total:
+          type: integer
+          description: Cantidad total de conteos que cumplen el filtro, sin paginar.
+    StockCountLineStatus:
+      type: string
+      enum: [uncounted, exact, difference, review]
+      description: Sin contar, coincide, con diferencia o en revisión (los contadores no coinciden).
+    StockCountLine:
+      type: object
+      required: [variant_id, product_id, status, expected_quantity]
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+          description: El producto de la variante, para mostrar su nombre.
+        status:
+          $ref: "#/components/schemas/StockCountLineStatus"
+        expected_quantity:
+          $ref: "#/components/schemas/SignedQuantity"
+        counted_quantity:
+          $ref: "#/components/schemas/Quantity"
+        difference:
+          $ref: "#/components/schemas/SignedQuantity"
+        difference_value:
+          $ref: "#/components/schemas/SignedMoney"
+      description: |
+        Una variante del conteo. `expected_quantity` es el stock al inicio más las entradas menos las salidas hasta
+        que se contó. `counted_quantity` y `difference` (contado − esperado) se omiten si está sin contar o en revisión,
+        y `difference_value` (la diferencia al costo del inicio) además si no se pueden ver costos.
+    StockCountLinePage:
+      type: object
+      required: [items, total, summary]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockCountLine"
+        total:
+          type: integer
+          description: Cantidad total de líneas que cumplen el filtro, sin paginar.
+        summary:
+          $ref: "#/components/schemas/StockCountSummary"
+    RecountInput:
+      type: object
+      required: [variant_ids]
+      additionalProperties: false
+      properties:
+        variant_ids:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            type: string
+            format: uuid
     ReceiptInput:
       type: object
       required: [variant_id, location_id, quantity, unit_cost]

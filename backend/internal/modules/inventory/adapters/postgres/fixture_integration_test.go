@@ -28,6 +28,8 @@ var (
 	_ domain.StockRepository       = (*postgres.StockRepository)(nil)
 	_ domain.PolicyRepository      = (*postgres.PolicyRepository)(nil)
 	_ domain.ReorderRuleRepository = (*postgres.ReorderRepository)(nil)
+	_ domain.StockCountRepository  = (*postgres.StockCountRepository)(nil)
+	_ domain.CountEntryRepository  = (*postgres.CountEntryRepository)(nil)
 )
 
 func dec(s string) decimal.Decimal { return decimal.RequireFromString(s) }
@@ -40,6 +42,8 @@ type fixture struct {
 	stock     *postgres.StockRepository
 	policies  *postgres.PolicyRepository
 	reorder   *postgres.ReorderRepository
+	counts    *postgres.StockCountRepository
+	entries   *postgres.CountEntryRepository
 }
 
 func newFixture(t *testing.T) fixture {
@@ -51,6 +55,8 @@ func newFixture(t *testing.T) fixture {
 		stock:     postgres.NewStockRepository(d),
 		policies:  postgres.NewPolicyRepository(d),
 		reorder:   postgres.NewReorderRepository(d),
+		counts:    postgres.NewStockCountRepository(d),
+		entries:   postgres.NewCountEntryRepository(d),
 	}
 }
 

@@ -541,6 +541,9 @@ type CashSessionId = openapi_types.UUID
 // CategoryId defines model for CategoryId.
 type CategoryId = openapi_types.UUID
 
+// CountEntryId defines model for CountEntryId.
+type CountEntryId = openapi_types.UUID
+
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID
 
@@ -561,6 +564,9 @@ type ProductId = openapi_types.UUID
 
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
+
+// StockCountId defines model for StockCountId.
+type StockCountId = openapi_types.UUID
 
 // UnitId defines model for UnitId.
 type UnitId = openapi_types.UUID
