@@ -4,14 +4,20 @@ import type { Customer } from '../../../../api/types';
 import { documentLabel } from '../../../../model/documentLabel';
 import styles from './CustomerTable.module.scss';
 
-type Props = { customer: Customer; segment: string | undefined; canWrite: boolean };
+type Props = {
+  customer: Customer;
+  segment: string | undefined;
+  canWrite: boolean;
+  /** Whether the user sees customers' credit (receivables:read): each row links to its account. */
+  canReadCredit: boolean;
+};
 
 /**
  * A customer of the list: the name with its trade name below. For who edits
  * customers, the name is the link to its form: on a phone it stays in view
  * while the other columns scroll.
  */
-export function CustomerRow({ customer, segment, canWrite }: Props) {
+export function CustomerRow({ customer, segment, canWrite, canReadCredit }: Props) {
   const contact = [customer.phone, customer.email].filter(Boolean);
   return (
     <TableRow>
@@ -41,6 +47,13 @@ export function CustomerRow({ customer, segment, canWrite }: Props) {
               </span>
             ))}
       </TableCell>
+      {canReadCredit && (
+        <TableCell>
+          <TextLink tone="quiet" to={paths.receivables.account(customer.id)} aria-label={`Cuenta de ${customer.name}`}>
+            Cuenta
+          </TextLink>
+        </TableCell>
+      )}
     </TableRow>
   );
 }

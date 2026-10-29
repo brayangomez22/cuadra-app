@@ -21,6 +21,15 @@ describe('readRows', () => {
   ])('rechaza el valor «%s»', (text, error) => {
     expect(readRows([row(0, 'card', text)], '32130.00')).toEqual([{ error }]);
   });
+
+  it('un solo pago puede ser a crédito', () => {
+    const rows = [row(0, 'credit', '10000'), row(1, 'cash', '5000'), row(2, 'credit', '1900')];
+    expect(readRows(rows, '16900.00')).toEqual([
+      { amount: '10000' },
+      { amount: '5000' },
+      { error: 'Solo un pago puede ser a crédito' },
+    ]);
+  });
 });
 
 describe('validPayments', () => {
@@ -40,6 +49,12 @@ describe('nextMethod', () => {
     const all = (['cash', 'card', 'nequi', 'daviplata', 'transfer'] as const).map((m, i) => row(i, m, ''));
     expect(nextMethod(all)).toBe('cash');
   });
+
+  it('nunca propone crédito: la venta a crédito la elige el cajero', () => {
+    const all = (['cash', 'card', 'nequi', 'daviplata', 'transfer'] as const).map((m, i) => row(i, m, ''));
+    expect(nextMethod([...all, row(5, 'credit', '')])).toBe('cash');
+    expect(nextMethod(all.slice(0, 4))).toBe('transfer');
+  });
 });
 
 describe('amountText', () => {
@@ -57,7 +72,9 @@ describe('settlementMessage', () => {
 
   it('explica que solo el efectivo da cambio', () => {
     const message = settlementMessage({ paid: '1.00', missing: '0.00', change: '0.00', error: 'non_cash_overpayment' });
-    expect(message).toMatch(/^Solo el efectivo da cambio/);
+    expect(message).toBe(
+      'Solo el efectivo da cambio: los demás medios, crédito incluido, no pueden sumar más que el total.',
+    );
   });
 
   it('sin error no hay mensaje', () => {

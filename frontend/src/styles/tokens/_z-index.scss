@@ -1,6 +1,7 @@
 $layers: (
-  'dropdown': 100,
   'sticky': 200,
   'modal': 300,
+  // A Select's list goes over the dialog it opens in (the payment method of the checkout).
+  'popover': 350,
   'toast': 400,
 );

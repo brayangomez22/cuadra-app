@@ -36,6 +36,11 @@
     color: var(--color-feedback-warning);
   }
 
+  // What the customer has left on credit, under the figures of the payment.
+  &[data-tone='credit'] {
+    grid-column: 1 / -1;
+  }
+
   &[data-tone='change'] {
     border-color: var(--color-border-accent);
     background: var(--color-bg-subtle);

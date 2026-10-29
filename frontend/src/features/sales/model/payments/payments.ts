@@ -13,7 +13,11 @@ export type ReadRow = { amount?: string; error?: string };
  * cashier charges an exact amount with Enter alone.
  */
 export function readRows(rows: PaymentRow[], total: string): ReadRow[] {
-  return rows.map((row) => {
+  return rows.map((row, index) => {
+    // A sale opens a single receivable, as the API checks.
+    if (row.method === 'credit' && rows.findIndex((r) => r.method === 'credit') < index) {
+      return { error: 'Solo un pago puede ser a crédito' };
+    }
     if (row.text.trim() === '') {
       return rows.length === 1 ? { amount: total } : { error: 'Escriba el valor' };
     }
@@ -50,7 +54,7 @@ export function amountText(amount: string): string {
 export function settlementMessage(s: Settlement): string | undefined {
   if (s.error === 'insufficient') return `Faltan ${formatMoney(s.missing)}.`;
   if (s.error === 'non_cash_overpayment') {
-    return 'Solo el efectivo da cambio: tarjeta, Nequi, Daviplata y transferencia no pueden sumar más que el total.';
+    return 'Solo el efectivo da cambio: los demás medios, crédito incluido, no pueden sumar más que el total.';
   }
   return undefined;
 }

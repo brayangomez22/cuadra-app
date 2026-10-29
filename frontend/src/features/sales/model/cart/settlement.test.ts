@@ -27,4 +27,16 @@ describe('settle', () => {
       ]),
     ).toMatchObject({ error: 'non_cash_overpayment' });
   });
+
+  it('el crédito no da cambio: una parte a crédito más el efectivo exacto cuadra', () => {
+    expect(
+      settle('11900.00', [
+        { method: 'credit', amount: '10000' },
+        { method: 'cash', amount: '1900' },
+      ]),
+    ).toEqual({ paid: '11900.00', missing: '0.00', change: '0.00' });
+    expect(settle('11900.00', [{ method: 'credit', amount: '12000' }])).toMatchObject({
+      error: 'non_cash_overpayment',
+    });
+  });
 });

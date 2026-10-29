@@ -26,6 +26,21 @@ describe('PosPage', () => {
       await expectSearchFocused();
     });
 
+    it('F3 abre la búsqueda de cliente', async () => {
+      posApi();
+      renderApp('/vender');
+      await searchBox();
+
+      await user().keyboard('{F3}');
+
+      expect(await screen.findByRole('dialog', { name: 'Elegir cliente' })).toBeInTheDocument();
+      // The dialog hides the rest of the screen from assistive technology.
+      expect(screen.getByRole('button', { name: 'Elegir cliente', hidden: true })).toHaveAttribute(
+        'aria-keyshortcuts',
+        'F3',
+      );
+    });
+
     it('F4 no abre el cobro con el carrito vacío', async () => {
       posApi();
       renderApp('/vender');

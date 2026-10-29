@@ -133,7 +133,7 @@ describe('tokens de diseño', () => {
       '--duration-fast',
       '--duration-normal',
       '--ease-standard',
-      ...['dropdown', 'sticky', 'modal', 'toast'].map((z) => `--z-${z}`),
+      ...['sticky', 'modal', 'popover', 'toast'].map((z) => `--z-${z}`),
       '--size-control',
       '--size-row',
       '--size-touch-min',

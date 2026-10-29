@@ -57,7 +57,7 @@
 
 // Same width as the trigger, and never taller than the space Radix measures.
 .content {
-  z-index: var(--z-dropdown);
+  z-index: var(--z-popover);
   overflow: hidden;
   inline-size: var(--radix-select-trigger-width);
   max-block-size: var(--radix-select-content-available-height);
