@@ -1,0 +1,13 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+// The main action last and on the right, as in the dialogs; stacked on a phone.
+.footer {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

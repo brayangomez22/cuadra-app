@@ -1,0 +1,12 @@
+.day {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+// The amount owed with its status below it, aligned with the numbers.
+.balance {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}

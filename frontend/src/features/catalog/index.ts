@@ -19,6 +19,7 @@ export type {
   VariantUnit,
 } from './api/types';
 export { ProductPicker } from './components/ProductPicker/ProductPicker';
+export { BASE_UNIT, unitOptions } from './model/variants/unitOptions';
 export { taxRateOptions } from './model/productForm/taxRates';
 export {
   defaultVariant,

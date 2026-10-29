@@ -1,0 +1,13 @@
+@use '@/styles/abstracts' as *;
+
+// Two columns on a phone so a line stays short; four in a row from a tablet up.
+.root {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+
+  @include respond-to(md) {
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  }
+}

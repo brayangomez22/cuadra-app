@@ -8,6 +8,7 @@ import {
   IconHome,
   IconSettings,
   IconTag,
+  IconTruck,
   IconUsers,
   IconWallet,
 } from '@/shared/ui';
@@ -32,6 +33,7 @@ export const navItems: NavItem[] = [
   { to: paths.products.list(), label: 'Productos', icon: IconTag, permission: 'catalog:read' },
   { to: paths.customers.list(), label: 'Clientes', icon: IconUsers, permission: 'customers:read' },
   { to: paths.receivables.aging(), label: 'Cartera', icon: IconWallet, permission: 'receivables:read' },
+  { to: paths.purchases.list(), label: 'Compras', icon: IconTruck, permission: 'purchases:read' },
   { to: paths.inventory.stock(), label: 'Inventario', icon: IconBox, permission: 'inventory:read' },
   { to: paths.inventory.counts(), label: 'Toma física', icon: IconClipboardCheck, permission: 'inventory:count' },
   // Owners and admins configure the catalog; the owner also the business.
