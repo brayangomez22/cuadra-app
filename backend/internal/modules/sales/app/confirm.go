@@ -36,12 +36,14 @@ type PaymentRequest struct {
 }
 
 // ConfirmSaleInput is a whole cart, checked out at once. CustomerID is
-// optional.
+// optional. CreditAuthorization, also optional, are the credentials of who
+// lets a credit sale exceed the customer's available credit.
 type ConfirmSaleInput struct {
-	LocationID uuid.UUID
-	CustomerID *uuid.UUID
-	Lines      []LineRequest
-	Payments   []PaymentRequest
+	LocationID          uuid.UUID
+	CustomerID          *uuid.UUID
+	Lines               []LineRequest
+	Payments            []PaymentRequest
+	CreditAuthorization *Credentials
 }
 
 // ConfirmSale builds the sale from the cart with the prices of the
@@ -51,8 +53,10 @@ type ConfirmSaleInput struct {
 // transaction that draws the number, so a slow rule does not hold the
 // location's sequence. The sale is charged in the actor's open cash session,
 // which must be at the sale's location; without one, the sale is rejected
-// unless the tenant lets users sell without it. If any step fails, nothing
-// is stored.
+// unless the tenant lets users sell without it. The part paid on credit
+// opens a receivable of the customer in the same transaction; who authorizes
+// exceeding the customer's credit is checked before it, since checking a
+// password is slow. If any step fails, nothing is stored.
 func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput) (_ *domain.Sale, err error) {
 	ctx, span := s.startSpan(ctx, "ConfirmSale", a, attribute.String("location.id", in.LocationID.String()))
 	defer func() { usecase.End(span, err) }()
@@ -63,6 +67,9 @@ func (s *Service) ConfirmSale(ctx context.Context, a Actor, in ConfirmSaleInput)
 	}
 	sale, err := s.newSale(ctx, span, a, in, c)
 	if err != nil {
+		return nil, err
+	}
+	if c.authorizedBy, err = s.authorizeCredit(ctx, a, sale, in.CreditAuthorization); err != nil {
 		return nil, err
 	}
 	if err := s.saveSale(ctx, span, a, sale, c); err != nil {
@@ -136,7 +143,10 @@ func (s *Service) saveSale(ctx context.Context, span trace.Span, a Actor, sale *
 				return err
 			}
 		}
-		return s.Stock.ReserveSale(ctx, a.TenantID, a.UserID, sale.LocationID(), sale.ID(), stockLines(sale))
+		if err := s.Stock.ReserveSale(ctx, a.TenantID, a.UserID, sale.LocationID(), sale.ID(), stockLines(sale)); err != nil {
+			return err
+		}
+		return s.chargeCredit(ctx, a, sale, c.authorizedBy)
 	})
 	var stockErr *domain.InsufficientStockError
 	if errors.As(err, &stockErr) {

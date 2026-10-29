@@ -1046,6 +1046,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/customers/{customerId}/credit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: components["parameters"]["CustomerId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Crédito de un cliente
+         * @description El cupo, el plazo, lo que debe, lo que le queda disponible y sus cuentas por cobrar abiertas, de la que vence
+         *     primero a la última. Un cliente sin cupo asignado tiene cupo 0: no puede comprar a crédito.
+         */
+        get: operations["getCustomerCredit"];
+        /**
+         * Asignar cupo y plazo
+         * @description Cambia el cupo y el plazo del cliente. Un cupo menor que lo que ya debe se acepta: el cliente solo deja de poder
+         *     comprar a crédito. El plazo aplica a las ventas siguientes; las cuentas abiertas conservan su vencimiento.
+         */
+        put: operations["setCustomerCredit"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/{customerId}/credit/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: components["parameters"]["CustomerId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Estado de cuenta de un cliente
+         * @description Las ventas a crédito, los abonos y las ventas a crédito anuladas del cliente, del más reciente al más antiguo,
+         *     cada uno con el saldo que dejó.
+         */
+        get: operations["listCustomerCreditMovements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/{customerId}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: components["parameters"]["CustomerId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar un abono
+         * @description Un pago parcial o total de lo que debe el cliente (activo o no). Se aplica a la cuenta por cobrar que vence
+         *     primero y sigue con las demás. En efectivo, entra como ingreso a la caja abierta de quien lo recibe.
+         */
+        post: operations["recordCustomerPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/receivables/aging": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cartera por edades
+         * @description Lo que deben los clientes, por edad: por vencer (vence hoy o después) y vencida de 1 a 30, de 31 a 60, de 61 a
+         *     90 y de más de 90 días, contados desde la fecha de vencimiento con el día de hoy en hora de Colombia. Los
+         *     clientes con más cartera vencida van primero; `totals` suma todos los clientes, no solo la página.
+         */
+        get: operations["getReceivablesAging"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/customer-segments": {
         parameters: {
             query?: never;
@@ -2296,6 +2392,128 @@ export interface components {
             /** @description Cantidad total de clientes que cumplen el filtro, sin paginar. */
             total: number;
         };
+        CreditTermsInput: {
+            credit_limit: components["schemas"]["Money"];
+            /** @description Días que tiene el cliente para pagar cada venta a crédito (0 vence el mismo día). */
+            term_days: number;
+        };
+        CustomerCredit: {
+            /** Format: uuid */
+            customer_id: string;
+            credit_limit: components["schemas"]["Money"];
+            term_days: number;
+            balance: components["schemas"]["Money"];
+            available: components["schemas"]["Money"];
+            /** @description Las cuentas por cobrar abiertas, de la que vence primero a la última. */
+            receivables: components["schemas"]["Receivable"][];
+        };
+        /** @description Lo que el cliente debe de una venta a crédito. */
+        Receivable: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            sale_id: string;
+            amount: components["schemas"]["Money"];
+            balance: components["schemas"]["Money"];
+            /**
+             * Format: date
+             * @description Día de vencimiento, en hora de Colombia.
+             */
+            due_date: string;
+            /** @enum {string} */
+            status: "open" | "paid" | "canceled";
+            /**
+             * Format: uuid
+             * @description Quién autorizó la venta por encima del cupo, si hizo falta.
+             */
+            authorized_by?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description Una línea del estado de cuenta: una venta a crédito (`charge`, con su vencimiento), un abono (`payment`, con su
+         *     medio de pago) o una venta a crédito anulada (`cancellation`), y el saldo que dejó.
+         */
+        CreditMovement: {
+            /** @enum {string} */
+            kind: "charge" | "payment" | "cancellation";
+            /** Format: date-time */
+            at: string;
+            amount: components["schemas"]["Money"];
+            balance: components["schemas"]["Money"];
+            /** Format: uuid */
+            sale_id?: string;
+            /** Format: uuid */
+            payment_id?: string;
+            method?: components["schemas"]["CustomerPaymentMethod"];
+            /** Format: date */
+            due_date?: string;
+        };
+        CreditMovementPage: {
+            items: components["schemas"]["CreditMovement"][];
+            /** @description Cantidad total de movimientos del cliente. */
+            total: number;
+            balance: components["schemas"]["Money"];
+        };
+        /**
+         * @description Medio de pago de un abono. Una deuda no se paga con crédito.
+         * @enum {string}
+         */
+        CustomerPaymentMethod: "cash" | "card" | "nequi" | "daviplata" | "transfer";
+        CustomerPaymentInput: {
+            method: components["schemas"]["CustomerPaymentMethod"];
+            amount: components["schemas"]["Money"];
+        };
+        CustomerPayment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            customer_id: string;
+            method: components["schemas"]["CustomerPaymentMethod"];
+            amount: components["schemas"]["Money"];
+            /**
+             * Format: uuid
+             * @description La caja a la que entró un abono en efectivo.
+             */
+            cash_session_id?: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Cuánto del abono fue a cada cuenta por cobrar, en el orden en que se aplicó. */
+            allocations: components["schemas"]["PaymentAllocation"][];
+            /** @description Lo que el cliente queda debiendo. */
+            balance: components["schemas"]["Money"];
+        };
+        PaymentAllocation: {
+            /** Format: uuid */
+            receivable_id: string;
+            amount: components["schemas"]["Money"];
+        };
+        AgingBuckets: {
+            current: components["schemas"]["Money"];
+            days_1_30: components["schemas"]["Money"];
+            days_31_60: components["schemas"]["Money"];
+            days_61_90: components["schemas"]["Money"];
+            over_90: components["schemas"]["Money"];
+            overdue: components["schemas"]["Money"];
+            total: components["schemas"]["Money"];
+        };
+        AgingRow: {
+            /** Format: uuid */
+            customer_id: string;
+            name: string;
+            buckets: components["schemas"]["AgingBuckets"];
+        };
+        ReceivablesAging: {
+            /**
+             * Format: date
+             * @description El día de hoy en hora de Colombia, desde el que se cuentan las edades.
+             */
+            as_of: string;
+            items: components["schemas"]["AgingRow"][];
+            /** @description Cantidad de clientes con cartera. */
+            total: number;
+            totals: components["schemas"]["AgingBuckets"];
+        };
         CustomerSegment: {
             /** Format: uuid */
             id: string;
@@ -2325,6 +2543,16 @@ export interface components {
             customer_id?: string;
             lines: components["schemas"]["SaleLineInput"][];
             payments: components["schemas"]["PaymentInput"][];
+            credit_authorization?: components["schemas"]["CreditAuthorizationInput"];
+        };
+        /**
+         * @description Correo y contraseña de un usuario de la empresa con `receivables:override` (dueño o administrador) que autoriza
+         *     una venta a crédito por encima del cupo del cliente. Se verifican y se descartan: no se guardan. Solo se usan
+         *     si la venta tiene un pago `credit`; la cuenta por cobrar guarda quién autorizó si pasó el cupo.
+         */
+        CreditAuthorizationInput: {
+            email: string;
+            password: string;
         };
         /**
          * @description Una línea del carrito: una variante y la cantidad. `discount` es un monto en pesos sobre la línea, antes de
@@ -2344,10 +2572,11 @@ export interface components {
             discount?: components["schemas"]["Money"];
         };
         /**
-         * @description Medio de pago. Solo el efectivo (`cash`) da cambio.
+         * @description Medio de pago. Solo el efectivo (`cash`) da cambio. `credit` es la parte que el cliente paga después: exige
+         *     cliente, va una sola vez por venta y abre una cuenta por cobrar.
          * @enum {string}
          */
-        PaymentMethod: "cash" | "card" | "nequi" | "daviplata" | "transfer";
+        PaymentMethod: "cash" | "card" | "nequi" | "daviplata" | "transfer" | "credit";
         /** @description Un pago. En efectivo, `amount` es lo entregado e incluye el cambio. */
         PaymentInput: {
             method: components["schemas"]["PaymentMethod"];
@@ -5244,6 +5473,186 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    getCustomerCredit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: components["parameters"]["CustomerId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El crédito del cliente. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerCredit"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    setCustomerCredit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: components["parameters"]["CustomerId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreditTermsInput"];
+            };
+        };
+        responses: {
+            /** @description El crédito del cliente con el cupo nuevo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerCredit"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description El cupo o el plazo no son válidos (`invalid_credit_limit`, `invalid_credit_term`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listCustomerCreditMovements: {
+        parameters: {
+            query?: {
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path: {
+                customerId: components["parameters"]["CustomerId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página del estado de cuenta. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreditMovementPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    recordCustomerPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: components["parameters"]["CustomerId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerPaymentInput"];
+            };
+        };
+        responses: {
+            /** @description El abono registrado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerPayment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Un abono en efectivo sin caja abierta, cuando la empresa la exige (`cash_session_required`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description El monto no es válido (`invalid_payment_amount`) o pasa de lo que debe el cliente
+             *     (`payment_exceeds_balance`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getReceivablesAging: {
+        parameters: {
+            query?: {
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de la cartera por edades. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivablesAging"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     listCustomerSegments: {
         parameters: {
             query?: never;
@@ -5453,7 +5862,11 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            /** @description El usuario no tiene permiso (`forbidden`) o un descuento supera su tope (`discount_exceeds_limit`). */
+            /**
+             * @description El usuario no tiene permiso (`forbidden`), un descuento supera su tope (`discount_exceeds_limit`) o las
+             *     credenciales de `credit_authorization` no son de un usuario que pueda autorizarla
+             *     (`credit_authorization_rejected`).
+             */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5465,7 +5878,8 @@ export interface operations {
             /**
              * @description No hay stock suficiente de una variante (`insufficient_stock`); `details.variant_id` dice cuál. El
              *     usuario no tiene caja abierta y la empresa la exige (`cash_session_required`), o la caja se cerró
-             *     (`cash_session_closed`).
+             *     (`cash_session_closed`). La parte a crédito pasa el cupo disponible del cliente y nadie la autorizó
+             *     (`credit_limit_exceeded`); `details.available` dice cuánto le queda.
              */
             409: {
                 headers: {
@@ -5477,12 +5891,22 @@ export interface operations {
             };
             /**
              * @description Algún dato no cumple las reglas (`product_not_found` y `product_inactive`, también para una
-             *     variante; `customer_not_found`, `customer_inactive`, `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
+             *     variante; `customer_not_found`, `customer_inactive`, `credit_not_enabled` (el cliente no tiene cupo),
+             *     `credit_without_customer`, `duplicate_credit_payment`, `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
              *     `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`). Una
              *     línea en una unidad que la variante no tiene (`unit_not_available`) o cuya cantidad en unidad base necesita
              *     más de 4 decimales (`quantity_precision`).
              */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Demasiados intentos de autorización con el mismo correo (`too_many_requests`). */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5587,7 +6011,10 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description La venta no está confirmada; por ejemplo, ya fue anulada (`sale_not_confirmed`). */
+            /**
+             * @description La venta no está confirmada; por ejemplo, ya fue anulada (`sale_not_confirmed`). Una venta a crédito que
+             *     el cliente ya abonó no se puede anular (`credit_sale_has_payments`).
+             */
             409: {
                 headers: {
                     [name: string]: unknown;

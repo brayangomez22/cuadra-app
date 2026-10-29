@@ -126,6 +126,15 @@ type Category struct {
 	CreatedAt time.Time
 }
 
+type CreditAccount struct {
+	TenantID    uuid.UUID
+	CustomerID  uuid.UUID
+	CreditLimit pgtype.Numeric
+	TermDays    int32
+	Balance     pgtype.Numeric
+	UpdatedAt   time.Time
+}
+
 type Customer struct {
 	ID                  uuid.UUID
 	TenantID            uuid.UUID
@@ -144,6 +153,25 @@ type Customer struct {
 	SearchName          string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+}
+
+type CustomerPayment struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CustomerID    uuid.UUID
+	Method        string
+	Amount        pgtype.Numeric
+	UserID        uuid.UUID
+	CashSessionID *uuid.UUID
+	CreatedAt     time.Time
+}
+
+type CustomerPaymentAllocation struct {
+	TenantID     uuid.UUID
+	PaymentID    uuid.UUID
+	ReceivableID uuid.UUID
+	Position     int32
+	Amount       pgtype.Numeric
 }
 
 type CustomerSegment struct {
@@ -231,6 +259,21 @@ type ProductVariant struct {
 	IsDefault  bool
 	Active     bool
 	CreatedAt  time.Time
+}
+
+type Receivable struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CustomerID   uuid.UUID
+	SaleID       uuid.UUID
+	Amount       pgtype.Numeric
+	Balance      pgtype.Numeric
+	DueDate      pgtype.Date
+	Status       string
+	AuthorizedBy *uuid.UUID
+	AuthorizedAt pgtype.Timestamptz
+	CreatedAt    time.Time
+	CanceledAt   pgtype.Timestamptz
 }
 
 type RefreshToken struct {

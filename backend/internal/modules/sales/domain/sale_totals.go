@@ -62,3 +62,13 @@ func (s *Sale) Paid() decimal.Decimal {
 
 // Change returns the cash given back; zero for a draft.
 func (s *Sale) Change() decimal.Decimal { return s.change }
+
+// CreditAmount returns the part of the sale paid on credit, zero if none.
+func (s *Sale) CreditAmount() decimal.Decimal {
+	for _, p := range s.payments {
+		if p.method == PaymentCredit {
+			return p.amount
+		}
+	}
+	return decimal.Zero
+}

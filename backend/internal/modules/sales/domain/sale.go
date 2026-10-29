@@ -126,13 +126,17 @@ func (s *Sale) AddLine(in LineInput, limit DiscountLimit) error {
 // Confirm pays a draft sale with payments and confirms it at the given time.
 // The payments must cover the total; only cash gives change, so the other
 // methods together cannot exceed the total, and the change (paid − total) is
-// never more than the cash received. On error the sale is unchanged.
+// never more than the cash received. At most one payment is on credit, and
+// only for a sale to a customer. On error the sale is unchanged.
 func (s *Sale) Confirm(payments []Payment, at time.Time) error {
 	if s.status != SaleDraft {
 		return ErrSaleNotDraft
 	}
 	if len(s.lines) == 0 {
 		return ErrSaleWithoutLines
+	}
+	if err := s.checkCredit(payments); err != nil {
+		return err
 	}
 	total := s.Totals().Total
 	paid, nonCash := decimal.Zero, decimal.Zero
@@ -153,6 +157,24 @@ func (s *Sale) Confirm(payments []Payment, at time.Time) error {
 	s.change = paid.Sub(total)
 	s.status = SaleConfirmed
 	s.confirmedAt = &confirmedAt
+	return nil
+}
+
+// checkCredit checks the credit payment of a sale, if any: only one, and
+// only with a customer who owes it.
+func (s *Sale) checkCredit(payments []Payment) error {
+	credits := 0
+	for _, p := range payments {
+		if p.method == PaymentCredit {
+			credits++
+		}
+	}
+	switch {
+	case credits > 1:
+		return ErrDuplicateCreditPayment
+	case credits == 1 && s.customerID == nil:
+		return ErrCreditWithoutCustomer
+	}
 	return nil
 }
 

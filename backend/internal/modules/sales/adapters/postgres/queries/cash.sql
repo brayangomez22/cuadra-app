@@ -42,7 +42,7 @@ FROM sale_payments p
 JOIN sales s ON s.tenant_id = p.tenant_id AND s.id = p.sale_id
 WHERE s.cash_session_id = $1 AND s.status = 'confirmed'
 GROUP BY p.method
-ORDER BY array_position(ARRAY['cash', 'card', 'nequi', 'daviplata', 'transfer'], p.method);
+ORDER BY array_position(ARRAY['cash', 'card', 'nequi', 'daviplata', 'transfer', 'credit'], p.method);
 
 -- name: CashSessionMovementTotals :one
 SELECT coalesce(sum(amount) FILTER (WHERE kind = 'in'), 0)::numeric  AS cash_in,
@@ -63,7 +63,7 @@ SELECT * FROM cash_session_counts WHERE session_id = $1 ORDER BY denomination DE
 
 -- name: ListCashSessionPayments :many
 SELECT * FROM cash_session_payments WHERE session_id = $1
-ORDER BY array_position(ARRAY['cash', 'card', 'nequi', 'daviplata', 'transfer'], method);
+ORDER BY array_position(ARRAY['cash', 'card', 'nequi', 'daviplata', 'transfer', 'credit'], method);
 
 -- CloseCashSession stores the closing of an open session; it affects no row
 -- if the session is not open.

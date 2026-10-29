@@ -64,6 +64,18 @@ func (f fakeCustomers) GetByID(_ context.Context, tenantID, id uuid.UUID) (*doma
 	return domain.RehydrateCustomer(s)
 }
 
+func (f fakeCustomers) Names(_ context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := map[uuid.UUID]string{}
+	for _, id := range ids {
+		if s, ok := f.customers[id]; ok && s.TenantID == tenantID {
+			out[id] = s.Name
+		}
+	}
+	return out, nil
+}
+
 // Search matches the text as a substring of the name or the document; the
 // fake does not rank or fold accents, which the integration tests cover.
 func (f fakeCustomers) Search(_ context.Context, flt domain.CustomerFilter) ([]*domain.Customer, int, error) {

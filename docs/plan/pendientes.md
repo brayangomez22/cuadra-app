@@ -81,8 +81,8 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P91 | Clientes: la ciudad es texto libre. La factura electrónica pide el municipio y el departamento del comprador con su código DANE: agregarlos al cliente (catálogo de municipios, sin romper los clientes que ya tienen ciudad) | T31 | T36 |
 | [ ] | P92 | Clientes: más tipos de documento de la DIAN (tarjeta de identidad, PPT, NIT de otro país, documento de identificación extranjero) y el mapeo de cada tipo al código DIAN del proveedor elegido. T31 solo acepta CC, NIT, CE y pasaporte | T31 | T36 |
 | [ ] | P93 | Una venta sin `customer_id` es a consumidor final (no hay un cliente guardado con ese nombre): la emisión debe mandarla con el documento `222222222222` y el nombre «Consumidor final» | T31 | T36 |
-| [ ] | P94 | POS: un atajo de teclado (por ejemplo F3) para elegir el cliente de la venta. En T31a se elige con el botón «Elegir cliente»; con la venta a crédito, elegir cliente pasa a ser frecuente | T31a | T32 |
-| [ ] | P95 | E2E de Playwright de la venta a un cliente: crearlo al vuelo desde el POS, venderle y ver su nombre en la tirilla. Va con el flujo de la venta a crédito | T31a | T32 |
+| [ ] | P94 | POS: un atajo de teclado (por ejemplo F3) para elegir el cliente de la venta. En T31a se elige con el botón «Elegir cliente»; con la venta a crédito, elegir cliente pasa a ser frecuente | T31a | T32a |
+| [ ] | P95 | E2E de Playwright de la venta a un cliente: crearlo al vuelo desde el POS, venderle y ver su nombre en la tirilla. Va con el flujo de la venta a crédito | T31a | T32a |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 

@@ -1,5 +1,5 @@
 import { Field, IconButton, IconClose, Input, Select } from '@/shared/ui';
-import { methodLabels, type PaymentMethod } from '../../../../model/payments/paymentMethods';
+import { methodLabels, posMethods, type PaymentMethod } from '../../../../model/payments/paymentMethods';
 import type { PaymentRow as Row } from '../../../../model/payments/payments';
 import styles from './PaymentRow.module.scss';
 
@@ -13,7 +13,7 @@ type Props = {
   onRemove: () => void;
 };
 
-const methodOptions = Object.entries(methodLabels).map(([value, label]) => ({ value, label }));
+const methodOptions = posMethods.map((value) => ({ value, label: methodLabels[value] }));
 
 /** A payment of the sale: its method and its amount. */
 export function PaymentRow({ row, index, field, onChange, onRemove }: Props) {

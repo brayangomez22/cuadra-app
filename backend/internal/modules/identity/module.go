@@ -122,3 +122,13 @@ func (p *Permissions) Authorize(role, permission string) bool {
 func (p *Permissions) Known(permission string) bool {
 	return p.matrix.Known(domain.Permission(permission))
 }
+
+// AuthorizeAction returns the user of tenantID with the credentials if its
+// role grants permission (see app.Service.AuthorizeAction). It is for the
+// sales module, which asks it who authorizes a sale over a customer's
+// credit, through the port internal/server adapts.
+func (m *Module) AuthorizeAction(ctx context.Context, tenantID uuid.UUID, email, password string, permission domain.Permission) (uuid.UUID, error) {
+	return m.service.AuthorizeAction(ctx, app.AuthorizationInput{
+		TenantID: tenantID, Email: email, Password: password, Permission: permission,
+	})
+}

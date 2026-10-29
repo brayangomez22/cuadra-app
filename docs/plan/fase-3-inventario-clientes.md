@@ -235,10 +235,15 @@ En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`: las tablas de l
 **Alcance:** el frontend de clientes sobre el contrato de T31 (`/customers`, `/customer-segments`), en una feature nueva `features/customers` (sección 11 de `docs/frontend.md`). (1) **Lista y búsqueda** en `/clientes` (texto, segmento y estado, paginada) y **formulario** de crear y editar (persona natural o jurídica, tipo y número de documento, nombre y nombre comercial, contacto, segmento, responsabilidades fiscales y activo), con los errores de la API en su campo (`invalid_nit_check_digit`, `customer_document_taken`...). Entrada en el menú con `customers:read`. (2) **Segmentos de cliente** como sección de `/configuracion` (`customers:manage`), con crear, renombrar y borrar (`customer_segment_in_use`). (3) **POS:** selector de cliente (búsqueda rápida, «Consumidor final» por defecto) y creación al vuelo en un diálogo con los campos mínimos; la venta envía `customer_id` y el recibo muestra el cliente. Responsive de 360 a 1920 px.
 **Tests primero:** el formulario muestra el error del DV junto al número; una persona jurídica solo ofrece NIT; el POS vende a consumidor final sin elegir cliente; crear un cliente desde el POS lo deja elegido en la venta.
 
-### [ ] T32 · Crédito y cartera (fiados)
+### [x] T32 · Crédito y cartera (fiados)
 **Alcance:** cupo de crédito por cliente y plazo en días; venta a crédito desde el POS (valida cupo disponible, con autorización de un rol superior para excederlo); cuentas por cobrar; abonos parciales o totales con medio de pago; estado de cuenta del cliente; cartera vencida por edades (0–30, 31–60, 61–90, +90 días).
-**Pendientes que entran a esta tarea:** P94 y P95 (`docs/plan/pendientes.md`).
+**Backend y contrato** (el frontend es T32a). P94 y P95 pasaron a T32a.
 **Tests primero:** una venta que excede el cupo se rechaza sin autorización; un abono reduce el saldo y nunca lo deja negativo; las edades de cartera se calculan con la fecha de vencimiento en `America/Bogota`.
+
+### [ ] T32a · Frontend de crédito y cartera
+**Depende de:** T32.
+**Alcance:** cupo y plazo en la ficha del cliente; venta a crédito en el POS (medio «Crédito» solo con cliente con cupo, diálogo de autorización con correo y contraseña de un administrador ante `credit_limit_exceeded`); abonos y estado de cuenta del cliente; pantalla de cartera por edades. Hoy `posMethods` deja fuera `credit` del selector de pagos.
+**Pendientes que entran a esta tarea:** P94 y P95 (`docs/plan/pendientes.md`).
 
 ### [ ] T33 · Proveedores y registro de compras
 **Alcance:** proveedores (NIT, contacto, plazo de pago); registro de una compra (factura del proveedor) con líneas (que referencian `variant_id`) en cualquier unidad de compra (las unidades alternativas de T26; la conversión es `inventory/domain.ToBaseUnit`), que genera las entradas de inventario y actualiza el costo promedio; compras de contado o a crédito (saldo por pagar básico). (Órdenes de compra y cuentas por pagar completas en V2.)

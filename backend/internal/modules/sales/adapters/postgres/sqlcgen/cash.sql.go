@@ -38,7 +38,7 @@ FROM sale_payments p
 JOIN sales s ON s.tenant_id = p.tenant_id AND s.id = p.sale_id
 WHERE s.cash_session_id = $1 AND s.status = 'confirmed'
 GROUP BY p.method
-ORDER BY array_position(ARRAY['cash', 'card', 'nequi', 'daviplata', 'transfer'], p.method)
+ORDER BY array_position(ARRAY['cash', 'card', 'nequi', 'daviplata', 'transfer', 'credit'], p.method)
 `
 
 type CashSessionPaymentsRow struct {
@@ -359,7 +359,7 @@ func (q *Queries) ListCashSessionCounts(ctx context.Context, sessionID uuid.UUID
 
 const listCashSessionPayments = `-- name: ListCashSessionPayments :many
 SELECT tenant_id, session_id, method, amount FROM cash_session_payments WHERE session_id = $1
-ORDER BY array_position(ARRAY['cash', 'card', 'nequi', 'daviplata', 'transfer'], method)
+ORDER BY array_position(ARRAY['cash', 'card', 'nequi', 'daviplata', 'transfer', 'credit'], method)
 `
 
 func (q *Queries) ListCashSessionPayments(ctx context.Context, sessionID uuid.UUID) ([]CashSessionPayment, error) {

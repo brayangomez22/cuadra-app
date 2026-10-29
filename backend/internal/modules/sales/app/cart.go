@@ -24,6 +24,8 @@ type cart struct {
 	payments []domain.Payment
 	units    []*UnitInfo
 	prices   []ResolvedPrice
+	// authorizedBy is who let the credit part exceed the customer's credit.
+	authorizedBy uuid.UUID
 }
 
 // checkCustomer checks that the sale's customer, if any, can buy: it is the

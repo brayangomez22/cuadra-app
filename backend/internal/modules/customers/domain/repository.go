@@ -38,6 +38,9 @@ type CustomerRepository interface {
 	// tenant's.
 	Update(ctx context.Context, c *Customer) error
 	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*Customer, error)
+	// Names returns the names of the tenant's customers among ids, active
+	// or not.
+	Names(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]string, error)
 	// Search returns a page of the filter and how many customers match it.
 	Search(ctx context.Context, f CustomerFilter) ([]*Customer, int, error)
 }

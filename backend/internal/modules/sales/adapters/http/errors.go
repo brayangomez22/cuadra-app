@@ -35,6 +35,19 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrInvalidPaymentMethod, Status: http.StatusUnprocessableEntity, Code: "invalid_payment_method", Message: "El medio de pago no es válido."},
 	{Err: domain.ErrInvalidVoidReason, Status: http.StatusUnprocessableEntity, Code: "invalid_void_reason", Message: "Escriba el motivo de la anulación (máximo 500 caracteres)."},
 
+	// Credit sales.
+	{
+		Err: domain.ErrCreditLimitExceeded, Status: http.StatusConflict, Code: "credit_limit_exceeded",
+		Message:  "La venta a crédito supera el cupo disponible del cliente. Pida la autorización de un administrador.",
+		Describe: describeCreditLimit,
+	},
+	{Err: domain.ErrCreditSaleHasPayments, Status: http.StatusConflict, Code: "credit_sale_has_payments", Message: "El cliente ya abonó a esta venta a crédito: no se puede anular."},
+	{Err: domain.ErrCreditAuthorizationRejected, Status: http.StatusForbidden, Code: "credit_authorization_rejected", Message: "La autorización no es válida: revise el correo y la contraseña de un administrador o del dueño."},
+	{Err: domain.ErrTooManyAuthorizationAttempts, Status: http.StatusTooManyRequests, Code: "too_many_requests", Message: "Demasiados intentos de autorización. Espere unos minutos e intente de nuevo."},
+	{Err: domain.ErrCreditNotEnabled, Status: http.StatusUnprocessableEntity, Code: "credit_not_enabled", Message: "El cliente no tiene cupo de crédito. Asígnele uno o cobre la venta de contado."},
+	{Err: domain.ErrCreditWithoutCustomer, Status: http.StatusUnprocessableEntity, Code: "credit_without_customer", Message: "Elija el cliente de la venta para venderle a crédito."},
+	{Err: domain.ErrDuplicateCreditPayment, Status: http.StatusUnprocessableEntity, Code: "duplicate_credit_payment", Message: "Una venta lleva un solo pago a crédito."},
+
 	// Cash sessions.
 	{Err: domain.ErrCashSessionRequired, Status: http.StatusConflict, Code: "cash_session_required", Message: "Se necesita una caja abierta para vender."},
 	{Err: domain.ErrCashSessionClosed, Status: http.StatusConflict, Code: "cash_session_closed", Message: "La caja ya está cerrada. Para seguir vendiendo, abra una nueva."},
@@ -62,4 +75,16 @@ func describeInsufficientStock(err error) (string, map[string]string, bool) {
 	}
 	return "No hay stock suficiente de " + e.Description() + ".",
 		map[string]string{"variant_id": e.VariantID.String()}, true
+}
+
+// describeCreditLimit says how much credit the customer has left, so the
+// cashier can charge the rest some other way.
+func describeCreditLimit(err error) (string, map[string]string, bool) {
+	var e *domain.CreditLimitExceededError
+	if !errors.As(err, &e) {
+		return "", nil, false
+	}
+	available := httpx.FormatMoney(e.Available)
+	return "La venta a crédito supera el cupo disponible del cliente ($ " + available + "). Pida la autorización de un administrador.",
+		map[string]string{"available": available}, true
 }

@@ -88,6 +88,35 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 	return err
 }
 
+const customerNames = `-- name: CustomerNames :many
+SELECT id, name FROM customers WHERE id = ANY($1::uuid[])
+`
+
+type CustomerNamesRow struct {
+	ID   uuid.UUID
+	Name string
+}
+
+func (q *Queries) CustomerNames(ctx context.Context, ids []uuid.UUID) ([]CustomerNamesRow, error) {
+	rows, err := q.db.Query(ctx, customerNames, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CustomerNamesRow
+	for rows.Next() {
+		var i CustomerNamesRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCustomer = `-- name: GetCustomer :one
 SELECT id, tenant_id, person_type, document_type, document_number, name, trade_name, email, phone, address, city,
        segment_id, tax_responsibilities, active, created_at

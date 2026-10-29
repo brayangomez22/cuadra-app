@@ -20,11 +20,13 @@ import (
 var testNow = time.Date(2026, 10, 10, 9, 30, 0, 0, time.FixedZone("COT", -5*3600))
 
 type env struct {
-	svc     *app.Service
-	store   *store
-	actor   app.Actor
-	spans   *tracetest.SpanRecorder
-	metrics *sdkmetric.ManualReader
+	svc        *app.Service
+	store      *store
+	credit     *fakeCredit
+	authorizer *fakeAuthorizer
+	actor      app.Actor
+	spans      *tracetest.SpanRecorder
+	metrics    *sdkmetric.ManualReader
 }
 
 // newEnv builds a Service on the fakes; rules go before the base price rule.
@@ -39,9 +41,11 @@ func newEnv(t *testing.T, rules ...app.PriceRule) *env {
 			sessions:  map[uuid.UUID]*domain.CashSession{},
 			customers: map[catalogKey]bool{},
 		},
-		actor:   app.Actor{TenantID: newID(), UserID: newID()},
-		spans:   tracetest.NewSpanRecorder(),
-		metrics: sdkmetric.NewManualReader(),
+		credit:     &fakeCredit{},
+		authorizer: &fakeAuthorizer{users: map[app.Credentials]uuid.UUID{}},
+		actor:      app.Actor{TenantID: newID(), UserID: newID()},
+		spans:      tracetest.NewSpanRecorder(),
+		metrics:    sdkmetric.NewManualReader(),
 	}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(e.spans))
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(e.metrics))
@@ -55,6 +59,8 @@ func newEnv(t *testing.T, rules ...app.PriceRule) *env {
 		Policies:       fakePolicies{e.store},
 		CashSessions:   fakeCash{e.store},
 		Customers:      fakeCustomers{e.store},
+		Credit:         e.credit,
+		Authorizer:     e.authorizer,
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,

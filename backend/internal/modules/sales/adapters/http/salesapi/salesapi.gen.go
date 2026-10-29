@@ -79,6 +79,7 @@ func (e CashSessionStatus) Valid() bool {
 const (
 	Card      PaymentMethod = "card"
 	Cash      PaymentMethod = "cash"
+	Credit    PaymentMethod = "credit"
 	Daviplata PaymentMethod = "daviplata"
 	Nequi     PaymentMethod = "nequi"
 	Transfer  PaymentMethod = "transfer"
@@ -90,6 +91,8 @@ func (e PaymentMethod) Valid() bool {
 	case Card:
 		return true
 	case Cash:
+		return true
+	case Credit:
 		return true
 	case Daviplata:
 		return true
@@ -181,7 +184,8 @@ type CashMethodTotal struct {
 	// Example: 12500.00
 	Amount Money `json:"amount"`
 
-	// Method Medio de pago. Solo el efectivo (`cash`) da cambio.
+	// Method Medio de pago. Solo el efectivo (`cash`) da cambio. `credit` es la parte que el cliente paga después: exige
+	// cliente, va una sola vez por venta y abre una cuenta por cobrar.
 	Method PaymentMethod `json:"method"`
 }
 
@@ -252,6 +256,11 @@ type CloseCashSessionInput struct {
 
 // ConfirmSaleInput defines model for ConfirmSaleInput.
 type ConfirmSaleInput struct {
+	// CreditAuthorization Correo y contraseña de un usuario de la empresa con `receivables:override` (dueño o administrador) que autoriza
+	// una venta a crédito por encima del cupo del cliente. Se verifican y se descartan: no se guardan. Solo se usan
+	// si la venta tiene un pago `credit`; la cuenta por cobrar guarda quién autorizó si pasó el cupo.
+	CreditAuthorization *CreditAuthorizationInput `json:"credit_authorization,omitempty"`
+
 	// CustomerId El cliente activo a quien se vende (`/customers`). Sin él, la venta es a consumidor final.
 	CustomerId *openapi_types.UUID `json:"customer_id,omitempty"`
 	Lines      []SaleLineInput     `json:"lines"`
@@ -259,6 +268,14 @@ type ConfirmSaleInput struct {
 	// LocationId Sede donde se vende y de donde sale el stock.
 	LocationId openapi_types.UUID `json:"location_id"`
 	Payments   []PaymentInput     `json:"payments"`
+}
+
+// CreditAuthorizationInput Correo y contraseña de un usuario de la empresa con `receivables:override` (dueño o administrador) que autoriza
+// una venta a crédito por encima del cupo del cliente. Se verifican y se descartan: no se guardan. Solo se usan
+// si la venta tiene un pago `credit`; la cuenta por cobrar guarda quién autorizó si pasó el cupo.
+type CreditAuthorizationInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 // CurrentCashSession defines model for CurrentCashSession.
@@ -330,11 +347,13 @@ type PaymentInput struct {
 	// Example: 12500.00
 	Amount Money `json:"amount"`
 
-	// Method Medio de pago. Solo el efectivo (`cash`) da cambio.
+	// Method Medio de pago. Solo el efectivo (`cash`) da cambio. `credit` es la parte que el cliente paga después: exige
+	// cliente, va una sola vez por venta y abre una cuenta por cobrar.
 	Method PaymentMethod `json:"method"`
 }
 
-// PaymentMethod Medio de pago. Solo el efectivo (`cash`) da cambio.
+// PaymentMethod Medio de pago. Solo el efectivo (`cash`) da cambio. `credit` es la parte que el cliente paga después: exige
+// cliente, va una sola vez por venta y abre una cuenta por cobrar.
 type PaymentMethod string
 
 // Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
@@ -505,7 +524,8 @@ type SalePayment struct {
 	// Example: 12500.00
 	Amount Money `json:"amount"`
 
-	// Method Medio de pago. Solo el efectivo (`cash`) da cambio.
+	// Method Medio de pago. Solo el efectivo (`cash`) da cambio. `credit` es la parte que el cliente paga después: exige
+	// cliente, va una sola vez por venta y abre una cuenta por cobrar.
 	Method PaymentMethod `json:"method"`
 }
 
@@ -1808,6 +1828,20 @@ func (response ConfirmSale422JSONResponse) VisitConfirmSaleResponse(w http.Respo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ConfirmSale429JSONResponse Error
+
+func (response ConfirmSale429JSONResponse) VisitConfirmSaleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
 	_, err := buf.WriteTo(w)
 	return err
 }

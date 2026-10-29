@@ -75,6 +75,9 @@ func (h *Handler) ConfirmSale(ctx context.Context, req salesapi.ConfirmSaleReque
 	// The POS latency SLO measures charging a sale (docs/slo.md).
 	httpx.SetOperation(ctx, "pos.confirm_sale")
 	in := app.ConfirmSaleInput{LocationID: req.Body.LocationId, CustomerID: req.Body.CustomerId}
+	if c := req.Body.CreditAuthorization; c != nil {
+		in.CreditAuthorization = &app.Credentials{Email: c.Email, Password: c.Password}
+	}
 	for _, l := range req.Body.Lines {
 		qty, err := httpx.ParseDecimal(l.Quantity, domain.ErrInvalidQuantity)
 		if err != nil {
