@@ -18,6 +18,7 @@ func newModuleService(registry *modules.Registry, cfg Config) (*modules.Service,
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Logger:         cfg.Log,
+		Now:            cfg.Now,
 	})
 }
 

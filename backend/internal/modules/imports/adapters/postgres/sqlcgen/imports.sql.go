@@ -103,6 +103,24 @@ func (q *Queries) CreateImport(ctx context.Context, arg CreateImportParams) erro
 	return err
 }
 
+const dropImportFile = `-- name: DropImportFile :execrows
+UPDATE imports SET file = NULL, file_purged_at = now()
+WHERE tenant_id = $1 AND id = $2 AND file_purged_at IS NULL
+`
+
+type DropImportFileParams struct {
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+func (q *Queries) DropImportFile(ctx context.Context, arg DropImportFileParams) (int64, error) {
+	result, err := q.db.Exec(ctx, dropImportFile, arg.TenantID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getImport = `-- name: GetImport :one
 SELECT id, tenant_id, created_by, location_id, file_name, format, policy, status,
        total_rows, total_products, created, updated, skipped, errors, batches_done,

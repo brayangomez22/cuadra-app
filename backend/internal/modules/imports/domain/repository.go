@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -28,4 +29,10 @@ type ImportRepository interface {
 	// to its errors. With a ctx from a transaction it joins it, so a batch
 	// and its checkpoint are stored together.
 	Save(ctx context.Context, imp *Import, errs []RowError) error
+	// PurgeableFiles returns, across tenants, at most limit imports that
+	// still have their file and ended before before (ids only: the job
+	// that purges them runs with no tenant).
+	PurgeableFiles(ctx context.Context, before time.Time, limit int) ([]FileRef, error)
+	// DropFile deletes the import's file and keeps the import.
+	DropFile(ctx context.Context, tenantID, id uuid.UUID) error
 }

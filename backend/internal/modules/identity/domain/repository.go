@@ -58,6 +58,17 @@ type LoginDirectory interface {
 	FindByEmail(ctx context.Context, email Email) ([]LoginCandidate, error)
 }
 
+// DemoTenantRepository finds and deletes the demonstration tenants. Finding
+// crosses tenants (the reset runs with no tenant) and returns ids only.
+type DemoTenantRepository interface {
+	// FindByTemplate returns the ids of the demo tenants signed up with the
+	// business template.
+	FindByTemplate(ctx context.Context, template string) ([]uuid.UUID, error)
+	// Purge deletes the tenant and every row it owns; ErrNotDemoTenant if it
+	// is not a demo tenant and ErrTenantNotFound if it does not exist.
+	Purge(ctx context.Context, id uuid.UUID) error
+}
+
 // RefreshTokenRepository persists refresh tokens, scoped to their tenant.
 type RefreshTokenRepository interface {
 	// Create stores a new token.

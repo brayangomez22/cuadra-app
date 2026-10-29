@@ -57,6 +57,8 @@ type Service struct {
 	runs     metric.Int64Counter
 	products metric.Int64Counter
 	duration metric.Float64Histogram
+	// filesPurged counts the files of ended imports deleted (P82).
+	filesPurged metric.Int64Counter
 }
 
 // NewService builds a Service. It fails if a dependency is missing or a
@@ -84,6 +86,8 @@ func NewService(d Deps) (*Service, error) {
 		usecase.Histogram(&s.duration, "cuadra.imports.duration",
 			"Time from the start of an import's job to its end.", "s",
 			1, 5, 15, 30, 60, 120, 300, 600, 1800),
+		usecase.Counter(&s.filesPurged, "cuadra.imports.files_purged",
+			"Files of ended imports deleted after their retention.", "{file}"),
 	)
 	if err != nil {
 		return nil, err

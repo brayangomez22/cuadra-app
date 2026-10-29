@@ -1,0 +1,140 @@
+# Ferretería Demo: el negocio que se muestra en las visitas del piloto. Los
+# artículos combinan un nombre, una especificación y una marca de cada
+# familia; las cantidades por línea son las de un mostrador de barrio.
+tenant:
+  name: Ferretería Demo
+  nit: "901555111"
+  mailbox: ferreteria.demo.cuadra.co
+locations: [Sede Centro, Sede Norte]
+products: 3000
+customers: 300
+credit_share: 14
+defaulter_one_in: 4
+sales_per_day: 45
+# Domingo a sábado: el sábado es el día de las obras.
+weekdays: [45, 95, 90, 95, 100, 125, 165]
+# Enero y febrero flojos; diciembre, las remodelaciones de fin de año.
+months: [80, 82, 95, 100, 100, 105, 102, 100, 100, 105, 115, 140]
+segments: [Público, Maestro de obra, Contratista, Empresa]
+credit_segment: Maestro de obra
+suppliers:
+  - {name: Distribuidora Andina de Herramientas S.A.S., nit: "900301001", term_days: 30}
+  - {name: Materiales y Cementos del Valle S.A.S., nit: "900301002", term_days: 15}
+  - {name: Eléctricos Industriales Ltda., nit: "900301003", term_days: 30}
+  - {name: Tubos y Conexiones de Colombia S.A., nit: "900301004", term_days: 45}
+  - {name: Pinturas del Norte S.A.S., nit: "900301005", term_days: 30}
+families:
+  - category: Herramientas
+    unit: und
+    names: [Martillo, Destornillador de pala, Destornillador de estrella, Alicate, Llave de expansión, Serrucho, Metro, Nivel]
+    specs: [básico, profesional, de 6 pulgadas, de 8 pulgadas, de 10 pulgadas, de 12 pulgadas, mango de goma, reforzado]
+    brands: [Stanley, Truper, Bellota, Pretul]
+    attributes: {material: Acero}
+    price: [9000, 85000]
+    quantity: 2
+  - category: Herramientas
+    unit: und
+    names: [Taladro percutor, Pulidora, Sierra circular, Caladora, Lijadora orbital, Atornillador inalámbrico, Rotomartillo, Soldador]
+    specs: [de 500 W, de 650 W, de 750 W, de 850 W, de 1.000 W, de 1.200 W, con maletín, con kit de brocas]
+    brands: [Black+Decker, DeWalt, Bosch, Truper]
+    attributes: {material: Plástico y acero}
+    price: [180000, 780000]
+    quantity: 1
+  - category: Tornillería
+    unit: caja
+    names: [Tornillo drywall, Tornillo autoperforante, Tornillo madera, Chazo plástico, Perno hexagonal, Arandela plana, Tuerca hexagonal, Puntilla con cabeza]
+    specs: [de 1/2", de 3/4", de 1", de 1 1/4", de 1 1/2", de 2", de 2 1/2", de 3"]
+    brands: [Tornillos Unidos, Fijaciones Andinas, Sujetadores del Valle, Ferretodo]
+    attributes: {material: Acero galvanizado}
+    price: [6500, 42000]
+    quantity: 3
+  - category: Tornillería
+    unit: und
+    names: [Bisagra, Candado, Cerradura de pomo, Pasador, Manija, Cadena por eslabón, Gancho, Escuadra]
+    specs: [de 2", de 3", de 4", de 40 mm, de 50 mm, de 60 mm, de seguridad, cromada]
+    brands: [Yale, Segurex, Herraje Fino, Ferretodo]
+    attributes: {material: Acero}
+    price: [3500, 95000]
+    quantity: 4
+  - category: Construcción
+    unit: bulto
+    names: [Cemento gris, Cemento blanco, Mortero seco, Pega cerámica, Estuco, Yeso, Arena lavada, Gravilla]
+    specs: [de 25 kg, de 40 kg, de 50 kg, uso general, alta resistencia, para exteriores, para interiores, rápido]
+    brands: [Argos, Cemex, Holcim, Corona]
+    attributes: {material: Mineral}
+    price: [12000, 68000]
+    quantity: 10
+  - category: Construcción
+    unit: und
+    names: [Ladrillo, Bloque, Teja de fibrocemento, Teja plástica, Varilla corrugada, Malla electrosoldada, Alambre negro, Perfil de drywall]
+    specs: [número 4, número 5, de 3/8", de 1/2", de 1,22 m, de 2,44 m, de 3 m, de 6 m]
+    brands: [Ladrillera Santa Fe, Acerías Paz del Río, Eternit, Gerdau]
+    attributes: {material: Arcilla y acero}
+    price: [900, 120000]
+    quantity: 20
+  - category: Eléctricos
+    unit: m
+    names: [Cable THHN, Cable dúplex, Cable encauchetado, Manguera eléctrica, Tubo conduit, Canaleta, Cable coaxial, Cable UTP]
+    specs: [calibre 8, calibre 10, calibre 12, calibre 14, calibre 16, de 1/2", de 3/4", categoría 6]
+    brands: [Centelsa, Procables, Phelps Dodge, Luminex]
+    attributes: {material: Cobre}
+    price: [1500, 9500]
+    quantity: 30
+    step: "0.5"
+  - category: Eléctricos
+    unit: und
+    names: [Interruptor sencillo, Interruptor doble, Tomacorriente, Breaker, Bombillo LED, Plafón, Extensión, Multitoma]
+    specs: [de 9 W, de 12 W, de 18 W, de 15 A, de 20 A, de 30 A, con polo a tierra, blanco]
+    brands: [Leviton, Schneider, Sylvania, Philips]
+    attributes: {material: Plástico}
+    price: [3500, 65000]
+    quantity: 5
+  - category: Plomería
+    unit: und
+    names: [Codo PVC, Tee PVC, Unión PVC, Adaptador macho, Adaptador hembra, Llave de paso, Registro, Válvula de cheque]
+    specs: [de 1/2", de 3/4", de 1", de 1 1/4", de 1 1/2", de 2", presión, sanitario]
+    brands: [Pavco, Gerfor, Grival, Tigre]
+    attributes: {material: PVC}
+    price: [800, 78000]
+    quantity: 8
+  - category: Plomería
+    unit: und
+    names: [Grifería lavamanos, Grifería lavaplatos, Ducha, Sifón, Sanitario, Lavamanos, Flotador, Acople flexible]
+    specs: [sencilla, cromada, de pared, de mesa, ahorradora, de 40 cm, de 60 cm, económica]
+    brands: [Grival, Corona, FV, Helvex]
+    attributes: {material: Metal y cerámica}
+    price: [9000, 420000]
+    quantity: 2
+  - category: Plomería
+    unit: m
+    names: [Tubo PVC presión, Tubo PVC sanitario, Tubo CPVC, Manguera de jardín, Manguera transparente, Tubo galvanizado, Tubo PEX, Manguera de gas]
+    specs: [de 1/2", de 3/4", de 1", de 1 1/2", de 2", de 3", de 4", reforzada]
+    brands: [Pavco, Gerfor, Tigre, Colmena]
+    attributes: {material: PVC}
+    price: [2500, 32000]
+    quantity: 12
+    step: "0.5"
+  - category: Pinturas
+    unit: galon
+    names: [Vinilo, Esmalte, Anticorrosivo, Laca, Barniz, Impermeabilizante, Pintura de tráfico, Sellador]
+    specs: [blanco, negro, gris, rojo, azul, verde, transparente, mate]
+    brands: [Pintuco, Sherwin-Williams, Viniltex, Tito Pabón]
+    attributes: {material: Base agua}
+    price: [32000, 165000]
+    quantity: 3
+  - category: Pinturas
+    unit: und
+    names: [Brocha, Rodillo, Bandeja para pintura, Lija, Espátula, Cinta de enmascarar, Thinner, Masilla]
+    specs: [de 1", de 2", de 3", de 4", de 9", grano 80, grano 120, de 1/4 de galón]
+    brands: [Goya, Pintuco, Tesa, 3M]
+    attributes: {material: Varios}
+    price: [1500, 28000]
+    quantity: 4
+  - category: Herramientas
+    unit: und
+    names: [Pala, Pica, Carretilla, Barra, Machete, Rastrillo, Palustre, Llana]
+    specs: [punta redonda, punta cuadrada, de 5 libras, de 1,5 m, de 18 pulgadas, de 22 pulgadas, liviana, reforzada]
+    brands: [Herragro, Truper, Bellota, Incolma]
+    attributes: {material: Acero al carbono}
+    price: [12000, 260000]
+    quantity: 2

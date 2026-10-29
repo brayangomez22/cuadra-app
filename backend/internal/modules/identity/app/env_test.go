@@ -25,6 +25,7 @@ type env struct {
 	tenants      *fakeTenants
 	users        *fakeUsers
 	tokens       *fakeTokens
+	demo         *fakeDemo
 	hasher       *fakeHasher
 	setup        *fakeSetup
 	modules      *fakeModules
@@ -51,6 +52,7 @@ func newEnv(t *testing.T) *env {
 		spans:        tracetest.NewSpanRecorder(),
 		metrics:      sdkmetric.NewManualReader(),
 	}
+	e.demo = &fakeDemo{tenants: e.tenants, users: users}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(e.spans))
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(e.metrics))
 	t.Cleanup(func() {
@@ -64,6 +66,7 @@ func newEnv(t *testing.T) *env {
 		Tenants:        e.tenants,
 		Users:          users,
 		Tokens:         e.tokens,
+		Demo:           e.demo,
 		Directory:      users,
 		Hasher:         e.hasher,
 		Issuer:         fakeIssuer{clock: clock},

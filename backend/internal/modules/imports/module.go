@@ -8,6 +8,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/riverqueue/river"
 	"go.opentelemetry.io/otel/metric"
@@ -37,6 +38,12 @@ type Config struct {
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
+	// Now is the clock of the use cases; nil is time.Now (the demo
+	// generator simulates one).
+	Now func() time.Time
+	// Schedule adds the module's periodic jobs to Jobs (the API process);
+	// another instance of the module, like the demo generator's, does not.
+	Schedule bool
 }
 
 // Module is the wired imports module.
@@ -59,6 +66,7 @@ func New(cfg Config) (*Module, error) {
 		Sheets:         sheet.Sheets{},
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
+		Now:            cfg.Now,
 		Logger:         cfg.Logger,
 	})
 	if err != nil {
@@ -66,6 +74,14 @@ func New(cfg Config) (*Module, error) {
 	}
 	if err := river.AddWorkerSafely(cfg.Workers, &jobsadapter.RunImportWorker{Runner: svc}); err != nil {
 		return nil, err
+	}
+	if err := river.AddWorkerSafely(cfg.Workers, &jobsadapter.PurgeFilesWorker{Purger: svc}); err != nil {
+		return nil, err
+	}
+	if cfg.Schedule {
+		if err := cfg.Jobs.AddPeriodic(jobsadapter.PurgeFilesSchedule()); err != nil {
+			return nil, err
+		}
 	}
 	return &Module{service: svc, log: cfg.Logger}, nil
 }

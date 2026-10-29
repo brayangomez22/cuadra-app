@@ -22,6 +22,8 @@ type wiring struct {
 	registry      *modules.Registry
 	moduleService *modules.Service
 	permissions   *identity.Permissions
+	// identityModule is kept for the demo (NewDemo).
+	identityModule *identity.Module
 }
 
 // newWiring builds the activable modules and the permission matrix, which
@@ -61,6 +63,7 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 	if err != nil {
 		return nil, err
 	}
+	w.identityModule = identityModule
 	inventoryModule, err := w.inventory(catalogModule)
 	if err != nil {
 		return nil, err
@@ -101,6 +104,7 @@ func (w *wiring) catalog(history *ports.CatalogHistory) (*catalog.Module, error)
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
+		Now:            w.Now,
 	})
 }
 
@@ -110,6 +114,7 @@ func (w *wiring) customers() (*customers.Module, error) {
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
+		Now:            w.Now,
 	})
 }
 
@@ -129,6 +134,7 @@ func (w *wiring) identity(c *catalog.Module, cu *customers.Module) (*identity.Mo
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
+		Now:            w.Now,
 	})
 }
 
@@ -140,6 +146,7 @@ func (w *wiring) inventory(c *catalog.Module) (*inventory.Module, error) {
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
+		Now:            w.Now,
 	})
 }
 
@@ -164,6 +171,7 @@ func (w *wiring) sales(c *catalog.Module, i *inventory.Module, cu *customers.Mod
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
+		Now:            w.Now,
 	})
 }
 
@@ -177,6 +185,7 @@ func (w *wiring) receivables(cu *customers.Module, s *sales.Module) (*receivable
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
+		Now:            w.Now,
 	})
 }
 
@@ -187,12 +196,14 @@ func (w *wiring) imports(c *catalog.Module, id *identity.Module, i *inventory.Mo
 		DB:             w.DB,
 		Jobs:           w.Jobs,
 		Workers:        w.Workers,
+		Schedule:       w.Schedule,
 		Catalog:        ports.ImportsCatalog{Catalog: c, Identity: id},
 		Stock:          ports.ImportsStock{Inventory: i},
 		Modules:        w.moduleService,
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
+		Now:            w.Now,
 	})
 }
 
@@ -205,5 +216,6 @@ func (w *wiring) purchases(c *catalog.Module, i *inventory.Module) (*purchases.M
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
+		Now:            w.Now,
 	})
 }

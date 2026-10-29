@@ -22,7 +22,7 @@ type fakeTenants struct {
 func cloneTenant(t *domain.Tenant) *domain.Tenant {
 	c, err := domain.RehydrateTenant(domain.TenantSnapshot{
 		ID: t.ID(), Name: t.Name(), NIT: t.NIT(), Status: t.Status(), BusinessTemplate: t.BusinessTemplate(),
-		DefaultTaxRate: t.DefaultTaxRate(), CreatedAt: t.CreatedAt(),
+		DefaultTaxRate: t.DefaultTaxRate(), Demo: t.IsDemo(), CreatedAt: t.CreatedAt(),
 	})
 	if err != nil {
 		panic(err)

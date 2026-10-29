@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 )
 
@@ -24,7 +25,14 @@ type Config struct {
 	SentryDSN string
 	// SentryRelease names the build in Sentry; empty means the VCS revision.
 	SentryRelease string
+	// DemoEnabled resets the demo tenants every night (T34); DemoPassword is
+	// the password of their users, public on purpose. Never logged.
+	DemoEnabled  bool
+	DemoPassword string
 }
+
+// minDemoPassword is the shortest demo password accepted.
+const minDemoPassword = 12
 
 // Load reads the configuration using getenv (os.Getenv in production). It
 // reports every missing or invalid variable at once so startup fails fast.
@@ -62,10 +70,30 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 	}
 
+	if err := cfg.loadDemo(getenv); err != nil {
+		errs = append(errs, err)
+	}
+
 	if len(errs) > 0 {
 		return Config{}, fmt.Errorf("invalid configuration: %w", errors.Join(errs...))
 	}
 	return cfg, nil
+}
+
+// loadDemo reads DEMO_ENABLED and, when it is on, DEMO_PASSWORD.
+func (cfg *Config) loadDemo(getenv func(string) string) error {
+	if raw := getenv("DEMO_ENABLED"); raw != "" {
+		on, err := strconv.ParseBool(raw)
+		if err != nil {
+			return fmt.Errorf("DEMO_ENABLED is invalid: %w", err)
+		}
+		cfg.DemoEnabled = on
+	}
+	cfg.DemoPassword = getenv("DEMO_PASSWORD")
+	if cfg.DemoEnabled && len(cfg.DemoPassword) < minDemoPassword {
+		return fmt.Errorf("DEMO_PASSWORD must have at least %d characters when DEMO_ENABLED is on", minDemoPassword)
+	}
+	return nil
 }
 
 func withDefault(value, fallback string) string {

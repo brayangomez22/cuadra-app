@@ -8,6 +8,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/metric"
@@ -25,6 +26,9 @@ type Config struct {
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
+	// Now is the clock of the use cases; nil is time.Now (the demo
+	// generator simulates one).
+	Now func() time.Time
 }
 
 // Module is the wired customers module.
@@ -43,6 +47,7 @@ func New(cfg Config) (*Module, error) {
 		Segments:       postgres.NewSegmentRepository(cfg.DB),
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
+		Now:            cfg.Now,
 		Logger:         cfg.Logger,
 	})
 	if err != nil {

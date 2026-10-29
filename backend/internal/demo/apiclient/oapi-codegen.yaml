@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+# Types and client of the whole contract, for the demo generator: it writes
+# its data through the API like any other client.
+package: apiclient
+output: apiclient.gen.go
+generate:
+  models: true
+  client: true

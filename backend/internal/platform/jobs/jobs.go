@@ -98,6 +98,18 @@ func (c *Client) InsertTx(ctx context.Context, tx pgx.Tx, args river.JobArgs, op
 	return res.Job.ID, nil
 }
 
+// AddPeriodic schedules a periodic job; its kind must be among Workers. A
+// module adds its own as it adds its workers, before the client starts.
+func (c *Client) AddPeriodic(job *river.PeriodicJob) error {
+	if !c.working {
+		return errors.New("jobs: periodic jobs need workers")
+	}
+	if _, err := c.river.PeriodicJobs().AddSafely(job); err != nil {
+		return fmt.Errorf("jobs: add periodic job: %w", err)
+	}
+	return nil
+}
+
 // Start starts working jobs until Stop is called or ctx is canceled.
 func (c *Client) Start(ctx context.Context) error {
 	if !c.working {

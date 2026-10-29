@@ -201,6 +201,7 @@ type Import struct {
 	CreatedAt     time.Time
 	StartedAt     pgtype.Timestamptz
 	FinishedAt    pgtype.Timestamptz
+	FilePurgedAt  pgtype.Timestamptz
 }
 
 type ImportError struct {
@@ -551,6 +552,7 @@ type Tenant struct {
 	CreatedAt        time.Time
 	BusinessTemplate string
 	DefaultTaxRate   pgtype.Numeric
+	Demo             bool
 }
 
 type TenantModule struct {

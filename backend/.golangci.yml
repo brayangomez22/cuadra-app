@@ -234,6 +234,12 @@ linters:
           deny:
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules
               desc: only internal/server joins the modules; cmd and the API tests use server.New
+        demo:
+          files:
+            - "**/internal/demo/**"
+          deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules
+              desc: the demo generator writes through the API (internal/server), never through a module
         platform:
           files:
             - "**/internal/platform/**"

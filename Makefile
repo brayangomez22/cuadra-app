@@ -10,7 +10,7 @@ OPENAPI_SPEC := $(CURDIR)/api/openapi.yaml
 export
 
 .DEFAULT_GOAL := help
-.PHONY: help up down run test test-int lint lint-size lint-guards lint-neutral check migrate sqlc openapi e2e-up e2e e2e-down obs-up obs-down obs-alert-test jobs-ui
+.PHONY: help up down run test test-int lint lint-size lint-guards lint-neutral check migrate seed sqlc openapi e2e-up e2e e2e-down obs-up obs-down obs-alert-test jobs-ui
 
 help: ## List available commands
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -41,7 +41,7 @@ lint-size: ## Fail if a Go file passes 300 lines (400 for tests)
 
 # Each depguard rule and forbidigo message of .golangci.yml must reject what
 # backend/testdata/guards breaks it with.
-DEPGUARD_RULES := domain kernel app catalog platform composition
+DEPGUARD_RULES := domain kernel app catalog platform composition demo
 FORBIDIGO_MSGS := "UUID v7" "decimal.Decimal" "recibe la hora"
 
 lint-guards: ## Check that depguard and forbidigo still reject what testdata/guards breaks them with
@@ -57,6 +57,9 @@ lint-neutral: ## Fail if a term of one business type appears in the core
 	cd $(BACKEND) && go run ./cmd/lint-neutral -root $(CURDIR)
 
 check: lint lint-neutral test test-int ## Must pass before a task is done
+
+seed: ## Generate the demo tenants (every demo profile, or TEMPLATE=<template>) with six months of history
+	cd $(BACKEND) && go run ./cmd/seed $(if $(TEMPLATE),-template $(TEMPLATE)) $(if $(SEED),-seed $(SEED))
 
 migrate: ## Apply migrations (goose up) as MIGRATION_DATABASE_URL and set app_user's password
 	cd $(BACKEND) && go run ./cmd/migrate

@@ -14,7 +14,7 @@ Este directorio es lo único que cambia de fase en fase. `CLAUDE.md` contiene la
 |---|---|---|---|---|---|
 | 1 | Núcleo | T01–T17 | `fase-1-nucleo.md` | ✅ completa | Cimientos técnicos (CI, observabilidad, BD multi-tenant, OpenAPI), identidad, catálogo, inventario, UI base y dominio de ventas |
 | 2 | Vender | T18–T25 (+ T24a–T24k) | `fase-2-vender.md` | ✅ completa | River, Sentry, API y pantalla del POS, tirilla, caja, dashboards y E2E |
-| 3 | Inventario, clientes y compras | T26–T34 (+ T26a–T26r, T29a, T30a, T31a, T32a, T33a) | `fase-3-inventario-clientes.md` | 🟡 activa | Fraccionamiento, escáner con cámara, stock mínimo, importación de Excel, toma física, clientes, fiados, compras y demo |
+| 3 | Inventario, clientes y compras | T26–T34 (+ T26a–T26r, T29a, T30a, T31a, T32a, T33a, T34a) | `fase-3-inventario-clientes.md` | 🟡 activa | Fraccionamiento, escáner con cámara, stock mínimo, importación de Excel, toma física, clientes, fiados, compras y demo |
 | 4 | Facturación, control y reportes | T35–T44 | `fase-4-facturacion-control.md` | ⚪ | DIAN, seguridad, feature flags, analítica, usuarios y auditoría, reportes, tablero y primeros pasos |
 | 5 | Producción y piloto | T45–T50 | `fase-5-produccion-piloto.md` | ⚪ | Terraform, CD, monitoreo en producción, backups, exportación de datos y legal → **arranca el piloto** |
 | 6 | Portafolio | T51–T53 | `fase-6-portafolio.md` | ⚪ | Pruebas de carga, README final y laboratorio de Kubernetes (opcional) |
@@ -27,7 +27,7 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
 
 **Hitos**
 - **Al terminar la fase 2:** ya puedes mostrar una venta real de punta a punta.
-- **Al terminar la fase 3:** la demo (T34) está lista para visitas de venta y para el portafolio.
+- **Al terminar la fase 3:** la demo (T34 y T34a) está lista para visitas de venta y para el portafolio.
 - **Al terminar la fase 5:** arranca el piloto con 3 a 5 negocios (empezando por ferreterías).
 
 **Excepciones al orden**

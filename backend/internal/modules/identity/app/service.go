@@ -25,6 +25,7 @@ type Deps struct {
 	Users     domain.UserRepository
 	Tokens    domain.RefreshTokenRepository
 	Directory domain.LoginDirectory
+	Demo      domain.DemoTenantRepository
 	Hasher    domain.PasswordHasher
 	Issuer    AccessTokenIssuer
 	Setup     TenantSetup
@@ -59,7 +60,7 @@ type Service struct {
 // NewService builds a Service. It fails if a required dependency is missing
 // or a metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Tenants, d.Users, d.Tokens, d.Directory, d.Hasher, d.Issuer, d.Setup,
+	if usecase.AnyNil(d.Tenants, d.Users, d.Tokens, d.Directory, d.Demo, d.Hasher, d.Issuer, d.Setup,
 		d.Permissions, d.Modules, d.IPLimiter, d.EmailLimiter) {
 		return nil, errors.New("identity: missing service dependency")
 	}
