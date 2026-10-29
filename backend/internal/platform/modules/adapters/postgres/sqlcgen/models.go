@@ -261,6 +261,45 @@ type ProductVariant struct {
 	CreatedAt  time.Time
 }
 
+type Purchase struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	SupplierID    uuid.UUID
+	LocationID    uuid.UUID
+	InvoiceNumber string
+	InvoiceKey    string
+	IssuedOn      pgtype.Date
+	DueOn         pgtype.Date
+	Payment       string
+	Notes         *string
+	Subtotal      pgtype.Numeric
+	Tax           pgtype.Numeric
+	Total         pgtype.Numeric
+	BalanceDue    pgtype.Numeric
+	CreatedBy     uuid.UUID
+	CreatedAt     time.Time
+}
+
+type PurchaseLine struct {
+	TenantID     uuid.UUID
+	PurchaseID   uuid.UUID
+	Position     int32
+	VariantID    uuid.UUID
+	ProductName  string
+	VariantLabel *string
+	UnitID       *uuid.UUID
+	UnitCode     *string
+	UnitFactor   pgtype.Numeric
+	Quantity     pgtype.Numeric
+	UnitCost     pgtype.Numeric
+	TaxRate      pgtype.Numeric
+	Subtotal     pgtype.Numeric
+	Tax          pgtype.Numeric
+	BaseQuantity pgtype.Numeric
+	BaseUnitCost pgtype.Numeric
+	LotID        *uuid.UUID
+}
+
 type Receivable struct {
 	ID           uuid.UUID
 	TenantID     uuid.UUID
@@ -487,6 +526,21 @@ type StockMovement struct {
 	UserID           uuid.UUID
 	OccurredAt       time.Time
 	LotID            *uuid.UUID
+}
+
+type Supplier struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	Name            string
+	Nit             string
+	ContactName     *string
+	Email           *string
+	Phone           *string
+	PaymentTermDays int32
+	Active          bool
+	SearchName      string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type Tenant struct {

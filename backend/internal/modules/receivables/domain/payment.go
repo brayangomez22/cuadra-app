@@ -128,7 +128,7 @@ func (a *Account) dueFirst(open []*Receivable) ([]*Receivable, error) {
 		return nil, ErrBalanceMismatch
 	}
 	slices.SortStableFunc(order, func(x, y *Receivable) int {
-		if c := x.dueDate.t.Compare(y.dueDate.t); c != 0 {
+		if c := x.dueDate.Time().Compare(y.dueDate.Time()); c != 0 {
 			return c
 		}
 		return x.createdAt.Compare(y.createdAt)

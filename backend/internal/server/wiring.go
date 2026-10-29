@@ -8,6 +8,7 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/imports"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/purchases"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/receivables"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
@@ -81,10 +82,14 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 	if err != nil {
 		return nil, err
 	}
+	purchasesModule, err := w.purchases(catalogModule, inventoryModule)
+	if err != nil {
+		return nil, err
+	}
 	return []func(*http.ServeMux){
 		identityModule.RegisterRoutes, catalogModule.RegisterRoutes, customersModule.RegisterRoutes,
 		inventoryModule.RegisterRoutes, salesModule.RegisterRoutes, receivablesModule.RegisterRoutes,
-		importsModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
+		importsModule.RegisterRoutes, purchasesModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
 	}, nil
 }
 
@@ -185,6 +190,18 @@ func (w *wiring) imports(c *catalog.Module, id *identity.Module, i *inventory.Mo
 		Catalog:        ports.ImportsCatalog{Catalog: c, Identity: id},
 		Stock:          ports.ImportsStock{Inventory: i},
 		Modules:        w.moduleService,
+		Logger:         w.Log,
+		TracerProvider: w.TracerProvider,
+		MeterProvider:  w.MeterProvider,
+	})
+}
+
+// purchases buys the catalog's variants into the inventory's stock.
+func (w *wiring) purchases(c *catalog.Module, i *inventory.Module) (*purchases.Module, error) {
+	return purchases.New(purchases.Config{
+		DB:             w.DB,
+		Catalog:        ports.PurchasesCatalog{Catalog: c},
+		Stock:          ports.PurchasesStock{Inventory: i},
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,

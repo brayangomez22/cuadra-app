@@ -1190,6 +1190,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Buscar proveedores
+         * @description Lista los proveedores de la empresa por nombre, cada uno con lo que se le debe. Con `q` busca por palabras del
+         *     nombre (sin importar tildes ni mayúsculas) o por el comienzo del número del NIT.
+         */
+        get: operations["listSuppliers"];
+        put?: never;
+        /**
+         * Crear un proveedor
+         * @description El NIT es único en la empresa.
+         */
+        post: operations["createSupplier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suppliers/{supplierId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: components["parameters"]["SupplierId"];
+            };
+            cookie?: never;
+        };
+        /** Ver un proveedor */
+        get: operations["getSupplier"];
+        /**
+         * Editar un proveedor
+         * @description Reemplaza los datos del proveedor. Un proveedor no se borra: se desactiva (`active: false`) y ya no se le
+         *     pueden registrar compras, pero sus compras lo siguen nombrando.
+         */
+        put: operations["updateSupplier"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/purchases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar compras
+         * @description Lista las compras de la empresa, la factura más reciente primero.
+         */
+        get: operations["listPurchases"];
+        put?: never;
+        /**
+         * Registrar una compra
+         * @description Registra la factura de un proveedor. Cada línea entra al inventario de la sede como una entrada
+         *     (`purchase_in`) que referencia la compra y recalcula el costo promedio. Una línea puede venir en una unidad
+         *     alternativa de la variante (`unit_id`): la compra guarda la unidad, la cantidad y el costo en esa unidad, y el
+         *     inventario la recibe convertida a la unidad base (cantidad × factor, a costo ÷ factor redondeado a 4
+         *     decimales). El costo es por unidad y sin IVA; la tasa de IVA es la del producto salvo que la línea traiga
+         *     otra. Todo se guarda junto: si una línea no puede entrar, no queda la compra. Una compra de contado queda
+         *     pagada; una a crédito queda con saldo por pagar igual a su total y vence `due_on` o, sin él, el plazo del
+         *     proveedor después de la fecha de la factura. La misma factura de un proveedor se registra una sola vez: el
+         *     número se compara sin espacios, guiones ni puntos y sin importar mayúsculas.
+         */
+        post: operations["registerPurchase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/purchases/{purchaseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purchaseId: components["parameters"]["PurchaseId"];
+            };
+            cookie?: never;
+        };
+        /** Ver una compra */
+        get: operations["getPurchase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales": {
         parameters: {
             query?: never;
@@ -2514,6 +2614,193 @@ export interface components {
             total: number;
             totals: components["schemas"]["AgingBuckets"];
         };
+        /** @description Un proveedor de la empresa. `nit` está en su forma canónica, con el dígito de verificación. */
+        Supplier: {
+            /** Format: uuid */
+            id: string;
+            /** @description Razón social o nombre del proveedor. */
+            name: string;
+            /** @example 900123456-8 */
+            nit: string;
+            /** @description A quién llamar en el proveedor. */
+            contact_name?: string;
+            email?: string;
+            phone?: string;
+            /** @description Días de crédito que da el proveedor; vence así una compra a crédito sin `due_on`. */
+            payment_term_days: number;
+            active: boolean;
+            /** @description Lo que se le debe al proveedor por sus compras a crédito, con 2 decimales. */
+            balance_due: components["schemas"]["Money"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description Los datos de un proveedor. El NIT se escribe con su dígito de verificación (con o sin guion y puntos); una
+         *     persona natural con RUT también tiene NIT. Los campos de contacto vacíos se guardan como ausentes.
+         */
+        SupplierInput: {
+            name: string;
+            /** @example 900.123.456-8 */
+            nit: string;
+            contact_name?: string;
+            email?: string;
+            phone?: string;
+            /** @default 0 */
+            payment_term_days: number;
+            /**
+             * @description A un proveedor inactivo no se le registran compras.
+             * @default true
+             */
+            active: boolean;
+        };
+        SupplierPage: {
+            items: components["schemas"]["Supplier"][];
+            /** @description Cantidad total de proveedores que cumplen el filtro, sin paginar. */
+            total: number;
+        };
+        /**
+         * @description De contado (queda pagada) o a crédito (queda con saldo por pagar).
+         * @enum {string}
+         */
+        PurchasePayment: "cash" | "credit";
+        /**
+         * @description Con saldo por pagar (`open`) o pagada (`paid`).
+         * @enum {string}
+         */
+        PurchaseStatus: "open" | "paid";
+        PurchaseLineInput: {
+            /** Format: uuid */
+            variant_id: string;
+            /**
+             * Format: uuid
+             * @description Una unidad alternativa de la variante en la que vienen `quantity` y `unit_cost` (por ejemplo, cajas o
+             *     docenas). Sin ella, vienen en la unidad base.
+             */
+            unit_id?: string;
+            quantity: components["schemas"]["Quantity"];
+            /** @description El costo de una unidad de compra, sin IVA. */
+            unit_cost: components["schemas"]["Money"];
+            /** @description La tasa de IVA de la factura. Sin ella, la del producto. */
+            tax_rate?: components["schemas"]["TaxRate"];
+        };
+        PurchaseInput: {
+            /** Format: uuid */
+            supplier_id: string;
+            /**
+             * Format: uuid
+             * @description La sede a la que entra la mercancía.
+             */
+            location_id: string;
+            /** @example FE 1234 */
+            invoice_number: string;
+            /**
+             * Format: date
+             * @description La fecha de la factura, no posterior a hoy en hora de Colombia.
+             */
+            issued_on: string;
+            payment: components["schemas"]["PurchasePayment"];
+            /**
+             * Format: date
+             * @description El vencimiento de una compra a crédito, no anterior a la factura. Se ignora de contado.
+             */
+            due_on?: string;
+            notes?: string;
+            lines: components["schemas"]["PurchaseLineInput"][];
+        };
+        /**
+         * @description Una línea de la compra en la unidad en que se compró, y lo que entró al inventario en la unidad base. Los
+         *     importes tienen 2 decimales y redondeo half-up.
+         */
+        PurchaseLine: {
+            /** Format: uuid */
+            variant_id: string;
+            product_name: string;
+            /** @description La etiqueta de la variante (`38 / Negro`); ausente en un producto sin variantes. */
+            variant_label?: string;
+            /**
+             * Format: uuid
+             * @description La unidad alternativa en que se compró; ausente si fue en la unidad base.
+             */
+            unit_id?: string;
+            /** @example caja */
+            unit_code: string;
+            /** @description Cuántas unidades base tiene la unidad de compra (1 en la unidad base). */
+            unit_factor: components["schemas"]["Quantity"];
+            quantity: components["schemas"]["Quantity"];
+            unit_cost: components["schemas"]["Money"];
+            tax_rate: components["schemas"]["TaxRate"];
+            subtotal: components["schemas"]["Money"];
+            tax: components["schemas"]["Money"];
+            total: components["schemas"]["Money"];
+            /** @description Lo que entró al inventario, en la unidad base. */
+            base_quantity: components["schemas"]["Quantity"];
+            /** @description El costo de una unidad base que entró al costo promedio. */
+            base_unit_cost: components["schemas"]["Money"];
+        };
+        /** @description El IVA de la compra a una tasa. */
+        PurchaseTax: {
+            rate: components["schemas"]["TaxRate"];
+            base: components["schemas"]["Money"];
+            tax: components["schemas"]["Money"];
+        };
+        Purchase: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            supplier_id: string;
+            /** Format: uuid */
+            location_id: string;
+            invoice_number: string;
+            /** Format: date */
+            issued_on: string;
+            /**
+             * Format: date
+             * @description El vencimiento; solo en una compra a crédito.
+             */
+            due_on?: string;
+            payment: components["schemas"]["PurchasePayment"];
+            status: components["schemas"]["PurchaseStatus"];
+            notes?: string;
+            lines: components["schemas"]["PurchaseLine"][];
+            subtotal: components["schemas"]["Money"];
+            /** @description El IVA por tasa, de la menor a la mayor. */
+            taxes: components["schemas"]["PurchaseTax"][];
+            tax: components["schemas"]["Money"];
+            total: components["schemas"]["Money"];
+            /** @description Lo que falta pagar al proveedor. */
+            balance_due: components["schemas"]["Money"];
+            /** Format: uuid */
+            created_by: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        PurchaseSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            supplier_id: string;
+            supplier_name: string;
+            /** Format: uuid */
+            location_id: string;
+            invoice_number: string;
+            /** Format: date */
+            issued_on: string;
+            /** Format: date */
+            due_on?: string;
+            payment: components["schemas"]["PurchasePayment"];
+            status: components["schemas"]["PurchaseStatus"];
+            /** @description Cuántas líneas tiene la compra. */
+            lines: number;
+            total: components["schemas"]["Money"];
+            balance_due: components["schemas"]["Money"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        PurchasePage: {
+            items: components["schemas"]["PurchaseSummary"][];
+            /** @description Cantidad total de compras que cumplen el filtro, sin paginar. */
+            total: number;
+        };
         CustomerSegment: {
             /** Format: uuid */
             id: string;
@@ -2997,6 +3284,19 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /**
+         * @description Algún dato del proveedor no cumple las reglas: el NIT no es válido (`invalid_nit`) o su dígito de verificación
+         *     no coincide (`invalid_nit_check_digit`), el nombre (`invalid_supplier_name`), un dato de contacto
+         *     (`invalid_supplier_contact`) o el plazo de pago no está entre 0 y 365 días (`invalid_payment_term`).
+         */
+        InvalidSupplier: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description El recurso no existe (`code` = `not_found` u otro más específico). */
         NotFound: {
             headers: {
@@ -3053,6 +3353,8 @@ export interface components {
         UnitId: string;
         AttributeId: string;
         CustomerId: string;
+        SupplierId: string;
+        PurchaseId: string;
         SegmentId: string;
         AxisId: string;
         LocationId: string;
@@ -5802,6 +6104,265 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listSuppliers: {
+        parameters: {
+            query?: {
+                /** @description Texto a buscar. */
+                q?: string;
+                /** @description Proveedores activos (por defecto), inactivos o todos. */
+                status?: "active" | "inactive" | "all";
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de proveedores. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createSupplier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupplierInput"];
+            };
+        };
+        responses: {
+            /** @description Proveedor creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Supplier"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Ya existe un proveedor con ese NIT (`supplier_nit_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["InvalidSupplier"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getSupplier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: components["parameters"]["SupplierId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El proveedor y lo que se le debe. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Supplier"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateSupplier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                supplierId: components["parameters"]["SupplierId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupplierInput"];
+            };
+        };
+        responses: {
+            /** @description El proveedor actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Supplier"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Ya existe otro proveedor con ese NIT (`supplier_nit_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["InvalidSupplier"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listPurchases: {
+        parameters: {
+            query?: {
+                /** @description Solo las compras de este proveedor. */
+                supplier_id?: string;
+                /** @description Compras con saldo por pagar (`open`), pagadas (`paid`) o todas (por defecto). */
+                status?: "open" | "paid" | "all";
+                /** @description Facturas desde este día (incluido). */
+                from?: string;
+                /** @description Facturas hasta este día (incluido). */
+                to?: string;
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de compras. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchasePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    registerPurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseInput"];
+            };
+        };
+        responses: {
+            /** @description La compra registrada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Purchase"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description La factura de ese proveedor ya está registrada (`purchase_invoice_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description Algún dato no cumple las reglas: el proveedor no existe (`supplier_not_found`) o está inactivo
+             *     (`supplier_inactive`); la sede no existe (`location_not_found`) o está inactiva (`location_inactive`); el
+             *     número de factura (`invalid_invoice_number`), la fecha de la factura es posterior a hoy en hora de Colombia
+             *     (`invoice_date_in_future`), el vencimiento es anterior a la factura (`due_before_issue`), las notas
+             *     (`invalid_purchase_notes`) o la compra no tiene líneas o tiene más de 200 (`invalid_purchase_lines`). Los
+             *     errores de una línea traen su posición (desde 0) en `details.line`: la variante no existe
+             *     (`variant_not_found`) o está inactiva (`variant_inactive`), no tiene esa unidad (`unit_not_available`), la
+             *     cantidad (`invalid_quantity`) o en la unidad base necesita más de 4 decimales (`quantity_precision`), el
+             *     costo (`invalid_unit_cost`) o la tasa (`invalid_tax_rate`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getPurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purchaseId: components["parameters"]["PurchaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La compra con sus líneas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Purchase"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
         };
     };

@@ -63,7 +63,7 @@ test/api/                # tests de integración de la API completa, sobre serve
 
 ### Núcleo compartido: `internal/kernel`
 
-Un value object puro que validan los `domain/` de más de un módulo vive en `internal/kernel/<tema>` (`taxid`: el NIT y su dígito de verificación, que usan `identity` y `customers` y después la facturación). Solo importa la librería estándar y no tiene estado ni I/O; no es un lugar para helpers ni para entidades. Un tipo entra aquí solo cuando lo necesita un segundo módulo.
+Un value object puro que validan los `domain/` de más de un módulo vive en `internal/kernel/<tema>` (`taxid`: el NIT y su dígito de verificación, que usan `identity`, `customers` y `purchases` y después la facturación; `calendar`: el día de calendario en `America/Bogota` de los vencimientos de `receivables` y `purchases`). Solo importa la librería estándar y no tiene estado ni I/O; no es un lugar para helpers ni para entidades. Un tipo entra aquí solo cuando lo necesita un segundo módulo.
 
 ### Fronteras (`depguard`, en error)
 
@@ -72,7 +72,7 @@ Un value object puro que validan los `domain/` de más de un módulo vive en `in
 | `domain` | importar algo que no sea la librería estándar, `uuid`, `decimal` o `internal/kernel` (tampoco `net/http`) |
 | `kernel` | que `internal/kernel` importe algo fuera de la librería estándar |
 | `app` | importar `adapters`, `pgx`, `net/http` o el SDK de OpenTelemetry (`otel/sdk`) |
-| `catalog`, `customers`, `identity`, `imports`, `inventory`, `sales` | importar otro módulo |
+| `catalog`, `customers`, `identity`, `imports`, `inventory`, `purchases`, `receivables`, `sales` | importar otro módulo |
 | `platform` | importar cualquier módulo |
 | `composition` | que `cmd/` o `test/api` importen un módulo: solo `internal/server` (y su `ports/`) los une, y los demás usan `server.New` |
 
