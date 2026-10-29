@@ -10,4 +10,8 @@ export const methodLabels: Record<PaymentMethod, string> = {
   nequi: 'Nequi',
   daviplata: 'Daviplata',
   transfer: 'Transferencia',
+  credit: 'Crédito',
 };
+
+/** The methods the POS offers to pay with. Credit needs a customer with credit: it is not one of them yet. */
+export const posMethods: PaymentMethod[] = ['cash', 'card', 'nequi', 'daviplata', 'transfer'];

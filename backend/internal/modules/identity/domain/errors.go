@@ -34,8 +34,11 @@ var (
 	ErrTenantSuspended         = errors.New("identity: tenant suspended")
 	ErrTenantSelectionRequired = errors.New("identity: credentials match several tenants")
 	ErrTooManyAttempts         = errors.New("identity: too many login attempts")
-	ErrInvalidRefreshToken     = errors.New("identity: invalid refresh token")
-	ErrRefreshTokenNotFound    = errors.New("identity: refresh token not found")
-	ErrRefreshTokenExpired     = errors.New("identity: refresh token expired")
-	ErrRefreshTokenReused      = errors.New("identity: refresh token reused")
+	// ErrNotAuthorized means valid credentials of a user whose role may not
+	// authorize the action.
+	ErrNotAuthorized        = errors.New("identity: the user may not authorize the action")
+	ErrInvalidRefreshToken  = errors.New("identity: invalid refresh token")
+	ErrRefreshTokenNotFound = errors.New("identity: refresh token not found")
+	ErrRefreshTokenExpired  = errors.New("identity: refresh token expired")
+	ErrRefreshTokenReused   = errors.New("identity: refresh token reused")
 )

@@ -117,3 +117,18 @@ func value(s *string) string {
 	}
 	return *s
 }
+
+// Names returns the names of the tenant's customers among ids.
+func (r *CustomerRepository) Names(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	rows, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) ([]sqlcgen.CustomerNamesRow, error) {
+		return sqlcgen.New(tx).CustomerNames(ctx, ids)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("customers: names: %w", err)
+	}
+	out := make(map[uuid.UUID]string, len(rows))
+	for _, row := range rows {
+		out[row.ID] = row.Name
+	}
+	return out, nil
+}

@@ -45,3 +45,6 @@ WHERE (sqlc.narg(active)::boolean IS NULL OR c.active = sqlc.narg(active))
   AND (cardinality(sqlc.arg(terms)::text[]) = 0
        OR (sqlc.arg(document)::text <> '' AND replace(c.document_number, '-', '') LIKE sqlc.arg(document)::text || '%')
        OR c.search_name LIKE ALL (SELECT '%' || f_unaccent(lower(term)) || '%' FROM unnest(sqlc.arg(terms)::text[]) AS term));
+
+-- name: CustomerNames :many
+SELECT id, name FROM customers WHERE id = ANY(sqlc.arg(ids)::uuid[]);

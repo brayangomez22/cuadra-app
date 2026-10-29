@@ -50,6 +50,12 @@ tags:
       Clientes de la empresa y sus segmentos (configurables: público, mayorista, convenio...). Guardan lo que pide la
       factura electrónica: tipo de persona, documento (el NIT con dígito de verificación) y responsabilidades fiscales.
       Una venta sin cliente es a consumidor final.
+  - name: receivables
+    description: |
+      Crédito y cartera (fiados). Cada cliente puede tener un cupo (lo máximo que puede deber) y un plazo en días. Una
+      venta con un pago `credit` abre una cuenta por cobrar que vence el plazo después del día de la venta en hora de
+      Colombia; pasar el cupo exige la autorización de un usuario con `receivables:override`. Los abonos se aplican a
+      la cuenta que vence primero, nunca pasan del saldo, y en efectivo entran a la caja abierta de quien los recibe.
   - name: modules
     description: |
       Módulos que la empresa puede activar según su tipo de negocio (variantes, lotes, listas de precios...). Las
@@ -2305,6 +2311,183 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/customers/{customerId}/credit:
+    parameters:
+      - $ref: "#/components/parameters/CustomerId"
+    get:
+      tags: [receivables]
+      operationId: getCustomerCredit
+      summary: Crédito de un cliente
+      description: |
+        El cupo, el plazo, lo que debe, lo que le queda disponible y sus cuentas por cobrar abiertas, de la que vence
+        primero a la última. Un cliente sin cupo asignado tiene cupo 0: no puede comprar a crédito.
+      x-permission: receivables:read
+      responses:
+        "200":
+          description: El crédito del cliente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerCredit"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags: [receivables]
+      operationId: setCustomerCredit
+      summary: Asignar cupo y plazo
+      description: |
+        Cambia el cupo y el plazo del cliente. Un cupo menor que lo que ya debe se acepta: el cliente solo deja de poder
+        comprar a crédito. El plazo aplica a las ventas siguientes; las cuentas abiertas conservan su vencimiento.
+      x-permission: receivables:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreditTermsInput"
+      responses:
+        "200":
+          description: El crédito del cliente con el cupo nuevo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerCredit"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: El cupo o el plazo no son válidos (`invalid_credit_limit`, `invalid_credit_term`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/customers/{customerId}/credit/movements:
+    parameters:
+      - $ref: "#/components/parameters/CustomerId"
+    get:
+      tags: [receivables]
+      operationId: listCustomerCreditMovements
+      summary: Estado de cuenta de un cliente
+      description: |
+        Las ventas a crédito, los abonos y las ventas a crédito anuladas del cliente, del más reciente al más antiguo,
+        cada uno con el saldo que dejó.
+      x-permission: receivables:read
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página del estado de cuenta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditMovementPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/customers/{customerId}/payments:
+    parameters:
+      - $ref: "#/components/parameters/CustomerId"
+    post:
+      tags: [receivables]
+      operationId: recordCustomerPayment
+      summary: Registrar un abono
+      description: |
+        Un pago parcial o total de lo que debe el cliente (activo o no). Se aplica a la cuenta por cobrar que vence
+        primero y sigue con las demás. En efectivo, entra como ingreso a la caja abierta de quien lo recibe.
+      x-permission: receivables:collect
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerPaymentInput"
+      responses:
+        "201":
+          description: El abono registrado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerPayment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: |
+            Un abono en efectivo sin caja abierta, cuando la empresa la exige (`cash_session_required`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            El monto no es válido (`invalid_payment_amount`) o pasa de lo que debe el cliente
+            (`payment_exceeds_balance`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/receivables/aging:
+    get:
+      tags: [receivables]
+      operationId: getReceivablesAging
+      summary: Cartera por edades
+      description: |
+        Lo que deben los clientes, por edad: por vencer (vence hoy o después) y vencida de 1 a 30, de 31 a 60, de 61 a
+        90 y de más de 90 días, contados desde la fecha de vencimiento con el día de hoy en hora de Colombia. Los
+        clientes con más cartera vencida van primero; `totals` suma todos los clientes, no solo la página.
+      x-permission: receivables:read
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de la cartera por edades.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceivablesAging"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/v1/customer-segments:
     get:
       tags: [customers]
@@ -2508,7 +2691,9 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           description: |
-            El usuario no tiene permiso (`forbidden`) o un descuento supera su tope (`discount_exceeds_limit`).
+            El usuario no tiene permiso (`forbidden`), un descuento supera su tope (`discount_exceeds_limit`) o las
+            credenciales de `credit_authorization` no son de un usuario que pueda autorizarla
+            (`credit_authorization_rejected`).
           content:
             application/json:
               schema:
@@ -2517,7 +2702,14 @@ paths:
           description: |
             No hay stock suficiente de una variante (`insufficient_stock`); `details.variant_id` dice cuál. El
             usuario no tiene caja abierta y la empresa la exige (`cash_session_required`), o la caja se cerró
-            (`cash_session_closed`).
+            (`cash_session_closed`). La parte a crédito pasa el cupo disponible del cliente y nadie la autorizó
+            (`credit_limit_exceeded`); `details.available` dice cuánto le queda.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Demasiados intentos de autorización con el mismo correo (`too_many_requests`).
           content:
             application/json:
               schema:
@@ -2525,7 +2717,8 @@ paths:
         "422":
           description: |
             Algún dato no cumple las reglas (`product_not_found` y `product_inactive`, también para una
-            variante; `customer_not_found`, `customer_inactive`, `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
+            variante; `customer_not_found`, `customer_inactive`, `credit_not_enabled` (el cliente no tiene cupo),
+            `credit_without_customer`, `duplicate_credit_payment`, `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
             `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`). Una
             línea en una unidad que la variante no tiene (`unit_not_available`) o cuya cantidad en unidad base necesita
             más de 4 decimales (`quantity_precision`).
@@ -2627,7 +2820,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: La venta no está confirmada; por ejemplo, ya fue anulada (`sale_not_confirmed`).
+          description: |
+            La venta no está confirmada; por ejemplo, ya fue anulada (`sale_not_confirmed`). Una venta a crédito que
+            el cliente ya abonó no se puede anular (`credit_sale_has_payments`).
           content:
             application/json:
               schema:
@@ -4623,6 +4818,206 @@ components:
         total:
           type: integer
           description: Cantidad total de clientes que cumplen el filtro, sin paginar.
+    CreditTermsInput:
+      type: object
+      required: [credit_limit, term_days]
+      additionalProperties: false
+      properties:
+        credit_limit:
+          $ref: "#/components/schemas/Money"
+        term_days:
+          type: integer
+          minimum: 0
+          maximum: 365
+          description: Días que tiene el cliente para pagar cada venta a crédito (0 vence el mismo día).
+    CustomerCredit:
+      type: object
+      required: [customer_id, credit_limit, term_days, balance, available, receivables]
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+        credit_limit:
+          $ref: "#/components/schemas/Money"
+        term_days:
+          type: integer
+        balance:
+          $ref: "#/components/schemas/Money"
+        available:
+          $ref: "#/components/schemas/Money"
+        receivables:
+          type: array
+          description: Las cuentas por cobrar abiertas, de la que vence primero a la última.
+          items:
+            $ref: "#/components/schemas/Receivable"
+    Receivable:
+      type: object
+      description: Lo que el cliente debe de una venta a crédito.
+      required: [id, sale_id, amount, balance, due_date, status, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sale_id:
+          type: string
+          format: uuid
+        amount:
+          $ref: "#/components/schemas/Money"
+        balance:
+          $ref: "#/components/schemas/Money"
+        due_date:
+          type: string
+          format: date
+          description: Día de vencimiento, en hora de Colombia.
+        status:
+          type: string
+          enum: [open, paid, canceled]
+        authorized_by:
+          type: string
+          format: uuid
+          description: Quién autorizó la venta por encima del cupo, si hizo falta.
+        created_at:
+          type: string
+          format: date-time
+    CreditMovement:
+      type: object
+      description: |
+        Una línea del estado de cuenta: una venta a crédito (`charge`, con su vencimiento), un abono (`payment`, con su
+        medio de pago) o una venta a crédito anulada (`cancellation`), y el saldo que dejó.
+      required: [kind, at, amount, balance]
+      properties:
+        kind:
+          type: string
+          enum: [charge, payment, cancellation]
+        at:
+          type: string
+          format: date-time
+        amount:
+          $ref: "#/components/schemas/Money"
+        balance:
+          $ref: "#/components/schemas/Money"
+        sale_id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        method:
+          $ref: "#/components/schemas/CustomerPaymentMethod"
+        due_date:
+          type: string
+          format: date
+    CreditMovementPage:
+      type: object
+      required: [items, total, balance]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreditMovement"
+        total:
+          type: integer
+          description: Cantidad total de movimientos del cliente.
+        balance:
+          $ref: "#/components/schemas/Money"
+    CustomerPaymentMethod:
+      type: string
+      enum: [cash, card, nequi, daviplata, transfer]
+      description: Medio de pago de un abono. Una deuda no se paga con crédito.
+    CustomerPaymentInput:
+      type: object
+      required: [method, amount]
+      additionalProperties: false
+      properties:
+        method:
+          $ref: "#/components/schemas/CustomerPaymentMethod"
+        amount:
+          $ref: "#/components/schemas/Money"
+    CustomerPayment:
+      type: object
+      required: [id, customer_id, method, amount, created_at, allocations, balance]
+      properties:
+        id:
+          type: string
+          format: uuid
+        customer_id:
+          type: string
+          format: uuid
+        method:
+          $ref: "#/components/schemas/CustomerPaymentMethod"
+        amount:
+          $ref: "#/components/schemas/Money"
+        cash_session_id:
+          type: string
+          format: uuid
+          description: La caja a la que entró un abono en efectivo.
+        created_at:
+          type: string
+          format: date-time
+        allocations:
+          type: array
+          description: Cuánto del abono fue a cada cuenta por cobrar, en el orden en que se aplicó.
+          items:
+            $ref: "#/components/schemas/PaymentAllocation"
+        balance:
+          description: Lo que el cliente queda debiendo.
+          allOf:
+            - $ref: "#/components/schemas/Money"
+    PaymentAllocation:
+      type: object
+      required: [receivable_id, amount]
+      properties:
+        receivable_id:
+          type: string
+          format: uuid
+        amount:
+          $ref: "#/components/schemas/Money"
+    AgingBuckets:
+      type: object
+      required: [current, days_1_30, days_31_60, days_61_90, over_90, overdue, total]
+      properties:
+        current:
+          $ref: "#/components/schemas/Money"
+        days_1_30:
+          $ref: "#/components/schemas/Money"
+        days_31_60:
+          $ref: "#/components/schemas/Money"
+        days_61_90:
+          $ref: "#/components/schemas/Money"
+        over_90:
+          $ref: "#/components/schemas/Money"
+        overdue:
+          $ref: "#/components/schemas/Money"
+        total:
+          $ref: "#/components/schemas/Money"
+    AgingRow:
+      type: object
+      required: [customer_id, name, buckets]
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        buckets:
+          $ref: "#/components/schemas/AgingBuckets"
+    ReceivablesAging:
+      type: object
+      required: [as_of, items, total, totals]
+      properties:
+        as_of:
+          type: string
+          format: date
+          description: El día de hoy en hora de Colombia, desde el que se cuentan las edades.
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgingRow"
+        total:
+          type: integer
+          description: Cantidad de clientes con cartera.
+        totals:
+          $ref: "#/components/schemas/AgingBuckets"
     CustomerSegment:
       type: object
       required: [id, name]
@@ -4676,6 +5071,23 @@ components:
           maxItems: 10
           items:
             $ref: "#/components/schemas/PaymentInput"
+        credit_authorization:
+          $ref: "#/components/schemas/CreditAuthorizationInput"
+    CreditAuthorizationInput:
+      type: object
+      description: |
+        Correo y contraseña de un usuario de la empresa con `receivables:override` (dueño o administrador) que autoriza
+        una venta a crédito por encima del cupo del cliente. Se verifican y se descartan: no se guardan. Solo se usan
+        si la venta tiene un pago `credit`; la cuenta por cobrar guarda quién autorizó si pasó el cupo.
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          maxLength: 254
+        password:
+          type: string
+          maxLength: 128
     SaleLineInput:
       type: object
       description: |
@@ -4700,8 +5112,10 @@ components:
           $ref: "#/components/schemas/Money"
     PaymentMethod:
       type: string
-      enum: [cash, card, nequi, daviplata, transfer]
-      description: Medio de pago. Solo el efectivo (`cash`) da cambio.
+      enum: [cash, card, nequi, daviplata, transfer, credit]
+      description: |
+        Medio de pago. Solo el efectivo (`cash`) da cambio. `credit` es la parte que el cliente paga después: exige
+        cliente, va una sola vez por venta y abre una cuenta por cobrar.
     PaymentInput:
       type: object
       description: Un pago. En efectivo, `amount` es lo entregado e incluye el cambio.

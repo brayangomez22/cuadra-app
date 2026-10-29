@@ -211,6 +211,8 @@ func failureReason(err error) string {
 		return "tenant_suspended"
 	case errors.Is(err, domain.ErrTenantSelectionRequired):
 		return "tenant_selection_required"
+	case errors.Is(err, domain.ErrNotAuthorized):
+		return "not_authorized"
 	default:
 		return "error"
 	}

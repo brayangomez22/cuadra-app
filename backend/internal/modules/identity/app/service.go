@@ -50,9 +50,10 @@ type Service struct {
 	// email takes as long as a wrong password.
 	dummyHash string
 
-	logins      metric.Int64Counter
-	signups     metric.Int64Counter
-	reuseAlerts metric.Int64Counter
+	logins         metric.Int64Counter
+	authorizations metric.Int64Counter
+	signups        metric.Int64Counter
+	reuseAlerts    metric.Int64Counter
 }
 
 // NewService builds a Service. It fails if a required dependency is missing
@@ -71,6 +72,8 @@ func NewService(d Deps) (*Service, error) {
 	err := usecase.Create(usecase.Meter(d.MeterProvider, instrumentationName),
 		usecase.Counter(&s.logins, "cuadra.identity.logins",
 			"Login attempts, by result (success, failure).", "{attempt}"),
+		usecase.Counter(&s.authorizations, "cuadra.identity.authorizations",
+			"Authorizations of an action on someone else's session, by result (granted or why not).", "{attempt}"),
 		usecase.Counter(&s.signups, "cuadra.identity.signups",
 			"Businesses (tenants) registered, by business template.", "{tenant}"),
 		usecase.Counter(&s.reuseAlerts, "cuadra.identity.refresh_reuse_detected",

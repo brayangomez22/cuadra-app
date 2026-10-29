@@ -23,6 +23,10 @@ const (
 	PermInventoryAdjust      Permission = "inventory:adjust"
 	PermInventoryCount       Permission = "inventory:count"        // record what is counted in a stock count
 	PermInventoryCountManage Permission = "inventory:count_manage" // start, review, approve or cancel stock counts
+	PermReceivablesRead      Permission = "receivables:read"       // customers' credit, statements and aging
+	PermReceivablesManage    Permission = "receivables:manage"     // set customers' credit limit and term
+	PermReceivablesCollect   Permission = "receivables:collect"    // receive customers' payments
+	PermReceivablesOverride  Permission = "receivables:override"   // authorize a sale over a customer's credit
 	PermSalesCreate          Permission = "sales:create"
 	PermSalesDiscount        Permission = "sales:discount" // discount without the tenant's limit
 	PermSalesRead            Permission = "sales:read"
@@ -64,6 +68,7 @@ var coreRoles = []struct {
 		PermCatalogRead, PermCatalogWrite, PermImportsRun,
 		PermCustomersRead, PermCustomersWrite, PermCustomersManage,
 		PermInventoryRead, PermInventoryAdjust, PermInventoryCount, PermInventoryCountManage,
+		PermReceivablesRead, PermReceivablesManage, PermReceivablesCollect, PermReceivablesOverride,
 		PermSalesCreate, PermSalesDiscount, PermSalesRead, PermSalesVoid,
 		PermUsersManage,
 	}},
@@ -71,6 +76,7 @@ var coreRoles = []struct {
 		PermCatalogRead,
 		PermCustomersRead, PermCustomersWrite,
 		PermInventoryRead, PermInventoryCount,
+		PermReceivablesRead, PermReceivablesCollect,
 		PermSalesCreate, PermSalesRead,
 	}},
 	{RoleWarehouse, []Permission{
@@ -93,6 +99,10 @@ var corePermissions = []Permission{
 	PermInventoryAdjust,
 	PermInventoryCount,
 	PermInventoryCountManage,
+	PermReceivablesRead,
+	PermReceivablesManage,
+	PermReceivablesCollect,
+	PermReceivablesOverride,
 	PermSalesCreate,
 	PermSalesDiscount,
 	PermSalesRead,

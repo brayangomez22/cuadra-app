@@ -5,20 +5,22 @@ import "github.com/shopspring/decimal"
 // PaymentMethod is how a customer pays.
 type PaymentMethod string
 
-// Payment methods. Only cash gives change.
+// Payment methods. Only cash gives change. Credit is the part of the sale
+// the customer pays later: it opens a receivable in the receivables module.
 const (
 	PaymentCash      PaymentMethod = "cash"
 	PaymentCard      PaymentMethod = "card"
 	PaymentNequi     PaymentMethod = "nequi"
 	PaymentDaviplata PaymentMethod = "daviplata"
 	PaymentTransfer  PaymentMethod = "transfer"
+	PaymentCredit    PaymentMethod = "credit"
 )
 
 // ParsePaymentMethod returns the method with code s. Matching is exact.
 func ParsePaymentMethod(s string) (PaymentMethod, error) {
 	m := PaymentMethod(s)
 	switch m {
-	case PaymentCash, PaymentCard, PaymentNequi, PaymentDaviplata, PaymentTransfer:
+	case PaymentCash, PaymentCard, PaymentNequi, PaymentDaviplata, PaymentTransfer, PaymentCredit:
 		return m, nil
 	}
 	return "", ErrInvalidPaymentMethod

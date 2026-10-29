@@ -69,3 +69,17 @@ func (m *Module) SeedSegments(ctx context.Context, tenantID uuid.UUID, names []s
 func (m *Module) CheckCustomer(ctx context.Context, tenantID, userID, customerID uuid.UUID) error {
 	return m.service.CheckCustomer(ctx, app.Actor{TenantID: tenantID, UserID: userID}, customerID)
 }
+
+// CustomerExists tells whether customerID is a customer of tenantID, active
+// or not (domain.ErrCustomerNotFound otherwise). It is for the receivables
+// module: an inactive customer still pays what it owes.
+func (m *Module) CustomerExists(ctx context.Context, tenantID, userID, customerID uuid.UUID) error {
+	_, err := m.service.GetCustomer(ctx, app.Actor{TenantID: tenantID, UserID: userID}, customerID)
+	return err
+}
+
+// CustomerNames returns the names of the customers of tenantID among ids
+// (see app.Service.CustomerNames). It is for the receivables module.
+func (m *Module) CustomerNames(ctx context.Context, tenantID, userID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	return m.service.CustomerNames(ctx, app.Actor{TenantID: tenantID, UserID: userID}, ids)
+}

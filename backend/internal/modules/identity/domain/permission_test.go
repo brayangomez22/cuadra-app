@@ -84,6 +84,11 @@ func TestPermissionMatrix(t *testing.T) {
 			{name: "el admin anula ventas", role: domain.RoleAdmin, perm: domain.PermSalesVoid, want: true},
 			{name: "el dueño anula ventas", role: domain.RoleOwner, perm: domain.PermSalesVoid, want: true},
 			{name: "el bodeguero no ve las ventas", role: domain.RoleWarehouse, perm: domain.PermSalesRead, want: false},
+			{name: "el cajero recibe abonos", role: domain.RoleCashier, perm: domain.PermReceivablesCollect, want: true},
+			{name: "el cajero no asigna cupos", role: domain.RoleCashier, perm: domain.PermReceivablesManage, want: false},
+			{name: "el cajero no autoriza ventas sobre el cupo", role: domain.RoleCashier, perm: domain.PermReceivablesOverride, want: false},
+			{name: "el admin autoriza ventas sobre el cupo", role: domain.RoleAdmin, perm: domain.PermReceivablesOverride, want: true},
+			{name: "el bodeguero no ve la cartera", role: domain.RoleWarehouse, perm: domain.PermReceivablesRead, want: false},
 			{name: "el admin gestiona usuarios", role: domain.RoleAdmin, perm: domain.PermUsersManage, want: true},
 			{name: "el admin no puede gestionar la empresa", role: domain.RoleAdmin, perm: domain.PermTenantManage, want: false},
 			{name: "un rol desconocido no tiene permisos", role: domain.Role("root"), perm: domain.PermCatalogRead, want: false},
@@ -186,6 +191,7 @@ func TestPermissionMatrix(t *testing.T) {
 		cashier := m.Permissions(domain.RoleCashier, []string{"lots_expiry", "work_orders"})
 		require.Equal(t, []domain.Permission{
 			domain.PermCatalogRead, domain.PermCustomersRead, domain.PermCustomersWrite, domain.PermInventoryRead, domain.PermInventoryCount,
+			domain.PermReceivablesRead, domain.PermReceivablesCollect,
 			domain.PermSalesCreate, domain.PermSalesRead, "work_orders:write",
 		}, cashier)
 	})
