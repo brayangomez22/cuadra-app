@@ -50,6 +50,17 @@ describe('CustomerListPage', () => {
     await waitFor(() => expect(screen.queryByRole('row', { name: /Confecciones Sol/ })).not.toBeInTheDocument());
   });
 
+  it('con acceso a la cartera, cada cliente enlaza a su cuenta', async () => {
+    customersApi({ user: aUser('cashier') });
+    renderApp('/clientes');
+
+    const builder = await rowOf('Carlos Pérez');
+    expect(builder.getByRole('link', { name: 'Cuenta de Carlos Pérez' })).toHaveAttribute(
+      'href',
+      '/clientes/01920000-0000-7000-8000-000000000501/cuenta',
+    );
+  });
+
   it('sin clientes ofrece crear el primero', async () => {
     customersApi({ customers: [] });
     renderApp('/clientes');
@@ -65,5 +76,6 @@ describe('CustomerListPage', () => {
     await rowOf('Carlos Pérez');
     expect(screen.queryByRole('link', { name: 'Nuevo cliente' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^Editar/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^Cuenta de/ })).not.toBeInTheDocument();
   });
 });

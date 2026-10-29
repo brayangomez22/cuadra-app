@@ -1,7 +1,8 @@
 import { Alert, Button, DialogClose, IconPlus } from '@/shared/ui';
 import { amountText } from '../../../../model/payments/payments';
 import type { PaymentInput } from '../../../../model/payments/paymentMethods';
-import { MAX_PAYMENTS, usePayments } from '../../hooks/usePayments';
+import { MAX_PAYMENTS, usePayments } from '../../hooks/checkout/usePayments';
+import type { SaleCredit } from '../../hooks/checkout/useSaleCredit';
 import { PaymentFigures } from '../PaymentFigures/PaymentFigures';
 import { PaymentRow } from '../PaymentRow/PaymentRow';
 import styles from './PaymentsForm.module.scss';
@@ -9,6 +10,8 @@ import styles from './PaymentsForm.module.scss';
 type Props = {
   /** The total of the cart, IVA included. */
   total: string;
+  /** What the sale's customer can buy on credit; undefined offers no credit. */
+  credit: SaleCredit;
   /** Sends the sale; the payments are already checked against the total. */
   onConfirm: (payments: PaymentInput[]) => void;
   pending: boolean;
@@ -17,7 +20,7 @@ type Props = {
 };
 
 /** The payments of the sale, checked against the total before they are sent. */
-export function PaymentsForm({ total, onConfirm, pending, error }: Props) {
+export function PaymentsForm({ total, credit, onConfirm, pending, error }: Props) {
   const payments = usePayments({ total, onConfirm, pending });
   const { rows, problem } = payments;
   return (
@@ -29,7 +32,7 @@ export function PaymentsForm({ total, onConfirm, pending, error }: Props) {
       }}
       noValidate
     >
-      <PaymentFigures total={total} settlement={payments.settlement} />
+      <PaymentFigures total={total} settlement={payments.settlement} credit={credit} />
       <fieldset className={styles.payments}>
         <legend className="srOnly">Pagos</legend>
         {rows.map((row, index) => (
@@ -37,6 +40,7 @@ export function PaymentsForm({ total, onConfirm, pending, error }: Props) {
             key={row.key}
             row={row}
             index={index}
+            withCredit={Boolean(credit)}
             field={{ placeholder: rows.length === 1 ? amountText(total) : undefined, error: payments.errorOf(index) }}
             onChange={(changes) => payments.change(row.key, changes)}
             onRemove={() => payments.remove(row.key)}

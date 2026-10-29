@@ -19,6 +19,10 @@ describe('CustomerFormPage: editar', () => {
 
     expect(await screen.findByLabelText('Razón social')).toHaveValue('Confecciones Sol SAS');
     expect(screen.getByLabelText('Nombre comercial (opcional)')).toHaveValue('Boutique Sol');
+    expect(screen.getByRole('link', { name: 'Ver cuenta' })).toHaveAttribute(
+      'href',
+      `/clientes/${customerIds.boutique}/cuenta`,
+    );
     expect(screen.getByRole('checkbox', { name: /Gran contribuyente/ })).toBeChecked();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Activo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Guardar cliente' }));

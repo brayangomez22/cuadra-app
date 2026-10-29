@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FormProvider, useForm } from 'react-hook-form';
 import { paths } from '@/app/routes/paths';
+import { useCan } from '@/features/auth';
 import { Alert, Button, ButtonLink, FormGrid, FormSection, Page } from '@/shared/ui';
 import { IdentityFields } from '../../../../components/IdentityFields/IdentityFields';
 import { customerDefaults } from '../../../../model/customerForm/customerDefaults';
@@ -16,8 +17,20 @@ import styles from './CustomerForm.module.scss';
 export function CustomerForm({ data: { customer, segments } }: { data: CustomerFormData }) {
   const form = useForm({ resolver: zodResolver(customerSchema), defaultValues: customerDefaults(customer) });
   const { formError, submit } = useSaveCustomerForm(form, customer);
+  const canReadCredit = useCan()('receivables:read');
   return (
-    <Page title={customer ? 'Editar cliente' : 'Nuevo cliente'} description={customer?.name}>
+    <Page
+      title={customer ? 'Editar cliente' : 'Nuevo cliente'}
+      description={customer?.name}
+      actions={
+        customer &&
+        canReadCredit && (
+          <ButtonLink variant="secondary" to={paths.receivables.account(customer.id)}>
+            Ver cuenta
+          </ButtonLink>
+        )
+      }
+    >
       <FormProvider {...form}>
         <form className={styles.root} noValidate onSubmit={(event) => void submit(event)}>
           {formError && <Alert tone="danger">{formError}</Alert>}

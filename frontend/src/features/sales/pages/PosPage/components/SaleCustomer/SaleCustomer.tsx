@@ -8,5 +8,14 @@ type Props = { sale: SaleCustomerState; onDone: () => void };
 export function SaleCustomer({ sale, onDone }: Props) {
   const canRead = useCan()('customers:read');
   if (!canRead) return null;
-  return <CustomerPicker value={sale.customer} onChange={sale.setCustomer} onDone={onDone} />;
+  return (
+    <CustomerPicker
+      value={sale.customer}
+      onChange={sale.setCustomer}
+      open={sale.picking}
+      onOpenChange={sale.setPicking}
+      shortcut="F3"
+      onDone={onDone}
+    />
+  );
 }

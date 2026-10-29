@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { newBusiness } from '../support/business';
-import { chooseOption, createLocation, signUp } from '../support/signUp';
+import { signUp } from '../support/signUp';
+import { createProduct, escape, openCash, receiveStock } from '../support/stock';
 
 // The critical flow of Cuadra, end to end: a business signs up, signs in again,
 // creates a product, receives stock, sells with a mixed payment and finds the
@@ -62,41 +63,15 @@ for (const flow of flows) {
       });
 
       await test.step('crear producto', async () => {
-        await page.goto('/productos/nuevo');
-        await page.getByLabel('SKU', { exact: true }).fill(flow.product.sku);
-        await page.getByLabel('Nombre', { exact: true }).fill(flow.product.name);
-        await chooseOption(page, 'Unidad', /^Unidad \(und\)$/);
-        await page.getByLabel('Costo', { exact: true }).fill('6000');
-        await page.getByLabel('Precio de venta (sin IVA)').fill(flow.product.price);
-        for (const value of flow.variants?.values ?? []) {
-          await page.getByRole('checkbox', { name: value, exact: true }).check();
-        }
-        if (flow.variants) {
-          await expect(page.getByRole('table', { name: 'Variantes del producto' }).getByRole('row')).toHaveCount(3);
-        }
-        await page.getByRole('button', { name: 'Guardar producto' }).click();
-        await expect(page).toHaveURL('/productos');
-        await expect(page.getByText(flow.product.name).first()).toBeVisible();
+        await createProduct(page, flow.product, flow.variants?.values);
       });
 
       await test.step('registrar entrada de inventario', async () => {
-        await createLocation(page, 'Principal');
-        await page.getByRole('link', { name: 'Registrar entrada' }).first().click();
-        await page.getByLabel('Producto', { exact: true }).fill(sold.sku);
-        await page.getByRole('list', { name: 'Resultados' }).getByRole('button', { name: sold.name }).click();
-        await page.getByLabel('Cantidad', { exact: true }).fill('10');
-        await page.getByRole('button', { name: 'Registrar entrada' }).click();
-        // The toast is announced too: the same text is twice on the page.
-        await expect(page.getByText('Entrada registrada').first()).toBeVisible();
+        await receiveStock(page, sold, '10');
       });
 
       await test.step('abrir la caja', async () => {
-        await page.goto('/caja');
-        await page.getByLabel('Base inicial').fill('100000');
-        await page.getByRole('button', { name: 'Abrir caja' }).click();
-        // Opening the cash goes straight to the POS.
-        await expect(page).toHaveURL('/vender');
-        await expect(page.getByText('Caja abierta en Principal')).toBeVisible();
+        await openCash(page);
       });
 
       await test.step('vender con pago mixto', async () => {
@@ -138,8 +113,4 @@ for (const flow of flows) {
       });
     });
   });
-}
-
-function escape(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

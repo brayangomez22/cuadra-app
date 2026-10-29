@@ -1,0 +1,25 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+// The two fields stack on a phone and go side by side from a tablet.
+.fields {
+  display: grid;
+  gap: var(--space-4);
+
+  @include respond-to(sm) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.save {
+  justify-self: start;
+}

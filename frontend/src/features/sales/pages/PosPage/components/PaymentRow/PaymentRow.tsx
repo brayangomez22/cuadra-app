@@ -7,16 +7,19 @@ type Props = {
   row: Row;
   /** Its place among the payments, from 0: the first one has the focus and cannot be removed. */
   index: number;
+  /** Whether the sale's customer can buy on credit: credit is one of the methods. */
+  withCredit: boolean;
   /** What it shows when the amount is empty, and its error once submitted. */
   field: { placeholder?: string; error?: string };
   onChange: (changes: Partial<Row>) => void;
   onRemove: () => void;
 };
 
-const methodOptions = posMethods.map((value) => ({ value, label: methodLabels[value] }));
+const optionsOf = (withCredit: boolean) =>
+  posMethods(withCredit).map((value) => ({ value, label: methodLabels[value] }));
 
 /** A payment of the sale: its method and its amount. */
-export function PaymentRow({ row, index, field, onChange, onRemove }: Props) {
+export function PaymentRow({ row, index, withCredit, field, onChange, onRemove }: Props) {
   const n = index + 1;
   return (
     <div className={styles.root}>
@@ -29,7 +32,7 @@ export function PaymentRow({ row, index, field, onChange, onRemove }: Props) {
         }
       >
         <Select
-          options={methodOptions}
+          options={optionsOf(withCredit)}
           value={row.method}
           onValueChange={(value) => onChange({ method: value as PaymentMethod })}
         />

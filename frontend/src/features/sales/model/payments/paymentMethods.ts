@@ -13,5 +13,9 @@ export const methodLabels: Record<PaymentMethod, string> = {
   credit: 'Crédito',
 };
 
-/** The methods the POS offers to pay with. Credit needs a customer with credit: it is not one of them yet. */
-export const posMethods: PaymentMethod[] = ['cash', 'card', 'nequi', 'daviplata', 'transfer'];
+const paidNow: PaymentMethod[] = ['cash', 'card', 'nequi', 'daviplata', 'transfer'];
+
+/** The methods the POS offers to pay with. Credit only for a customer with a credit limit. */
+export function posMethods(withCredit: boolean): PaymentMethod[] {
+  return withCredit ? [...paidNow, 'credit'] : paidNow;
+}

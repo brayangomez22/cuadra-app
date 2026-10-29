@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { moneyField } from './moneyField';
+import { moneyField } from '@/shared/forms/moneyField';
 
 /** Opening the drawer: where, and the cash it starts with. */
 export const openCashSchema = z.object({

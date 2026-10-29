@@ -63,6 +63,10 @@ export const paths = {
     new: route('/clientes/nuevo'),
     edit: route('/clientes/:customerId/editar'),
   },
+  receivables: {
+    account: route('/clientes/:customerId/cuenta', ['pagina']),
+    aging: route('/cartera', ['pagina']),
+  },
   sales: {
     pos: route('/vender'),
     cash: route('/caja'),

@@ -44,7 +44,7 @@ export function SaleSummary({ totals, hasLocation, onCharge }: Props) {
         </kbd>
       </Button>
       <p className={styles.shortcuts} aria-hidden="true">
-        <kbd>F2</kbd> buscar · <kbd>F4</kbd> cobrar · <kbd>Esc</kbd> cancelar
+        <kbd>F2</kbd> buscar · <kbd>F3</kbd> cliente · <kbd>F4</kbd> cobrar · <kbd>Esc</kbd> cancelar
       </p>
     </section>
   );

@@ -1,0 +1,14 @@
+.root {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.meta {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.empty {
+  color: var(--color-text-muted);
+}

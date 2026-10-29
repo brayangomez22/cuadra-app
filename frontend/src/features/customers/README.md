@@ -7,14 +7,15 @@ en `docs/decisiones.md`.
 ## Páginas
 
 - `CustomerListPage` (`/clientes`, `customers:read`): búsqueda por nombre o documento, filtro por segmento y estado,
-  paginada; la búsqueda y los filtros viven en la URL.
+  paginada; la búsqueda y los filtros viven en la URL. Con `receivables:read`, cada cliente enlaza a su cuenta.
 - `CustomerFormPage` (`/clientes/nuevo`, `/clientes/:id/editar`, `customers:write`): el formulario completo, con los
   errores de la API en su campo (`invalid_nit_check_digit`, `customer_document_taken`...).
 
 ## API pública (`index.ts`)
 
 - `CustomerPicker`: el cliente de la venta en el POS. «Consumidor final» por defecto, búsqueda rápida y creación al
-  vuelo (con `customers:write`) en un diálogo con los campos mínimos.
+  vuelo (con `customers:write`) en un diálogo con los campos mínimos. Es controlado (`open`): el POS lo abre con F3.
+- `useCustomer` y `documentLabel`: un cliente y su documento, con los que `receivables` titula la cuenta del cliente.
 - `useCustomerSegments` y `customersKeys`: los segmentos, que `settings` crea, renombra y borra.
 
 ## Reglas

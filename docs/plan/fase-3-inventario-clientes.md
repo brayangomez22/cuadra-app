@@ -240,7 +240,7 @@ En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`: las tablas de l
 **Backend y contrato** (el frontend es T32a). P94 y P95 pasaron a T32a.
 **Tests primero:** una venta que excede el cupo se rechaza sin autorización; un abono reduce el saldo y nunca lo deja negativo; las edades de cartera se calculan con la fecha de vencimiento en `America/Bogota`.
 
-### [ ] T32a · Frontend de crédito y cartera
+### [x] T32a · Frontend de crédito y cartera
 **Depende de:** T32.
 **Alcance:** cupo y plazo en la ficha del cliente; venta a crédito en el POS (medio «Crédito» solo con cliente con cupo, diálogo de autorización con correo y contraseña de un administrador ante `credit_limit_exceeded`); abonos y estado de cuenta del cliente; pantalla de cartera por edades. Hoy `posMethods` deja fuera `credit` del selector de pagos.
 **Pendientes que entran a esta tarea:** P94 y P95 (`docs/plan/pendientes.md`).

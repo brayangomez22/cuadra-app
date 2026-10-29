@@ -1,3 +1,4 @@
+import { useCan } from '@/features/auth';
 import { Table, TableBody, TableHead, TableHeaderCell, TableRow } from '@/shared/ui';
 import type { Customer, CustomerSegment } from '../../../../api/types';
 import { CustomerRow } from './CustomerRow';
@@ -7,6 +8,7 @@ type Props = { customers: Customer[]; segments: CustomerSegment[]; canWrite: boo
 /** The customers of a page: who they are, their document, segment and contact; the name opens the form. */
 export function CustomerTable({ customers, segments, canWrite }: Props) {
   const segmentNames = new Map(segments.map((s) => [s.id, s.name]));
+  const canReadCredit = useCan()('receivables:read');
   return (
     <Table caption="Clientes">
       <TableHead>
@@ -15,6 +17,11 @@ export function CustomerTable({ customers, segments, canWrite }: Props) {
           <TableHeaderCell>Documento</TableHeaderCell>
           <TableHeaderCell>Segmento</TableHeaderCell>
           <TableHeaderCell>Contacto</TableHeaderCell>
+          {canReadCredit && (
+            <TableHeaderCell>
+              <span className="srOnly">Crédito</span>
+            </TableHeaderCell>
+          )}
         </TableRow>
       </TableHead>
       <TableBody>
@@ -24,6 +31,7 @@ export function CustomerTable({ customers, segments, canWrite }: Props) {
             customer={customer}
             segment={customer.segment_id && segmentNames.get(customer.segment_id)}
             canWrite={canWrite}
+            canReadCredit={canReadCredit}
           />
         ))}
       </TableBody>
