@@ -29,9 +29,15 @@ const demoPassword = "demo-clave-segura"
 // before.
 var demoToday = time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
 
-// newDemo builds a resetter of small demos (a few weeks, a short catalog)
-// on a database of its own, and the API that serves it to its users.
-func newDemo(t *testing.T) (*demo.Resetter, http.Handler) {
+// demoEnv is a resetter of small demos (a few weeks, a short catalog) on a
+// database of its own.
+type demoEnv struct {
+	resetter *demo.Resetter
+	db       *db.DB
+	jobs     *jobs.Client
+}
+
+func newDemoEnv(t *testing.T) demoEnv {
 	t.Helper()
 	database := dbtest.New(t)
 	jobClient, err := jobs.New(jobs.Config{DB: database})
@@ -44,16 +50,26 @@ func newDemo(t *testing.T) (*demo.Resetter, http.Handler) {
 		Now:       func() time.Time { return demoToday },
 	})
 	require.NoError(t, err)
-	return r, publicAPI(t, database, jobClient)
+	return demoEnv{resetter: r, db: database, jobs: jobClient}
 }
 
-// publicAPI is the API as cmd/api builds it, on the real clock.
-func publicAPI(t *testing.T, database *db.DB, jobClient *jobs.Client) http.Handler {
+// newDemo builds a resetter of small demos and the API that serves it to
+// its users, with the demo on.
+func newDemo(t *testing.T) (*demo.Resetter, http.Handler) {
+	t.Helper()
+	e := newDemoEnv(t)
+	return e.resetter, e.publicAPI(t, true)
+}
+
+// publicAPI is the API as cmd/api builds it, on the real clock, with the
+// demo on or off (DEMO_ENABLED).
+func (e demoEnv) publicAPI(t *testing.T, demoEnabled bool) http.Handler {
 	t.Helper()
 	tokens, err := auth.NewJWT(testSecret, 15*time.Minute)
 	require.NoError(t, err)
 	h, err := server.New(server.Config{
-		DB: database, Tokens: tokens, Jobs: jobClient, Workers: river.NewWorkers(), Log: slog.New(slog.DiscardHandler),
+		DB: e.db, Tokens: tokens, Jobs: e.jobs, Workers: river.NewWorkers(), Log: slog.New(slog.DiscardHandler),
+		DemoEnabled: demoEnabled,
 	})
 	require.NoError(t, err)
 	return h
@@ -96,6 +112,7 @@ func TestDemoReset(t *testing.T) {
 			require.NoError(t, err)
 			require.Positive(t, want.Sales)
 			require.Positive(t, want.Purchases)
+			require.Positive(t, want.Alerts, "P111: the demo shows reorder alerts")
 
 			second, err := r.Reset(t.Context(), template)
 			require.NoError(t, err)

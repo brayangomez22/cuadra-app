@@ -154,6 +154,7 @@ func newAPIHandler(cfg config.Config, database *db.DB, log *slog.Logger, jobClie
 		Log:            log,
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),
+		DemoEnabled:    cfg.DemoEnabled,
 	})
 }
 

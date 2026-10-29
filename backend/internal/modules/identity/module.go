@@ -32,6 +32,10 @@ const (
 	loginsPerIPWindow    = time.Minute
 	loginsPerEmail       = 10
 	loginsPerEmailWindow = 15 * time.Minute
+	// demoEntriesPerIP bounds the sessions one client opens in the public
+	// demo: each one stores a refresh token.
+	demoEntriesPerIP       = 10
+	demoEntriesPerIPWindow = time.Minute
 )
 
 // Config are the module's dependencies.
@@ -47,7 +51,9 @@ type Config struct {
 	Modules     app.ActiveModules
 	// Now is the clock of the use cases; nil is time.Now (the demo generator
 	// simulates one).
-	Now            func() time.Time
+	Now func() time.Time
+	// DemoEnabled lets anyone enter the demo tenants (DEMO_ENABLED).
+	DemoEnabled    bool
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -78,6 +84,8 @@ func New(cfg Config) (*Module, error) {
 		Modules:        cfg.Modules,
 		IPLimiter:      ratelimit.NewFixedWindow(loginsPerIP, loginsPerIPWindow),
 		EmailLimiter:   ratelimit.NewFixedWindow(loginsPerEmail, loginsPerEmailWindow),
+		DemoLimiter:    ratelimit.NewFixedWindow(demoEntriesPerIP, demoEntriesPerIPWindow),
+		DemoEnabled:    cfg.DemoEnabled,
 		Now:            cfg.Now,
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,

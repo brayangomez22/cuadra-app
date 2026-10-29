@@ -42,6 +42,35 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	return err
 }
 
+const getFirstUserByRole = `-- name: GetFirstUserByRole :one
+SELECT id, tenant_id, email, name, password_hash, role, active, created_at
+FROM users
+WHERE tenant_id = $1 AND role = $2 AND active
+ORDER BY created_at, id
+LIMIT 1
+`
+
+type GetFirstUserByRoleParams struct {
+	TenantID uuid.UUID
+	Role     string
+}
+
+func (q *Queries) GetFirstUserByRole(ctx context.Context, arg GetFirstUserByRoleParams) (User, error) {
+	row := q.db.QueryRow(ctx, getFirstUserByRole, arg.TenantID, arg.Role)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Email,
+		&i.Name,
+		&i.PasswordHash,
+		&i.Role,
+		&i.Active,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT id, tenant_id, email, name, password_hash, role, active, created_at
 FROM users

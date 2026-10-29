@@ -107,6 +107,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Demostraciones disponibles
+         * @description Los tipos de negocio que tienen una empresa de demostración, para el botón «Probar la demo». Sus datos se
+         *     reinician cada noche.
+         */
+        get: operations["listDemos"];
+        put?: never;
+        /**
+         * Entrar a la demostración
+         * @description Abre, sin contraseña, la sesión del usuario del rol elegido en la empresa de demostración del tipo de negocio.
+         *     Nunca abre una sesión en una empresa que no sea de demostración.
+         */
+        post: operations["startDemo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/refresh": {
         parameters: {
             query?: never;
@@ -1683,6 +1709,23 @@ export interface components {
         BusinessTemplateList: {
             items: components["schemas"]["BusinessTemplate"][];
         };
+        DemoOption: {
+            /** @example generica */
+            business_template: string;
+            /**
+             * @description Nombre del tipo de negocio.
+             * @example Negocio general
+             */
+            name: string;
+        };
+        DemoOptionList: {
+            items: components["schemas"]["DemoOption"][];
+        };
+        DemoRequest: {
+            business_template: string;
+            /** @enum {string} */
+            role: "owner" | "admin" | "cashier" | "warehouse";
+        };
         LoginRequest: {
             email: string;
             /** Format: password */
@@ -1745,6 +1788,8 @@ export interface components {
              *     ]
              */
             modules: string[];
+            /** @description La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso. */
+            demo: boolean;
         };
         /** @description La empresa (tenant) y su configuración. */
         Tenant: {
@@ -3534,6 +3579,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TenantSelectionRequired"];
+                };
+            };
+            /** @description Demasiados intentos (`code` = `too_many_requests`). */
+            429: {
+                headers: {
+                    /** @description Segundos que hay que esperar antes de intentar de nuevo. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listDemos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las demostraciones disponibles (puede estar vacía mientras se generan). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoOptionList"];
+                };
+            };
+            /** @description La demostración está apagada en este servidor (`code` = `demo_unavailable`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    startDemo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoRequest"];
+            };
+        };
+        responses: {
+            /** @description Sesión iniciada en la demostración. */
+            200: {
+                headers: {
+                    "Set-Cookie": components["headers"]["SetRefreshCookie"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSession"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /**
+             * @description La demostración está apagada, no hay una del tipo de negocio o no tiene usuario de ese rol
+             *     (`code` = `demo_unavailable`).
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             /** @description Demasiados intentos (`code` = `too_many_requests`). */

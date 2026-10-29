@@ -44,8 +44,22 @@ func TestGetMe(t *testing.T) {
 			"email": "ana@eltornillo.co",
 			"role": "cashier",
 			"permissions": ["catalog:read", "inventory:read", "sales:create", "sales:read"],
-			"modules": ["variants"]
+			"modules": ["variants"],
+			"demo": false
 		}`, rec.Body.String())
+	})
+
+	t.Run("dice demo en un tenant de demostración", func(t *testing.T) {
+		p := profile(t, domain.RoleWarehouse)
+		p.Tenant.MarkDemo()
+		uc := &stubUseCases{me: func(uuid.UUID, uuid.UUID) (app.Profile, error) { return p, nil }}
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+		req = req.WithContext(auth.WithPrincipal(req.Context(), auth.Principal{TenantID: p.Tenant.ID(), UserID: p.User.ID(), Role: "warehouse"}))
+
+		rec := serve(t, uc, req)
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"demo":true`)
 	})
 
 	t.Run("sin módulos activos envía listas vacías, no null", func(t *testing.T) {

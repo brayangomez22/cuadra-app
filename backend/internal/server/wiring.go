@@ -135,6 +135,7 @@ func (w *wiring) identity(c *catalog.Module, cu *customers.Module) (*identity.Mo
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
 		Now:            w.Now,
+		DemoEnabled:    w.DemoEnabled,
 	})
 }
 

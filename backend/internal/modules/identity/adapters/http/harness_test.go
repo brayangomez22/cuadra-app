@@ -27,6 +27,8 @@ type stubUseCases struct {
 	logout  func(string) error
 	me      func(tenantID, userID uuid.UUID) (app.Profile, error)
 	update  func(tenantID, userID uuid.UUID, in app.TenantUpdate) (*domain.Tenant, error)
+	demo    func(app.DemoLoginInput) (app.Session, error)
+	demos   func() ([]app.BusinessTemplate, error)
 	// templates is what BusinessTemplates answers.
 	templates []app.BusinessTemplate
 }
@@ -54,6 +56,12 @@ func (s *stubUseCases) Me(_ context.Context, tenantID, userID uuid.UUID) (app.Pr
 func (s *stubUseCases) UpdateTenant(_ context.Context, tenantID, userID uuid.UUID, in app.TenantUpdate) (*domain.Tenant, error) {
 	return s.update(tenantID, userID, in)
 }
+
+func (s *stubUseCases) StartDemo(_ context.Context, in app.DemoLoginInput) (app.Session, error) {
+	return s.demo(in)
+}
+
+func (s *stubUseCases) DemoOptions(context.Context) ([]app.BusinessTemplate, error) { return s.demos() }
 
 var now = time.Date(2026, 10, 10, 15, 0, 0, 0, time.UTC)
 

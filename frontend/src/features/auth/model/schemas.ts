@@ -41,3 +41,10 @@ export const signUpSchema = z.object({
 });
 
 export type SignUpValues = z.infer<typeof signUpSchema>;
+
+export const demoSchema = z.object({
+  business_template: z.string('Elija el tipo de negocio').min(1, 'Elija el tipo de negocio'),
+  role: z.enum(['owner', 'admin', 'cashier', 'warehouse'], 'Elija con qué rol entrar'),
+});
+
+export type DemoValues = z.infer<typeof demoSchema>;

@@ -25,7 +25,8 @@ type Config struct {
 	SentryDSN string
 	// SentryRelease names the build in Sentry; empty means the VCS revision.
 	SentryRelease string
-	// DemoEnabled resets the demo tenants every night (T34); DemoPassword is
+	// DemoEnabled resets the demo tenants every night (T34) and lets anyone
+	// enter them without a password (POST /auth/demo, T34a); DemoPassword is
 	// the password of their users, public on purpose. Never logged.
 	DemoEnabled  bool
 	DemoPassword string

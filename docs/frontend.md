@@ -54,7 +54,7 @@ Dentro de una feature, los imports son relativos. La regla propia `cuadra/featur
 ## 2. Nombres
 
 - Componentes en `PascalCase/PascalCase.tsx`; hooks `useCamelCase.ts`; lógica pura `camelCase.ts`.
-- Una carpeta por componente y un componente exportado por archivo. Excepción: piezas hermanas pequeñas que comparten la hoja de estilos del componente, como su esqueleto (`BusinessTypeOptionsSkeleton`) o su enlace (`AuthLink`).
+- Una carpeta por componente y un componente exportado por archivo. Excepción: piezas hermanas pequeñas que comparten la hoja de estilos del componente, como su esqueleto (`ChoiceCardsSkeleton`) o su enlace (`AuthLink`).
 - Nada de `utils.ts` ni `helpers.ts` genéricos: el archivo se llama por lo que hace (`lineTotals.ts`, `toProductInput.ts`). La regla `cuadra/file-names` rechaza `utils`, `helpers`, `common` y `misc`.
 - Los tests de una página van en `NombrePage.test.tsx` mientras quepan en el límite de 200 líneas. Cuando lo pasan, se dividen por escenario: `PosPage.checkout.test.tsx`, `PosPage.scanner.test.tsx`. No hay carpetas `__tests__/`.
 

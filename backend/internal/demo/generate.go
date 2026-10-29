@@ -74,6 +74,9 @@ func (g Generator) Generate(ctx context.Context, s Scenario, password string) (u
 	if err := r.writeCatalog(ctx); err != nil {
 		return tenant, err
 	}
+	if err := r.writeReorderRules(ctx); err != nil {
+		return tenant, err
+	}
 	if err := r.writePeople(ctx); err != nil {
 		return tenant, err
 	}

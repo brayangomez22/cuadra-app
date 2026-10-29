@@ -4,6 +4,7 @@ import { Outlet } from 'react-router';
 import { useAuth } from '@/features/auth';
 import { Drawer, IconButton, IconMenu } from '@/shared/ui';
 import { AccountPanel } from './AccountPanel';
+import { DemoBanner } from './DemoBanner';
 import { MainNav } from './MainNav';
 import styles from './AppLayout.module.scss';
 
@@ -42,6 +43,7 @@ export function AppLayout() {
       </aside>
 
       <main id="contenido" tabIndex={-1} className={styles.main}>
+        {user.demo && <DemoBanner />}
         <Outlet />
       </main>
     </div>

@@ -162,6 +162,30 @@ func (e CustomerPaymentMethod) Valid() bool {
 	}
 }
 
+// Defines values for DemoRequestRole.
+const (
+	DemoRequestRoleAdmin     DemoRequestRole = "admin"
+	DemoRequestRoleCashier   DemoRequestRole = "cashier"
+	DemoRequestRoleOwner     DemoRequestRole = "owner"
+	DemoRequestRoleWarehouse DemoRequestRole = "warehouse"
+)
+
+// Valid indicates whether the value is a known member of the DemoRequestRole enum.
+func (e DemoRequestRole) Valid() bool {
+	switch e {
+	case DemoRequestRoleAdmin:
+		return true
+	case DemoRequestRoleCashier:
+		return true
+	case DemoRequestRoleOwner:
+		return true
+	case DemoRequestRoleWarehouse:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DocumentRefKind.
 const (
 	DocumentRefKindPurchase   DocumentRefKind = "purchase"
@@ -311,22 +335,22 @@ func (e ImportUploadOnExistingSku) Valid() bool {
 
 // Defines values for MeRole.
 const (
-	Admin     MeRole = "admin"
-	Cashier   MeRole = "cashier"
-	Owner     MeRole = "owner"
-	Warehouse MeRole = "warehouse"
+	MeRoleAdmin     MeRole = "admin"
+	MeRoleCashier   MeRole = "cashier"
+	MeRoleOwner     MeRole = "owner"
+	MeRoleWarehouse MeRole = "warehouse"
 )
 
 // Valid indicates whether the value is a known member of the MeRole enum.
 func (e MeRole) Valid() bool {
 	switch e {
-	case Admin:
+	case MeRoleAdmin:
 		return true
-	case Cashier:
+	case MeRoleCashier:
 		return true
-	case Owner:
+	case MeRoleOwner:
 		return true
-	case Warehouse:
+	case MeRoleWarehouse:
 		return true
 	default:
 		return false
@@ -1265,6 +1289,31 @@ type CustomerSegmentList struct {
 	Items []CustomerSegment `json:"items"`
 }
 
+// DemoOption defines model for DemoOption.
+type DemoOption struct {
+	// BusinessTemplate Example: generica
+	BusinessTemplate string `json:"business_template"`
+
+	// Name Nombre del tipo de negocio.
+	//
+	// Example: Negocio general
+	Name string `json:"name"`
+}
+
+// DemoOptionList defines model for DemoOptionList.
+type DemoOptionList struct {
+	Items []DemoOption `json:"items"`
+}
+
+// DemoRequest defines model for DemoRequest.
+type DemoRequest struct {
+	BusinessTemplate string          `json:"business_template"`
+	Role             DemoRequestRole `json:"role"`
+}
+
+// DemoRequestRole defines model for DemoRequest.Role.
+type DemoRequestRole string
+
 // DenominationCount Billetes o monedas contados de una denominación del peso colombiano: 100000, 50000, 20000, 10000, 5000, 2000,
 // 1000 (billete y moneda juntos), 500, 200, 100 o 50.
 type DenominationCount struct {
@@ -1470,9 +1519,12 @@ type Me struct {
 
 	// DefaultTaxRate La tasa de IVA que se propone a un producto nuevo. La siembra la plantilla de la empresa y se cambia con
 	// `PATCH /api/v1/tenant`.
-	DefaultTaxRate TaxRate            `json:"default_tax_rate"`
-	Email          string             `json:"email"`
-	Id             openapi_types.UUID `json:"id"`
+	DefaultTaxRate TaxRate `json:"default_tax_rate"`
+
+	// Demo La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso.
+	Demo  bool               `json:"demo"`
+	Email string             `json:"email"`
+	Id    openapi_types.UUID `json:"id"`
 
 	// Modules Módulos activos de la empresa, para mostrar u ocultar menús, columnas y campos.
 	//
@@ -3225,6 +3277,9 @@ type GetVariantKardexParams struct {
 	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// StartDemoJSONRequestBody defines body for StartDemo for application/json ContentType.
+type StartDemoJSONRequestBody = DemoRequest
+
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
@@ -3421,6 +3476,34 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+
+	// ListDemos Demostraciones disponibles
+	//
+	// Los tipos de negocio que tienen una empresa de demostración, para el botón «Probar la demo». Sus datos se
+	// reinician cada noche.
+	//
+	// Corresponds with GET /api/v1/auth/demo (the `ListDemos` operationId).
+	ListDemos(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// StartDemoWithBody Entrar a la demostración
+	//
+	// Abre, sin contraseña, la sesión del usuario del rol elegido en la empresa de demostración del tipo de negocio.
+	// Nunca abre una sesión en una empresa que no sea de demostración.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /api/v1/auth/demo (the `StartDemo` operationId).
+	StartDemoWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// StartDemo Entrar a la demostración
+	//
+	// Abre, sin contraseña, la sesión del usuario del rol elegido en la empresa de demostración del tipo de negocio.
+	// Nunca abre una sesión en una empresa que no sea de demostración.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /api/v1/auth/demo (the `StartDemo` operationId).
+	StartDemo(ctx context.Context, body StartDemoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// LoginWithBody Iniciar sesión
 	//
@@ -4604,6 +4687,64 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /readyz (the `GetReadyz` operationId).
 	GetReadyz(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+// ListDemos Demostraciones disponibles
+//
+// Los tipos de negocio que tienen una empresa de demostración, para el botón «Probar la demo». Sus datos se
+// reinician cada noche.
+//
+// Corresponds with GET /api/v1/auth/demo (the `ListDemos` operationId).
+func (c *Client) ListDemos(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListDemosRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// StartDemoWithBody Entrar a la demostración
+//
+// Abre, sin contraseña, la sesión del usuario del rol elegido en la empresa de demostración del tipo de negocio.
+// Nunca abre una sesión en una empresa que no sea de demostración.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /api/v1/auth/demo (the `StartDemo` operationId).
+func (c *Client) StartDemoWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewStartDemoRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// StartDemo Entrar a la demostración
+//
+// Abre, sin contraseña, la sesión del usuario del rol elegido en la empresa de demostración del tipo de negocio.
+// Nunca abre una sesión en una empresa que no sea de demostración.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /api/v1/auth/demo (the `StartDemo` operationId).
+func (c *Client) StartDemo(ctx context.Context, body StartDemoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewStartDemoRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 // LoginWithBody Iniciar sesión
@@ -7117,6 +7258,73 @@ func (c *Client) GetReadyz(ctx context.Context, reqEditors ...RequestEditorFn) (
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewListDemosRequest constructs an http.Request for the ListDemos method
+func NewListDemosRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/auth/demo")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewStartDemoRequest calls the generic StartDemo builder with application/json body
+func NewStartDemoRequest(server string, body StartDemoJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewStartDemoRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewStartDemoRequestWithBody constructs an http.Request for the StartDemo method, with any body, and a specified content type
+func NewStartDemoRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/auth/demo")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
 }
 
 // NewLoginRequest calls the generic Login builder with application/json body
@@ -11459,6 +11667,36 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 
+	// ListDemosWithResponse Demostraciones disponibles
+	//
+	// Los tipos de negocio que tienen una empresa de demostración, para el botón «Probar la demo». Sus datos se
+	// reinician cada noche.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/auth/demo (the `ListDemos` operationId).
+	ListDemosWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListDemosResponse, error)
+
+	// StartDemoWithBodyWithResponse Entrar a la demostración
+	//
+	// Abre, sin contraseña, la sesión del usuario del rol elegido en la empresa de demostración del tipo de negocio.
+	// Nunca abre una sesión en una empresa que no sea de demostración.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/auth/demo (the `StartDemo` operationId).
+	StartDemoWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*StartDemoResponse, error)
+
+	// StartDemoWithResponse Entrar a la demostración
+	//
+	// Abre, sin contraseña, la sesión del usuario del rol elegido en la empresa de demostración del tipo de negocio.
+	// Nunca abre una sesión en una empresa que no sea de demostración.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/auth/demo (the `StartDemo` operationId).
+	StartDemoWithResponse(ctx context.Context, body StartDemoJSONRequestBody, reqEditors ...RequestEditorFn) (*StartDemoResponse, error)
+
 	// LoginWithBodyWithResponse Iniciar sesión
 	//
 	// Si el correo y la contraseña coinciden en varias empresas, responde 409 con la lista de
@@ -12745,6 +12983,144 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /readyz (the `GetReadyz` operationId).
 	GetReadyzWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetReadyzResponse, error)
+}
+
+type ListDemosResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DemoOptionList
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListDemosResponse) GetJSON200() *DemoOptionList {
+	return r.JSON200
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ListDemosResponse) GetJSON404() *Error {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListDemosResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListDemosResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListDemosResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListDemosResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListDemosResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// StartDemoResponse200Headers the declared response headers of an HTTP 200 response for StartDemo
+type StartDemoResponse200Headers struct {
+	SetCookie *string
+}
+
+// StartDemoResponse429Headers the declared response headers of an HTTP 429 response for StartDemo
+type StartDemoResponse429Headers struct {
+	RetryAfter *int
+}
+
+type StartDemoResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AuthSession
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Error
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *StartDemoResponse200Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *StartDemoResponse429Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r StartDemoResponse) GetJSON200() *AuthSession {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r StartDemoResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r StartDemoResponse) GetJSON404() *Error {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r StartDemoResponse) GetJSON429() *Error {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r StartDemoResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r StartDemoResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r StartDemoResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r StartDemoResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r StartDemoResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
 }
 
 // LoginResponse200Headers the declared response headers of an HTTP 200 response for Login
@@ -19829,6 +20205,54 @@ func (r GetReadyzResponse) ContentType() string {
 	return ""
 }
 
+// ListDemosWithResponse Demostraciones disponibles
+//
+// Los tipos de negocio que tienen una empresa de demostración, para el botón «Probar la demo». Sus datos se
+// reinician cada noche.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/auth/demo (the `ListDemos` operationId).
+func (c *ClientWithResponses) ListDemosWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListDemosResponse, error) {
+	rsp, err := c.ListDemos(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListDemosResponse(rsp)
+}
+
+// StartDemoWithBodyWithResponse Entrar a la demostración
+//
+// Abre, sin contraseña, la sesión del usuario del rol elegido en la empresa de demostración del tipo de negocio.
+// Nunca abre una sesión en una empresa que no sea de demostración.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/auth/demo (the `StartDemo` operationId).
+func (c *ClientWithResponses) StartDemoWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*StartDemoResponse, error) {
+	rsp, err := c.StartDemoWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseStartDemoResponse(rsp)
+}
+
+// StartDemoWithResponse Entrar a la demostración
+//
+// Abre, sin contraseña, la sesión del usuario del rol elegido en la empresa de demostración del tipo de negocio.
+// Nunca abre una sesión en una empresa que no sea de demostración.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/auth/demo (the `StartDemo` operationId).
+func (c *ClientWithResponses) StartDemoWithResponse(ctx context.Context, body StartDemoJSONRequestBody, reqEditors ...RequestEditorFn) (*StartDemoResponse, error) {
+	rsp, err := c.StartDemo(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseStartDemoResponse(rsp)
+}
+
 // LoginWithBodyWithResponse Iniciar sesión
 //
 // Si el correo y la contraseña coinciden en varias empresas, responde 409 con la lista de
@@ -21912,6 +22336,123 @@ func (c *ClientWithResponses) GetReadyzWithResponse(ctx context.Context, reqEdit
 		return nil, err
 	}
 	return ParseGetReadyzResponse(rsp)
+}
+
+// ParseListDemosResponse parses an HTTP response from a ListDemosWithResponse call
+func ParseListDemosResponse(rsp *http.Response) (*ListDemosResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListDemosResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DemoOptionList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseStartDemoResponse parses an HTTP response from a StartDemoWithResponse call
+func ParseStartDemoResponse(rsp *http.Response) (*StartDemoResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &StartDemoResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AuthSession
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers StartDemoResponse200Headers
+		if values := rsp.Header.Values("Set-Cookie"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Set-Cookie", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.SetCookie = &value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 429:
+		var headers StartDemoResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
+	}
+
+	return response, nil
 }
 
 // ParseLoginResponse parses an HTTP response from a LoginWithResponse call

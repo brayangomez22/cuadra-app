@@ -150,6 +150,26 @@ func (f *fakeUsers) Update(_ context.Context, u *domain.User) error {
 	return nil
 }
 
+// FirstByRole returns the oldest active user of tenantID with role.
+func (f *fakeUsers) FirstByRole(_ context.Context, tenantID uuid.UUID, role domain.Role) (*domain.User, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var first *domain.User
+	for _, u := range f.byID {
+		if u.TenantID() != tenantID || u.Role() != role || !u.IsActive() {
+			continue
+		}
+		if first == nil || u.CreatedAt().Before(first.CreatedAt()) ||
+			(u.CreatedAt().Equal(first.CreatedAt()) && u.ID().String() < first.ID().String()) {
+			first = u
+		}
+	}
+	if first == nil {
+		return nil, domain.ErrUserNotFound
+	}
+	return cloneUser(first), nil
+}
+
 // FindByEmail implements domain.LoginDirectory over the same users.
 func (f *fakeUsers) FindByEmail(_ context.Context, email domain.Email) ([]domain.LoginCandidate, error) {
 	f.mu.Lock()

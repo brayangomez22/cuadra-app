@@ -122,3 +122,11 @@ func userFromRow(row sqlcgen.User) (*domain.User, error) {
 	}
 	return u, nil
 }
+
+// FirstByRole returns the oldest active user of tenantID with role;
+// domain.ErrUserNotFound if it has none.
+func (r *UserRepository) FirstByRole(ctx context.Context, tenantID uuid.UUID, role domain.Role) (*domain.User, error) {
+	return r.get(ctx, tenantID, func(q *sqlcgen.Queries) (sqlcgen.User, error) {
+		return q.GetFirstUserByRole(ctx, sqlcgen.GetFirstUserByRoleParams{TenantID: tenantID, Role: role.String()})
+	})
+}

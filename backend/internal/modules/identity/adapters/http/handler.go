@@ -31,6 +31,7 @@ type UseCases interface {
 	Me(ctx context.Context, tenantID, userID uuid.UUID) (app.Profile, error)
 	BusinessTemplates() []app.BusinessTemplate
 	UpdateTenant(ctx context.Context, tenantID, userID uuid.UUID, in app.TenantUpdate) (*domain.Tenant, error)
+	DemoUseCases
 }
 
 // Handler implements identityapi.StrictServerInterface.
@@ -236,6 +237,7 @@ func me(p app.Profile) identityapi.Me {
 		Role:             identityapi.MeRole(p.User.Role()),
 		Permissions:      names,
 		Modules:          modules,
+		Demo:             p.Tenant.IsDemo(),
 	}
 }
 
