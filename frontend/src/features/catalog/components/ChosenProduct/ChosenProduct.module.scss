@@ -21,6 +21,10 @@
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-bg-subtle);
+
+  &[data-invalid='true'] {
+    border-color: var(--color-feedback-danger);
+  }
 }
 
 .text {
@@ -39,4 +43,19 @@
   color: var(--color-text-muted);
 
   @include numeric;
+}
+
+// Same as Field's error: the message of the API about the chosen product.
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-feedback-danger);
+}
+
+.errorIcon {
+  flex-shrink: 0;
+  margin-block-start: 0.15em;
 }

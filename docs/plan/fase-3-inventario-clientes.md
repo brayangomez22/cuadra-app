@@ -251,7 +251,7 @@ En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`: las tablas de l
 **División:** T33 hizo el dominio, el contrato y la API (módulo `purchases`); el frontend pasó a **T33a**.
 **Tests primero:** registrar una compra genera un movimiento de entrada por línea con el costo convertido a la unidad base; no se puede registrar dos veces el mismo número de factura del mismo proveedor.
 
-### [ ] T33a · Frontend de proveedores y compras
+### [x] T33a · Frontend de proveedores y compras
 **Depende de:** T33.
 **Alcance:** el frontend de compras sobre el contrato de T33 (`/suppliers`, `/purchases`), en una feature nueva `features/purchases` (sección 11 de `docs/frontend.md`), con menú «Compras» para `purchases:read`. (1) **Proveedores:** lista y búsqueda (nombre o NIT, estado), formulario de crear y editar (NIT con DV, contacto, plazo de pago, activo) con los errores en su campo (`invalid_nit_check_digit`, `supplier_nit_taken`) y lo que se le debe. (2) **Registrar una compra:** proveedor, sede, número y fecha de la factura, contado o crédito (vencimiento propuesto por el plazo), y líneas con búsqueda de producto, unidad de compra (base o alternativa), cantidad, costo sin IVA y tasa; el subtotal, el IVA por tasa y el total a la vista, y los errores de cada línea en su fila (`details.line`). (3) **Lista y detalle** de compras (proveedor, estado, fechas) con su saldo por pagar. Responsive de 360 a 1920 px.
 **Pendientes que entran a esta tarea:** P98 (`docs/plan/pendientes.md`).

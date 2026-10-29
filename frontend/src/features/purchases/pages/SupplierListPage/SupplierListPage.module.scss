@@ -1,0 +1,14 @@
+.loading {
+  align-self: center;
+  padding-block: var(--space-8);
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+
+  &[aria-busy='true'] {
+    opacity: 0.6;
+  }
+}

@@ -3,6 +3,7 @@ import { RequireAuth } from '@/features/auth';
 import { authRoutes } from '@/features/auth/routes';
 import { catalogRoutes } from '@/features/catalog/routes';
 import { customersRoutes } from '@/features/customers/routes';
+import { purchasesRoutes } from '@/features/purchases/routes';
 import { receivablesRoutes } from '@/features/receivables/routes';
 import { devRoutes } from '@/features/dev/routes';
 import { importRoutes } from '@/features/imports/routes';
@@ -36,6 +37,7 @@ export const routes: RouteObject[] = [
               { path: paths.home.pattern, element: <HomePage /> },
               ...catalogRoutes,
               ...customersRoutes,
+              ...purchasesRoutes,
               ...receivablesRoutes,
               ...importRoutes,
               ...inventoryRoutes,

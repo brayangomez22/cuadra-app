@@ -63,6 +63,14 @@ export const paths = {
     new: route('/clientes/nuevo'),
     edit: route('/clientes/:customerId/editar'),
   },
+  purchases: {
+    list: route('/compras', ['proveedor']),
+    new: route('/compras/nueva'),
+    detail: route('/compras/:purchaseId'),
+    suppliers: route('/compras/proveedores'),
+    newSupplier: route('/compras/proveedores/nuevo'),
+    editSupplier: route('/compras/proveedores/:supplierId/editar'),
+  },
   receivables: {
     account: route('/clientes/:customerId/cuenta', ['pagina']),
     aging: route('/cartera', ['pagina']),

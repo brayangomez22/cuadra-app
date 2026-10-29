@@ -36,7 +36,7 @@ export function ProductPicker({ label, value, onChange, error, onPicked }: Props
       onChange(null);
       requestAnimationFrame(() => searchInput.current?.focus());
     };
-    return <ChosenProduct label={label} value={value} onChange={change} />;
+    return <ChosenProduct label={label} value={value} onChange={change} error={error} />;
   }
 
   return (

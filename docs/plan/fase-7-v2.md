@@ -9,7 +9,7 @@ Cotización con vigencia, enviada en PDF (y por WhatsApp, ver V2-6); se conviert
 
 ### Épica V2-2 · Órdenes de compra y cuentas por pagar
 Orden de compra al proveedor (sugerida desde la lista de reposición de T28), recepción total o parcial contra la orden, cuentas por pagar con vencimientos y pagos, y reporte de compras por proveedor.
-**Pendientes que entran a esta épica:** P99, P100 y P101 (`docs/plan/pendientes.md`): pagos a proveedores, anular una compra y el documento de origen de la compra (de T33).
+**Pendientes que entran a esta épica:** P99, P100, P101, P103 y P104 (`docs/plan/pendientes.md`): pagos a proveedores, anular una compra y el documento de origen de la compra (de T33); la unidad base en las líneas de la compra y la búsqueda de proveedores en el formulario de compra (de T33a).
 
 ### Épica V2-3 · Listas de precios
 Módulo `price_lists`: listas por segmento de cliente (configurables por tenant), implementadas como regla del `PriceResolver`, aplicadas automáticamente en el POS; **actualización masiva** ("el proveedor X subió 8%") con recálculo según el margen y vista previa antes de aplicar; historial de precios.

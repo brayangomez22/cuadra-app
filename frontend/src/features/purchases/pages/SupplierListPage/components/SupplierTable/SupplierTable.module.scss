@@ -1,0 +1,16 @@
+.name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nit {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.contact {
+  display: block;
+  overflow-wrap: anywhere;
+}

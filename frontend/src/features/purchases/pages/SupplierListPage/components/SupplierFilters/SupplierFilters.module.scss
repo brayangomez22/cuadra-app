@@ -1,0 +1,21 @@
+@use '@/styles/abstracts' as *;
+
+// One column on a phone; from a tablet up, the search beside the status.
+.root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: end;
+
+  @include respond-to(sm) {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 12rem);
+  }
+}
+
+.field {
+  min-inline-size: 0;
+}
+
+.search {
+  max-inline-size: 36rem;
+}

@@ -1,0 +1,39 @@
+@use '@/styles/abstracts' as *;
+
+// A box of its own on the right from a tablet up, under the lines.
+.root {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+
+  @include respond-to(md) {
+    align-self: flex-end;
+    min-inline-size: 20rem;
+  }
+}
+
+.figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.figure {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-variant-numeric: tabular-nums;
+
+  dd {
+    margin: 0;
+  }
+
+  &[data-role='total'] {
+    padding-block-start: var(--space-2);
+    border-block-start: 1px solid var(--color-border-default);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+  }
+}

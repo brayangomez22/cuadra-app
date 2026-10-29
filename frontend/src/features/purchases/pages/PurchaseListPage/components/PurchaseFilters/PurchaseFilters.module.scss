@@ -1,0 +1,21 @@
+@use '@/styles/abstracts' as *;
+
+// One column on a phone, two on a tablet, the four in a row from a laptop up.
+.root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: end;
+
+  @include respond-to(sm) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include respond-to(lg) {
+    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  }
+}
+
+.field {
+  min-inline-size: 0;
+}
