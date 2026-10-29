@@ -31,7 +31,10 @@ type Tenant struct {
 	template string
 	// defaultTaxRate is the IVA rate a new product starts with.
 	defaultTaxRate decimal.Decimal
-	createdAt      time.Time
+	// demo marks the public demonstration tenants, which are reset every
+	// night and never reach real third parties (DIAN, messages).
+	demo      bool
+	createdAt time.Time
 }
 
 // businessTemplateFormat is the format of a business template ID (the name
@@ -76,7 +79,7 @@ func newTenant(s TenantSnapshot) (*Tenant, error) {
 	}
 	return &Tenant{
 		id: s.ID, name: name, nit: s.NIT, status: s.Status, template: s.BusinessTemplate,
-		defaultTaxRate: s.DefaultTaxRate, createdAt: s.CreatedAt.UTC(),
+		defaultTaxRate: s.DefaultTaxRate, demo: s.Demo, createdAt: s.CreatedAt.UTC(),
 	}, nil
 }
 
@@ -113,6 +116,13 @@ func (t *Tenant) DefaultTaxRate() decimal.Decimal { return t.defaultTaxRate }
 // IsActive reports whether the tenant can operate.
 func (t *Tenant) IsActive() bool { return t.status == TenantActive }
 
+// IsDemo reports whether the tenant is a demonstration tenant.
+func (t *Tenant) IsDemo() bool { return t.demo }
+
+// MarkDemo makes the tenant a demonstration tenant, which can then be
+// purged. Only the demo generator does it, before storing the tenant.
+func (t *Tenant) MarkDemo() { t.demo = true }
+
 // Suspend blocks the tenant (for example, unpaid subscription). Idempotent.
 func (t *Tenant) Suspend() { t.status = TenantSuspended }
 
@@ -127,6 +137,7 @@ type TenantSnapshot struct {
 	Status           TenantStatus
 	BusinessTemplate string
 	DefaultTaxRate   decimal.Decimal
+	Demo             bool
 	CreatedAt        time.Time
 }
 

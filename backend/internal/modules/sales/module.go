@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -41,6 +42,9 @@ type Config struct {
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
+	// Now is the clock of the use cases; nil is time.Now (the demo
+	// generator simulates one).
+	Now func() time.Time
 }
 
 // Module is the wired sales module.
@@ -67,6 +71,7 @@ func New(cfg Config) (*Module, error) {
 		CashSessions:   postgres.NewCashSessionRepository(cfg.DB),
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
+		Now:            cfg.Now,
 		Logger:         cfg.Logger,
 	})
 	if err != nil {

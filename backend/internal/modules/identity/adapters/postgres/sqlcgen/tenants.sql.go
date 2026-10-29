@@ -14,8 +14,8 @@ import (
 )
 
 const createTenant = `-- name: CreateTenant :exec
-INSERT INTO tenants (id, name, nit, status, business_template, default_tax_rate, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO tenants (id, name, nit, status, business_template, default_tax_rate, demo, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type CreateTenantParams struct {
@@ -25,6 +25,7 @@ type CreateTenantParams struct {
 	Status           string
 	BusinessTemplate string
 	DefaultTaxRate   decimal.Decimal
+	Demo             bool
 	CreatedAt        time.Time
 }
 
@@ -36,13 +37,14 @@ func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) erro
 		arg.Status,
 		arg.BusinessTemplate,
 		arg.DefaultTaxRate,
+		arg.Demo,
 		arg.CreatedAt,
 	)
 	return err
 }
 
 const getTenant = `-- name: GetTenant :one
-SELECT id, name, nit, status, business_template, default_tax_rate, created_at
+SELECT id, name, nit, status, business_template, default_tax_rate, demo, created_at
 FROM tenants
 WHERE id = $1
 `
@@ -54,6 +56,7 @@ type GetTenantRow struct {
 	Status           string
 	BusinessTemplate string
 	DefaultTaxRate   decimal.Decimal
+	Demo             bool
 	CreatedAt        time.Time
 }
 
@@ -67,6 +70,7 @@ func (q *Queries) GetTenant(ctx context.Context, id uuid.UUID) (GetTenantRow, er
 		&i.Status,
 		&i.BusinessTemplate,
 		&i.DefaultTaxRate,
+		&i.Demo,
 		&i.CreatedAt,
 	)
 	return i, err

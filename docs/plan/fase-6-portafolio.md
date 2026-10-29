@@ -10,6 +10,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 
 ### [ ] T51 · Pruebas de carga (k6)
 **Alcance:** `loadtest/` con escenarios de k6: búsqueda de productos en el POS, registro de venta y concurrencia sobre el mismo producto. Datos realistas (varios tenants, miles de productos), con tenants de al menos dos plantillas y productos con variantes. Resultados exportados a Prometheus y visibles en Grafana. Documentar en `docs/rendimiento.md`: hardware, escenario, throughput y p95/p99, y los cuellos de botella encontrados y corregidos.
+**Pendientes que entran a esta tarea:** P110 (`docs/plan/pendientes.md`).
 **Aceptación:** un informe con números reales y al menos una mejora justificada con un antes y un después.
 
 ### [ ] T52 · README y documentación de arquitectura (portafolio)

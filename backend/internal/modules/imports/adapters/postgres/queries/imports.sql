@@ -40,3 +40,7 @@ LIMIT $3 OFFSET $4;
 
 -- name: CountImportErrors :one
 SELECT count(*) FROM import_errors WHERE tenant_id = $1 AND import_id = $2;
+
+-- name: DropImportFile :execrows
+UPDATE imports SET file = NULL, file_purged_at = now()
+WHERE tenant_id = $1 AND id = $2 AND file_purged_at IS NULL;

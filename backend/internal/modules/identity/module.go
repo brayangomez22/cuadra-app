@@ -43,8 +43,11 @@ type Config struct {
 	Setup app.TenantSetup
 	// Permissions is the role → permission matrix; Modules, the active
 	// modules of each tenant.
-	Permissions    *Permissions
-	Modules        app.ActiveModules
+	Permissions *Permissions
+	Modules     app.ActiveModules
+	// Now is the clock of the use cases; nil is time.Now (the demo generator
+	// simulates one).
+	Now            func() time.Time
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -67,6 +70,7 @@ func New(cfg Config) (*Module, error) {
 		Users:          users,
 		Tokens:         postgres.NewRefreshTokenRepository(cfg.DB),
 		Directory:      postgres.NewLoginDirectory(cfg.DB),
+		Demo:           postgres.NewDemoTenantRepository(cfg.DB),
 		Hasher:         argon2id.New(argon2id.DefaultParams),
 		Issuer:         cfg.Issuer,
 		Setup:          cfg.Setup,
@@ -74,6 +78,7 @@ func New(cfg Config) (*Module, error) {
 		Modules:        cfg.Modules,
 		IPLimiter:      ratelimit.NewFixedWindow(loginsPerIP, loginsPerIPWindow),
 		EmailLimiter:   ratelimit.NewFixedWindow(loginsPerEmail, loginsPerEmailWindow),
+		Now:            cfg.Now,
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Logger:         cfg.Logger,

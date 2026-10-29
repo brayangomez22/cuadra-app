@@ -202,6 +202,7 @@ type Import struct {
 	CreatedAt     time.Time
 	StartedAt     *time.Time
 	FinishedAt    *time.Time
+	FilePurgedAt  *time.Time
 }
 
 type ImportError struct {
@@ -552,6 +553,7 @@ type Tenant struct {
 	CreatedAt        time.Time
 	BusinessTemplate string
 	DefaultTaxRate   decimal.Decimal
+	Demo             bool
 }
 
 type TenantModule struct {

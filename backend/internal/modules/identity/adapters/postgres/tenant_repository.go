@@ -72,6 +72,7 @@ func createTenant(ctx context.Context, q *sqlcgen.Queries, t *domain.Tenant) err
 		Status:           string(t.Status()),
 		BusinessTemplate: t.BusinessTemplate(),
 		DefaultTaxRate:   t.DefaultTaxRate(),
+		Demo:             t.IsDemo(),
 		CreatedAt:        t.CreatedAt(),
 	})
 }
@@ -122,6 +123,7 @@ func tenantFromRow(row sqlcgen.GetTenantRow) (*domain.Tenant, error) {
 		Status:           domain.TenantStatus(row.Status),
 		BusinessTemplate: row.BusinessTemplate,
 		DefaultTaxRate:   row.DefaultTaxRate,
+		Demo:             row.Demo,
 		CreatedAt:        row.CreatedAt,
 	})
 	if err != nil {

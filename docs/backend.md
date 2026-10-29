@@ -61,6 +61,8 @@ test/api/                # tests de integración de la API completa, sobre serve
 
 `main` y los tests de `test/api` arman la API con el mismo `server.New`: así los tests prueban el armado real y no una copia. Los tests de `internal/server` son unitarios (rutas y compuertas con módulos de prueba).
 
+**El generador de la demo** (`internal/demo`, T34) no es un módulo: es un cliente más del contrato. Arma su propia API con `server.NewDemo` sobre un reloj simulado (`server.Config.Now`, que llega a cada módulo) y la recorre con un cliente Go generado del OpenAPI (`internal/demo/apiclient`); lo único que hace por fuera del contrato (marcar el tenant como demo, crear un usuario por rol y borrarlo) pasa por `server.Demo`. Sus datos por tipo de negocio viven en `internal/demo/data/*.yaml`, fuera de las raíces de `lint-neutral`. Lo corren `cmd/seed` (`make seed`) y el trabajo nocturno `demo.reset`. **Crece con el producto:** una tarea que agrega un módulo agrega sus datos al generador.
+
 ### Núcleo compartido: `internal/kernel`
 
 Un value object puro que validan los `domain/` de más de un módulo vive en `internal/kernel/<tema>` (`taxid`: el NIT y su dígito de verificación, que usan `identity`, `customers` y `purchases` y después la facturación; `calendar`: el día de calendario en `America/Bogota` de los vencimientos de `receivables` y `purchases`). Solo importa la librería estándar y no tiene estado ni I/O; no es un lugar para helpers ni para entidades. Un tipo entra aquí solo cuando lo necesita un segundo módulo.
@@ -74,6 +76,7 @@ Un value object puro que validan los `domain/` de más de un módulo vive en `in
 | `app` | importar `adapters`, `pgx`, `net/http` o el SDK de OpenTelemetry (`otel/sdk`) |
 | `catalog`, `customers`, `identity`, `imports`, `inventory`, `purchases`, `receivables`, `sales` | importar otro módulo |
 | `platform` | importar cualquier módulo |
+| `demo` | que `internal/demo` (el generador de la demo) importe un módulo: escribe por la API (`internal/server`) |
 | `composition` | que `cmd/` o `test/api` importen un módulo: solo `internal/server` (y su `ports/`) los une, y los demás usan `server.New` |
 
 Los tests no siguen las reglas de `domain` y `app` (usan `testify` y el SDK de OpenTelemetry para leer spans y métricas). `make lint-guards` verifica que cada regla siga rechazando su import prohibido en `backend/testdata/guards/`: si una regla se rompe al editar `.golangci.yml`, el CI falla.
@@ -195,6 +198,7 @@ La convención la definió la importación (T29, `internal/modules/imports`); T3
 - **Se encola en la transacción que lo origina** (outbox). El repositorio guarda el cambio y llama `jobs.Client.InsertTx` con la misma `pgx.Tx` (`ImportRepository.Queue`); el adaptador de trabajos le da esa función (`jobsadapter.Enqueuer`), así `postgres` no conoce River. Si el commit falla, el trabajo no existe; si el trabajo no se puede insertar, el cambio no se guarda. Los argumentos con `InsertOpts` `UniqueOpts{ByArgs: true}` evitan encolar dos veces lo mismo.
 - **Se reintenta sin duplicar.** River reintenta un trabajo que devuelve error. El caso de uso debe poder correr otra vez: guarda un punto de control en la misma transacción que cada parte de su trabajo (`batches_done` con cada lote) y al empezar salta lo hecho; una entidad ya terminada no se procesa de nuevo (`ErrImportFinished` → `nil`). Un error de negocio que reintentar no arregla deja la entidad en estado fallido con su motivo y devuelve `nil`; uno de infraestructura se devuelve. Un trabajo largo declara su `Timeout`.
 - **Span y métricas.** `platform/jobs` abre el span del trabajo, enlazado al de quien lo encoló, y cuenta los trabajos por tipo y resultado. El caso de uso abre además su span `<modulo>.<CasoDeUso>` con `tenant.id`, `user.id` y el ID de la entidad, y cuenta sus hechos de negocio (`cuadra.imports.runs`, `cuadra.imports.products`, `cuadra.imports.duration`).
+- **Trabajos periódicos.** Un trabajo que corre a una hora (sin tenant: el caso de uso busca en todos con una función `SECURITY DEFINER` que devuelve solo IDs y trabaja cada uno en su `WithTenantTx`) declara su `river.PeriodicJob` con `jobs.Daily(hora, minuto, jobs.Bogota)` y un `ID` igual a su `Kind`, y el `module.go` lo agrega con `cfg.Jobs.AddPeriodic` solo si `cfg.Schedule` (lo pone `cmd/api`; las otras instancias de la API, como la del generador de la demo o la de los tests, no programan nada). Ejemplos: `imports.purge_files` a las 4:00 y `demo.reset` a las 3:00.
 - **Tests.** El caso de uso con fakes (un `Transactor` que deshace lo hecho si `fn` falla, para probar el reintento y el lote fallido); el repositorio con integración (que confirmar y encolar van juntos, que el punto de control se deshace con su lote); y el flujo completo en `test/api` con `newAPIWithJobs` y el cliente de trabajos corriendo.
 
 ## 8. Comentarios

@@ -16,6 +16,7 @@ import (
 	"github.com/riverqueue/river"
 	"go.opentelemetry.io/otel"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/demo"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/config"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
@@ -85,6 +86,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	if err := scheduleDemo(cfg, database, log, jobClient, workers); err != nil {
+		return err
+	}
 	return serve(ctx, cfg, log, httpx.NewServer(cfg.HTTPAddr, handler, cfg.ShutdownTimeout), jobClient)
 }
 
@@ -140,16 +144,38 @@ func newAPIHandler(cfg config.Config, database *db.DB, log *slog.Logger, jobClie
 		return nil, err
 	}
 	return server.New(server.Config{
-		DB:      database,
-		Tokens:  tokens,
-		Jobs:    jobClient,
-		Workers: workers,
+		DB:       database,
+		Tokens:   tokens,
+		Jobs:     jobClient,
+		Workers:  workers,
+		Schedule: true,
 		// The API docs are for developers only; other environments do not serve them.
 		Docs:           cfg.Env == "development",
 		Log:            log,
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),
 	})
+}
+
+// scheduleDemo resets the demo tenants every night when the demo is on
+// (DEMO_ENABLED), in this process's workers.
+func scheduleDemo(cfg config.Config, database *db.DB, log *slog.Logger, jobClient *jobs.Client, workers *river.Workers) error {
+	if !cfg.DemoEnabled {
+		return nil
+	}
+	resetter, err := demo.NewResetter(demo.Resetter{
+		Generator: demo.Generator{
+			DB: database, Jobs: jobClient, Log: log,
+			TracerProvider: otel.GetTracerProvider(), MeterProvider: otel.GetMeterProvider(),
+		},
+		Templates: demo.Templates(),
+		Password:  cfg.DemoPassword,
+		Options:   demo.Options{Seed: demo.DefaultSeed},
+	})
+	if err != nil {
+		return err
+	}
+	return resetter.Schedule(workers, jobClient)
 }
 
 // serve runs the API until ctx is canceled, with the job workers.

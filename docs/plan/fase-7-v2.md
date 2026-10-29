@@ -22,6 +22,7 @@ PWA instalable; catálogo, precios y clientes en caché local (IndexedDB); venta
 
 ### Épica V2-6 · WhatsApp
 Integración con la WhatsApp Business Platform (directa o vía un proveedor; decidir con un spike): envío de facturas y cotizaciones en PDF, **recordatorios de cobro** automáticos de cartera vencida, **resumen diario** al dueño (ventas, cartera, productos por agotarse) y plantillas aprobadas por Meta. Reutiliza los trabajos programados de River.
+**Pendientes que entran a esta épica:** P109 (`docs/plan/pendientes.md`).
 
 ### Épica V2-7 · Módulos de nicho
 Cada punto es un módulo activable (`cross_references`, `kits`, `deliveries`, `warranties`, `projects`) que las plantillas activan según el tipo de negocio. Ninguno entra al core.

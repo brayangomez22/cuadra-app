@@ -257,10 +257,17 @@ En los tests no corren `funlen`, `gocognit`, `cyclop` ni `dupl`: las tablas de l
 **Pendientes que entran a esta tarea:** P98 (`docs/plan/pendientes.md`).
 **Tests primero:** una línea en cajas muestra lo que entra en unidad base; la factura repetida se marca en el número; el error de una línea queda en su fila.
 
-### [ ] T34 · Tenant de demostración y datos semilla
+### [x] T34 · Tenant de demostración y datos semilla
 **Depende de:** T11, T18.
+**División:** el backend (generador, tenant demo, reinicio nocturno y P82) es T34; la demo pública (entrar sin contraseña, el banner y el botón) es **T34a**. El test de que el demo no envía nada real pasa a T36 (P108) y a V2-6 (P109), porque hoy nada envía.
 **Alcance:** generador de datos realistas (`cmd/seed`) que crea un tenant demo **por plantilla de tipo de negocio** (como mínimo "Ferretería Demo" y "Almacén de Ropa Demo"), cada uno con 2 sedes, ~3.000 productos con categorías, unidades y códigos de barras, clientes con cartera, proveedores, compras y **6 meses de historial de ventas** con patrones creíbles (más ventas los sábados, temporadas). Determinista (misma semilla = mismos datos) para que sirva también en E2E y pruebas de carga. Tenant demo público con botón "Probar la demo" (usuarios por rol), **reinicio automático cada noche** (trabajo programado de River) y adaptador DIAN simulado que nunca llama al proveedor real (se conecta cuando exista T36). Banner visible de "modo demostración".
 **Pendientes que entran a esta tarea:** P82 (`docs/plan/pendientes.md`).
 **Crece con el producto:** desde aquí, cada tarea que agregue un módulo agrega también sus datos semilla al generador.
 **Tests primero:** el generador es determinista; el tenant demo no puede enviar correos, WhatsApp ni documentos DIAN reales; el reinicio deja el tenant exactamente en su estado inicial.
 **Para qué:** vender (mostrar Cuadra en el negocio sin cargar nada) y portafolio (un enlace que el reclutador puede abrir).
+
+### [ ] T34a · Demo pública
+**Depende de:** T34.
+**Alcance:** lo que ve quien abre la demo, sobre el tenant que genera T34. (1) **Entrar sin contraseña:** `POST /api/v1/auth/demo` (público, con rate limit) recibe la plantilla y el rol (`owner`, `admin`, `cashier`, `warehouse`) y abre la sesión del usuario de ese rol en el tenant demo de la plantilla (lo encuentra con `demo_tenants()`); 404 si la demo está apagada (`DEMO_ENABLED`) o no existe. (2) **`Me.demo`** (booleano, aditivo) y un **banner** visible de «modo demostración» en todas las pantallas, que dice que los datos se reinician cada noche. (3) En el login, el botón **«Probar la demo»**: elegir el tipo de negocio y el rol. (4) Los datos semilla de los pendientes que entran. Responsive de 360 a 1920 px.
+**Pendientes que entran a esta tarea:** P111 (`docs/plan/pendientes.md`).
+**Tests primero:** el endpoint no abre sesión en un tenant que no es demo ni con la demo apagada; el banner sale solo en un tenant demo; el botón entra con el rol elegido.

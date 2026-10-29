@@ -24,8 +24,11 @@ var (
 	ErrPasswordTooLong       = errors.New("identity: password too long")
 	ErrEmptyPasswordHash     = errors.New("identity: empty password hash")
 	ErrTenantNotFound        = errors.New("identity: tenant not found")
-	ErrUserNotFound          = errors.New("identity: user not found")
-	ErrEmailTaken            = errors.New("identity: email already registered in the tenant")
+	// ErrNotDemoTenant reports a purge of a tenant that is not a demo one:
+	// only demonstration tenants can be deleted.
+	ErrNotDemoTenant = errors.New("identity: not a demo tenant")
+	ErrUserNotFound  = errors.New("identity: user not found")
+	ErrEmailTaken    = errors.New("identity: email already registered in the tenant")
 	// ErrUnknownBusinessTemplate reports a business template that does not
 	// exist or is not a well-formed ID.
 	ErrUnknownBusinessTemplate = errors.New("identity: unknown business template")

@@ -1,0 +1,88 @@
+# Almacén de Ropa Demo: cada prenda se vende por talla y color (módulo
+# variants). Las temporadas son las de un almacén de barrio: diciembre, la
+# prima de junio y el regreso a clases de enero y febrero.
+tenant:
+  name: Almacén de Ropa Demo
+  nit: "901555222"
+  mailbox: ropa.demo.cuadra.co
+locations: [Tienda Centro, Tienda Unicentro]
+products: 3300
+customers: 300
+credit_share: 10
+defaulter_one_in: 5
+sales_per_day: 22
+weekdays: [70, 80, 75, 80, 95, 130, 170]
+months: [110, 95, 85, 90, 105, 135, 115, 90, 90, 100, 120, 175]
+segments: [Público, Mayorista]
+credit_segment: Mayorista
+suppliers:
+  - {name: Confecciones Medellín S.A.S., nit: "900401001", term_days: 30}
+  - {name: Textiles del Caribe Ltda., nit: "900401002", term_days: 45}
+  - {name: Calzado Bucaramanga S.A.S., nit: "900401003", term_days: 30}
+  - {name: Accesorios y Moda S.A.S., nit: "900401004", term_days: 15}
+families:
+  - category: Mujer
+    unit: und
+    names: [Blusa, Camiseta, Jean, Vestido, Falda, Chaqueta, Leggings, Saco]
+    specs: [básica, estampada, de lino, de rayas, manga larga, manga corta, ajustada, oversize]
+    brands: [Studio F, ELA, Pat Primo, Koaj]
+    attributes: {material: Algodón, genero: Mujer}
+    price: [35000, 190000]
+    quantity: 2
+    axes:
+      - {name: talla, values: [XS, S, M, L, XL]}
+      - {name: color, values: [Negro, Blanco, Azul, Rojo, Beige]}
+  - category: Hombre
+    unit: und
+    names: [Camisa, Camiseta, Jean, Pantalón, Bermuda, Chaqueta, Polo, Buzo]
+    specs: [clásica, slim, estampada, de lino, de cuadros, manga larga, manga corta, deportiva]
+    brands: [Arturo Calle, Tennis, Gef, Koaj]
+    attributes: {material: Algodón, genero: Hombre}
+    price: [39000, 210000]
+    quantity: 2
+    axes:
+      - {name: talla, values: [S, M, L, XL, XXL]}
+      - {name: color, values: [Negro, Blanco, Gris, Azul, Beige]}
+  - category: Niños
+    unit: und
+    names: [Camiseta, Pantalón, Pijama, Vestido, Sudadera, Chaqueta, Short, Conjunto]
+    specs: [estampada, básica, de algodón, de dibujos, escolar, deportiva, de rayas, abrigada]
+    brands: [Offcorss, Baby Fresh, Epk, Gef]
+    attributes: {material: Algodón, genero: Unisex}
+    price: [25000, 120000]
+    quantity: 3
+    axes:
+      - {name: talla, values: [XS, S, M, L]}
+      - {name: color, values: [Blanco, Azul, Rojo, Gris]}
+  - category: Calzado
+    unit: par
+    names: [Tenis, Zapato, Sandalia, Bota, Baleta, Mocasín, Chancla, Botín]
+    specs: [de cuero, deportivo, casual, de lona, formal, de plataforma, urbano, clásico]
+    brands: [Bosi, Vélez, Spring Step, Croydon]
+    attributes: {material: Cuero, genero: Unisex}
+    price: [49000, 320000]
+    quantity: 1
+    axes:
+      - {name: talla calzado, values: ["35", "36", "37", "38", "39", "40", "41", "42", "43"]}
+      - {name: color, values: [Negro, Blanco, Beige]}
+  - category: Accesorios
+    unit: und
+    names: [Gorra, Cinturón, Bolso, Billetera, Bufanda, Medias, Morral, Sombrero]
+    specs: [de cuero, de tela, clásico, deportivo, estampado, tejido, pequeño, grande]
+    brands: [Vélez, Totto, Mario Hernández, Koaj]
+    attributes: {material: Cuero, genero: Unisex}
+    price: [15000, 280000]
+    quantity: 2
+    axes:
+      - {name: color, values: [Negro, Gris, Azul, Rojo, Beige]}
+  - category: Mujer
+    unit: und
+    names: [Top, Body, Pantalón, Short, Cárdigan, Overol, Enterizo, Pijama]
+    specs: [deportivo, de fiesta, de algodón, de seda, tejido, de cuadros, básico, estampado]
+    brands: [Studio F, ELA, Pat Primo, Leonisa]
+    attributes: {material: Poliéster, genero: Mujer}
+    price: [29000, 170000]
+    quantity: 2
+    axes:
+      - {name: talla, values: [XS, S, M, L, XL]}
+      - {name: color, values: [Negro, Blanco, Rojo, Gris, Azul]}
