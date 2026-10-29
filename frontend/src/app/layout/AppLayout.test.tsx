@@ -126,4 +126,17 @@ describe('AppLayout', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/ingresar'));
     expect(api.calls('POST /api/v1/auth/logout')).toHaveLength(1);
   });
+
+  it('avisa del modo demostración solo en una empresa de demostración', async () => {
+    fakeApi(signedIn({ ...aUser('cashier'), demo: true }));
+    renderApp('/');
+    const banner = await screen.findByRole('status', { name: 'Modo demostración' });
+    expect(banner).toHaveTextContent('Los datos se reinician cada noche');
+    cleanup();
+
+    fakeApi(signedIn(aUser('cashier')));
+    renderApp('/');
+    await mainMenu();
+    expect(screen.queryByRole('status', { name: 'Modo demostración' })).not.toBeInTheDocument();
+  });
 });

@@ -48,6 +48,14 @@ type Scenario struct {
 	Customers []Customer
 	Suppliers []Supplier
 	Days      []Day
+	// Reorder are the minimum and maximum stock of some variants.
+	Reorder []ReorderRule
+}
+
+// ReorderRule is the minimum and maximum stock of a variant at a location.
+type ReorderRule struct {
+	Location, Product, Variant int
+	Min, Max                   decimal.Decimal
 }
 
 // Product is an article of the catalog with its variants.
@@ -199,7 +207,9 @@ func NewScenario(p Profile, o Options) (Scenario, error) {
 		Customers: planCustomers(rng, p, o.Customers),
 		Suppliers: p.Suppliers,
 	}
-	s.Days = newHistory(rng, &s, o).plan()
+	h := newHistory(rng, &s, o)
+	s.Days = h.plan()
+	s.Reorder = h.reorderRules()
 	return s, nil
 }
 

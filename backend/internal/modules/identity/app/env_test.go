@@ -31,11 +31,14 @@ type env struct {
 	modules      *fakeModules
 	ipLimiter    *fakeLimiter
 	emailLimiter *fakeLimiter
+	demoLimiter  *fakeLimiter
 	spans        *tracetest.SpanRecorder
 	metrics      *sdkmetric.ManualReader
 }
 
-func newEnv(t *testing.T) *env {
+// newEnv builds the env with the demo on; opts change the service's
+// dependencies before it is built.
+func newEnv(t *testing.T, opts ...func(*app.Deps)) *env {
 	t.Helper()
 	clock := &fakeClock{now: time.Date(2026, 10, 10, 15, 0, 0, 0, time.UTC)}
 	users := &fakeUsers{byID: map[uuid.UUID]*domain.User{}}
@@ -49,6 +52,7 @@ func newEnv(t *testing.T) *env {
 		modules:      &fakeModules{active: map[uuid.UUID][]string{}},
 		ipLimiter:    &fakeLimiter{denied: map[string]bool{}},
 		emailLimiter: &fakeLimiter{denied: map[string]bool{}},
+		demoLimiter:  &fakeLimiter{denied: map[string]bool{}},
 		spans:        tracetest.NewSpanRecorder(),
 		metrics:      sdkmetric.NewManualReader(),
 	}
@@ -62,7 +66,7 @@ func newEnv(t *testing.T) *env {
 
 	permissions, err := app.NewPermissionMatrix(testRegistry)
 	require.NoError(t, err)
-	svc, err := app.NewService(app.Deps{
+	deps := app.Deps{
 		Tenants:        e.tenants,
 		Users:          users,
 		Tokens:         e.tokens,
@@ -75,10 +79,16 @@ func newEnv(t *testing.T) *env {
 		Modules:        e.modules,
 		IPLimiter:      e.ipLimiter,
 		EmailLimiter:   e.emailLimiter,
+		DemoLimiter:    e.demoLimiter,
+		DemoEnabled:    true,
 		Now:            clock.Now,
 		TracerProvider: tp,
 		MeterProvider:  mp,
-	})
+	}
+	for _, opt := range opts {
+		opt(&deps)
+	}
+	svc, err := app.NewService(deps)
 	require.NoError(t, err)
 	e.svc = svc
 	return e

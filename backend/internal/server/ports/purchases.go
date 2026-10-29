@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog"
+	catalogdomain "github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory"
 	inventoryapp "github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/app"
 	inventorydomain "github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/domain"
@@ -21,12 +22,23 @@ type PurchasesCatalog struct{ Catalog *catalog.Module }
 
 // Variants returns what a purchase needs of each variant of tenantID among
 // ids: its names, its product's VAT rate and base unit, and its alternate
-// units.
+// units. A purchase may have more lines than the catalog reads in one call
+// (catalog.MaxProductsByID), so it reads them in batches.
 func (c PurchasesCatalog) Variants(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) ([]purchasesapp.VariantInfo, error) {
-	products, err := c.Catalog.ProductsOfVariants(ctx, tenantID, ids)
-	if err != nil {
-		return nil, err
+	out := make([]purchasesapp.VariantInfo, 0, len(ids))
+	for batch := range slices.Chunk(ids, catalog.MaxProductsByID) {
+		products, err := c.Catalog.ProductsOfVariants(ctx, tenantID, batch)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, purchaseVariants(products, batch)...)
 	}
+	return out, nil
+}
+
+// purchaseVariants is what a purchase needs of the variants among ids of
+// products.
+func purchaseVariants(products []*catalogdomain.Product, ids []uuid.UUID) []purchasesapp.VariantInfo {
 	out := make([]purchasesapp.VariantInfo, 0, len(ids))
 	for _, p := range products {
 		for _, v := range p.Variants() {
@@ -43,7 +55,7 @@ func (c PurchasesCatalog) Variants(ctx context.Context, tenantID uuid.UUID, ids 
 			out = append(out, info)
 		}
 	}
-	return out, nil
+	return out
 }
 
 // PurchasesStock satisfies purchasesapp.PurchaseStock with the inventory

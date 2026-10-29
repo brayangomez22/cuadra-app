@@ -31,24 +31,48 @@ func (e AuthSessionTokenType) Valid() bool {
 	}
 }
 
+// Defines values for DemoRequestRole.
+const (
+	DemoRequestRoleAdmin     DemoRequestRole = "admin"
+	DemoRequestRoleCashier   DemoRequestRole = "cashier"
+	DemoRequestRoleOwner     DemoRequestRole = "owner"
+	DemoRequestRoleWarehouse DemoRequestRole = "warehouse"
+)
+
+// Valid indicates whether the value is a known member of the DemoRequestRole enum.
+func (e DemoRequestRole) Valid() bool {
+	switch e {
+	case DemoRequestRoleAdmin:
+		return true
+	case DemoRequestRoleCashier:
+		return true
+	case DemoRequestRoleOwner:
+		return true
+	case DemoRequestRoleWarehouse:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeRole.
 const (
-	Admin     MeRole = "admin"
-	Cashier   MeRole = "cashier"
-	Owner     MeRole = "owner"
-	Warehouse MeRole = "warehouse"
+	MeRoleAdmin     MeRole = "admin"
+	MeRoleCashier   MeRole = "cashier"
+	MeRoleOwner     MeRole = "owner"
+	MeRoleWarehouse MeRole = "warehouse"
 )
 
 // Valid indicates whether the value is a known member of the MeRole enum.
 func (e MeRole) Valid() bool {
 	switch e {
-	case Admin:
+	case MeRoleAdmin:
 		return true
-	case Cashier:
+	case MeRoleCashier:
 		return true
-	case Owner:
+	case MeRoleOwner:
 		return true
-	case Warehouse:
+	case MeRoleWarehouse:
 		return true
 	default:
 		return false
@@ -87,6 +111,31 @@ type BusinessTemplateList struct {
 	Items []BusinessTemplate `json:"items"`
 }
 
+// DemoOption defines model for DemoOption.
+type DemoOption struct {
+	// BusinessTemplate Example: generica
+	BusinessTemplate string `json:"business_template"`
+
+	// Name Nombre del tipo de negocio.
+	//
+	// Example: Negocio general
+	Name string `json:"name"`
+}
+
+// DemoOptionList defines model for DemoOptionList.
+type DemoOptionList struct {
+	Items []DemoOption `json:"items"`
+}
+
+// DemoRequest defines model for DemoRequest.
+type DemoRequest struct {
+	BusinessTemplate string          `json:"business_template"`
+	Role             DemoRequestRole `json:"role"`
+}
+
+// DemoRequestRole defines model for DemoRequest.Role.
+type DemoRequestRole string
+
 // Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Error struct {
 	Error ErrorDetail `json:"error"`
@@ -124,9 +173,12 @@ type Me struct {
 
 	// DefaultTaxRate La tasa de IVA que se propone a un producto nuevo. La siembra la plantilla de la empresa y se cambia con
 	// `PATCH /api/v1/tenant`.
-	DefaultTaxRate TaxRate            `json:"default_tax_rate"`
-	Email          string             `json:"email"`
-	Id             openapi_types.UUID `json:"id"`
+	DefaultTaxRate TaxRate `json:"default_tax_rate"`
+
+	// Demo La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso.
+	Demo  bool               `json:"demo"`
+	Email string             `json:"email"`
+	Id    openapi_types.UUID `json:"id"`
 
 	// Modules Módulos activos de la empresa, para mostrar u ocultar menús, columnas y campos.
 	//
@@ -300,6 +352,9 @@ type RefreshSessionParams struct {
 	CuadraRefresh *RefreshCookie `form:"cuadra_refresh,omitempty" json:"cuadra_refresh,omitempty"`
 }
 
+// StartDemoJSONRequestBody defines body for StartDemo for application/json ContentType.
+type StartDemoJSONRequestBody = DemoRequest
+
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
@@ -311,6 +366,12 @@ type UpdateTenantJSONRequestBody = TenantUpdate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// ListDemos Demostraciones disponibles
+	// (GET /api/v1/auth/demo)
+	ListDemos(w http.ResponseWriter, r *http.Request)
+	// StartDemo Entrar a la demostración
+	// (POST /api/v1/auth/demo)
+	StartDemo(w http.ResponseWriter, r *http.Request)
 	// Login Iniciar sesión
 	// (POST /api/v1/auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
@@ -342,6 +403,34 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListDemos operation middleware
+func (siw *ServerInterfaceWrapper) ListDemos(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDemos(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartDemo operation middleware
+func (siw *ServerInterfaceWrapper) StartDemo(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartDemo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // Login operation middleware
 func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request) {
@@ -606,6 +695,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/signup", wrapper.SignUp)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/business-templates", wrapper.ListBusinessTemplates)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/login", wrapper.Login)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/demo", wrapper.ListDemos)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/demo", wrapper.StartDemo)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/refresh", wrapper.RefreshSession)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/me", wrapper.GetMe)
@@ -621,6 +712,153 @@ type ForbiddenJSONResponse Error
 type InternalErrorJSONResponse Error
 
 type UnauthorizedJSONResponse Error
+
+type ListDemosRequestObject struct {
+}
+
+type ListDemosResponseObject interface {
+	VisitListDemosResponse(w http.ResponseWriter) error
+}
+
+type ListDemos200JSONResponse DemoOptionList
+
+func (response ListDemos200JSONResponse) VisitListDemosResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDemos404JSONResponse Error
+
+func (response ListDemos404JSONResponse) VisitListDemosResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDemos500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListDemos500JSONResponse) VisitListDemosResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartDemoRequestObject struct {
+	Body *StartDemoJSONRequestBody
+}
+
+type StartDemoResponseObject interface {
+	VisitStartDemoResponse(w http.ResponseWriter) error
+}
+
+type StartDemo200ResponseHeaders struct {
+	SetCookie *string
+}
+
+type StartDemo200JSONResponse struct {
+	Body    AuthSession
+	Headers StartDemo200ResponseHeaders
+}
+
+func (response StartDemo200JSONResponse) VisitStartDemoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartDemo400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response StartDemo400JSONResponse) VisitStartDemoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartDemo404JSONResponse Error
+
+func (response StartDemo404JSONResponse) VisitStartDemoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartDemo429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type StartDemo429JSONResponse struct {
+	Body    Error
+	Headers StartDemo429ResponseHeaders
+}
+
+func (response StartDemo429JSONResponse) VisitStartDemoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartDemo500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response StartDemo500JSONResponse) VisitStartDemoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type LoginRequestObject struct {
 	Body *LoginJSONRequestBody
@@ -1108,6 +1346,12 @@ func (response UpdateTenant500JSONResponse) VisitUpdateTenantResponse(w http.Res
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// ListDemos Demostraciones disponibles
+	// (GET /api/v1/auth/demo)
+	ListDemos(ctx context.Context, request ListDemosRequestObject) (ListDemosResponseObject, error)
+	// StartDemo Entrar a la demostración
+	// (POST /api/v1/auth/demo)
+	StartDemo(ctx context.Context, request StartDemoRequestObject) (StartDemoResponseObject, error)
 	// Login Iniciar sesión
 	// (POST /api/v1/auth/login)
 	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
@@ -1168,6 +1412,61 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListDemos operation middleware
+func (sh *strictHandler) ListDemos(w http.ResponseWriter, r *http.Request) {
+	var request ListDemosRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDemos(ctx, request.(ListDemosRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDemos")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDemosResponseObject); ok {
+		if err := validResponse.VisitListDemosResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// StartDemo operation middleware
+func (sh *strictHandler) StartDemo(w http.ResponseWriter, r *http.Request) {
+	var request StartDemoRequestObject
+
+	var body StartDemoJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.StartDemo(ctx, request.(StartDemoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "StartDemo")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(StartDemoResponseObject); ok {
+		if err := validResponse.VisitStartDemoResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // Login operation middleware

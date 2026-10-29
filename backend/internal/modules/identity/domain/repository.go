@@ -34,6 +34,9 @@ type UserRepository interface {
 	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*User, error)
 	// GetByEmail returns ErrUserNotFound when no user of tenantID has email.
 	GetByEmail(ctx context.Context, tenantID uuid.UUID, email Email) (*User, error)
+	// FirstByRole returns the oldest active user of tenantID with role;
+	// ErrUserNotFound if it has none.
+	FirstByRole(ctx context.Context, tenantID uuid.UUID, role Role) (*User, error)
 	// Update stores the name, password hash, role and active flag;
 	// ErrUserNotFound if the user does not exist in its tenant.
 	Update(ctx context.Context, u *User) error

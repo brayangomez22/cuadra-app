@@ -38,6 +38,8 @@ type Config struct {
 	// Now is the clock of every module; nil is time.Now. Only the demo
 	// generator sets it, to write months of history in minutes.
 	Now func() time.Time
+	// DemoEnabled lets anyone enter the demo tenants (DEMO_ENABLED).
+	DemoEnabled bool
 }
 
 // New builds every module and the handler that serves them. It fails, so

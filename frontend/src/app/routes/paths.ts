@@ -40,6 +40,7 @@ export const paths = {
   home: route('/'),
   login: route('/ingresar'),
   signUp: route('/registro'),
+  demo: route('/demo'),
   products: {
     list: route('/productos'),
     new: route('/productos/nuevo'),

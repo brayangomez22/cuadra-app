@@ -1,7 +1,7 @@
 @use '@/styles/abstracts' as *;
 
 // Cards that fill the row: one column on a phone, two or three on wider forms.
-.options {
+.root {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
   gap: var(--space-2);

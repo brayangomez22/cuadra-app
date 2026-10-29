@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"slices"
 	"sync"
 
 	"github.com/google/uuid"
@@ -10,9 +11,11 @@ import (
 )
 
 // fakeDemo finds the demo tenants among fakeTenants and purges one by
-// removing it and its users.
+// removing it and its users. FindByTemplate also returns extra, as a broken
+// repository would.
 type fakeDemo struct {
 	mu      sync.Mutex
+	extra   []uuid.UUID
 	tenants *fakeTenants
 	users   *fakeUsers
 	purged  []uuid.UUID
@@ -21,7 +24,7 @@ type fakeDemo struct {
 func (f *fakeDemo) FindByTemplate(_ context.Context, template string) ([]uuid.UUID, error) {
 	f.tenants.mu.Lock()
 	defer f.tenants.mu.Unlock()
-	var out []uuid.UUID
+	out := slices.Clone(f.extra)
 	for id, t := range f.tenants.byID {
 		if t.IsDemo() && t.BusinessTemplate() == template {
 			out = append(out, id)

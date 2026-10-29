@@ -33,5 +33,6 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrInvalidDefaultTaxRate, Status: http.StatusUnprocessableEntity, Code: "invalid_default_tax_rate", Message: "El IVA por defecto debe ser un porcentaje de 0 a menos de 100, con hasta 2 decimales."},
 	// A token whose tenant no longer exists is an invalid session, as for its user.
 	{Err: domain.ErrTenantNotFound, Status: http.StatusUnauthorized, Code: "unauthorized", Message: unauthorizedMessage},
+	{Err: domain.ErrDemoUnavailable, Status: http.StatusNotFound, Code: "demo_unavailable", Message: "La demostración no está disponible en este momento. Intente más tarde."},
 	{Err: domain.ErrInvalidUserName, Status: http.StatusUnprocessableEntity, Code: "invalid_user_name", Message: "Escriba su nombre (máximo 200 caracteres)."},
 }

@@ -143,6 +143,7 @@ export function aUser(role: Me['role'] = 'owner'): Me {
     role,
     permissions: permissionsByRole[role],
     modules: [],
+    demo: false,
   };
 }
 

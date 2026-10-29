@@ -44,4 +44,7 @@ var (
 	ErrRefreshTokenNotFound = errors.New("identity: refresh token not found")
 	ErrRefreshTokenExpired  = errors.New("identity: refresh token expired")
 	ErrRefreshTokenReused   = errors.New("identity: refresh token reused")
+	// ErrDemoUnavailable means there is no demo to enter: it is off, the
+	// business template has none or it has no active user of the role.
+	ErrDemoUnavailable = errors.New("identity: demo unavailable")
 )

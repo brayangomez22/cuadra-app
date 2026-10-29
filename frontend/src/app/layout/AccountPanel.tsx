@@ -1,15 +1,8 @@
 import clsx from 'clsx';
 import { useState } from 'react';
-import type { Me } from '@/features/auth';
+import { roleLabels, type Me } from '@/features/auth';
 import { Button, IconLogout } from '@/shared/ui';
 import styles from './AccountPanel.module.scss';
-
-const roleLabels: Record<Me['role'], string> = {
-  owner: 'Dueño',
-  admin: 'Administrador',
-  cashier: 'Cajero',
-  warehouse: 'Bodeguero',
-};
 
 type Props = {
   user: Me;

@@ -3,7 +3,7 @@ import { useId, type ComponentProps } from 'react';
 import { describeError } from '@/shared/api/errors';
 import { Alert, Button, IconAlert, Inline } from '@/shared/ui';
 import { useBusinessTemplates } from '../../../../api/businessTemplates';
-import { BusinessTypeOptions, BusinessTypeOptionsSkeleton } from '../BusinessTypeOptions/BusinessTypeOptions';
+import { ChoiceCards, ChoiceCardsSkeleton } from '../../../../components/ChoiceCards/ChoiceCards';
 import styles from './BusinessTypeField.module.scss';
 
 type Props = Omit<ComponentProps<'input'>, 'type' | 'id'> & {
@@ -30,7 +30,7 @@ export function BusinessTypeField({ error, className, ...radio }: Props) {
       <p className={styles.hint}>
         Prepara sus unidades, categorías y campos de producto. Después puede cambiarlo todo.
       </p>
-      {templates.isPending && <BusinessTypeOptionsSkeleton />}
+      {templates.isPending && <ChoiceCardsSkeleton />}
       {templates.isError && (
         <Alert tone="danger" title="No pudimos cargar los tipos de negocio">
           <Inline as="span" gap="3" wrap>
@@ -42,8 +42,8 @@ export function BusinessTypeField({ error, className, ...radio }: Props) {
         </Alert>
       )}
       {templates.data && (
-        <BusinessTypeOptions
-          templates={templates.data}
+        <ChoiceCards
+          options={templates.data.map((t) => ({ value: t.id, label: t.name, description: t.description }))}
           id={id}
           labelId={labelId}
           errorId={error ? errorId : undefined}

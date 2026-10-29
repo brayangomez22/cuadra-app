@@ -20,14 +20,16 @@ import (
 const pageSize = 100
 
 // Fingerprint summarizes a demo tenant as the API shows it, without ids or
-// the real time: the catalog, the stock of each location, the sales of each
-// day, the purchases and the receivables' aging. The same scenario gives
+// the real time: the catalog, the stock of each location, the reorder
+// alerts, the sales of each day, the purchases and the receivables' aging. The same scenario gives
 // the same fingerprint, however many times it is generated.
 type Fingerprint struct {
 	Products  int
 	Sales     int
 	Purchases int
-	Digest    string
+	// Alerts are the variants under their minimum stock.
+	Alerts int
+	Digest string
 }
 
 // fingerprint is what a Fingerprint is computed from, one line per fact.
@@ -36,6 +38,7 @@ type fingerprint struct {
 	owner apiclient.RequestEditorFn
 	lines []string
 	skus  map[uuid.UUID]string
+	locs  map[uuid.UUID]string
 }
 
 // Fingerprint reads the demo tenant of s as its owner on the morning after
@@ -49,16 +52,16 @@ func (g Generator) Fingerprint(ctx context.Context, tenant uuid.UUID, s Scenario
 	if err := r.logIn(ctx, tenant, password); err != nil {
 		return Fingerprint{}, err
 	}
-	f := &fingerprint{r: r, owner: r.as(s.Profile.OwnerEmail()), skus: map[uuid.UUID]string{}}
+	f := &fingerprint{r: r, owner: r.as(s.Profile.OwnerEmail()), skus: map[uuid.UUID]string{}, locs: map[uuid.UUID]string{}}
 	out := Fingerprint{}
-	steps := []func(context.Context) (int, error){f.products, f.stock, f.sales, f.purchases, f.aging}
+	steps := []func(context.Context) (int, error){f.products, f.stock, f.sales, f.purchases, f.aging, f.alerts}
 	counts := make([]int, len(steps))
 	for i, step := range steps {
 		if counts[i], err = step(ctx); err != nil {
 			return Fingerprint{}, err
 		}
 	}
-	out.Products, out.Sales, out.Purchases = counts[0], counts[2], counts[3]
+	out.Products, out.Sales, out.Purchases, out.Alerts = counts[0], counts[2], counts[3], counts[5]
 	slices.Sort(f.lines)
 	sum := sha256.Sum256([]byte(strings.Join(f.lines, "\n")))
 	out.Digest = hex.EncodeToString(sum[:])
@@ -106,6 +109,7 @@ func (f *fingerprint) stock(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	for _, loc := range locs.JSON200.Items {
+		f.locs[loc.Id] = loc.Name
 		if err := f.locationStock(ctx, loc.Id, loc.Name); err != nil {
 			return 0, err
 		}
@@ -182,4 +186,24 @@ func (f *fingerprint) aging(ctx context.Context) (int, error) {
 	}
 	f.add("aging|%s|%d", totals, res.JSON200.Total)
 	return res.JSON200.Total, nil
+}
+
+// alerts adds each variant under its minimum: location, SKU, stock, minimum,
+// maximum and suggested quantity. It runs after stock, which names the
+// locations.
+func (f *fingerprint) alerts(ctx context.Context) (int, error) {
+	for offset := 0; ; offset += pageSize {
+		limit, off := pageSize, offset
+		res, err := f.r.api.ListReorderAlertsWithResponse(ctx, &apiclient.ListReorderAlertsParams{Limit: &limit, Offset: &off}, f.owner)
+		if err := expect("list reorder alerts", res, err); err != nil {
+			return 0, err
+		}
+		for _, a := range res.JSON200.Items {
+			f.add("alert|%s|%s|%s|%s|%s|%s", f.locs[a.LocationId], f.skus[a.VariantId],
+				a.Quantity, a.MinQuantity, a.MaxQuantity, a.SuggestedQuantity)
+		}
+		if offset+pageSize >= res.JSON200.Total {
+			return res.JSON200.Total, nil
+		}
+	}
 }

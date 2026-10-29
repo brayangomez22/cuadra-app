@@ -3,3 +3,5 @@
 export const meQueryKey = ['me'] as const;
 
 export const businessTemplatesQueryKey = ['auth', 'business-templates'] as const;
+
+export const demosQueryKey = ['auth', 'demos'] as const;

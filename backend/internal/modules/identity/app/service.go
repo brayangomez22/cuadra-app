@@ -35,8 +35,12 @@ type Deps struct {
 	Modules     ActiveModules
 	// IPLimiter is keyed by client IP and EmailLimiter by normalized email;
 	// both count every login attempt.
-	IPLimiter      RateLimiter
-	EmailLimiter   RateLimiter
+	IPLimiter    RateLimiter
+	EmailLimiter RateLimiter
+	// DemoEnabled lets anyone enter the demo tenants without a password
+	// (DEMO_ENABLED); DemoLimiter, keyed by client IP, counts those entries.
+	DemoEnabled    bool
+	DemoLimiter    RateLimiter
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -55,13 +59,14 @@ type Service struct {
 	authorizations metric.Int64Counter
 	signups        metric.Int64Counter
 	reuseAlerts    metric.Int64Counter
+	demoLogins     metric.Int64Counter
 }
 
 // NewService builds a Service. It fails if a required dependency is missing
 // or a metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
 	if usecase.AnyNil(d.Tenants, d.Users, d.Tokens, d.Directory, d.Demo, d.Hasher, d.Issuer, d.Setup,
-		d.Permissions, d.Modules, d.IPLimiter, d.EmailLimiter) {
+		d.Permissions, d.Modules, d.IPLimiter, d.EmailLimiter, d.DemoLimiter) {
 		return nil, errors.New("identity: missing service dependency")
 	}
 	if d.Now == nil {
@@ -79,6 +84,8 @@ func NewService(d Deps) (*Service, error) {
 			"Businesses (tenants) registered, by business template.", "{tenant}"),
 		usecase.Counter(&s.reuseAlerts, "cuadra.identity.refresh_reuse_detected",
 			"Reused refresh tokens that revoked a live session: a sign of token theft.", "{event}"),
+		usecase.Counter(&s.demoLogins, "cuadra.identity.demo_logins",
+			"Entries to the public demo, by result, role and business template.", "{session}"),
 	)
 	if err != nil {
 		return nil, err

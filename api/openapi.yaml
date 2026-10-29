@@ -240,6 +240,78 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/auth/demo:
+    get:
+      tags: [auth]
+      operationId: listDemos
+      summary: Demostraciones disponibles
+      description: |
+        Los tipos de negocio que tienen una empresa de demostración, para el botón «Probar la demo». Sus datos se
+        reinician cada noche.
+      security: []
+      responses:
+        "200":
+          description: Las demostraciones disponibles (puede estar vacía mientras se generan).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoOptionList"
+        "404":
+          description: La demostración está apagada en este servidor (`code` = `demo_unavailable`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [auth]
+      operationId: startDemo
+      summary: Entrar a la demostración
+      description: |
+        Abre, sin contraseña, la sesión del usuario del rol elegido en la empresa de demostración del tipo de negocio.
+        Nunca abre una sesión en una empresa que no sea de demostración.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemoRequest"
+      responses:
+        "200":
+          description: Sesión iniciada en la demostración.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetRefreshCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: |
+            La demostración está apagada, no hay una del tipo de negocio o no tiene usuario de ese rol
+            (`code` = `demo_unavailable`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Demasiados intentos (`code` = `too_many_requests`).
+          headers:
+            Retry-After:
+              description: Segundos que hay que esperar antes de intentar de nuevo.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/v1/auth/refresh:
     post:
       tags: [auth]
@@ -3851,6 +3923,37 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BusinessTemplate"
+    DemoOption:
+      type: object
+      required: [business_template, name]
+      properties:
+        business_template:
+          type: string
+          example: generica
+        name:
+          type: string
+          description: Nombre del tipo de negocio.
+          example: Negocio general
+    DemoOptionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DemoOption"
+    DemoRequest:
+      type: object
+      required: [business_template, role]
+      additionalProperties: false
+      properties:
+        business_template:
+          type: string
+          minLength: 1
+          maxLength: 50
+        role:
+          type: string
+          enum: [owner, admin, cashier, warehouse]
     LoginRequest:
       type: object
       required: [email, password]
@@ -3887,7 +3990,7 @@ components:
           $ref: "#/components/schemas/Me"
     Me:
       type: object
-      required: [id, tenant_id, tenant_name, tenant_nit, business_template, default_tax_rate, name, email, role, permissions, modules]
+      required: [id, tenant_id, tenant_name, tenant_nit, business_template, default_tax_rate, name, email, role, permissions, modules, demo]
       properties:
         id:
           type: string
@@ -3931,6 +4034,9 @@ components:
           items:
             type: string
           example: [variants]
+        demo:
+          type: boolean
+          description: La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso.
     Tenant:
       type: object
       required: [id, name, nit, business_template, default_tax_rate]

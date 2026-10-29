@@ -8,9 +8,9 @@ import (
 )
 
 // The purchases: at most maxPurchaseLines lines per invoice (the contract
-// allows 200, but a purchase of more than 100 fails today: P107), received before opening, creditPurchases out of five
-// on credit, and restocked when below a third (restockDivisor) of their
-// level.
+// allows 200; a supplier's invoice rarely has more than 100), received
+// before opening, creditPurchases out of five on credit, and restocked when
+// below a third (restockDivisor) of their level.
 const (
 	maxPurchaseLines = 100
 	purchaseMinute   = openingHour*60 - 30

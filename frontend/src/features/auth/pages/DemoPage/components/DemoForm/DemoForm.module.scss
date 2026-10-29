@@ -1,0 +1,12 @@
+@use '@/styles/abstracts' as *;
+
+// The name of each group of cards, as Field's label.
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-default);
+}
+
+.submit {
+  inline-size: 100%;
+}
