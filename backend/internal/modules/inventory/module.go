@@ -15,6 +15,7 @@ import (
 	httpadapter "github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/adapters/http"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/adapters/postgres"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/app"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/domain"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
 )
@@ -76,6 +77,15 @@ func (m *Module) RegisterRoutes(mux *http.ServeMux) {
 func (m *Module) IssueSaleStock(ctx context.Context, tenantID, userID uuid.UUID, in app.SaleStockInput) error {
 	_, err := m.service.IssueSaleStock(ctx, app.Actor{TenantID: tenantID, UserID: userID}, in)
 	return err
+}
+
+// ReceivePurchaseStock registers the stock entries of a purchase (see
+// app.Service.ReceivePurchaseStock), in line order. It is for the purchases
+// module, through the port internal/server adapts; with a ctx from
+// db.InTenantTx it joins the purchase's transaction. Errors of one variant
+// are *app.VariantStockError.
+func (m *Module) ReceivePurchaseStock(ctx context.Context, tenantID, userID uuid.UUID, in app.PurchaseStockInput) ([]*domain.StockMovement, error) {
+	return m.service.ReceivePurchaseStock(ctx, app.Actor{TenantID: tenantID, UserID: userID}, in)
 }
 
 // ReverseSaleStock gives back the stock of a voided sale (see

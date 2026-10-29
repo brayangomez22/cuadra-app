@@ -56,6 +56,12 @@ tags:
       venta con un pago `credit` abre una cuenta por cobrar que vence el plazo después del día de la venta en hora de
       Colombia; pasar el cupo exige la autorización de un usuario con `receivables:override`. Los abonos se aplican a
       la cuenta que vence primero, nunca pasan del saldo, y en efectivo entran a la caja abierta de quien los recibe.
+  - name: purchases
+    description: |
+      Proveedores y compras. Una compra es la factura de un proveedor: sus líneas, en la unidad en que se compraron,
+      entran al inventario de una sede y recalculan el costo promedio. Puede ser de contado o a crédito; a crédito
+      queda con saldo por pagar. Los pagos al proveedor llegan con las cuentas por pagar. Muestra costos: solo la ven
+      el dueño y el administrador.
   - name: modules
     description: |
       Módulos que la empresa puede activar según su tipo de negocio (variantes, lotes, listas de precios...). Las
@@ -2619,6 +2625,287 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/suppliers:
+    get:
+      tags: [purchases]
+      operationId: listSuppliers
+      summary: Buscar proveedores
+      description: |
+        Lista los proveedores de la empresa por nombre, cada uno con lo que se le debe. Con `q` busca por palabras del
+        nombre (sin importar tildes ni mayúsculas) o por el comienzo del número del NIT.
+      x-permission: purchases:read
+      parameters:
+        - name: q
+          in: query
+          description: Texto a buscar.
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+        - name: status
+          in: query
+          description: Proveedores activos (por defecto), inactivos o todos.
+          required: false
+          schema:
+            type: string
+            enum: [active, inactive, all]
+            default: active
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de proveedores.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [purchases]
+      operationId: createSupplier
+      summary: Crear un proveedor
+      description: El NIT es único en la empresa.
+      x-permission: purchases:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierInput"
+      responses:
+        "201":
+          description: Proveedor creado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Ya existe un proveedor con ese NIT (`supplier_nit_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/InvalidSupplier"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/suppliers/{supplierId}:
+    parameters:
+      - $ref: "#/components/parameters/SupplierId"
+    get:
+      tags: [purchases]
+      operationId: getSupplier
+      summary: Ver un proveedor
+      x-permission: purchases:read
+      responses:
+        "200":
+          description: El proveedor y lo que se le debe.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags: [purchases]
+      operationId: updateSupplier
+      summary: Editar un proveedor
+      description: |
+        Reemplaza los datos del proveedor. Un proveedor no se borra: se desactiva (`active: false`) y ya no se le
+        pueden registrar compras, pero sus compras lo siguen nombrando.
+      x-permission: purchases:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierInput"
+      responses:
+        "200":
+          description: El proveedor actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Ya existe otro proveedor con ese NIT (`supplier_nit_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/InvalidSupplier"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/purchases:
+    get:
+      tags: [purchases]
+      operationId: listPurchases
+      summary: Listar compras
+      description: Lista las compras de la empresa, la factura más reciente primero.
+      x-permission: purchases:read
+      parameters:
+        - name: supplier_id
+          in: query
+          description: Solo las compras de este proveedor.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Compras con saldo por pagar (`open`), pagadas (`paid`) o todas (por defecto).
+          required: false
+          schema:
+            type: string
+            enum: [open, paid, all]
+            default: all
+        - name: from
+          in: query
+          description: Facturas desde este día (incluido).
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          description: Facturas hasta este día (incluido).
+          required: false
+          schema:
+            type: string
+            format: date
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de compras.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchasePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [purchases]
+      operationId: registerPurchase
+      summary: Registrar una compra
+      description: |
+        Registra la factura de un proveedor. Cada línea entra al inventario de la sede como una entrada
+        (`purchase_in`) que referencia la compra y recalcula el costo promedio. Una línea puede venir en una unidad
+        alternativa de la variante (`unit_id`): la compra guarda la unidad, la cantidad y el costo en esa unidad, y el
+        inventario la recibe convertida a la unidad base (cantidad × factor, a costo ÷ factor redondeado a 4
+        decimales). El costo es por unidad y sin IVA; la tasa de IVA es la del producto salvo que la línea traiga
+        otra. Todo se guarda junto: si una línea no puede entrar, no queda la compra. Una compra de contado queda
+        pagada; una a crédito queda con saldo por pagar igual a su total y vence `due_on` o, sin él, el plazo del
+        proveedor después de la fecha de la factura. La misma factura de un proveedor se registra una sola vez: el
+        número se compara sin espacios, guiones ni puntos y sin importar mayúsculas.
+      x-permission: purchases:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseInput"
+      responses:
+        "201":
+          description: La compra registrada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: La factura de ese proveedor ya está registrada (`purchase_invoice_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Algún dato no cumple las reglas: el proveedor no existe (`supplier_not_found`) o está inactivo
+            (`supplier_inactive`); la sede no existe (`location_not_found`) o está inactiva (`location_inactive`); el
+            número de factura (`invalid_invoice_number`), la fecha de la factura es posterior a hoy en hora de Colombia
+            (`invoice_date_in_future`), el vencimiento es anterior a la factura (`due_before_issue`), las notas
+            (`invalid_purchase_notes`) o la compra no tiene líneas o tiene más de 200 (`invalid_purchase_lines`). Los
+            errores de una línea traen su posición (desde 0) en `details.line`: la variante no existe
+            (`variant_not_found`) o está inactiva (`variant_inactive`), no tiene esa unidad (`unit_not_available`), la
+            cantidad (`invalid_quantity`) o en la unidad base necesita más de 4 decimales (`quantity_precision`), el
+            costo (`invalid_unit_cost`) o la tasa (`invalid_tax_rate`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/purchases/{purchaseId}:
+    parameters:
+      - $ref: "#/components/parameters/PurchaseId"
+    get:
+      tags: [purchases]
+      operationId: getPurchase
+      summary: Ver una compra
+      x-permission: purchases:read
+      responses:
+        "200":
+          description: La compra con sus líneas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/v1/sales:
     get:
       tags: [sales]
@@ -3329,6 +3616,20 @@ components:
       schema:
         type: string
         format: uuid
+    SupplierId:
+      name: supplierId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PurchaseId:
+      name: purchaseId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     SegmentId:
       name: segmentId
       in: path
@@ -3406,6 +3707,15 @@ components:
         (`legal_person_requires_nit`), el nombre (`invalid_customer_name`), un dato de contacto (`invalid_customer_contact`),
         las responsabilidades fiscales (`invalid_tax_responsibilities`) o un segmento que no existe
         (`customer_segment_not_found`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InvalidSupplier:
+      description: |
+        Algún dato del proveedor no cumple las reglas: el NIT no es válido (`invalid_nit`) o su dígito de verificación
+        no coincide (`invalid_nit_check_digit`), el nombre (`invalid_supplier_name`), un dato de contacto
+        (`invalid_supplier_contact`) o el plazo de pago no está entre 0 y 365 días (`invalid_payment_term`).
       content:
         application/json:
           schema:
@@ -5018,6 +5328,307 @@ components:
           description: Cantidad de clientes con cartera.
         totals:
           $ref: "#/components/schemas/AgingBuckets"
+    Supplier:
+      type: object
+      description: Un proveedor de la empresa. `nit` está en su forma canónica, con el dígito de verificación.
+      required: [id, name, nit, payment_term_days, active, balance_due, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Razón social o nombre del proveedor.
+        nit:
+          type: string
+          example: 900123456-8
+        contact_name:
+          type: string
+          description: A quién llamar en el proveedor.
+        email:
+          type: string
+        phone:
+          type: string
+        payment_term_days:
+          type: integer
+          description: Días de crédito que da el proveedor; vence así una compra a crédito sin `due_on`.
+        active:
+          type: boolean
+        balance_due:
+          $ref: "#/components/schemas/Money"
+          description: Lo que se le debe al proveedor por sus compras a crédito, con 2 decimales.
+        created_at:
+          type: string
+          format: date-time
+    SupplierInput:
+      type: object
+      description: |
+        Los datos de un proveedor. El NIT se escribe con su dígito de verificación (con o sin guion y puntos); una
+        persona natural con RUT también tiene NIT. Los campos de contacto vacíos se guardan como ausentes.
+      required: [name, nit]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        nit:
+          type: string
+          minLength: 1
+          maxLength: 30
+          example: 900.123.456-8
+        contact_name:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+        payment_term_days:
+          type: integer
+          minimum: 0
+          maximum: 365
+          default: 0
+        active:
+          type: boolean
+          default: true
+          description: A un proveedor inactivo no se le registran compras.
+    SupplierPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Supplier"
+        total:
+          type: integer
+          description: Cantidad total de proveedores que cumplen el filtro, sin paginar.
+    PurchasePayment:
+      type: string
+      description: De contado (queda pagada) o a crédito (queda con saldo por pagar).
+      enum: [cash, credit]
+    PurchaseStatus:
+      type: string
+      description: Con saldo por pagar (`open`) o pagada (`paid`).
+      enum: [open, paid]
+    PurchaseLineInput:
+      type: object
+      required: [variant_id, quantity, unit_cost]
+      additionalProperties: false
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        unit_id:
+          type: string
+          format: uuid
+          description: |
+            Una unidad alternativa de la variante en la que vienen `quantity` y `unit_cost` (por ejemplo, cajas o
+            docenas). Sin ella, vienen en la unidad base.
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+        unit_cost:
+          $ref: "#/components/schemas/Money"
+          description: El costo de una unidad de compra, sin IVA.
+        tax_rate:
+          $ref: "#/components/schemas/TaxRate"
+          description: La tasa de IVA de la factura. Sin ella, la del producto.
+    PurchaseInput:
+      type: object
+      required: [supplier_id, location_id, invoice_number, issued_on, payment, lines]
+      additionalProperties: false
+      properties:
+        supplier_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+          description: La sede a la que entra la mercancía.
+        invoice_number:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: FE 1234
+        issued_on:
+          type: string
+          format: date
+          description: La fecha de la factura, no posterior a hoy en hora de Colombia.
+        payment:
+          $ref: "#/components/schemas/PurchasePayment"
+        due_on:
+          type: string
+          format: date
+          description: El vencimiento de una compra a crédito, no anterior a la factura. Se ignora de contado.
+        notes:
+          type: string
+          maxLength: 500
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            $ref: "#/components/schemas/PurchaseLineInput"
+    PurchaseLine:
+      type: object
+      description: |
+        Una línea de la compra en la unidad en que se compró, y lo que entró al inventario en la unidad base. Los
+        importes tienen 2 decimales y redondeo half-up.
+      required: [variant_id, product_name, unit_code, unit_factor, quantity, unit_cost, tax_rate, subtotal, tax, total,
+        base_quantity, base_unit_cost]
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        product_name:
+          type: string
+        variant_label:
+          type: string
+          description: La etiqueta de la variante (`38 / Negro`); ausente en un producto sin variantes.
+        unit_id:
+          type: string
+          format: uuid
+          description: La unidad alternativa en que se compró; ausente si fue en la unidad base.
+        unit_code:
+          type: string
+          example: caja
+        unit_factor:
+          $ref: "#/components/schemas/Quantity"
+          description: Cuántas unidades base tiene la unidad de compra (1 en la unidad base).
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+        unit_cost:
+          $ref: "#/components/schemas/Money"
+        tax_rate:
+          $ref: "#/components/schemas/TaxRate"
+        subtotal:
+          $ref: "#/components/schemas/Money"
+        tax:
+          $ref: "#/components/schemas/Money"
+        total:
+          $ref: "#/components/schemas/Money"
+        base_quantity:
+          $ref: "#/components/schemas/Quantity"
+          description: Lo que entró al inventario, en la unidad base.
+        base_unit_cost:
+          $ref: "#/components/schemas/Money"
+          description: El costo de una unidad base que entró al costo promedio.
+    PurchaseTax:
+      type: object
+      description: El IVA de la compra a una tasa.
+      required: [rate, base, tax]
+      properties:
+        rate:
+          $ref: "#/components/schemas/TaxRate"
+        base:
+          $ref: "#/components/schemas/Money"
+        tax:
+          $ref: "#/components/schemas/Money"
+    Purchase:
+      type: object
+      required: [id, supplier_id, location_id, invoice_number, issued_on, payment, status, lines, subtotal, taxes, tax,
+        total, balance_due, created_by, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        supplier_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        invoice_number:
+          type: string
+        issued_on:
+          type: string
+          format: date
+        due_on:
+          type: string
+          format: date
+          description: El vencimiento; solo en una compra a crédito.
+        payment:
+          $ref: "#/components/schemas/PurchasePayment"
+        status:
+          $ref: "#/components/schemas/PurchaseStatus"
+        notes:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/PurchaseLine"
+        subtotal:
+          $ref: "#/components/schemas/Money"
+        taxes:
+          type: array
+          description: El IVA por tasa, de la menor a la mayor.
+          items:
+            $ref: "#/components/schemas/PurchaseTax"
+        tax:
+          $ref: "#/components/schemas/Money"
+        total:
+          $ref: "#/components/schemas/Money"
+        balance_due:
+          $ref: "#/components/schemas/Money"
+          description: Lo que falta pagar al proveedor.
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+    PurchaseSummary:
+      type: object
+      required: [id, supplier_id, supplier_name, location_id, invoice_number, issued_on, payment, status, lines, total,
+        balance_due, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        supplier_id:
+          type: string
+          format: uuid
+        supplier_name:
+          type: string
+        location_id:
+          type: string
+          format: uuid
+        invoice_number:
+          type: string
+        issued_on:
+          type: string
+          format: date
+        due_on:
+          type: string
+          format: date
+        payment:
+          $ref: "#/components/schemas/PurchasePayment"
+        status:
+          $ref: "#/components/schemas/PurchaseStatus"
+        lines:
+          type: integer
+          description: Cuántas líneas tiene la compra.
+        total:
+          $ref: "#/components/schemas/Money"
+        balance_due:
+          $ref: "#/components/schemas/Money"
+        created_at:
+          type: string
+          format: date-time
+    PurchasePage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PurchaseSummary"
+        total:
+          type: integer
+          description: Cantidad total de compras que cumplen el filtro, sin paginar.
     CustomerSegment:
       type: object
       required: [id, name]

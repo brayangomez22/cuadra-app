@@ -262,6 +262,9 @@ type Offset = int
 // ProductId defines model for ProductId.
 type ProductId = openapi_types.UUID
 
+// PurchaseId defines model for PurchaseId.
+type PurchaseId = openapi_types.UUID
+
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
 
@@ -270,6 +273,9 @@ type SegmentId = openapi_types.UUID
 
 // StockCountId defines model for StockCountId.
 type StockCountId = openapi_types.UUID
+
+// SupplierId defines model for SupplierId.
+type SupplierId = openapi_types.UUID
 
 // UnitId defines model for UnitId.
 type UnitId = openapi_types.UUID

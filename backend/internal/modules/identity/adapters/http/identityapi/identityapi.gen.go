@@ -252,6 +252,9 @@ type ModuleId = string
 // ProductId defines model for ProductId.
 type ProductId = openapi_types.UUID
 
+// PurchaseId defines model for PurchaseId.
+type PurchaseId = openapi_types.UUID
+
 // RefreshCookie defines model for RefreshCookie.
 type RefreshCookie = string
 
@@ -263,6 +266,9 @@ type SegmentId = openapi_types.UUID
 
 // StockCountId defines model for StockCountId.
 type StockCountId = openapi_types.UUID
+
+// SupplierId defines model for SupplierId.
+type SupplierId = openapi_types.UUID
 
 // UnitId defines model for UnitId.
 type UnitId = openapi_types.UUID
