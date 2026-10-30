@@ -2,9 +2,11 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { json } from '@/test/fakeApi';
 import { aBuilder, customerIds, searchCustomers } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 import { posApi } from '../../testing/posApi';
 import { checkout, clearPosStorage, findCartLine, posted, scan, user } from '../../testing/posSteps';
 
+beforeAll(preloadPages('/vender'));
 beforeEach(clearPosStorage);
 
 const created = aBuilder({

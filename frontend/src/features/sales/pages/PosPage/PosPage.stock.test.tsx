@@ -4,7 +4,9 @@ import { ids, variantBarcode, variantId } from '@/test/fixtures';
 import { CEMENT_BARCODE, posApi } from '../../testing/posApi';
 import { cartLine, checkout, clearPosStorage, findCartLine, scan, user } from '../../testing/posSteps';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 
+beforeAll(preloadPages('/vender'));
 beforeEach(clearPosStorage);
 
 describe('PosPage', () => {

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { json } from '@/test/fakeApi';
 import { ids, plain } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 import { aDistributor, aPurchase, purchaseId, supplierIds } from '../../testing/fixtures';
 import { purchasesApi } from '../../testing/purchasesApi';
 import {
@@ -12,7 +13,6 @@ import {
   lineGroup,
   pickProduct,
   registerPurchase,
-  preloadPurchasePages,
 } from '../../testing/purchaseSteps';
 
 const detailRoutes = {
@@ -21,7 +21,7 @@ const detailRoutes = {
 };
 
 describe('PurchaseFormPage: registrar', () => {
-  beforeAll(preloadPurchasePages);
+  beforeAll(preloadPages('/compras/nueva'));
 
   it('registra una compra a crédito con el vencimiento propuesto por el plazo del proveedor', async () => {
     const api = purchasesApi({ routes: detailRoutes });

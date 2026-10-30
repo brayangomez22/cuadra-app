@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { json } from '@/test/fakeApi';
 import { aGarment, ids, variantId } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 import { garmentServer } from '../../testing/garmentServer';
 import { chooseValues, fillGarment, productFormApi, saveProduct, withVariants } from '../../testing/productForm';
 
@@ -10,6 +11,8 @@ const variantsOf = (calls: Request[]) =>
   Promise.all(calls.map(async (r) => (await r.json()) as { variants: unknown[] }));
 
 describe('ProductFormPage: variantes', () => {
+  beforeAll(preloadPages('/productos/nuevo'));
+
   it('solo ofrece los ejes y valores definidos por la empresa, sin texto libre', async () => {
     productFormApi({}, withVariants());
     renderApp('/productos/nuevo');

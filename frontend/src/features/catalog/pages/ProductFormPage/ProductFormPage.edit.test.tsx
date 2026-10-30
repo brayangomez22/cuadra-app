@@ -3,9 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { json } from '@/test/fakeApi';
 import { aProduct, ids, unitOf } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 import { productFormApi, saveProduct } from '../../testing/productForm';
 
 describe('ProductFormPage: editar un producto', () => {
+  beforeAll(preloadPages('/productos/nuevo'));
+
   it('precarga el producto y guarda los cambios con PUT', async () => {
     const api = productFormApi({
       [`GET /api/v1/products/${ids.pipe}`]: json(200, aProduct({ barcode: '7701234567890' })),

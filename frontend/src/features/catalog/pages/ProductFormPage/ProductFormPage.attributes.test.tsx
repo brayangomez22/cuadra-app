@@ -3,10 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { apiError, fakeApi, json } from '@/test/fakeApi';
 import { aProduct, attributes, ids } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 import { sentProduct } from '../../testing/sentBody';
 import { fillProduct, productFormApi, saveProduct } from '../../testing/productForm';
 
 describe('ProductFormPage: atributos', () => {
+  beforeAll(preloadPages('/productos/nuevo'));
+
   const attributesApi = (extra: Parameters<typeof fakeApi>[0] = {}) =>
     productFormApi({
       'GET /api/v1/product-attributes': json(200, { items: attributes }),

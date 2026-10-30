@@ -1,9 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-/** Loads the purchase pages ahead (beforeAll): the lazy route import is slow the first time and would eat the first test's timeout. */
-export const preloadPurchasePages = () => import('../pages');
-
 /** Chooses an option of the select labelled label, inside container (the page by default). */
 export async function choose(label: string, option: string, container = screen.getByRole('main')) {
   await userEvent.click(within(container).getByRole('combobox', { name: label }));

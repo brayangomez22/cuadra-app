@@ -3,9 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { aUser, json, signedIn } from '@/test/fakeApi';
 import { aProduct, ids, unitOf } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 import { fillProduct, productFormApi, saveProduct } from '../../testing/productForm';
 
 describe('ProductFormPage: crear un producto', () => {
+  beforeAll(preloadPages('/productos/nuevo'));
+
   it('crea el producto enviando los montos como decimal con punto y vuelve a la lista', async () => {
     const api = productFormApi({ 'POST /api/v1/products': json(201, aProduct()) });
     const { router } = renderApp('/productos/nuevo');

@@ -3,9 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { aUser, apiError, json, type Me } from '@/test/fakeApi';
 import { aGarment, aProduct, boxOf12, ids, packOf3, plain, unitOf, variantId, withUnits } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 import { productFormApi } from '../../testing/productForm';
 
 describe('ProductFormPage: unidades de venta', () => {
+  beforeAll(preloadPages('/productos/nuevo'));
+
   const withUnitConversions = (user = aUser()): Me => ({ ...user, modules: ['unit_conversions'] });
   const box = unitOf('caja');
   const unitPath = (unitId: string, variant = ids.pipe) =>

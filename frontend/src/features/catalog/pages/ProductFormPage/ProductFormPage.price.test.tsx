@@ -2,11 +2,14 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { plain } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 import { productFormApi } from '../../testing/productForm';
 
 const preview = () => plain(screen.getByRole('status', { name: 'Con IVA y margen' }).textContent);
 
 describe('ProductFormPage: precio con IVA y margen', () => {
+  beforeAll(preloadPages('/productos/nuevo'));
+
   it('muestra, mientras se escribe, lo que paga el cliente y el margen', async () => {
     productFormApi();
     renderApp('/productos/nuevo');

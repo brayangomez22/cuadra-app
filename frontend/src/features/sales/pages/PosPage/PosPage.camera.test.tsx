@@ -1,9 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { fakeCamera } from '@/test/camera';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 import { CEMENT_BARCODE, posApi } from '../../testing/posApi';
 import { clearPosStorage, expectSearchFocused, findCartLine, searchBox, user } from '../../testing/posSteps';
 
+beforeAll(preloadPages('/vender'));
 beforeEach(clearPosStorage);
 
 async function openCamera() {
