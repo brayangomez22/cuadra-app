@@ -10,7 +10,9 @@ import (
 // The purchases: at most maxPurchaseLines lines per invoice (the contract
 // allows 200; a supplier's invoice rarely has more than 100), received
 // before opening, creditPurchases out of five on credit, and restocked when
-// below a third (restockDivisor) of their level.
+// below a third (restockDivisor) of their level. Only an invoice still
+// within the supplier's term is on credit: there are no payments to
+// suppliers yet, so an older one is taken as paid (in cash).
 const (
 	maxPurchaseLines = 100
 	purchaseMinute   = openingHour*60 - 30
@@ -75,21 +77,35 @@ func (h *history) purchases(date time.Time, loc, sup int, needs func(stockKey) b
 		for v := range product.Variants {
 			k := stockKey{loc, p, v}
 			if q := h.level[k].Sub(h.stock[k]); needs(k) && q.IsPositive() {
-				lines = append(lines, Line{Product: p, Variant: v, Quantity: q})
-				h.stock[k] = h.level[k]
+				line := purchaseLine(product, p, v, q)
+				lines = append(lines, line)
+				h.stock[k] = h.stock[k].Add(line.Quantity)
 			}
 		}
 	}
+	supplier := h.s.Suppliers[sup]
+	inTerm := !date.AddDate(0, 0, supplier.TermDays).Before(h.o.End)
 	var out []Purchase
 	for len(lines) > 0 {
 		n := min(len(lines), maxPurchaseLines)
-		h.invoices++
+		h.invoices[sup]++
 		out = append(out, Purchase{
 			At: at(date, purchaseMinute+len(out)), Location: loc, Supplier: sup,
-			Invoice: fmt.Sprintf("FE-%06d", h.invoices), Credit: h.rng.IntN(5) < creditPurchases,
-			Lines: lines[:n],
+			Invoice: fmt.Sprintf("%s-%06d", supplier.InvoicePrefix, h.invoices[sup]),
+			Credit:  h.rng.IntN(5) < creditPurchases && inTerm,
+			Lines:   lines[:n],
 		})
 		lines = lines[n:]
 	}
 	return out
+}
+
+// purchaseLine buys q of a variant, in whole purchase units (rounded up)
+// when the product has one.
+func purchaseLine(product Product, p, v int, q decimal.Decimal) Line {
+	if !product.PurchaseFactor.IsPositive() {
+		return Line{Product: p, Variant: v, Quantity: q}
+	}
+	units := q.Div(product.PurchaseFactor).Ceil()
+	return Line{Product: p, Variant: v, Quantity: units.Mul(product.PurchaseFactor), InPurchaseUnit: true}
 }

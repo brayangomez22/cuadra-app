@@ -16,13 +16,13 @@ describe('lineCostHint', () => {
       name: 'tubos en la unidad base',
       item: line(withUnits(aProduct(), [boxOf12])),
       unitId: '',
-      hint: 'Sin IVA, por und.',
+      hint: 'Sin IVA, por unidad.',
     },
     {
       name: 'camisetas por paquete',
       item: line(withUnits(aGarment(), [packOf3])),
       unitId: unitOf('paq').id,
-      hint: 'Sin IVA, por paq.',
+      hint: 'Sin IVA, por paquete.',
     },
     { name: 'sin producto', item: null, unitId: '', hint: 'Sin IVA, por unidad de compra.' },
   ])('dice la unidad del costo: $name', ({ item, unitId, hint }) => {

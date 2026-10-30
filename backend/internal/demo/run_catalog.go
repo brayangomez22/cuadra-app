@@ -91,7 +91,7 @@ func (r *runner) createProduct(ctx context.Context, owner apiclient.RequestEdito
 		if err := expect("create product", res, err); err != nil {
 			return nil, err
 		}
-		return variantIDs(res.JSON201), nil
+		return r.addPurchaseUnit(ctx, owner, p, res.JSON201)
 	}
 	in := apiclient.ProductWithVariantsInput{
 		Name: p.Name, BaseUnitId: r.ids.units[p.Unit], CategoryId: &category, TaxRate: tax, Attributes: attrs,
@@ -106,7 +106,27 @@ func (r *runner) createProduct(ctx context.Context, owner apiclient.RequestEdito
 	if err := expect("create product with variants", res, err); err != nil {
 		return nil, err
 	}
-	return variantIDs(res.JSON201), nil
+	return r.addPurchaseUnit(ctx, owner, p, res.JSON201)
+}
+
+// addPurchaseUnit gives every variant of created the unit p is bought in
+// (a box of 12, priced as 12 units), and returns the variants' ids.
+func (r *runner) addPurchaseUnit(
+	ctx context.Context, owner apiclient.RequestEditorFn, p Product, created *apiclient.Product,
+) ([]uuid.UUID, error) {
+	ids := variantIDs(created)
+	if !p.PurchaseFactor.IsPositive() {
+		return ids, nil
+	}
+	for i, id := range ids {
+		res, err := r.api.SetVariantUnitWithResponse(ctx, created.Id, id, r.ids.units[p.PurchaseUnit], apiclient.VariantUnitInput{
+			Factor: httpx.FormatDecimal(p.PurchaseFactor), Price: httpx.FormatMoney(p.Variants[i].Price.Mul(p.PurchaseFactor)),
+		}, owner)
+		if err := expect("set purchase unit", res, err); err != nil {
+			return nil, err
+		}
+	}
+	return ids, nil
 }
 
 func variantIDs(p *apiclient.Product) []uuid.UUID {
@@ -144,6 +164,7 @@ func (r *runner) writePeople(ctx context.Context) error {
 		term := sup.TermDays
 		res, err := r.api.CreateSupplierWithResponse(ctx, apiclient.SupplierInput{
 			Name: sup.Name, Nit: withCheckDigit(sup.NIT), PaymentTermDays: &term,
+			ContactName: &sup.ContactName, Phone: &sup.Phone, Email: &sup.Email,
 		}, owner)
 		if err := expect("create supplier", res, err); err != nil {
 			return err

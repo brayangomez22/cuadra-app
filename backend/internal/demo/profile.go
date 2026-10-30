@@ -61,10 +61,15 @@ type TenantProfile struct {
 }
 
 // Supplier is a supplier of the demo tenant; NIT is the number without DV.
+// Its invoices are numbered InvoicePrefix-000001 onwards.
 type Supplier struct {
-	Name     string `yaml:"name"`
-	NIT      string `yaml:"nit"`
-	TermDays int    `yaml:"term_days"`
+	Name          string `yaml:"name"`
+	NIT           string `yaml:"nit"`
+	TermDays      int    `yaml:"term_days"`
+	InvoicePrefix string `yaml:"invoice_prefix"`
+	ContactName   string `yaml:"contact_name"`
+	Phone         string `yaml:"phone"`
+	Email         string `yaml:"email"`
 }
 
 // Family is a kind of product: its articles combine a name, a spec and a
@@ -84,6 +89,16 @@ type Family struct {
 	// Axes are the variant axes (name → values) the articles vary on; the
 	// first is a range (sizes), the others a choice (colors).
 	Axes []FamilyAxis `yaml:"axes"`
+	// PurchaseUnit, when set, is the unit the suppliers sell it in (a box
+	// of 12): its articles are bought in whole ones.
+	PurchaseUnit *PurchaseUnit `yaml:"purchase_unit"`
+}
+
+// PurchaseUnit is an alternate unit of a family's articles and how many of
+// its unit it brings.
+type PurchaseUnit struct {
+	Unit   string `yaml:"unit"`
+	Factor int    `yaml:"factor"`
 }
 
 // FamilyAxis is a variant axis of a family and the values it uses.
@@ -136,10 +151,23 @@ func (p Profile) check() error {
 	if !slices.Contains(p.Segments, p.CreditSegment) {
 		return errors.New("credit_segment must be one of the segments")
 	}
-	for _, f := range p.Families {
-		if err := f.check(); err != nil {
+	for _, s := range p.Suppliers {
+		if err := s.check(); err != nil {
 			return err
 		}
+	}
+	for _, f := range p.Families {
+		if err := errors.Join(f.check(), f.PurchaseUnit.check(f)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// check verifies a supplier can number its invoices and give a due date.
+func (s Supplier) check() error {
+	if s.InvoicePrefix == "" || s.TermDays <= 0 {
+		return fmt.Errorf("supplier %s: invoice_prefix and term_days are required", s.Name)
 	}
 	return nil
 }
@@ -151,6 +179,15 @@ func (f Family) check() error {
 	}
 	if f.Price[0] <= 0 || f.Price[1] < f.Price[0] || f.Quantity <= 0 {
 		return fmt.Errorf("family %s: a price range and a quantity are required", f.Category)
+	}
+	return nil
+}
+
+// check verifies the purchase unit of f, if it has one, is another unit
+// that brings more than one.
+func (u *PurchaseUnit) check(f Family) error {
+	if u != nil && (u.Unit == "" || u.Unit == f.Unit || u.Factor <= 1) {
+		return fmt.Errorf("family %s: a purchase unit needs another unit and a factor over 1", f.Category)
 	}
 	return nil
 }

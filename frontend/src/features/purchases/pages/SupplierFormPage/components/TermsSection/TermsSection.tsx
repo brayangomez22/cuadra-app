@@ -11,7 +11,7 @@ export function TermsSection({ editing }: { editing: boolean }) {
     <FormSection title="Condiciones">
       <FormGrid>
         <Field
-          label="Plazo de pago"
+          label="Plazo de pago (días)"
           hint="Días de crédito que le da; con 0, le paga de contado. Propone el vencimiento de sus compras."
           error={errorOf('payment_term_days')}
         >

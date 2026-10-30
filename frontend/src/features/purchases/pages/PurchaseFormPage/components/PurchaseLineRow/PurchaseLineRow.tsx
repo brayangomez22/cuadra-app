@@ -34,6 +34,7 @@ export function PurchaseLineRow({ index, onRemove }: Props) {
         name={`lines.${index}.item`}
         render={({ field, fieldState }) => (
           <ProductPicker
+            ref={field.ref}
             label="Producto"
             value={field.value ?? null}
             onChange={(item) => {

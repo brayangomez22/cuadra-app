@@ -36,18 +36,31 @@ describe('PurchaseDetailPage', () => {
     renderApp(`/compras/${purchaseId}`);
 
     const table = within(await screen.findByRole('table', { name: 'Líneas de la compra' }));
+    // The first cell repeats quantity, cost and IVA for a phone, where their columns are hidden.
     expect(cells(table.getByRole('row', { name: /Tubo PVC/ }))).toEqual([
-      'Tubo PVC presión 1/2 pulgada',
+      'Tubo PVC presión 1/2 pulgada2 caja × $ 96.000 · IVA 19 %',
       '2 caja',
       '24 (caja de 12)',
       '$ 96.000',
       '19 %',
       '$ 228.480',
     ]);
-    expect(cells(table.getByRole('row', { name: /Camiseta/ })).slice(0, 3)).toEqual([
-      'Camiseta básica (Azul · S)',
-      '6 und',
-      '—',
+    expect(cells(table.getByRole('row', { name: /Camiseta/ })).slice(1, 3)).toEqual(['6 und', '—']);
+  });
+
+  it('sin líneas en otra unidad no muestra la columna de lo que entró', async () => {
+    const purchase = aPurchase();
+    const lines = purchase.lines.filter((line) => !line.unit_id);
+    purchasesApi({ routes: { ...routes, [`GET /api/v1/purchases/${purchaseId}`]: json(200, { ...purchase, lines }) } });
+    renderApp(`/compras/${purchaseId}`);
+
+    const table = within(await screen.findByRole('table', { name: 'Líneas de la compra' }));
+    expect(table.getAllByRole('columnheader').map((th) => th.textContent)).toEqual([
+      'Producto',
+      'Cantidad',
+      'Costo unitario',
+      'IVA',
+      'Total',
     ]);
   });
 });

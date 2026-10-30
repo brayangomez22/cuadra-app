@@ -3,7 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { apiError } from '@/test/fakeApi';
 import { renderApp } from '@/test/renderApp';
 import { purchasesApi } from '../../testing/purchasesApi';
-import { fillAmounts, fillInvoice, lineGroup, pickProduct, registerPurchase } from '../../testing/purchaseSteps';
+import {
+  fillAmounts,
+  fillInvoice,
+  lineGroup,
+  pickProduct,
+  registerPurchase,
+  submitPurchase,
+  preloadPurchasePages,
+} from '../../testing/purchaseSteps';
 
 async function fillOneLine() {
   await fillInvoice();
@@ -19,6 +27,8 @@ async function fillTwoLines() {
 }
 
 describe('PurchaseFormPage: errores', () => {
+  beforeAll(preloadPurchasePages);
+
   it('la factura repetida se marca en el número', async () => {
     purchasesApi({
       routes: {
@@ -83,9 +93,10 @@ describe('PurchaseFormPage: errores', () => {
     renderApp('/compras/nueva');
 
     await fillInvoice();
-    await registerPurchase();
+    await submitPurchase();
 
     expect(await within(lineGroup(1)).findByText('Elija el producto')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(api.calls('POST /api/v1/purchases')).toHaveLength(0);
   });
 });

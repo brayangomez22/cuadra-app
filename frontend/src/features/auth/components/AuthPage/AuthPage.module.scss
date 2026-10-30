@@ -63,7 +63,10 @@
 }
 
 // Links: default text color, underlined with the orange accent (docs/estilos.md).
+// Tall enough to tap: 44px of target around the text.
 .link {
+  display: inline-flex;
+  align-items: center;
   border-radius: var(--radius-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-default);
@@ -72,5 +75,6 @@
   text-decoration-thickness: 0.15em;
   text-underline-offset: 0.2em;
 
+  @include touch-target;
   @include focus-ring;
 }

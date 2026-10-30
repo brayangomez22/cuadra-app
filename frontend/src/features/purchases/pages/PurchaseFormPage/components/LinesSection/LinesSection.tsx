@@ -4,7 +4,7 @@ import { emptyLine } from '../../../../model/purchaseForm/purchaseDefaults';
 import type { PurchaseInputValues } from '../../../../model/purchaseForm/purchaseSchema';
 import { PurchaseLineRow } from '../PurchaseLineRow/PurchaseLineRow';
 
-/** "Productos": a line per product of the invoice, in the unit it was bought in. */
+/** "Productos": a line per product of the invoice, in the unit it was bought in. A new line starts at its product. */
 export function LinesSection() {
   const { control } = useFormContext<PurchaseInputValues>();
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
@@ -19,7 +19,12 @@ export function LinesSection() {
           />
         ))}
         <div>
-          <Button type="button" variant="secondary" icon={<IconPlus />} onClick={() => append(emptyLine())}>
+          <Button
+            type="button"
+            variant="secondary"
+            icon={<IconPlus />}
+            onClick={() => append(emptyLine(), { focusName: `lines.${String(fields.length)}.item` })}
+          >
             Agregar línea
           </Button>
         </div>

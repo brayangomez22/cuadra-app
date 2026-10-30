@@ -158,13 +158,25 @@ func (r *runner) purchase(ctx context.Context, d *Day, p Purchase) error {
 		in.DueOn = &openapi_types.Date{Time: d.Date.AddDate(0, 0, r.s.Suppliers[p.Supplier].TermDays)}
 	}
 	for _, l := range p.Lines {
-		in.Lines = append(in.Lines, apiclient.PurchaseLineInput{
-			VariantId: r.ids.variants[l.Product][l.Variant], Quantity: httpx.FormatDecimal(l.Quantity),
-			UnitCost: httpx.FormatMoney(r.s.Products[l.Product].Variants[l.Variant].Cost), TaxRate: &tax,
-		})
+		in.Lines = append(in.Lines, r.purchaseLine(l, &tax))
 	}
 	res, err := r.api.RegisterPurchaseWithResponse(ctx, in, r.as(r.s.Profile.Staff()[0].Email))
 	return expect(fmt.Sprintf("register purchase %s", p.Invoice), res, err)
+}
+
+// purchaseLine is a line at the variant's cost, in its purchase unit (so
+// many boxes, at the cost of a box) when it was bought in one.
+func (r *runner) purchaseLine(l Line, tax *apiclient.TaxRate) apiclient.PurchaseLineInput {
+	product := r.s.Products[l.Product]
+	quantity, cost := l.Quantity, product.Variants[l.Variant].Cost
+	in := apiclient.PurchaseLineInput{VariantId: r.ids.variants[l.Product][l.Variant], TaxRate: tax}
+	if l.InPurchaseUnit {
+		unit := r.ids.units[product.PurchaseUnit]
+		in.UnitId = &unit
+		quantity, cost = quantity.Div(product.PurchaseFactor), cost.Mul(product.PurchaseFactor)
+	}
+	in.Quantity, in.UnitCost = httpx.FormatDecimal(quantity), httpx.FormatMoney(cost)
+	return in
 }
 
 // payment receives a customer's payment at the first location's drawer.

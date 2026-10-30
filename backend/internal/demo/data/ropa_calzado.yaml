@@ -16,10 +16,14 @@ months: [110, 95, 85, 90, 105, 135, 115, 90, 90, 100, 120, 175]
 segments: [Público, Mayorista]
 credit_segment: Mayorista
 suppliers:
-  - {name: Confecciones Medellín S.A.S., nit: "900401001", term_days: 30}
-  - {name: Textiles del Caribe Ltda., nit: "900401002", term_days: 45}
-  - {name: Calzado Bucaramanga S.A.S., nit: "900401003", term_days: 30}
-  - {name: Accesorios y Moda S.A.S., nit: "900401004", term_days: 15}
+  - {name: Confecciones Medellín S.A.S., nit: "900401001", term_days: 30, invoice_prefix: CME,
+     contact_name: Natalia Restrepo, phone: "6043221870", email: ventas@cmedellin.demo.cuadra.co}
+  - {name: Textiles del Caribe Ltda., nit: "900401002", term_days: 45, invoice_prefix: TDC,
+     contact_name: Rafael Pertuz, phone: "6053568013", email: pedidos@tcaribe.demo.cuadra.co}
+  - {name: Calzado Bucaramanga S.A.S., nit: "900401003", term_days: 30, invoice_prefix: CBU,
+     contact_name: Diana Carolina Pinzón, phone: "6076349921", email: comercial@cbucaramanga.demo.cuadra.co}
+  - {name: Accesorios y Moda S.A.S., nit: "900401004", term_days: 15, invoice_prefix: AYM,
+     contact_name: Camilo Herrera, phone: "6012875566", email: ventas@aymoda.demo.cuadra.co}
 families:
   - category: Mujer
     unit: und

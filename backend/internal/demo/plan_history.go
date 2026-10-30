@@ -30,28 +30,30 @@ type stockKey struct{ location, product, variant int }
 // history plans the days in order, keeping what the business has and owes
 // so no sale takes what is not in stock and no credit passes its limit.
 type history struct {
-	rng      *rand.Rand
-	s        *Scenario
-	o        Options
-	start    time.Time
-	stock    map[stockKey]decimal.Decimal
-	level    map[stockKey]decimal.Decimal
-	owed     []decimal.Decimal
-	popular  []int
-	credit   []int
-	invoices int
+	rng     *rand.Rand
+	s       *Scenario
+	o       Options
+	start   time.Time
+	stock   map[stockKey]decimal.Decimal
+	level   map[stockKey]decimal.Decimal
+	owed    []decimal.Decimal
+	popular []int
+	credit  []int
+	// invoices counts each supplier's invoices.
+	invoices []int
 }
 
 func newHistory(rng *rand.Rand, s *Scenario, o Options) *history {
 	h := &history{
-		rng:     rng,
-		s:       s,
-		o:       o,
-		start:   o.End.AddDate(0, 0, 1-o.Days),
-		stock:   map[stockKey]decimal.Decimal{},
-		level:   map[stockKey]decimal.Decimal{},
-		owed:    make([]decimal.Decimal, len(s.Customers)),
-		popular: rng.Perm(len(s.Products)),
+		rng:      rng,
+		s:        s,
+		o:        o,
+		start:    o.End.AddDate(0, 0, 1-o.Days),
+		stock:    map[stockKey]decimal.Decimal{},
+		level:    map[stockKey]decimal.Decimal{},
+		owed:     make([]decimal.Decimal, len(s.Customers)),
+		popular:  rng.Perm(len(s.Products)),
+		invoices: make([]int, len(s.Suppliers)),
 	}
 	h.credit = creditCustomers(h)
 	return h

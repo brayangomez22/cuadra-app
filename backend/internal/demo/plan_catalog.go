@@ -84,11 +84,15 @@ func (c *catalogPlan) product(fi int, f Family, k combo, room int) Product {
 	for i, a := range axes {
 		variants[i] = c.variant(f.Category, a, cost, price)
 	}
-	return Product{
+	product := Product{
 		Name:     strings.Join([]string{f.Names[k.name], f.Specs[k.spec], f.Brands[k.brand]}, " "),
 		Category: f.Category, Unit: f.Unit, Attributes: attrs, Variants: variants,
 		Supplier: fi % len(c.profile.Suppliers), Step: step, MaxQuantity: f.Quantity,
 	}
+	if u := f.PurchaseUnit; u != nil {
+		product.PurchaseUnit, product.PurchaseFactor = u.Unit, decimal.NewFromInt(int64(u.Factor))
+	}
+	return product
 }
 
 // price is a price of f's range, in hundreds of pesos.
