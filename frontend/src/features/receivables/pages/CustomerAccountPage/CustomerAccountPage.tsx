@@ -6,8 +6,9 @@ import { Page } from '@/shared/ui';
 import { useCustomerCredit } from '../../api/credit';
 import { AccountActions } from './components/AccountActions/AccountActions';
 import { CreditSummary } from './components/CreditSummary/CreditSummary';
-import { CreditTermsForm } from './components/CreditTermsForm/CreditTermsForm';
+import { CreditTerms } from './components/CreditTerms/CreditTerms';
 import { OpenReceivables } from './components/OpenReceivables/OpenReceivables';
+import { OverdueNotice } from './components/OverdueNotice/OverdueNotice';
 import { Statement } from './components/Statement/Statement';
 import styles from './CustomerAccountPage.module.scss';
 
@@ -27,9 +28,10 @@ export function CustomerAccountPage() {
         {() =>
           credit.data && (
             <div className={styles.root}>
+              <OverdueNotice receivables={credit.data.receivables} />
               <div className={styles.credit}>
                 <CreditSummary credit={credit.data} />
-                {can('receivables:manage') && <CreditTermsForm credit={credit.data} />}
+                {can('receivables:manage') && <CreditTerms credit={credit.data} />}
               </div>
               <OpenReceivables receivables={credit.data.receivables} />
               <Statement customerId={customerId} />

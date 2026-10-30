@@ -146,7 +146,8 @@ func (f fakeStock) ListLevels(_ context.Context, tenantID uuid.UUID, filter doma
 	f.stockFilters = append(f.stockFilters, filter)
 	var page domain.StockLevelPage
 	for k, s := range f.levels {
-		if k.tenantID != tenantID || k.locationID != filter.LocationID || filter.VariantID != nil && k.variantID != *filter.VariantID {
+		if k.tenantID != tenantID || k.locationID != filter.LocationID || filter.VariantID != nil && k.variantID != *filter.VariantID ||
+			filter.VariantIDs != nil && !slices.Contains(filter.VariantIDs, k.variantID) {
 			continue
 		}
 		l, err := domain.RehydrateStockLevel(s)

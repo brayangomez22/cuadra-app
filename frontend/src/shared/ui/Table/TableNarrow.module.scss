@@ -1,0 +1,28 @@
+@use '@/styles/abstracts' as *;
+
+// What the wide columns say, under a cell's value, only below md.
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+
+  @include numeric;
+
+  [data-numeric='true'] > & {
+    align-items: flex-end;
+  }
+
+  &[data-until='md'] {
+    @include respond-to(md) {
+      display: none;
+    }
+  }
+
+  &[data-until='lg'] {
+    @include respond-to(lg) {
+      display: none;
+    }
+  }
+}

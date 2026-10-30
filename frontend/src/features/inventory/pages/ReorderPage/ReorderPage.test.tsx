@@ -47,6 +47,17 @@ describe('ReorderPage', () => {
     expect(query(api.calls(alertsKey)[0]!).get('location_id')).toBe(ids.main);
   });
 
+  it('marca lo agotado, con su nombre y no solo con el color', async () => {
+    const shirt = { variant_id: variantId('M', 'Azul'), product_id: ids.garment, quantity: '0' };
+    reorderApi(page([aReorderAlert(shirt), aReorderAlert()]));
+    renderApp('/inventario/reponer');
+
+    const table = within(await screen.findByRole('table', { name: 'Por reponer en Bodega principal' }));
+    const empty = within(await table.findByRole('row', { name: /Camiseta básica/ }));
+    expect(empty.getByText('Agotado')).toBeInTheDocument();
+    expect(within(table.getByRole('row', { name: /Tubo PVC/ })).queryByText('Agotado')).not.toBeInTheDocument();
+  });
+
   it('cambia de sede desde la URL y el selector', async () => {
     const api = reorderApi();
     renderApp(`/inventario/reponer?sede=${ids.north}`);

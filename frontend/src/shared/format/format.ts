@@ -7,17 +7,13 @@ type NumericString = Intl.StringNumericLiteral;
 const locale = 'es-CO';
 const timeZone = 'America/Bogota';
 
-const moneyWhole = new Intl.NumberFormat(locale, {
+// Pesos have no coins below 50, so an amount is shown whole: the API keeps its
+// two decimals, the screen rounds half-up ("12500.5" → "$ 12.501").
+const money = new Intl.NumberFormat(locale, {
   style: 'currency',
   currency: 'COP',
-  minimumFractionDigits: 0,
   maximumFractionDigits: 0,
-});
-const moneyCents = new Intl.NumberFormat(locale, {
-  style: 'currency',
-  currency: 'COP',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
+  roundingMode: 'halfExpand',
 });
 const quantity = new Intl.NumberFormat(locale, { maximumFractionDigits: 4 });
 const signedQuantity = new Intl.NumberFormat(locale, { maximumFractionDigits: 4, signDisplay: 'exceptZero' });
@@ -32,11 +28,9 @@ const dateTime = new Intl.DateTimeFormat(locale, {
   minute: '2-digit',
 });
 
-const hasCents = (value: string) => /\.\d*[1-9]/.test(value);
-
-/** "12500.00" → "$ 12.500"; "12500.5" → "$ 12.500,50" (half-up to 2 decimals). */
+/** "12500.00" → "$ 12.500"; "12500.5" → "$ 12.501" (whole pesos, half-up). */
 export function formatMoney(value: string): string {
-  return (hasCents(value) ? moneyCents : moneyWhole).format(value as NumericString);
+  return money.format(value as NumericString);
 }
 
 /** "2.5" → "2,5"; with signed, an entry shows its "+". */
@@ -108,9 +102,14 @@ export function parseMoneyInput(text: string): DecimalInput {
   return parseDecimalInput(trimmed);
 }
 
-/** A decimal string of the API as it is typed in a field: "10000.00" → "10000,00". */
+/**
+ * A decimal string of the API as it is typed in a field: whole amounts lose
+ * their zero decimals and the rest keep at least two ("10000.00" → "10000",
+ * "1900.50" → "1900,50", "2.5000" → "2,50").
+ */
 export function toDecimalInput(value: string): string {
-  return value.replace('.', ',');
+  const typed = /^-?\d+\.0+$/.test(value) ? value.replace(/\.0+$/, '') : value.replace(/(\.\d\d\d*?)0+$/, '$1');
+  return typed.replace('.', ',');
 }
 
 /** Whether a decimal string of the API is zero ("0", "0.00", "-0"). */

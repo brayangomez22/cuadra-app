@@ -38,7 +38,7 @@ export function VariantMatrixRow({ index, row, inactive }: Props) {
       </TableCell>
       <TableCell>
         <Field {...cell('barcode', 'Código de barras')}>
-          <Input {...code} {...register(`variants.${index}.barcode`)} />
+          <Input {...code} className={styles.barcode} {...register(`variants.${index}.barcode`)} />
         </Field>
       </TableCell>
       <TableCell numeric>

@@ -14,9 +14,9 @@ export function CustomerTable({ customers, segments, canWrite }: Props) {
       <TableHead>
         <TableRow>
           <TableHeaderCell>Cliente</TableHeaderCell>
-          <TableHeaderCell>Documento</TableHeaderCell>
-          <TableHeaderCell>Segmento</TableHeaderCell>
-          <TableHeaderCell>Contacto</TableHeaderCell>
+          <TableHeaderCell wide>Documento</TableHeaderCell>
+          <TableHeaderCell wide>Segmento</TableHeaderCell>
+          <TableHeaderCell wide>Contacto</TableHeaderCell>
           {canReadCredit && (
             <TableHeaderCell>
               <span className="srOnly">Crédito</span>

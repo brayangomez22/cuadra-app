@@ -1,11 +1,10 @@
 import { useCan } from '@/features/auth';
 import { QueryState } from '@/shared/query';
-import { Field, Page, Select, Spinner } from '@/shared/ui';
+import { Page, Spinner } from '@/shared/ui';
 import { useLocations } from '../../api/locations';
-import { locationOptions } from '../../model/shownLocation';
-import { LocationStock } from './components/LocationStock/LocationStock';
 import { NoLocations } from './components/NoLocations/NoLocations';
 import { StockActions } from './components/StockActions/StockActions';
+import { StockBrowser } from './components/StockBrowser/StockBrowser';
 import { useStockLocation } from '../../hooks/useStockLocation';
 import styles from './StockPage.module.scss';
 
@@ -40,18 +39,15 @@ export function StockPage() {
       >
         {() =>
           location && (
-            <>
-              <Field label="Sede" className={styles.location}>
-                <Select options={locationOptions(list)} value={location.id} onValueChange={chooseLocation} />
-              </Field>
-              <LocationStock
-                location={location}
-                offset={offset}
-                canSeeCost={can('catalog:write')}
-                canReceive={canReceive}
-                onOffsetChange={setOffset}
-              />
-            </>
+            <StockBrowser
+              locations={list}
+              location={location}
+              onLocationChange={chooseLocation}
+              offset={offset}
+              onOffsetChange={setOffset}
+              canSeeCost={can('catalog:write')}
+              canReceive={canReceive}
+            />
           )
         }
       </QueryState>

@@ -36,6 +36,7 @@ SELECT tenant_id, variant_id, location_id, quantity, average_cost
 FROM stock_levels
 WHERE location_id = sqlc.arg(location_id) AND lot_id IS NULL
   AND (sqlc.narg(variant_id)::uuid IS NULL OR variant_id = sqlc.narg(variant_id))
+  AND (sqlc.narg(variant_ids)::uuid[] IS NULL OR variant_id = ANY(sqlc.narg(variant_ids)::uuid[]))
 ORDER BY variant_id
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -43,7 +44,8 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 SELECT count(*)
 FROM stock_levels
 WHERE location_id = sqlc.arg(location_id) AND lot_id IS NULL
-  AND (sqlc.narg(variant_id)::uuid IS NULL OR variant_id = sqlc.narg(variant_id));
+  AND (sqlc.narg(variant_id)::uuid IS NULL OR variant_id = sqlc.narg(variant_id))
+  AND (sqlc.narg(variant_ids)::uuid[] IS NULL OR variant_id = ANY(sqlc.narg(variant_ids)::uuid[]));
 
 -- ListKardex pages a variant's movements, newest first.
 -- name: ListKardex :many

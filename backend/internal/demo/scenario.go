@@ -106,6 +106,13 @@ type Day struct {
 	Purchases []Purchase
 	Sales     []Sale
 	Payments  []Payment
+	// Opening and Closing are when the drawers open and close; the
+	// purchases arrive before, the payments and sales come in between.
+	Opening, Closing time.Time
+	// CashDifference is, per location, how much the closing count is off
+	// what the drawer should have: zero most days, a cashier's shortfall
+	// (negative) or overage in whole thousands on some.
+	CashDifference []decimal.Decimal
 }
 
 // Sale is a sale at a location; Customer is -1 for an anonymous buyer.

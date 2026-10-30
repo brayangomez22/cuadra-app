@@ -12,6 +12,7 @@ describe('ReorderSummary en el inicio', () => {
     renderApp('/');
 
     expect(await screen.findByText('7 productos por reponer')).toBeInTheDocument();
+    expect(screen.getByText(/sumando todas las sedes/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ver qué pedir' })).toHaveAttribute('href', '/inventario/reponer');
     const [request] = api.calls(alertsKey);
     expect(query(request!).get('location_id')).toBeNull();

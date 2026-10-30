@@ -14,8 +14,9 @@ FROM reorder_rules
 WHERE location_id = sqlc.arg(location_id) AND variant_id = ANY(sqlc.arg(variant_ids)::uuid[]);
 
 -- ListReorderAlerts pages the rules whose stock at their location (of every
--- lot, zero without a level) is at or below their minimum, the furthest below
--- it first. The condition is the one of domain.ReorderRule.NeedsReorder; the
+-- lot, zero without a level) is at or below their minimum: what ran out first,
+-- then the furthest below its minimum in proportion (1 of 5 before 40 of 50).
+-- The condition is the one of domain.ReorderRule.NeedsReorder; the
 -- integration tests check both agree.
 -- name: ListReorderAlerts :many
 SELECT r.tenant_id, r.variant_id, r.location_id, r.min_quantity, r.max_quantity,
@@ -28,7 +29,9 @@ LEFT JOIN LATERAL (
 ) s ON true
 WHERE (sqlc.narg(location_id)::uuid IS NULL OR r.location_id = sqlc.narg(location_id))
   AND COALESCE(s.quantity, 0) <= r.min_quantity
-ORDER BY COALESCE(s.quantity, 0) - r.min_quantity, r.location_id, r.variant_id
+ORDER BY COALESCE(s.quantity, 0) > 0,
+         COALESCE(s.quantity, 0) / NULLIF(r.min_quantity, 0),
+         r.location_id, r.variant_id
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: CountReorderAlerts :one

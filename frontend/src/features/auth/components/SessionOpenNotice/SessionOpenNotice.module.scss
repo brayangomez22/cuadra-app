@@ -1,0 +1,13 @@
+@use '@/styles/abstracts' as *;
+
+// The two ways out, stacked to the full width on a phone and side by side
+// once they fit.
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+
+  @include respond-to(sm) {
+    flex-flow: row wrap;
+  }
+}

@@ -37,7 +37,7 @@ export function AgingPage() {
           aging.data && (
             <div className={styles.root} aria-busy={aging.isPlaceholderData || undefined}>
               <AgingTotals totals={aging.data.totals} />
-              <AgingTable rows={aging.data.items} totals={aging.data.totals} />
+              <AgingTable rows={aging.data.items} totals={aging.data.totals} customers={aging.data.total} />
               <Pagination
                 label="Páginas de la cartera"
                 total={aging.data.total}

@@ -715,6 +715,10 @@ type ListStockParams struct {
 	// VariantId Solo la existencia de esta variante.
 	VariantId *openapi_types.UUID `form:"variant_id,omitempty" json:"variant_id,omitempty"`
 
+	// VariantIds Solo la existencia de estas variantes (hasta 100). Sirve para buscar en el inventario por nombre, SKU o
+	// código: el cliente busca en el catálogo y pide aquí la existencia de lo que encontró.
+	VariantIds *[]openapi_types.UUID `form:"variant_ids,omitempty" json:"variant_ids,omitempty"`
+
 	// Limit Cantidad máxima de resultados.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
@@ -1096,6 +1100,19 @@ func (siw *ServerInterfaceWrapper) ListStock(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "variant_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variant_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "variant_ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "variant_ids", r.URL.Query(), &params.VariantIds, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "variant_ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "variant_ids", Err: err})
 		}
 		return
 	}

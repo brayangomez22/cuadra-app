@@ -1,35 +1,10 @@
 @use '@/styles/abstracts' as *;
 
-// A phone shows the invoice (with its supplier and day under it) and the
-// total (with what is owed and the status under it); the rest get their own
-// columns from a tablet up.
-.wide {
-  display: none;
+// A day is read whole, with its digits aligned.
+.day {
+  white-space: nowrap;
 
-  @include respond-to(md) {
-    display: table-cell;
-  }
-
-  &[data-day] {
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-}
-
-.narrow {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-
-  [data-numeric] > & {
-    align-items: flex-end;
-  }
-
-  @include respond-to(md) {
-    display: none;
-  }
+  @include numeric;
 }
 
 .owed {

@@ -6,17 +6,20 @@ import {
   formatQuantity,
   parseDecimalInput,
   parseMoneyInput,
+  toDecimalInput,
 } from './format';
 
 describe('formatMoney', () => {
   it.each([
     ['12500.00', '$ 12.500'],
     ['12500', '$ 12.500'],
-    ['12500.5', '$ 12.500,50'],
-    ['8333.3333', '$ 8.333,33'],
-    ['0.005', '$ 0,01'],
-    ['99999999999999.99', '$ 99.999.999.999.999,99'],
-  ])('formatea %s como %s, sin pasar por float', (value, expected) => {
+    ['12500.5', '$ 12.501'],
+    ['12500.49', '$ 12.500'],
+    ['8333.3333', '$ 8.333'],
+    ['-10.5', '-$ 11'],
+    ['0.4', '$ 0'],
+    ['99999999999999.99', '$ 100.000.000.000.000'],
+  ])('formatea %s como %s, en pesos enteros (half-up) y sin pasar por float', (value, expected) => {
     expect(plain(formatMoney(value))).toBe(expected);
   });
 });
@@ -112,5 +115,19 @@ describe('parseMoneyInput', () => {
     ['abc', 'invalid'],
   ] as const)('rechaza %j', (text, reason) => {
     expect(parseMoneyInput(text)).toEqual({ ok: false, reason });
+  });
+});
+
+describe('toDecimalInput', () => {
+  it.each([
+    ['10000.00', '10000'],
+    ['1900.50', '1900,50'],
+    ['8333.3333', '8333,3333'],
+    ['2.5000', '2,50'],
+    ['0.7500', '0,75'],
+    ['120', '120'],
+    ['-3.00', '-3'],
+  ])('escribe %s como %s, sin decimales en cero ni ceros de más', (value, expected) => {
+    expect(toDecimalInput(value)).toBe(expected);
   });
 });

@@ -26,6 +26,21 @@ describe('CashReportPage', () => {
     expect(value('Diferencia')).toBe('-$ 3.000');
   });
 
+  it('una diferencia de monedas no alarma como un billete que falta', async () => {
+    const closed = aClosedCashSession();
+    const closing = { ...closed.closing!, counted: '147989.50', difference: '-10.50' };
+    cashApi({
+      'GET /api/v1/cash-sessions/01920000-0000-7000-8000-000000000401': json(200, { ...closed, closing }),
+    });
+    renderApp(`/caja/${ids.cashSession}`);
+
+    const result = await screen.findByRole('region', { name: 'Resultado del arqueo' });
+    expect(within(result).getByText('Faltante menor')).toHaveAttribute('data-tone', 'warning');
+    expect(plain(document.querySelector('[aria-label="Cierre de caja"]')?.textContent)).toContain(
+      'Diferencia (Faltante menor)',
+    );
+  });
+
   it('imprime el reporte de cierre en el ancho del papel del equipo', async () => {
     localStorage.setItem('cuadra.pos.paper', '58');
     const print = vi.spyOn(window, 'print').mockImplementation(() => {});

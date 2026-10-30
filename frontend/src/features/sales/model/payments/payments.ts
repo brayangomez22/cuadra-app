@@ -47,7 +47,7 @@ export function nextMethod(rows: PaymentRow[]): PaymentMethod {
 
 /** An amount of the API as the cashier types it: "1900.00" → "1900". */
 export function amountText(amount: string): string {
-  return toDecimalInput(amount.replace(/\.00$/, ''));
+  return toDecimalInput(amount);
 }
 
 /** Why the payments do not settle the total, in Spanish. */

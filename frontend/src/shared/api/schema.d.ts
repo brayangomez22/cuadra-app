@@ -750,8 +750,8 @@ export interface paths {
         /**
          * Variantes por reponer
          * @description Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
-         *     (máximo − existencia, nunca negativa), de la que está más por debajo de su mínimo a la que menos. Sin
-         *     `location_id`, las de todas las sedes.
+         *     (máximo − existencia, nunca negativa). Primero las agotadas y después de la que está más por debajo de su
+         *     mínimo en proporción a la que menos (1 de 5 antes que 40 de 50). Sin `location_id`, las de todas las sedes.
          */
         get: operations["listReorderAlerts"];
         put?: never;
@@ -5034,6 +5034,11 @@ export interface operations {
             query?: {
                 /** @description Solo la existencia de esta variante. */
                 variant_id?: string;
+                /**
+                 * @description Solo la existencia de estas variantes (hasta 100). Sirve para buscar en el inventario por nombre, SKU o
+                 *     código: el cliente busca en el catálogo y pide aquí la existencia de lo que encontró.
+                 */
+                variant_ids?: string[];
                 /** @description Cantidad máxima de resultados. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Cantidad de resultados a saltar. */

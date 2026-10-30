@@ -13,10 +13,12 @@
   }
 }
 
-.meta {
+// The location of a balance, under it, when the kardex shows every location.
+.location {
   display: block;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+  white-space: normal;
 }
 
 .detail {

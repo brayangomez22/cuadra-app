@@ -48,10 +48,11 @@ type StockRepository interface {
 }
 
 // StockFilter selects the levels without a lot at a location, optionally of
-// one variant.
+// one variant or, when VariantIDs is not nil, of those variants.
 type StockFilter struct {
 	LocationID uuid.UUID
 	VariantID  *uuid.UUID
+	VariantIDs []uuid.UUID
 	Limit      int
 	Offset     int
 }

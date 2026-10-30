@@ -4,6 +4,7 @@ import { useFieldError } from '@/shared/forms/useFieldError';
 import { SelectController } from '@/shared/forms/SelectController/SelectController';
 import type { ProductFormInput } from '../../../../model/productForm/productSchema';
 import { taxRateOptions } from '../../../../model/productForm/taxRates';
+import { PricePreview } from '../PricePreview/PricePreview';
 
 type Props = {
   /** With the variant matrix, the cost and price are what the variants without theirs take. */
@@ -17,7 +18,7 @@ function priceHint({ matrix, inactive }: Props) {
   return matrix ? 'Lo usan las variantes que no tengan el suyo.' : 'Use coma para los centavos: 12500,50.';
 }
 
-/** "Precio": cost, price before IVA and the IVA rate. */
+/** "Precio": cost, price before IVA and the IVA rate, and what they make the customer pay and the margin. */
 export function PriceSection({ matrix, inactive }: Props) {
   const { register, control } = useFormContext<ProductFormInput>();
   const error = useFieldError(control);
@@ -39,6 +40,7 @@ export function PriceSection({ matrix, inactive }: Props) {
           <SelectController control={control} name="tax_rate" options={taxRateOptions(taxRate)} />
         </Field>
       </FormGrid>
+      <PricePreview />
     </FormSection>
   );
 }

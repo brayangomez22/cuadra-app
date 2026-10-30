@@ -135,7 +135,7 @@ describe('ProductFormPage: variantes', () => {
     ).toEqual({
       sku: 'CAM-L-ROJO',
       barcode: '770999000605',
-      cost: '15000.00',
+      cost: '15000',
       price: '28000',
       axis_values: { talla: 'L', color: 'Rojo' },
       active: false,

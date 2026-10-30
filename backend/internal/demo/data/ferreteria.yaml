@@ -32,8 +32,8 @@ families:
   - category: Herramientas
     unit: und
     names: [Martillo, Destornillador de pala, Destornillador de estrella, Alicate, Llave de expansión, Serrucho, Metro, Nivel]
-    specs: [básico, profesional, de 6 pulgadas, de 8 pulgadas, de 10 pulgadas, de 12 pulgadas, mango de goma, reforzado]
-    brands: [Stanley, Truper, Bellota, Pretul]
+    specs: [estándar, profesional, de uso pesado, de alta resistencia, con mango de goma, con mango de madera, con estuche, para obra]
+    brands: [Forja Andina, Truecán, Herramax, Pico Fino]
     attributes: {material: Acero}
     price: [9000, 85000]
     quantity: 2
@@ -41,7 +41,7 @@ families:
     unit: und
     names: [Taladro percutor, Pulidora, Sierra circular, Caladora, Lijadora orbital, Atornillador inalámbrico, Rotomartillo, Soldador]
     specs: [de 500 W, de 650 W, de 750 W, de 850 W, de 1.000 W, de 1.200 W, con maletín, con kit de brocas]
-    brands: [Black+Decker, DeWalt, Bosch, Truper]
+    brands: [Voltix, Taladro Pro, Forja Andina, Potencia]
     attributes: {material: Plástico y acero}
     price: [180000, 780000]
     quantity: 1
@@ -57,7 +57,7 @@ families:
     unit: und
     names: [Bisagra, Candado, Cerradura de pomo, Pasador, Manija, Cadena por eslabón, Gancho, Escuadra]
     specs: [de 2", de 3", de 4", de 40 mm, de 50 mm, de 60 mm, de seguridad, cromada]
-    brands: [Yale, Segurex, Herraje Fino, Ferretodo]
+    brands: [Cerrojo, Guardián, Herraje Fino, Ferretodo]
     attributes: {material: Acero}
     price: [3500, 95000]
     quantity: 4
@@ -65,23 +65,31 @@ families:
     unit: bulto
     names: [Cemento gris, Cemento blanco, Mortero seco, Pega cerámica, Estuco, Yeso, Arena lavada, Gravilla]
     specs: [de 25 kg, de 40 kg, de 50 kg, uso general, alta resistencia, para exteriores, para interiores, rápido]
-    brands: [Argos, Cemex, Holcim, Corona]
+    brands: [Cementos del Llano, Roca Fuerte, Piedra Azul, Mortero Real]
     attributes: {material: Mineral}
     price: [12000, 68000]
     quantity: 10
   - category: Construcción
     unit: und
-    names: [Ladrillo, Bloque, Teja de fibrocemento, Teja plástica, Varilla corrugada, Malla electrosoldada, Alambre negro, Perfil de drywall]
-    specs: [número 4, número 5, de 3/8", de 1/2", de 1,22 m, de 2,44 m, de 3 m, de 6 m]
-    brands: [Ladrillera Santa Fe, Acerías Paz del Río, Eternit, Gerdau]
-    attributes: {material: Arcilla y acero}
-    price: [900, 120000]
+    names: [Ladrillo, Bloque, Adoquín, Tableta]
+    specs: [número 4, número 5, número 6, macizo, liviano, estructural, de fachada, de muro]
+    brands: [Arcilla Santa Clara, Ladrillos del Sol, Bloquera Andina, Barro Fino]
+    attributes: {material: Arcilla}
+    price: [900, 6500]
     quantity: 20
+  - category: Construcción
+    unit: und
+    names: [Teja de fibrocemento, Teja plástica, Varilla corrugada, Perfil de drywall]
+    specs: ["de 1,22 m", "de 1,83 m", "de 2,44 m", de 3 m, "de 3,66 m", de 6 m, de 3/8", de 1/2"]
+    brands: [Aceros del Sol, Techo Firme, Varilla Andina, Perfiles del Valle]
+    attributes: {material: Fibrocemento y acero}
+    price: [12000, 95000]
+    quantity: 10
   - category: Eléctricos
     unit: m
-    names: [Cable THHN, Cable dúplex, Cable encauchetado, Manguera eléctrica, Tubo conduit, Canaleta, Cable coaxial, Cable UTP]
-    specs: [calibre 8, calibre 10, calibre 12, calibre 14, calibre 16, de 1/2", de 3/4", categoría 6]
-    brands: [Centelsa, Procables, Phelps Dodge, Luminex]
+    names: [Cable THHN, Cable dúplex, Cable encauchetado, Cable de cobre desnudo, Cable vehicular, Alambre de cobre, Cable de parlante, Cable siliconado]
+    specs: [calibre 6, calibre 8, calibre 10, calibre 12, calibre 14, calibre 16, calibre 18, calibre 20]
+    brands: [Cobrelec, Conductores del Valle, Hilo de Cobre, Fase Uno]
     attributes: {material: Cobre}
     price: [1500, 9500]
     quantity: 30
@@ -90,34 +98,50 @@ families:
   - category: Eléctricos
     unit: und
     names: [Interruptor sencillo, Interruptor doble, Tomacorriente, Breaker, Bombillo LED, Plafón, Extensión, Multitoma]
-    specs: [de 9 W, de 12 W, de 18 W, de 15 A, de 20 A, de 30 A, con polo a tierra, blanco]
-    brands: [Leviton, Schneider, Sylvania, Philips]
+    specs: [línea económica, línea premium, blanco, gris, de sobreponer, de incrustar, industrial, residencial]
+    brands: [Interlux, Chispa, Luz Clara, Voltaje]
     attributes: {material: Plástico}
     price: [3500, 65000]
     quantity: 5
     purchase_unit: {unit: caja, factor: 10}
   - category: Plomería
     unit: und
-    names: [Codo PVC, Tee PVC, Unión PVC, Adaptador macho, Adaptador hembra, Llave de paso, Registro, Válvula de cheque]
-    specs: [de 1/2", de 3/4", de 1", de 1 1/4", de 1 1/2", de 2", presión, sanitario]
-    brands: [Pavco, Gerfor, Grival, Tigre]
+    names: [Codo PVC, Tee PVC, Unión PVC, Adaptador macho]
+    specs: [de 1/2", de 3/4", de 1", de 1 1/4", de 1 1/2", de 2", de 3", de 4"]
+    brands: [Tubosol, Conexa, Agua Viva, Plastiflex]
     attributes: {material: PVC}
-    price: [800, 78000]
+    price: [800, 9500]
     quantity: 8
     purchase_unit: {unit: caja, factor: 12}
   - category: Plomería
     unit: und
-    names: [Grifería lavamanos, Grifería lavaplatos, Ducha, Sifón, Sanitario, Lavamanos, Flotador, Acople flexible]
-    specs: [sencilla, cromada, de pared, de mesa, ahorradora, de 40 cm, de 60 cm, económica]
-    brands: [Grival, Corona, FV, Helvex]
-    attributes: {material: Metal y cerámica}
-    price: [9000, 420000]
+    names: [Llave de paso, Registro, Válvula de cheque, Llave de jardín]
+    specs: [de 1/2", de 3/4", de 1", de 1 1/4", de 1 1/2", de 2", de bola, de bronce]
+    brands: [Tubosol, Conexa, Agua Viva, Grifo Real]
+    attributes: {material: Bronce y PVC}
+    price: [15000, 78000]
+    quantity: 3
+  - category: Plomería
+    unit: und
+    names: [Sifón, Flotador, Acople flexible, Ducha]
+    specs: [estándar, de lujo, de pared, de mesa, de 40 cm, de 60 cm, para cocina, para baño]
+    brands: [Grifo Real, Chorro, Aguamarina, Agua Viva]
+    attributes: {material: Metal y plástico}
+    price: [9000, 65000]
     quantity: 2
+  - category: Plomería
+    unit: und
+    names: [Grifería lavamanos, Grifería lavaplatos, Sanitario, Lavamanos]
+    specs: [sencilla, cromada, de pared, de mesa, ahorradora, de lujo, blanca, económica]
+    brands: [Grifo Real, Cerámica del Valle, Chorro, Aguamarina]
+    attributes: {material: Metal y cerámica}
+    price: [85000, 420000]
+    quantity: 1
   - category: Plomería
     unit: m
     names: [Tubo PVC presión, Tubo PVC sanitario, Tubo CPVC, Manguera de jardín, Manguera transparente, Tubo galvanizado, Tubo PEX, Manguera de gas]
     specs: [de 1/2", de 3/4", de 1", de 1 1/2", de 2", de 3", de 4", reforzada]
-    brands: [Pavco, Gerfor, Tigre, Colmena]
+    brands: [Tubosol, Conexa, Plastiflex, Manguera Andina]
     attributes: {material: PVC}
     price: [2500, 32000]
     quantity: 12
@@ -126,23 +150,23 @@ families:
     unit: galon
     names: [Vinilo, Esmalte, Anticorrosivo, Laca, Barniz, Impermeabilizante, Pintura de tráfico, Sellador]
     specs: [blanco, negro, gris, rojo, azul, verde, transparente, mate]
-    brands: [Pintuco, Sherwin-Williams, Viniltex, Tito Pabón]
+    brands: [Color Andino, Pinturas Arcoíris, Brocha de Oro, Matiz]
     attributes: {material: Base agua}
     price: [32000, 165000]
     quantity: 3
   - category: Pinturas
     unit: und
     names: [Brocha, Rodillo, Bandeja para pintura, Lija, Espátula, Cinta de enmascarar, Thinner, Masilla]
-    specs: [de 1", de 2", de 3", de 4", de 9", grano 80, grano 120, de 1/4 de galón]
-    brands: [Goya, Pintuco, Tesa, 3M]
+    specs: [profesional, estándar, de uso pesado, para interiores, para exteriores, para madera, para metal, multiusos]
+    brands: [Brocha de Oro, Color Andino, Cinta Fija, Lija Fina]
     attributes: {material: Varios}
     price: [1500, 28000]
     quantity: 4
   - category: Herramientas
     unit: und
     names: [Pala, Pica, Carretilla, Barra, Machete, Rastrillo, Palustre, Llana]
-    specs: [punta redonda, punta cuadrada, de 5 libras, de 1,5 m, de 18 pulgadas, de 22 pulgadas, liviana, reforzada]
-    brands: [Herragro, Truper, Bellota, Incolma]
+    specs: [estándar, profesional, de uso pesado, de alta resistencia, con mango de madera, con mango de fibra, para obra, para jardín]
+    brands: [Forja Andina, Truecán, Campo Duro, Pico Fino]
     attributes: {material: Acero al carbono}
     price: [12000, 260000]
     quantity: 2

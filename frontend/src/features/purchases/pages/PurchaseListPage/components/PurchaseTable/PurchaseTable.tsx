@@ -1,7 +1,6 @@
 import { Table, TableBody, TableHead, TableHeaderCell, TableRow } from '@/shared/ui';
 import type { PurchaseSummary } from '../../../../api/types';
 import { PurchaseRow } from './PurchaseRow';
-import styles from './PurchaseTable.module.scss';
 
 /**
  * The purchases of a page: the invoice, its supplier, its days, its total and
@@ -15,11 +14,11 @@ export function PurchaseTable({ purchases }: { purchases: PurchaseSummary[] }) {
       <TableHead>
         <TableRow>
           <TableHeaderCell>Factura</TableHeaderCell>
-          <TableHeaderCell className={styles.wide}>Proveedor</TableHeaderCell>
-          <TableHeaderCell className={styles.wide}>Fecha</TableHeaderCell>
-          <TableHeaderCell className={styles.wide}>Vence</TableHeaderCell>
+          <TableHeaderCell wide>Proveedor</TableHeaderCell>
+          <TableHeaderCell wide>Fecha</TableHeaderCell>
+          <TableHeaderCell wide>Vence</TableHeaderCell>
           <TableHeaderCell numeric>Total</TableHeaderCell>
-          <TableHeaderCell numeric className={styles.wide}>
+          <TableHeaderCell numeric wide>
             Por pagar
           </TableHeaderCell>
         </TableRow>

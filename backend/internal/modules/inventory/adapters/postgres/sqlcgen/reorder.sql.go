@@ -61,7 +61,9 @@ LEFT JOIN LATERAL (
 ) s ON true
 WHERE ($1::uuid IS NULL OR r.location_id = $1)
   AND COALESCE(s.quantity, 0) <= r.min_quantity
-ORDER BY COALESCE(s.quantity, 0) - r.min_quantity, r.location_id, r.variant_id
+ORDER BY COALESCE(s.quantity, 0) > 0,
+         COALESCE(s.quantity, 0) / NULLIF(r.min_quantity, 0),
+         r.location_id, r.variant_id
 LIMIT $3 OFFSET $2
 `
 
@@ -81,8 +83,9 @@ type ListReorderAlertsRow struct {
 }
 
 // ListReorderAlerts pages the rules whose stock at their location (of every
-// lot, zero without a level) is at or below their minimum, the furthest below
-// it first. The condition is the one of domain.ReorderRule.NeedsReorder; the
+// lot, zero without a level) is at or below their minimum: what ran out first,
+// then the furthest below its minimum in proportion (1 of 5 before 40 of 50).
+// The condition is the one of domain.ReorderRule.NeedsReorder; the
 // integration tests check both agree.
 func (q *Queries) ListReorderAlerts(ctx context.Context, arg ListReorderAlertsParams) ([]ListReorderAlertsRow, error) {
 	rows, err := q.db.Query(ctx, listReorderAlerts, arg.LocationID, arg.RowOffset, arg.RowLimit)

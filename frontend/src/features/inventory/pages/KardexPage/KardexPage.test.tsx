@@ -51,6 +51,32 @@ describe('KardexPage', () => {
     expect(plain(receipt.textContent)).toContain('$ 8.000');
   });
 
+  it('con todas las sedes, cada saldo dice de qué sede es', async () => {
+    kardexApi({
+      [`GET /api/v1/variants/${ids.pipe}/kardex`]: json(
+        200,
+        page([aMovement({ location_id: ids.north, balance_after: '4' }), aMovement({ id: ids.cashSession })]),
+      ),
+    });
+    renderApp(`/productos/${ids.pipe}/kardex`);
+
+    const table = await kardexTable();
+    expect(table.getByRole('columnheader', { name: 'Saldo en su sede' })).toBeInTheDocument();
+    const [north, main] = table.getAllByRole('row', { name: /Entrada de mercancía/ });
+    expect(plain(within(north!).getAllByRole('cell')[3]?.textContent)).toBe('4en Sede norte');
+    expect(plain(within(main!).getAllByRole('cell')[3]?.textContent)).toBe('10en Bodega principal');
+  });
+
+  it('en una sede, el saldo es el de esa sede', async () => {
+    kardexApi();
+    renderApp(`/productos/${ids.pipe}/kardex?sede=${ids.main}`);
+
+    const table = await kardexTable();
+    expect(table.getByRole('columnheader', { name: 'Saldo en la sede' })).toBeInTheDocument();
+    const receipt = await table.findByRole('row', { name: /Entrada de mercancía/ });
+    expect(plain(within(receipt).getAllByRole('cell')[3]?.textContent)).toBe('10');
+  });
+
   it('filtra por sede y la conserva en la URL', async () => {
     const api = kardexApi();
     const { router } = renderApp(`/productos/${ids.pipe}/kardex`);

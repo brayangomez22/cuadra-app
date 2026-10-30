@@ -8,17 +8,25 @@ import (
 )
 
 // The business hours, in Bogotá: payments come in before the first sale,
-// so they never pay a debt the day's sales have not made yet.
+// so they never pay a debt the day's sales have not made yet. The drawers
+// open and close up to drawerSlack minutes off openingHour and
+// closingMinute, and one closing in cashOffOneIn is off by some bill.
 const (
-	openingHour  = 8
-	firstSaleMin = 9 * 60
-	lastSaleMin  = 19 * 60
+	openingHour   = 8
+	closingMinute = 19*60 + 30
+	drawerSlack   = 10
+	cashOffOneIn  = 8
+	firstSaleMin  = 9 * 60
+	lastSaleMin   = 19 * 60
 	// otherLocationShare is how much the other locations sell compared
 	// with the first, in percent.
 	otherLocationShare = 70
 	// creditMargin keeps credit sales this percent under the limit: the
 	// API's total may differ from Total by some cents.
 	creditMargin = 95
+	// defaulterShare is the part of their limit, in percent, a customer
+	// who never pays gets to owe.
+	defaulterShare = 50
 	// payOneIn is the chance (one in) that a customer who owes pays on a
 	// given day.
 	payOneIn = 8
@@ -71,7 +79,8 @@ func (h *history) plan() []Day {
 		} else {
 			d.Purchases = h.restock(date)
 		}
-		d.Payments = h.payments(date)
+		h.drawers(&d)
+		d.Payments = h.payments(d.Opening)
 		d.Sales = h.sales(date)
 		days[i] = d
 	}
@@ -83,9 +92,28 @@ func at(date time.Time, minutes int) time.Time {
 	return time.Date(date.Year(), date.Month(), date.Day(), 0, minutes, 0, 0, bogota)
 }
 
+// drawers sets when the drawers open and close (around 8:00 and 7:30 p. m.,
+// a few minutes off each day) and how much each closing count is off.
+func (h *history) drawers(d *Day) {
+	d.Opening = at(d.Date, openingHour*60-drawerSlack+h.rng.IntN(2*drawerSlack+1))
+	d.Closing = at(d.Date, closingMinute-drawerSlack+h.rng.IntN(2*drawerSlack+1))
+	d.CashDifference = make([]decimal.Decimal, len(h.s.Locations))
+	for loc := range d.CashDifference {
+		if h.rng.IntN(cashOffOneIn) != 0 {
+			continue
+		}
+		// A missing or extra bill of 1.000 to 20.000; short more often than over.
+		diff := decimal.NewFromInt(int64(1+h.rng.IntN(20)) * 1000)
+		if h.rng.IntN(3) != 0 {
+			diff = diff.Neg()
+		}
+		d.CashDifference[loc] = diff
+	}
+}
+
 // payments are the customers with credit (not the defaulters) paying part
-// of what they owe, early in the morning.
-func (h *history) payments(date time.Time) []Payment {
+// of what they owe, early in the morning, once the drawers are open.
+func (h *history) payments(opening time.Time) []Payment {
 	var out []Payment
 	for i, c := range h.s.Customers {
 		if !c.CreditLimit.IsPositive() || c.Defaulter || h.owed[i].LessThan(decimal.NewFromInt(2000)) || h.rng.IntN(payOneIn) != 0 {
@@ -104,7 +132,7 @@ func (h *history) payments(date time.Time) []Payment {
 		if h.rng.IntN(5) < 2 {
 			method = "transfer"
 		}
-		out = append(out, Payment{At: at(date, openingHour*60+10+len(out)), Customer: i, Amount: amount, Method: method})
+		out = append(out, Payment{At: opening.Add(time.Duration(5+len(out)) * time.Minute), Customer: i, Amount: amount, Method: method})
 	}
 	return out
 }

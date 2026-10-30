@@ -25,7 +25,12 @@ export function StockRow({ level, product, loading, canSeeCost, canEditReorder }
           {formatQuantity(level.quantity)} {product?.unit.code}
         </span>
       </TableCell>
-      <ReorderCell level={level} name={rowVariant(product, level.variant_id).name} canEdit={canEditReorder} />
+      <ReorderCell
+        level={level}
+        name={rowVariant(product, level.variant_id).name}
+        unit={product?.unit.code}
+        canEdit={canEditReorder}
+      />
       {canSeeCost && <TableCell numeric>{averageCost(level)}</TableCell>}
     </TableRow>
   );
