@@ -191,5 +191,5 @@ Una feature nueva (clientes, compras...) tiene la forma de `inventory`. Los paso
 4. **Menú:** su entrada en `src/app/layout/navItems.ts` con su `permission` (y `module` si es de un módulo activable), para que el menú la esconda a quien no puede usarla.
 5. **Datos:** un archivo por recurso en `api/` con sus llaves en `api/keys.ts`; las mutaciones invalidan ahí lo que cambian.
 6. **Lógica:** las reglas puras en `model/`, agrupadas por tema si pasan de unos 10 archivos, con tests table-driven de al menos dos tipos de negocio.
-7. **Tests:** las páginas por escenario con `renderApp` y `fakeApi` (tipado contra el contrato), con sus fixtures y builders en `testing/`. Estados de carga, vacío y error con `QueryState`; formularios con `useApiFormErrors`.
+7. **Tests:** las páginas por escenario con `renderApp` y `fakeApi` (tipado contra el contrato), con sus fixtures y builders en `testing/`; una pantalla pesada (el POS, el formulario de producto) se precarga con `beforeAll(preloadPages('/vender'))` de `@/test/preloadPages`, para que su primera carga no consuma el tiempo del primer test. Estados de carga, vacío y error con `QueryState`; formularios con `useApiFormErrors`.
 8. **Estilos y responsive:** `docs/estilos.md` (tokens, `.root`, `data-*`, de 360 a 1920 px, 44 px en el POS) y el kit de `shared/ui` antes de crear un componente.

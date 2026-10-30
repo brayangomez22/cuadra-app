@@ -1,9 +1,12 @@
 import { screen, waitFor } from '@testing-library/react';
 import { apiError } from '@/test/fakeApi';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 import { fillProduct, productFormApi, saveProduct } from '../../testing/productForm';
 
 describe('ProductFormPage: validación y errores de la API', () => {
+  beforeAll(preloadPages('/productos/nuevo'));
+
   it('no envía el formulario con el precio vacío', async () => {
     const api = productFormApi();
     renderApp('/productos/nuevo');

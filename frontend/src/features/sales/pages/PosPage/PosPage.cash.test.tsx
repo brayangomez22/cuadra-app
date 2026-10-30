@@ -5,7 +5,9 @@ import { anOpenCashSession } from '../../testing/fixtures';
 import { posApi } from '../../testing/posApi';
 import { checkout, clearPosStorage, findCartLine, posted, scan, user } from '../../testing/posSteps';
 import { renderApp } from '@/test/renderApp';
+import { preloadPages } from '@/test/preloadPages';
 
+beforeAll(preloadPages('/vender'));
 beforeEach(clearPosStorage);
 
 describe('PosPage', () => {
