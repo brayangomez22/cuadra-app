@@ -23,6 +23,7 @@ export function CountEntryForm({ countId }: { countId: string }) {
           render={({ field, fieldState }) => (
             <ProductPicker
               label="Producto"
+              ref={field.ref}
               value={field.value ?? null}
               onChange={choose}
               onPicked={focusQuantity}

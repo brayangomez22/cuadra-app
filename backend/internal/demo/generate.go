@@ -85,7 +85,7 @@ func (g Generator) Generate(ctx context.Context, s Scenario, password string) (u
 			return tenant, fmt.Errorf("demo: day %s: %w", s.Days[i].Date.Format(time.DateOnly), err)
 		}
 	}
-	return tenant, nil
+	return tenant, r.writeStockCounts(ctx)
 }
 
 // newRunner builds the generator's API on a new clock.

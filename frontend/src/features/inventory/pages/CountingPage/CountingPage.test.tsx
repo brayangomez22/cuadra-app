@@ -43,6 +43,30 @@ describe('CountingPage', () => {
     expect(document.body.textContent).not.toMatch(/esperad/i);
   });
 
+  it('después de registrar deja el foco en el producto, para escanear el siguiente con el lector', async () => {
+    const api = countingApi();
+    renderApp(url);
+
+    await pickPipe();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Cantidad contada' }), '8{Enter}');
+
+    await waitFor(() => expect(api.calls(recorded)).toHaveLength(1));
+    await waitFor(() => expect(screen.getByRole('searchbox', { name: 'Producto' })).toHaveFocus());
+  });
+
+  it('dice qué categorías cubre un conteo parcial', async () => {
+    fakeApi({
+      ...countScreenApi(aUser('warehouse'), aStockCount({ category_ids: [ids.plumbing] })),
+      [entriesKey]: json(200, page([])),
+      'GET /api/v1/categories': json(200, {
+        items: [{ id: ids.plumbing, name: 'Plomería', created_at: '2026-10-01T15:00:00Z' }],
+      }),
+    });
+    renderApp(url);
+
+    expect(await screen.findByText('Plomería · 12 de 120 productos contados')).toBeInTheDocument();
+  });
+
   it('escanea con la cámara el código de una talla y la deja lista para contar', async () => {
     const camera = fakeCamera();
     const api = countingApi();

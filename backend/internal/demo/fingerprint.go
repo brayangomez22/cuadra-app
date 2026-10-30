@@ -21,7 +21,7 @@ const pageSize = 100
 
 // Fingerprint summarizes a demo tenant as the API shows it, without ids or
 // the real time: the catalog, the stock of each location, the reorder
-// alerts, the sales of each day, the purchases and the receivables' aging. The same scenario gives
+// alerts, the sales of each day, the purchases, the receivables' aging and the physical counts. The same scenario gives
 // the same fingerprint, however many times it is generated.
 type Fingerprint struct {
 	Products  int
@@ -29,6 +29,8 @@ type Fingerprint struct {
 	Purchases int
 	// Alerts are the variants under their minimum stock.
 	Alerts int
+	// Counts are the approved physical counts.
+	Counts int
 	Digest string
 }
 
@@ -54,14 +56,14 @@ func (g Generator) Fingerprint(ctx context.Context, tenant uuid.UUID, s Scenario
 	}
 	f := &fingerprint{r: r, owner: r.as(s.Profile.OwnerEmail()), skus: map[uuid.UUID]string{}, locs: map[uuid.UUID]string{}}
 	out := Fingerprint{}
-	steps := []func(context.Context) (int, error){f.products, f.stock, f.sales, f.purchases, f.aging, f.alerts}
+	steps := []func(context.Context) (int, error){f.products, f.stock, f.sales, f.purchases, f.aging, f.alerts, f.counts}
 	counts := make([]int, len(steps))
 	for i, step := range steps {
 		if counts[i], err = step(ctx); err != nil {
 			return Fingerprint{}, err
 		}
 	}
-	out.Products, out.Sales, out.Purchases, out.Alerts = counts[0], counts[2], counts[3], counts[5]
+	out.Products, out.Sales, out.Purchases, out.Alerts, out.Counts = counts[0], counts[2], counts[3], counts[5], counts[6]
 	slices.Sort(f.lines)
 	sum := sha256.Sum256([]byte(strings.Join(f.lines, "\n")))
 	out.Digest = hex.EncodeToString(sum[:])
@@ -206,4 +208,27 @@ func (f *fingerprint) alerts(ctx context.Context) (int, error) {
 			return res.JSON200.Total, nil
 		}
 	}
+}
+
+// counts adds the approved physical counts, each with its accuracy. One page
+// is enough: a demo has one per location.
+func (f *fingerprint) counts(ctx context.Context) (int, error) {
+	approved, limit := apiclient.StockCountStatusApproved, pageSize
+	res, err := f.r.api.ListStockCountsWithResponse(ctx, &apiclient.ListStockCountsParams{Status: &approved, Limit: &limit}, f.owner)
+	if err := expect("list stock counts", res, err); err != nil {
+		return 0, err
+	}
+	for _, c := range res.JSON200.Items {
+		f.add("count|%s|%d|%d|%v", f.locs[c.LocationId], c.Lines, c.CountedLines, countSummaryText(c.Summary))
+	}
+	return res.JSON200.Total, nil
+}
+
+// countSummaryText is a count's result as text: its pointers would change
+// from one reading to the next.
+func countSummaryText(s *apiclient.StockCountSummary) string {
+	if s == nil {
+		return "-"
+	}
+	return fmt.Sprintf("%d|%v|%v", s.ExactLines, deref(s.Accuracy), deref(s.NetDifferenceValue))
 }

@@ -28,6 +28,12 @@ export function fromUnits(units: bigint): string {
   return `${sign}${abs / ONE}.${fraction}`;
 }
 
+/** To whole pesos, half-up as the screen shows them: 125005000n → 125010000n. */
+export function roundToWhole(units: bigint): bigint {
+  const half = units < 0n ? -ONE / 2n : ONE / 2n;
+  return ((units + half) / ONE) * ONE;
+}
+
 /** A quantity or a rate without trailing zeros: 35000n → "3.5", 20000n → "2". */
 export function fromUnitsTrimmed(units: bigint): string {
   return fromUnits(units).replace(/\.?0+$/, '');

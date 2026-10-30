@@ -1,7 +1,7 @@
 import { formatDateTime, formatMoney, formatQuantity } from '@/shared/format';
 import { TableCell, TableNarrow, TableRow } from '@/shared/ui';
 import type { StockMovement } from '../../../../api/types';
-import { movementLabels } from '../../../../model/movementLabels';
+import { MovementLabel } from './MovementLabel';
 import styles from './MovementRow.module.scss';
 
 type Props = {
@@ -24,7 +24,7 @@ export function MovementRow({ movement, locationName, canSeeCost, withDetail }: 
         {formatDateTime(movement.occurred_at)}
       </TableCell>
       <TableCell>
-        {movementLabels[movement.type]}
+        <MovementLabel movement={movement} />
         <TableNarrow>{formatDateTime(movement.occurred_at)}</TableNarrow>
       </TableCell>
       <TableCell numeric>

@@ -113,6 +113,7 @@ func TestDemoReset(t *testing.T) {
 			require.Positive(t, want.Sales)
 			require.Positive(t, want.Purchases)
 			require.Positive(t, want.Alerts, "P111: the demo shows reorder alerts")
+			require.Positive(t, want.Counts, "P135: the demo shows physical counts with their accuracy")
 
 			second, err := r.Reset(t.Context(), template)
 			require.NoError(t, err)

@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { formatMoney, isZero } from '@/shared/format';
 import type { CustomerCredit } from '../../../../api/types';
+import { shownAvailable } from '../../../../model/shownAvailable';
 import styles from './CreditSummary.module.scss';
 
 type Props = { credit: CustomerCredit };
@@ -14,7 +15,7 @@ export function CreditSummary({ credit }: Props) {
     ['Cupo', formatMoney(credit.credit_limit)],
     ['Plazo', days(credit.term_days)],
     ['Debe', formatMoney(credit.balance)],
-    ['Disponible', formatMoney(credit.available)],
+    ['Disponible', formatMoney(shownAvailable(credit))],
   ];
   return (
     <section className={styles.root} aria-labelledby={titleId}>

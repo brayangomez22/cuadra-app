@@ -1,7 +1,9 @@
 import { paths } from '@/app/routes/paths';
+import { useCategories } from '@/features/catalog';
 import { formatDateTime, formatMoney } from '@/shared/format';
 import { Badge, Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow, TextLink } from '@/shared/ui';
 import type { StockCount } from '../../../../api/types';
+import { countScope } from '../../../../model/stockCount/countScope';
 import { accuracyText } from '../../../../model/stockCount/countSummary';
 import { countStatusLabels } from '../../../../model/stockCount/statusLabels';
 
@@ -9,6 +11,7 @@ type Props = { caption: string; counts: StockCount[]; canReview: boolean };
 
 /** The past counts of a location, newest first: the accuracy report of the inventory. */
 export function CountsTable({ caption, counts, canReview }: Props) {
+  const categories = useCategories();
   return (
     <Table caption={caption}>
       <TableHead>
@@ -40,7 +43,7 @@ export function CountsTable({ caption, counts, canReview }: Props) {
               </TableCell>
               <TableCell numeric>{count.summary ? accuracyText(count.summary.accuracy) : '—'}</TableCell>
               <TableCell numeric>{net === undefined ? '—' : formatMoney(net)}</TableCell>
-              <TableCell>{count.category_ids.length > 0 ? 'Algunas categorías' : 'Toda la sede'}</TableCell>
+              <TableCell>{countScope(count.category_ids, categories.data)}</TableCell>
             </TableRow>
           );
         })}
