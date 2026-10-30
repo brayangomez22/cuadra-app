@@ -60,6 +60,7 @@ test('crea un cliente en el POS, le vende de contado y a crédito, recibe un abo
 
   await test.step('asignar cupo y plazo', async () => {
     await account(page);
+    await page.getByRole('button', { name: 'Cambiar cupo y plazo' }).click();
     await page.getByLabel('Cupo de crédito').fill('100000');
     await page.getByLabel('Plazo en días').fill('30');
     await page.getByRole('button', { name: 'Guardar cupo' }).click();
