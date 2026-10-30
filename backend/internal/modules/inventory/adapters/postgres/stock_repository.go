@@ -32,15 +32,17 @@ func (r *StockRepository) ListLevels(ctx context.Context, tenantID uuid.UUID, f 
 	}
 	var rows []sqlcgen.ListStockLevelsRow
 	var total int64
+	count := sqlcgen.CountStockLevelsParams{LocationID: f.LocationID, VariantID: f.VariantID, VariantIds: f.VariantIDs}
+	list := sqlcgen.ListStockLevelsParams{
+		LocationID: count.LocationID, VariantID: count.VariantID, VariantIds: count.VariantIds, RowLimit: limit, RowOffset: offset,
+	}
 	err = r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
 		var err error
-		if rows, err = q.ListStockLevels(ctx, sqlcgen.ListStockLevelsParams{
-			LocationID: f.LocationID, VariantID: f.VariantID, RowLimit: limit, RowOffset: offset,
-		}); err != nil {
+		if rows, err = q.ListStockLevels(ctx, list); err != nil {
 			return err
 		}
-		total, err = q.CountStockLevels(ctx, sqlcgen.CountStockLevelsParams{LocationID: f.LocationID, VariantID: f.VariantID})
+		total, err = q.CountStockLevels(ctx, count)
 		return err
 	})
 	if err != nil {

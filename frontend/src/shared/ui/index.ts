@@ -20,7 +20,7 @@ export { Select, type SelectOption } from './Select';
 export { Skeleton } from './Skeleton';
 export { Spinner } from './Spinner';
 export { Stack, type Gap } from './Stack';
-export { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from './Table';
+export { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableNarrow, TableRow } from './Table';
 export { Textarea } from './Textarea';
 export { TextLink } from './TextLink';
 export { ToastProvider, useToast, type ToastOptions, type ToastTone } from './Toast';

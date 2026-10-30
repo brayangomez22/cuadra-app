@@ -16,7 +16,7 @@ describe('AgingPage', () => {
 
     const table = within(await screen.findByRole('table', { name: /Cartera por edades/ }));
     expect(cells(table.getByRole('row', { name: /Carlos Pérez/ }))).toEqual([
-      'Carlos Pérez',
+      'Carlos PérezVencido $ 150.000',
       '$ 200.000',
       '$ 150.000',
       '$ 0',
@@ -26,7 +26,7 @@ describe('AgingPage', () => {
     ]);
     expect(cells(table.getByRole('row', { name: /Confecciones Sol SAS/ })).at(-2)).toBe('$ 80.000');
     expect(cells(table.getByRole('row', { name: /^Total/ }))).toEqual([
-      'Total',
+      'Total de 2 clientesVencido $ 230.000Más de 90 días $ 80.000',
       '$ 200.000',
       '$ 150.000',
       '$ 0',
@@ -34,6 +34,9 @@ describe('AgingPage', () => {
       '$ 80.000',
       '$ 430.000',
     ]);
+    expect(cells(table.getByRole('row', { name: /Confecciones Sol SAS/ }))[0]).toBe(
+      'Confecciones Sol SASVencido $ 80.000Más de 90 días $ 80.000',
+    );
     expect(screen.getByText(/28\/10\/2026/)).toBeInTheDocument();
     expect(plain(screen.getByText('Vencida', { selector: 'dt' }).nextElementSibling?.textContent)).toBe('$ 230.000');
   });

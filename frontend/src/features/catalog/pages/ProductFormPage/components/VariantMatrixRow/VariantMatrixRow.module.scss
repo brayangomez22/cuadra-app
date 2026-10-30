@@ -13,6 +13,12 @@
   font-family: var(--font-family-mono);
 }
 
+// An EAN-13 is read whole, digit by digit: the column never cuts it.
+.barcode {
+  min-inline-size: 16ch;
+  font-family: var(--font-family-mono);
+}
+
 .amount {
   min-inline-size: 10ch;
 }

@@ -16,7 +16,7 @@ describe('ProductFormPage: unidades de venta', () => {
     productFormApi({ [`GET /api/v1/products/${ids.pipe}`]: json(200, withUnits(aProduct(), [boxOf12])) });
     renderApp(`/productos/${ids.pipe}/editar`);
 
-    await screen.findByDisplayValue('10000,00');
+    await screen.findByDisplayValue('10000');
     expect(screen.queryByRole('region', { name: 'Unidades de venta' })).not.toBeInTheDocument();
   });
 
@@ -91,11 +91,11 @@ describe('ProductFormPage: unidades de venta', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Caja (caja)' }));
     await userEvent.type(dialog.getByLabelText(/^Cuántas und trae/), '12');
     await userEvent.click(dialog.getByRole('button', { name: 'Usar el sugerido' }));
-    expect(dialog.getByLabelText('Precio (sin IVA)')).toHaveValue('120000,00');
+    expect(dialog.getByLabelText('Precio (sin IVA)')).toHaveValue('120000');
     await userEvent.click(dialog.getByRole('button', { name: 'Guardar unidad' }));
 
     await waitFor(() => expect(api.calls(`PUT ${unitPath(box.id)}`)).toHaveLength(1));
-    expect(await api.calls(`PUT ${unitPath(box.id)}`)[0]!.json()).toEqual({ factor: '12', price: '120000.00' });
+    expect(await api.calls(`PUT ${unitPath(box.id)}`)[0]!.json()).toEqual({ factor: '12', price: '120000' });
   });
 
   it('muestra en su campo el código de barras repetido', async () => {
@@ -139,7 +139,7 @@ describe('ProductFormPage: unidades de venta', () => {
     await userEvent.click((await section()).getByRole('button', { name: 'Editar caja' }));
     const dialog = within(await screen.findByRole('dialog', { name: 'Editar unidad de venta' }));
     const price = dialog.getByLabelText('Precio (sin IVA)');
-    expect(price).toHaveValue('110000,00');
+    expect(price).toHaveValue('110000');
     await userEvent.clear(price);
     await userEvent.type(price, '105000');
     await userEvent.click(dialog.getByRole('button', { name: 'Guardar unidad' }));

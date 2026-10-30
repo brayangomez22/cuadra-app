@@ -52,6 +52,9 @@ describe('StockPage: stock mínimo y máximo', () => {
     const cement = await rowOf(/Cemento gris/);
     await userEvent.click(within(cement).getByRole('button', { name: 'Mínimo y máximo de Cemento gris 50kg' }));
     const dialog = within(await screen.findByRole('dialog', { name: 'Mínimo y máximo' }));
+    expect(dialog.getByLabelText('Stock mínimo')).toHaveAccessibleDescription(
+      'En bulto. Hoy hay 2,5 bulto en esta sede.',
+    );
     await userEvent.type(dialog.getByLabelText('Stock mínimo'), '5');
     await userEvent.type(dialog.getByLabelText('Stock máximo'), '12,5');
     await userEvent.click(dialog.getByRole('button', { name: 'Guardar' }));

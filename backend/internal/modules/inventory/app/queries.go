@@ -27,10 +27,12 @@ func pageBounds(limit, offset int) (int, int) {
 	return limit, max(offset, 0)
 }
 
-// StockQuery selects the levels at a location, optionally of one variant.
+// StockQuery selects the levels at a location, optionally of one variant or
+// of some (VariantIDs, when not nil: the ones a catalog search found).
 type StockQuery struct {
 	LocationID uuid.UUID
 	VariantID  *uuid.UUID
+	VariantIDs []uuid.UUID
 	Limit      int
 	Offset     int
 }
@@ -53,7 +55,7 @@ func (s *Service) ListStock(ctx context.Context, a Actor, q StockQuery) (_ Level
 	if _, err := s.Locations.GetByID(ctx, a.TenantID, q.LocationID); err != nil {
 		return LevelPage{}, err
 	}
-	f := domain.StockFilter{LocationID: q.LocationID, VariantID: q.VariantID}
+	f := domain.StockFilter{LocationID: q.LocationID, VariantID: q.VariantID, VariantIDs: q.VariantIDs}
 	f.Limit, f.Offset = pageBounds(q.Limit, q.Offset)
 	page, err := s.Stock.ListLevels(ctx, a.TenantID, f)
 	if err != nil {

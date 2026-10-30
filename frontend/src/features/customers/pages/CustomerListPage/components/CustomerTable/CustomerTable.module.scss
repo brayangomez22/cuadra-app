@@ -20,3 +20,10 @@
   display: block;
   overflow-wrap: anywhere;
 }
+
+// The way to the account keeps its touch size and stays on the right.
+.account {
+  inline-size: 1%;
+  text-align: end;
+  white-space: nowrap;
+}

@@ -14,6 +14,9 @@ import (
 // hardware store and a clothing store (CLAUDE.md, "Neutralidad").
 var demoTemplates = []string{"ferreteria", "ropa_calzado"}
 
+// decimalThousand is a thousand pesos.
+var decimalThousand = decimal.NewFromInt(1000)
+
 // end is the last day of history of the small scenarios: from December to
 // March, so they have a season and a quiet month.
 var end = time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)

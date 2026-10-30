@@ -102,7 +102,7 @@ func (h *history) charge(s *Sale) {
 	if len(credit) > 0 && h.rng.IntN(2) == 0 {
 		s.Customer = credit[h.rng.IntN(len(credit))]
 		total := h.s.Total(*s)
-		limit := h.s.Customers[s.Customer].CreditLimit.Mul(decimal.NewFromInt(creditMargin)).Div(decimal.NewFromInt(100))
+		limit := h.creditRoom(h.s.Customers[s.Customer])
 		if h.rng.IntN(2) == 0 && !h.owed[s.Customer].Add(total).GreaterThan(limit) {
 			s.Credit, s.Method = true, "credit"
 			h.owed[s.Customer] = h.owed[s.Customer].Add(total)
@@ -110,6 +110,17 @@ func (h *history) charge(s *Sale) {
 		return
 	}
 	s.Customer = h.rng.IntN(len(h.s.Customers))
+}
+
+// creditRoom is the most a customer may owe: their limit with a margin, or
+// half of it for one who never pays, because the shop stops giving credit
+// to whoever does not pay.
+func (h *history) creditRoom(c Customer) decimal.Decimal {
+	share := int64(creditMargin)
+	if c.Defaulter {
+		share = defaulterShare
+	}
+	return c.CreditLimit.Mul(decimal.NewFromInt(share)).Div(decimal.NewFromInt(100))
 }
 
 // creditCustomers are the indexes of the customers with credit.

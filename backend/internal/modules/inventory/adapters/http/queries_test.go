@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/app"
@@ -81,6 +82,16 @@ func TestListStock(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		require.Equal(t, app.StockQuery{LocationID: locationID, VariantID: &variantID, Limit: 5, Offset: 10}, uc.stockQuery)
+	})
+
+	t.Run("pasa las variantes de una búsqueda en el catálogo", func(t *testing.T) {
+		first, second := newID(), newID()
+		uc := &stubUseCases{}
+		rec := serve(t, uc, &owner, http.MethodGet,
+			"/api/v1/locations/"+locationID.String()+"/stock?variant_ids="+first.String()+"&variant_ids="+second.String(), "")
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Equal(t, []uuid.UUID{first, second}, uc.stockQuery.VariantIDs)
 	})
 
 	t.Run("sede inexistente responde 404 location_not_found", func(t *testing.T) {

@@ -40,20 +40,23 @@ export function TableRow({ selected, className, ...rest }: RowProps) {
   return <tr className={clsx(styles.row, className)} aria-selected={selected ? true : undefined} {...rest} />;
 }
 
-/** numeric: prices and quantities, right-aligned with tabular figures. */
-type CellProps<T> = T & { numeric?: boolean };
+/**
+ * numeric: prices and quantities, right-aligned with tabular figures. wide: a
+ * column that only shows from a tablet up (md), or from lg for a table of many
+ * figures; below it a TableNarrow in another cell says what it does, so the
+ * table fits without scrolling sideways.
+ */
+type CellProps<T> = T & { numeric?: boolean; wide?: boolean | 'lg' };
 
-export function TableHeaderCell({ numeric, scope = 'col', className, ...rest }: CellProps<ComponentProps<'th'>>) {
-  return (
-    <th
-      scope={scope}
-      className={clsx(styles.headerCell, className)}
-      data-numeric={numeric ? true : undefined}
-      {...rest}
-    />
-  );
+const cellData = (numeric?: boolean, wide?: boolean | 'lg') => ({
+  'data-numeric': numeric ? true : undefined,
+  'data-wide': wide === false ? undefined : wide,
+});
+
+export function TableHeaderCell({ numeric, wide, scope = 'col', className, ...rest }: CellProps<ComponentProps<'th'>>) {
+  return <th scope={scope} className={clsx(styles.headerCell, className)} {...cellData(numeric, wide)} {...rest} />;
 }
 
-export function TableCell({ numeric, className, ...rest }: CellProps<ComponentProps<'td'>>) {
-  return <td className={clsx(styles.cell, className)} data-numeric={numeric ? true : undefined} {...rest} />;
+export function TableCell({ numeric, wide, className, ...rest }: CellProps<ComponentProps<'td'>>) {
+  return <td className={clsx(styles.cell, className)} {...cellData(numeric, wide)} {...rest} />;
 }

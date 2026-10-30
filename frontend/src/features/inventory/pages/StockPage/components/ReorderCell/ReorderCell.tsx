@@ -4,10 +4,10 @@ import type { StockLevel } from '../../../../api/types';
 import { ReorderRuleDialog } from '../ReorderRuleDialog/ReorderRuleDialog';
 import styles from './ReorderCell.module.scss';
 
-type Props = { level: StockLevel; name?: string; canEdit: boolean };
+type Props = { level: StockLevel; name?: string; unit?: string; canEdit: boolean };
 
 /** The variant's minimum and maximum at the location and, for who adjusts stock, the button to change them. */
-export function ReorderCell({ level, name = 'la variante', canEdit }: Props) {
+export function ReorderCell({ level, name = 'la variante', unit, canEdit }: Props) {
   const rule = level.reorder;
   return (
     <TableCell numeric>
@@ -17,6 +17,7 @@ export function ReorderCell({ level, name = 'la variante', canEdit }: Props) {
           <ReorderRuleDialog
             level={level}
             name={name}
+            unit={unit}
             trigger={<IconButton label={`Mínimo y máximo de ${name}`} icon={<IconEdit />} />}
           />
         )}

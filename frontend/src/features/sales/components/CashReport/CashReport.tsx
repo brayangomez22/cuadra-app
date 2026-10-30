@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { formatDateTime, formatMoney } from '@/shared/format';
 import type { CashSession } from '../../api/types';
-import { resultLabels } from '../../model/cash/cashLabels';
+import { cashResult } from '../../model/cash/cashResult';
 import { negated } from '../../model/cash/negated';
 import type { Paper } from '../../model/paper';
 import styles from './CashReport.module.scss';
@@ -49,7 +49,7 @@ export function CashReport({ session, business, location, cashier, paper, classN
         <ReportFigure term="Egresos" value={formatMoney(negated(c.cash_out))} />
         <ReportFigure term="Esperado" value={formatMoney(c.expected)} strong />
         <ReportFigure term="Contado" value={formatMoney(c.counted)} strong />
-        <ReportFigure term={`Diferencia (${resultLabels[c.result]})`} value={formatMoney(c.difference)} strong />
+        <ReportFigure term={`Diferencia (${cashResult(c).label})`} value={formatMoney(c.difference)} strong />
       </dl>
 
       <CashReportBreakdown closing={c} movements={session.movements} />

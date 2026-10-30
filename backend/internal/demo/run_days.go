@@ -11,14 +11,17 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 )
 
-// The drawers: each location's opens at openingHour with openingFloat and
-// closes at closingMinute, counted in these bills and coins.
-const closingMinute = 19*60 + 30
-
+// The drawers: each location's opens at the day's Opening with openingFloat
+// and closes at its Closing, counted in these bills and coins.
 var (
 	openingFloat  = decimal.NewFromInt(200_000)
 	denominations = []int64{100_000, 50_000, 20_000, 10_000, 5_000, 2_000, 1_000, 500, 200, 100, 50}
 )
+
+// billShare is how much of what is left a drawer holds in each big bill, in
+// percent: a cashier gives change, so the drawer mixes bills instead of
+// holding the fewest. The smaller bills and the coins take the rest.
+var billShare = map[int64]int64{100_000: 40, 50_000: 50, 20_000: 60, 10_000: 70, 5_000: 70, 2_000: 70}
 
 // expectedCash is what a drawer should have at closing.
 type expectedCash = decimal.Decimal
@@ -40,10 +43,9 @@ func (r *runner) seller(loc int) string {
 // opening, then the drawers open, the payments and the sales, and the
 // drawers close.
 func (r *runner) writeDay(ctx context.Context, d *Day) error {
-	opening := at(d.Date, openingHour*60)
 	open := false
 	for _, e := range d.Events() {
-		if !open && !e.At.Before(opening) {
+		if !open && !e.At.Before(d.Opening) {
 			if err := r.openDrawers(ctx, d); err != nil {
 				return err
 			}
@@ -76,7 +78,7 @@ func (r *runner) write(ctx context.Context, d *Day, e Event) error {
 
 // openDrawers opens every location's drawer with its seller.
 func (r *runner) openDrawers(ctx context.Context, d *Day) error {
-	r.clock.Set(at(d.Date, openingHour*60))
+	r.clock.Set(d.Opening)
 	r.sessions = r.sessions[:0]
 	r.expected = r.expected[:0]
 	for loc, id := range r.ids.locations {
@@ -92,13 +94,14 @@ func (r *runner) openDrawers(ctx context.Context, d *Day) error {
 	return nil
 }
 
-// closeDrawers counts each drawer as it should be, down to the smallest
-// coin: what is under 50 pesos stays as a small difference.
+// closeDrawers counts each drawer as it should be, off by the day's
+// difference, down to the smallest coin: what is under 50 pesos stays as a
+// small difference.
 func (r *runner) closeDrawers(ctx context.Context, d *Day) error {
-	r.clock.Set(at(d.Date, closingMinute))
+	r.clock.Set(d.Closing)
 	for loc, id := range r.sessions {
 		res, err := r.api.CloseCashSessionWithResponse(ctx, id, apiclient.CloseCashSessionInput{
-			Counts: count(r.expected[loc]),
+			Counts: count(r.expected[loc].Add(d.CashDifference[loc])),
 		}, r.as(r.seller(loc)))
 		if err := expect("close drawer", res, err); err != nil {
 			return err
@@ -107,12 +110,17 @@ func (r *runner) closeDrawers(ctx context.Context, d *Day) error {
 	return nil
 }
 
-// count splits amount in the fewest bills and coins.
+// count splits amount in bills and coins: part of it in each big bill
+// (billShare), the rest in the fewest smaller ones.
 func count(amount decimal.Decimal) []apiclient.DenominationCount {
 	left := amount.IntPart()
 	var out []apiclient.DenominationCount
 	for _, d := range denominations {
-		if n := left / d; n > 0 {
+		n := left / d
+		if share, ok := billShare[d]; ok {
+			n = n * share / 100
+		}
+		if n > 0 {
 			out = append(out, apiclient.DenominationCount{Denomination: httpx.FormatMoney(decimal.NewFromInt(d)), Quantity: n})
 			left -= n * d
 		}

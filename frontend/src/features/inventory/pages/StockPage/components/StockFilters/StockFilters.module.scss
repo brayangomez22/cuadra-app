@@ -1,0 +1,13 @@
+@use '@/styles/abstracts' as *;
+
+// The location and the search, stacked on a phone and side by side from sm.
+.root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+
+  @include respond-to(sm) {
+    grid-template-columns: minmax(0, 16rem) minmax(0, 1fr);
+    align-items: end;
+  }
+}

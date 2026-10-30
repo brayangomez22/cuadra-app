@@ -2,3 +2,12 @@
 .totals {
   font-weight: var(--font-weight-bold);
 }
+
+.amount[data-zero='true'] {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+}
+
+.overdue {
+  color: var(--color-text-default);
+}

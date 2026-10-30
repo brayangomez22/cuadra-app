@@ -27,31 +27,64 @@ suppliers:
 families:
   - category: Mujer
     unit: und
-    names: [Blusa, Camiseta, Jean, Vestido, Falda, Chaqueta, Leggings, Saco]
-    specs: [básica, estampada, de lino, de rayas, manga larga, manga corta, ajustada, oversize]
-    brands: [Studio F, ELA, Pat Primo, Koaj]
+    names: [Blusa, Camiseta, Falda, Chaqueta]
+    specs: [básica, estampada, de lino, de rayas, ajustada, oversize, de algodón, clásica]
+    brands: [Alma Rosa, Lirio, Nativa, Bruma]
     attributes: {material: Algodón, genero: Mujer}
     price: [35000, 190000]
     quantity: 2
     axes:
       - {name: talla, values: [XS, S, M, L, XL]}
       - {name: color, values: [Negro, Blanco, Azul, Rojo, Beige]}
+  - category: Mujer
+    unit: und
+    names: [Jean, Vestido, Saco, Pantalón]
+    specs: [básico, estampado, de lino, de rayas, ajustado, oversize, de algodón, clásico]
+    brands: [Alma Rosa, Lirio, Nativa, Bruma]
+    attributes: {material: Algodón, genero: Mujer}
+    price: [45000, 190000]
+    quantity: 2
+    axes:
+      - {name: talla, values: [XS, S, M, L, XL]}
+      - {name: color, values: [Negro, Blanco, Azul, Rojo, Beige]}
   - category: Hombre
     unit: und
-    names: [Camisa, Camiseta, Jean, Pantalón, Bermuda, Chaqueta, Polo, Buzo]
-    specs: [clásica, slim, estampada, de lino, de cuadros, manga larga, manga corta, deportiva]
-    brands: [Arturo Calle, Tennis, Gef, Koaj]
+    names: [Camisa, Camiseta, Bermuda, Chaqueta]
+    specs: [clásica, slim, estampada, de lino, de cuadros, de algodón, deportiva, básica]
+    brands: [Cordillera, Roble, Andino Wear, Bruma]
     attributes: {material: Algodón, genero: Hombre}
     price: [39000, 210000]
     quantity: 2
     axes:
       - {name: talla, values: [S, M, L, XL, XXL]}
       - {name: color, values: [Negro, Blanco, Gris, Azul, Beige]}
+  - category: Hombre
+    unit: und
+    names: [Jean, Pantalón, Polo, Buzo]
+    specs: [clásico, slim, estampado, de lino, de cuadros, de algodón, deportivo, básico]
+    brands: [Cordillera, Roble, Andino Wear, Bruma]
+    attributes: {material: Algodón, genero: Hombre}
+    price: [45000, 210000]
+    quantity: 2
+    axes:
+      - {name: talla, values: [S, M, L, XL, XXL]}
+      - {name: color, values: [Negro, Blanco, Gris, Azul, Beige]}
   - category: Niños
     unit: und
-    names: [Camiseta, Pantalón, Pijama, Vestido, Sudadera, Chaqueta, Short, Conjunto]
+    names: [Camiseta, Pijama, Sudadera, Chaqueta]
     specs: [estampada, básica, de algodón, de dibujos, escolar, deportiva, de rayas, abrigada]
-    brands: [Offcorss, Baby Fresh, Epk, Gef]
+    brands: [Pequeños Pasos, Trompo, Arcoíris, Cometa]
+    attributes: {material: Algodón, genero: Unisex}
+    price: [25000, 120000]
+    quantity: 3
+    axes:
+      - {name: talla, values: [XS, S, M, L]}
+      - {name: color, values: [Blanco, Azul, Rojo, Gris]}
+  - category: Niños
+    unit: und
+    names: [Pantalón, Vestido, Short, Conjunto]
+    specs: [estampado, básico, de algodón, de dibujos, escolar, deportivo, de rayas, abrigado]
+    brands: [Pequeños Pasos, Trompo, Arcoíris, Cometa]
     attributes: {material: Algodón, genero: Unisex}
     price: [25000, 120000]
     quantity: 3
@@ -60,30 +93,51 @@ families:
       - {name: color, values: [Blanco, Azul, Rojo, Gris]}
   - category: Calzado
     unit: par
-    names: [Tenis, Zapato, Sandalia, Bota, Baleta, Mocasín, Chancla, Botín]
-    specs: [de cuero, deportivo, casual, de lona, formal, de plataforma, urbano, clásico]
-    brands: [Bosi, Vélez, Spring Step, Croydon]
+    names: [Tenis, Zapato, Mocasín, Botín]
+    specs: [de cuero, deportivo, casual, de lona, formal, urbano, clásico, de gamuza]
+    brands: [Paso Firme, Huella, Andariego, Suela Viva]
     attributes: {material: Cuero, genero: Unisex}
     price: [49000, 320000]
     quantity: 1
     axes:
       - {name: talla calzado, values: ["35", "36", "37", "38", "39", "40", "41", "42", "43"]}
       - {name: color, values: [Negro, Blanco, Beige]}
+  - category: Calzado
+    unit: par
+    names: [Sandalia, Bota, Baleta, Chancla]
+    specs: [de cuero, deportiva, casual, de lona, formal, de plataforma, urbana, clásica]
+    brands: [Paso Firme, Huella, Andariego, Suela Viva]
+    attributes: {material: Cuero, genero: Unisex}
+    price: [39000, 280000]
+    quantity: 1
+    axes:
+      - {name: talla calzado, values: ["35", "36", "37", "38", "39", "40", "41", "42", "43"]}
+      - {name: color, values: [Negro, Blanco, Beige]}
   - category: Accesorios
     unit: und
-    names: [Gorra, Cinturón, Bolso, Billetera, Bufanda, Medias, Morral, Sombrero]
+    names: [Cinturón, Bolso, Morral, Sombrero]
     specs: [de cuero, de tela, clásico, deportivo, estampado, tejido, pequeño, grande]
-    brands: [Vélez, Totto, Mario Hernández, Koaj]
+    brands: [Talabartería del Valle, Morralito, Huella, Bruma]
     attributes: {material: Cuero, genero: Unisex}
-    price: [15000, 280000]
+    price: [25000, 280000]
+    quantity: 2
+    axes:
+      - {name: color, values: [Negro, Gris, Azul, Rojo, Beige]}
+  - category: Accesorios
+    unit: und
+    names: [Gorra, Billetera, Bufanda, Riñonera]
+    specs: [de cuero, de tela, clásica, deportiva, estampada, tejida, pequeña, grande]
+    brands: [Talabartería del Valle, Morralito, Huella, Bruma]
+    attributes: {material: Cuero, genero: Unisex}
+    price: [15000, 150000]
     quantity: 2
     axes:
       - {name: color, values: [Negro, Gris, Azul, Rojo, Beige]}
   - category: Mujer
     unit: und
-    names: [Top, Body, Pantalón, Short, Cárdigan, Overol, Enterizo, Pijama]
+    names: [Top, Body, Short, Cárdigan, Overol, Enterizo, Pantalón, Conjunto]
     specs: [deportivo, de fiesta, de algodón, de seda, tejido, de cuadros, básico, estampado]
-    brands: [Studio F, ELA, Pat Primo, Leonisa]
+    brands: [Alma Rosa, Lirio, Nativa, Seda Viva]
     attributes: {material: Poliéster, genero: Mujer}
     price: [29000, 170000]
     quantity: 2

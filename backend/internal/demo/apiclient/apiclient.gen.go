@@ -3128,6 +3128,10 @@ type ListStockParams struct {
 	// VariantId Solo la existencia de esta variante.
 	VariantId *openapi_types.UUID `form:"variant_id,omitempty" json:"variant_id,omitempty"`
 
+	// VariantIds Solo la existencia de estas variantes (hasta 100). Sirve para buscar en el inventario por nombre, SKU o
+	// código: el cliente busca en el catálogo y pide aquí la existencia de lo que encontró.
+	VariantIds *[]openapi_types.UUID `form:"variant_ids,omitempty" json:"variant_ids,omitempty"`
+
 	// Limit Cantidad máxima de resultados.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
@@ -3932,8 +3936,8 @@ type ClientInterface interface {
 	// ListReorderAlerts Variantes por reponer
 	//
 	// Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
-	// (máximo − existencia, nunca negativa), de la que está más por debajo de su mínimo a la que menos. Sin
-	// `location_id`, las de todas las sedes.
+	// (máximo − existencia, nunca negativa). Primero las agotadas y después de la que está más por debajo de su
+	// mínimo en proporción a la que menos (1 de 5 antes que 40 de 50). Sin `location_id`, las de todas las sedes.
 	//
 	// Corresponds with GET /api/v1/inventory/reorder-alerts (the `ListReorderAlerts` operationId).
 	ListReorderAlerts(ctx context.Context, params *ListReorderAlertsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5654,8 +5658,8 @@ func (c *Client) ReceiveStock(ctx context.Context, body ReceiveStockJSONRequestB
 // ListReorderAlerts Variantes por reponer
 //
 // Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
-// (máximo − existencia, nunca negativa), de la que está más por debajo de su mínimo a la que menos. Sin
-// `location_id`, las de todas las sedes.
+// (máximo − existencia, nunca negativa). Primero las agotadas y después de la que está más por debajo de su
+// mínimo en proporción a la que menos (1 de 5 antes que 40 de 50). Sin `location_id`, las de todas las sedes.
 //
 // Corresponds with GET /api/v1/inventory/reorder-alerts (the `ListReorderAlerts` operationId).
 func (c *Client) ListReorderAlerts(ctx context.Context, params *ListReorderAlertsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -9068,6 +9072,18 @@ func NewListStockRequest(server string, locationId LocationId, params *ListStock
 
 		}
 
+		if params.VariantIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "variant_ids", *params.VariantIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.Limit != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
@@ -12158,8 +12174,8 @@ type ClientWithResponsesInterface interface {
 	// ListReorderAlertsWithResponse Variantes por reponer
 	//
 	// Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
-	// (máximo − existencia, nunca negativa), de la que está más por debajo de su mínimo a la que menos. Sin
-	// `location_id`, las de todas las sedes.
+	// (máximo − existencia, nunca negativa). Primero las agotadas y después de la que está más por debajo de su
+	// mínimo en proporción a la que menos (1 de 5 antes que 40 de 50). Sin `location_id`, las de todas las sedes.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -21002,8 +21018,8 @@ func (c *ClientWithResponses) ReceiveStockWithResponse(ctx context.Context, body
 // ListReorderAlertsWithResponse Variantes por reponer
 //
 // Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
-// (máximo − existencia, nunca negativa), de la que está más por debajo de su mínimo a la que menos. Sin
-// `location_id`, las de todas las sedes.
+// (máximo − existencia, nunca negativa). Primero las agotadas y después de la que está más por debajo de su
+// mínimo en proporción a la que menos (1 de 5 antes que 40 de 50). Sin `location_id`, las de todas las sedes.
 //
 // Returns a wrapper object for the known response body format(s).
 //

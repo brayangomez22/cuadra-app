@@ -1,8 +1,7 @@
 import { variantName } from '@/features/catalog';
 import { formatMoney, formatPercent, formatQuantity } from '@/shared/format';
-import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '@/shared/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableNarrow, TableRow } from '@/shared/ui';
 import type { PurchaseLine } from '../../../../api/types';
-import styles from './PurchaseLines.module.scss';
 
 /**
  * The lines as the invoice reads them, in the unit they were bought in. A
@@ -18,18 +17,18 @@ export function PurchaseLines({ lines }: { lines: PurchaseLine[] }) {
       <TableHead>
         <TableRow>
           <TableHeaderCell>Producto</TableHeaderCell>
-          <TableHeaderCell numeric className={styles.wide}>
+          <TableHeaderCell numeric wide>
             Cantidad
           </TableHeaderCell>
           {inUnits && (
-            <TableHeaderCell numeric className={styles.wide}>
+            <TableHeaderCell numeric wide>
               Entró
             </TableHeaderCell>
           )}
-          <TableHeaderCell numeric className={styles.wide}>
+          <TableHeaderCell numeric wide>
             Costo unitario
           </TableHeaderCell>
-          <TableHeaderCell numeric className={styles.wide}>
+          <TableHeaderCell numeric wide>
             IVA
           </TableHeaderCell>
           <TableHeaderCell numeric>Total</TableHeaderCell>
@@ -52,22 +51,22 @@ function LineRow({ line, inUnits }: { line: PurchaseLine; inUnits: boolean }) {
     <TableRow>
       <TableCell>
         {variantName(line.product_name, line.variant_label ?? '')}
-        <span className={styles.narrow}>{`${quantity} × ${formatMoney(line.unit_cost)} · ${rate}`}</span>
+        <TableNarrow>{`${quantity} × ${formatMoney(line.unit_cost)} · ${rate}`}</TableNarrow>
       </TableCell>
-      <TableCell numeric className={styles.wide}>
+      <TableCell numeric wide>
         {quantity}
       </TableCell>
       {inUnits && (
-        <TableCell numeric className={styles.wide}>
+        <TableCell numeric wide>
           {line.unit_id
             ? `${formatQuantity(line.base_quantity)} (${line.unit_code} de ${formatQuantity(line.unit_factor)})`
             : '—'}
         </TableCell>
       )}
-      <TableCell numeric className={styles.wide}>
+      <TableCell numeric wide>
         {formatMoney(line.unit_cost)}
       </TableCell>
-      <TableCell numeric className={styles.wide}>
+      <TableCell numeric wide>
         {formatPercent(line.tax_rate, 'rate')}
       </TableCell>
       <TableCell numeric>{formatMoney(line.total)}</TableCell>

@@ -183,4 +183,21 @@ func TestStockLevelsByVariantAndLot(t *testing.T) {
 		require.Equal(t, 1, page.Total, "the core lists only the stock without a lot")
 		require.True(t, dec("2").Equal(page.Items[0].Quantity()))
 	})
+
+	t.Run("filtra las existencias de una sede por varias variantes, para buscar por nombre en el catálogo", func(t *testing.T) {
+		tenant := f.createTenant(t)
+		loc := f.createLocation(t, tenant, "Bodega")
+		cement, shirt, other := f.createVariant(t, tenant), f.createVariant(t, tenant), f.createVariant(t, tenant)
+		for _, v := range []uuid.UUID{cement, shirt, other} {
+			f.receive(t, tenant, v, loc.ID(), "3", "100")
+		}
+
+		page, err := f.stock.ListLevels(t.Context(), tenant, domain.StockFilter{
+			LocationID: loc.ID(), VariantIDs: []uuid.UUID{cement, shirt, newID()}, Limit: 10,
+		})
+		require.NoError(t, err)
+		require.Equal(t, 2, page.Total)
+		got := []uuid.UUID{page.Items[0].VariantID(), page.Items[1].VariantID()}
+		require.ElementsMatch(t, []uuid.UUID{cement, shirt}, got)
+	})
 }

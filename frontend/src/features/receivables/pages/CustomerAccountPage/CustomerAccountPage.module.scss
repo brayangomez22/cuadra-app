@@ -5,13 +5,12 @@
   gap: var(--space-8);
 }
 
-// The figures and the form side by side once there is room.
+// The figures, and under them the way to change the limit and term.
 .credit {
   display: grid;
-  gap: var(--space-6);
-  align-items: start;
+  gap: var(--space-4);
 
-  @include respond-to(lg) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  > button {
+    justify-self: start;
   }
 }

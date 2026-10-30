@@ -10,14 +10,15 @@
   font-weight: var(--font-weight-semibold);
 }
 
-// Two columns on a phone, four once there is room.
+// Two columns on a phone, four once the page is wide enough for a figure in
+// the millions in each.
 .figures {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
   margin: 0;
 
-  @include respond-to(sm) {
+  @include respond-to(md) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
@@ -36,6 +37,9 @@
     font-size: var(--font-size-xl);
     font-weight: var(--font-weight-bold);
     color: var(--color-text-default);
+
+    // A big amount breaks at its separators before it leaves the card.
+    overflow-wrap: anywhere;
 
     @include numeric;
   }

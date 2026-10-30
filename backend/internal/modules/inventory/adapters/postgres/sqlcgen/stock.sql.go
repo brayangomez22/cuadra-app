@@ -37,15 +37,17 @@ SELECT count(*)
 FROM stock_levels
 WHERE location_id = $1 AND lot_id IS NULL
   AND ($2::uuid IS NULL OR variant_id = $2)
+  AND ($3::uuid[] IS NULL OR variant_id = ANY($3::uuid[]))
 `
 
 type CountStockLevelsParams struct {
 	LocationID uuid.UUID
 	VariantID  *uuid.UUID
+	VariantIds []uuid.UUID
 }
 
 func (q *Queries) CountStockLevels(ctx context.Context, arg CountStockLevelsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countStockLevels, arg.LocationID, arg.VariantID)
+	row := q.db.QueryRow(ctx, countStockLevels, arg.LocationID, arg.VariantID, arg.VariantIds)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -241,13 +243,15 @@ SELECT tenant_id, variant_id, location_id, quantity, average_cost
 FROM stock_levels
 WHERE location_id = $1 AND lot_id IS NULL
   AND ($2::uuid IS NULL OR variant_id = $2)
+  AND ($3::uuid[] IS NULL OR variant_id = ANY($3::uuid[]))
 ORDER BY variant_id
-LIMIT $4 OFFSET $3
+LIMIT $5 OFFSET $4
 `
 
 type ListStockLevelsParams struct {
 	LocationID uuid.UUID
 	VariantID  *uuid.UUID
+	VariantIds []uuid.UUID
 	RowOffset  int32
 	RowLimit   int32
 }
@@ -264,6 +268,7 @@ func (q *Queries) ListStockLevels(ctx context.Context, arg ListStockLevelsParams
 	rows, err := q.db.Query(ctx, listStockLevels,
 		arg.LocationID,
 		arg.VariantID,
+		arg.VariantIds,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

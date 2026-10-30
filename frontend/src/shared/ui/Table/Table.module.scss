@@ -40,6 +40,22 @@
 
     @include numeric;
   }
+
+  &[data-wide] {
+    display: none;
+  }
+
+  &[data-wide='true'] {
+    @include respond-to(md) {
+      display: table-cell;
+    }
+  }
+
+  &[data-wide='lg'] {
+    @include respond-to(lg) {
+      display: table-cell;
+    }
+  }
 }
 
 .head {

@@ -112,21 +112,25 @@ func TestReorderAlerts(t *testing.T) {
 		require.Equal(t, 3, page.Total)
 	})
 
-	t.Run("ordena de la más por debajo del mínimo a la que menos y filtra por sede", func(t *testing.T) {
+	t.Run("pone primero lo agotado, luego lo más lejos de su mínimo en proporción, y filtra por sede", func(t *testing.T) {
 		tenant := f.createTenant(t)
 		north, south := f.createLocation(t, tenant, "Norte"), f.createLocation(t, tenant, "Sur")
-		closer, further := f.createVariant(t, tenant), f.createVariant(t, tenant)
-		f.receive(t, tenant, closer, north.ID(), "4", "100")
+		closer, further, empty := f.createVariant(t, tenant), f.createVariant(t, tenant), f.createVariant(t, tenant)
+		// closer has 40 of 50 (80 %) and further 1 of 5 (20 %): further is
+		// worse though closer lacks more units. empty, with none, goes first.
+		f.receive(t, tenant, closer, north.ID(), "40", "100")
 		f.receive(t, tenant, further, north.ID(), "1", "100")
-		f.saveRule(t, tenant, closer, north.ID(), "5", "10")
+		f.saveRule(t, tenant, closer, north.ID(), "50", "80")
 		f.saveRule(t, tenant, further, north.ID(), "5", "10")
+		f.saveRule(t, tenant, empty, north.ID(), "2", "4")
 		f.saveRule(t, tenant, closer, south.ID(), "1", "3")
 
 		page := f.alerts(t, tenant, new(north.ID()))
-		require.Equal(t, 2, page.Total)
-		require.Equal(t, further, page.Items[0].Rule.VariantID())
-		require.Equal(t, closer, page.Items[1].Rule.VariantID())
-		require.Equal(t, 3, f.alerts(t, tenant, nil).Total)
+		require.Equal(t, 3, page.Total)
+		require.Equal(t, empty, page.Items[0].Rule.VariantID())
+		require.Equal(t, further, page.Items[1].Rule.VariantID())
+		require.Equal(t, closer, page.Items[2].Rule.VariantID())
+		require.Equal(t, 4, f.alerts(t, tenant, nil).Total)
 	})
 
 	t.Run("suma la existencia de todos los lotes", func(t *testing.T) {

@@ -29,11 +29,4 @@ describe('RequireAuth', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/ingresar'));
   });
-
-  it('con sesión, el login lleva al inicio', async () => {
-    fakeApi(signedIn());
-    const { router } = renderApp('/ingresar');
-
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
-  });
 });

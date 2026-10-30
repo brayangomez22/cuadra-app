@@ -17,7 +17,7 @@ describe('ReceiptPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /Camiseta básica \(Azul · M\)/ }));
       await pickLocation('Bodega principal');
       await userEvent.type(screen.getByLabelText('Cantidad'), '12');
-      expect(screen.getByLabelText('Costo unitario')).toHaveValue('15000,00');
+      expect(screen.getByLabelText('Costo unitario')).toHaveValue('15000');
       await register();
 
       expect(await screen.findByText('Entrada registrada')).toBeInTheDocument();
@@ -26,7 +26,7 @@ describe('ReceiptPage', () => {
         variant_id: variantId('M', 'Azul'),
         location_id: ids.main,
         quantity: '12',
-        unit_cost: '15000.00',
+        unit_cost: '15000',
       });
     });
 
@@ -51,7 +51,7 @@ describe('ReceiptPage', () => {
       const chosen = await screen.findByRole('group', { name: 'Producto elegido' });
 
       expect(within(chosen).getByText('Camiseta básica (Rojo · L)')).toBeInTheDocument();
-      expect(screen.getByLabelText('Costo unitario')).toHaveValue('15000,00');
+      expect(screen.getByLabelText('Costo unitario')).toHaveValue('15000');
     });
   });
 });

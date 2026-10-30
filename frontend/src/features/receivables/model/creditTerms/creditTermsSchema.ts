@@ -22,7 +22,7 @@ export type CreditTermsValues = z.input<typeof creditTermsSchema>;
 /** The credit's limit and term as the form shows them: "1500000.00" → "1500000". */
 export function creditTermsDefaults(credit: Pick<CustomerCredit, 'credit_limit' | 'term_days'>): CreditTermsValues {
   return {
-    credit_limit: toDecimalInput(credit.credit_limit.replace(/\.00$/, '')),
+    credit_limit: toDecimalInput(credit.credit_limit),
     term_days: String(credit.term_days),
   };
 }

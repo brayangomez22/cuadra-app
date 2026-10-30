@@ -42,6 +42,7 @@ export function KardexMovements({ kardex, caption, withAxes, filters, locations,
             caption={caption}
             movements={kardex.data?.items ?? []}
             locations={locations}
+            allLocations={!filters.locationId}
             canSeeCost={canSeeCost}
           />
           <Pagination

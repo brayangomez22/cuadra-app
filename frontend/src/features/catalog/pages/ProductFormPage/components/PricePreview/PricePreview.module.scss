@@ -1,0 +1,20 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: block;
+  color: var(--color-text-muted);
+
+  @include numeric;
+
+  // Below cost is a state: in words and in the danger color.
+  &[data-below='true'] {
+    color: var(--color-feedback-danger);
+  }
+}
+
+// The price the customer pays is the figure of the section.
+.figure {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-default);
+}

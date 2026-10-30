@@ -36,6 +36,14 @@ describe('CustomerAccountPage', () => {
     expect(open.getByRole('row', { name: /Vence el 25\/11\/2026/ })).toBeInTheDocument();
   });
 
+  it('avisa de la mora: cuánto está vencido y cuántos días lleva la cuenta más antigua', async () => {
+    receivablesApi();
+    renderApp(builderAccount);
+
+    const alert = (await screen.findByText('En mora')).closest('[role="status"]');
+    expect(plain(alert?.textContent)).toContain('$ 150.000 vencido en 1 venta; la más antigua lleva 8 días.');
+  });
+
   it('guarda el cupo y el plazo', async () => {
     const api = receivablesApi({
       routes: {
@@ -44,7 +52,8 @@ describe('CustomerAccountPage', () => {
     });
     renderApp(builderAccount);
 
-    const limit = await screen.findByLabelText('Cupo de crédito');
+    await user().click(await screen.findByRole('button', { name: 'Cambiar cupo y plazo' }));
+    const limit = screen.getByLabelText('Cupo de crédito');
     expect(limit).toHaveValue('1500000');
     await user().clear(limit);
     await user().type(limit, '2.000.000');
@@ -53,6 +62,7 @@ describe('CustomerAccountPage', () => {
     await user().click(screen.getByRole('button', { name: 'Guardar cupo' }));
 
     expect(await screen.findByText('Cupo guardado')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Cupo de crédito')).not.toBeInTheDocument();
     const [put] = api.calls(`PUT /api/v1/customers/${customerIds.builder}/credit`);
     expect(await put!.json()).toEqual({ credit_limit: '2000000', term_days: 45 });
   });
@@ -68,7 +78,8 @@ describe('CustomerAccountPage', () => {
     });
     renderApp(builderAccount);
 
-    await user().click(await screen.findByRole('button', { name: 'Guardar cupo' }));
+    await user().click(await screen.findByRole('button', { name: 'Cambiar cupo y plazo' }));
+    await user().click(screen.getByRole('button', { name: 'Guardar cupo' }));
 
     expect(await screen.findByLabelText('Plazo en días')).toHaveAccessibleDescription(/El plazo no es válido/);
   });
@@ -78,7 +89,7 @@ describe('CustomerAccountPage', () => {
     renderApp(builderAccount);
 
     expect(await screen.findByRole('button', { name: 'Registrar abono' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Guardar cupo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cambiar cupo y plazo' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Editar cliente' })).toBeInTheDocument();
   });
 

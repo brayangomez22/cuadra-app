@@ -35,6 +35,32 @@ func TestScenarioCredit(t *testing.T) {
 			require.Positive(t, credit)
 		})
 
+		t.Run("a un cliente moroso se le deja de fiar cuando debe la mitad de su cupo: "+template, func(t *testing.T) {
+			s := small(t, template, 4)
+			owed := make([]decimal.Decimal, len(s.Customers))
+			defaulters := 0
+			for _, d := range s.Days {
+				for _, sale := range d.Sales {
+					if !sale.Credit || !s.Customers[sale.Customer].Defaulter {
+						continue
+					}
+					owed[sale.Customer] = owed[sale.Customer].Add(s.Total(sale))
+					half := s.Customers[sale.Customer].CreditLimit.Div(decimal.NewFromInt(2))
+					require.False(t, owed[sale.Customer].GreaterThan(half), "owes %s over half of the limit", owed[sale.Customer])
+				}
+			}
+			// A defaulter still owes something: the shop gave credit before it stopped.
+			for i, c := range s.Customers {
+				if c.Defaulter {
+					defaulters++
+					require.True(t, owed[i].IsPositive(), "%s never got credit", c.Name)
+				}
+			}
+			if template == "ferreteria" {
+				require.Positive(t, defaulters)
+			}
+		})
+
 		t.Run("queda cartera vencida para el informe de edades: "+template, func(t *testing.T) {
 			s := small(t, template, 4)
 			last := s.Days[len(s.Days)-1].Date
@@ -85,6 +111,16 @@ func TestScenarioFullScale(t *testing.T) {
 			require.GreaterOrEqual(t, len(variants(s)), 3000)
 			require.Len(t, s.Days, demo.HistoryDays)
 			require.Len(t, s.Locations, 2)
+			stock := finalStock(s)
+			alerts := make([]int, len(s.Locations))
+			for _, r := range s.Reorder {
+				if stock[key{r.Location, r.Product, r.Variant}].LessThanOrEqual(r.Min) {
+					alerts[r.Location]++
+				}
+			}
+			for loc, n := range alerts {
+				require.True(t, n > 0 && n <= 40, "%d alerts at location %d: the list must be worth reading", n, loc)
+			}
 		})
 	}
 }

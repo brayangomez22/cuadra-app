@@ -15,6 +15,26 @@
     text-decoration-color: currentcolor;
   }
 
+  // On a touch screen a finger gets a target of 44px around the link without
+  // moving the text near it. As an inline-block, a name that wraps in a table
+  // cell is one box, so the target covers every line of it.
+  @media (pointer: coarse) {
+    position: relative;
+    display: inline-block;
+    max-inline-size: 100%;
+
+    &::after {
+      position: absolute;
+      inset-block-start: 50%;
+      inset-inline-start: 0;
+      inline-size: 100%;
+      content: '';
+      translate: 0 -50%;
+
+      @include touch-target;
+    }
+  }
+
   &[data-tone='quiet'] {
     text-decoration-color: var(--color-border-strong);
 

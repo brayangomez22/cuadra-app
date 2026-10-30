@@ -59,7 +59,8 @@ func TestScenarioReorder(t *testing.T) {
 			stock := finalStock(s)
 			below := 0
 			for _, r := range s.Reorder {
-				if stock[key{r.Location, r.Product, r.Variant}].LessThan(r.Min) {
+				// At its minimum it is reordered too (domain.ReorderRule.NeedsReorder).
+				if stock[key{r.Location, r.Product, r.Variant}].LessThanOrEqual(r.Min) {
 					below++
 				}
 			}

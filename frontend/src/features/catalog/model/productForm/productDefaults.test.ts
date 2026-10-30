@@ -18,9 +18,9 @@ describe('productDefaults', () => {
   });
 
   it.each([
-    { negocio: 'ferretería', product: aCement(), cost: '28000,00', price: '32000,00' },
-    { negocio: 'ferretería', product: aProduct(), cost: '8333,33', price: '10000,00' },
-    { negocio: 'ropa', product: aGarment(), cost: '15000,00', price: '25000,00' },
+    { negocio: 'ferretería', product: aCement(), cost: '28000', price: '32000' },
+    { negocio: 'ferretería', product: aProduct(), cost: '8333,33', price: '10000' },
+    { negocio: 'ropa', product: aGarment(), cost: '15000', price: '25000' },
   ])('al editar ($negocio) los montos usan coma decimal', ({ product, cost, price }) => {
     const values = productDefaults({ product, units, definitions: [], defaultTaxRate: '0.19' });
 
@@ -35,7 +35,7 @@ describe('productDefaults', () => {
     expect(values.variants[0]).toMatchObject({
       variantId: variantId('S', 'Rojo'),
       sku: 'CAM-S-ROJO',
-      price: '25000,00',
+      price: '25000',
     });
   });
 

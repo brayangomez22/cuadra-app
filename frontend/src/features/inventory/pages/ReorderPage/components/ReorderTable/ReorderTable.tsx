@@ -10,16 +10,22 @@ type Props = {
   loadingProducts: boolean;
 };
 
-/** One row per variant at or below its minimum, the furthest below it first (the API's order). */
+/** One row per variant at or below its minimum: what ran out first, then the furthest below it (the API's order). */
 export function ReorderTable({ caption, alerts, productsById, loadingProducts }: Props) {
   return (
     <Table caption={caption}>
       <TableHead>
         <TableRow>
           <TableHeaderCell>Producto</TableHeaderCell>
-          <TableHeaderCell numeric>Existencia</TableHeaderCell>
-          <TableHeaderCell numeric>Mínimo</TableHeaderCell>
-          <TableHeaderCell numeric>Máximo</TableHeaderCell>
+          <TableHeaderCell numeric wide>
+            Existencia
+          </TableHeaderCell>
+          <TableHeaderCell numeric wide>
+            Mínimo
+          </TableHeaderCell>
+          <TableHeaderCell numeric wide>
+            Máximo
+          </TableHeaderCell>
           <TableHeaderCell numeric>Pedir</TableHeaderCell>
         </TableRow>
       </TableHead>

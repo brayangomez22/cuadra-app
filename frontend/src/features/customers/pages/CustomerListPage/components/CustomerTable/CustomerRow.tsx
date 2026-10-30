@@ -1,7 +1,8 @@
 import { paths } from '@/app/routes/paths';
-import { Badge, TableCell, TableRow, TextLink } from '@/shared/ui';
+import { Badge, ButtonLink, TableCell, TableNarrow, TableRow, TextLink } from '@/shared/ui';
 import type { Customer } from '../../../../api/types';
 import { documentLabel } from '../../../../model/documentLabel';
+import { phoneLabel } from '../../../../model/phoneLabel';
 import styles from './CustomerTable.module.scss';
 
 type Props = {
@@ -14,11 +15,12 @@ type Props = {
 
 /**
  * A customer of the list: the name with its trade name below. For who edits
- * customers, the name is the link to its form: on a phone it stays in view
- * while the other columns scroll.
+ * customers, the name is the link to its form. On a phone the document, the
+ * segment and the phone go under the name, next to the way to its account.
  */
 export function CustomerRow({ customer, segment, canWrite, canReadCredit }: Props) {
-  const contact = [customer.phone, customer.email].filter(Boolean);
+  const phone = customer.phone && phoneLabel(customer.phone);
+  const contact = [phone, customer.email].filter(Boolean);
   return (
     <TableRow>
       <TableCell>
@@ -33,12 +35,13 @@ export function CustomerRow({ customer, segment, canWrite, canReadCredit }: Prop
           {!customer.active && <Badge>Inactivo</Badge>}
         </span>
         {customer.trade_name && <span className={styles.meta}>{customer.trade_name}</span>}
+        <TableNarrow>{[documentLabel(customer), segment, phone].filter(Boolean).join(' · ')}</TableNarrow>
       </TableCell>
-      <TableCell>
+      <TableCell wide>
         <span className={styles.document}>{documentLabel(customer)}</span>
       </TableCell>
-      <TableCell>{segment ?? '—'}</TableCell>
-      <TableCell>
+      <TableCell wide>{segment ?? '—'}</TableCell>
+      <TableCell wide>
         {contact.length === 0
           ? '—'
           : contact.map((value) => (
@@ -48,10 +51,14 @@ export function CustomerRow({ customer, segment, canWrite, canReadCredit }: Prop
             ))}
       </TableCell>
       {canReadCredit && (
-        <TableCell>
-          <TextLink tone="quiet" to={paths.receivables.account(customer.id)} aria-label={`Cuenta de ${customer.name}`}>
+        <TableCell className={styles.account}>
+          <ButtonLink
+            variant="ghost"
+            to={paths.receivables.account(customer.id)}
+            aria-label={`Cuenta de ${customer.name}`}
+          >
             Cuenta
-          </TextLink>
+          </ButtonLink>
         </TableCell>
       )}
     </TableRow>

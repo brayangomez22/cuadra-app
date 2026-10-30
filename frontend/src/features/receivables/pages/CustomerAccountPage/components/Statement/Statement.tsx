@@ -25,9 +25,11 @@ export function Statement({ customerId }: Props) {
             <Table caption="Estado de cuenta" showCaption>
               <TableHead>
                 <TableRow>
-                  <TableHeaderCell>Fecha</TableHeaderCell>
+                  <TableHeaderCell wide>Fecha</TableHeaderCell>
                   <TableHeaderCell>Movimiento</TableHeaderCell>
-                  <TableHeaderCell numeric>Valor</TableHeaderCell>
+                  <TableHeaderCell numeric wide>
+                    Valor
+                  </TableHeaderCell>
                   <TableHeaderCell numeric>Saldo</TableHeaderCell>
                 </TableRow>
               </TableHead>

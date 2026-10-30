@@ -92,7 +92,7 @@ describe('CustomerAccountPage: abonos', () => {
     const paid = within(await table.findByRole('row', { name: /Abono · Efectivo/ }));
     expect(paid.getAllByRole('cell').map((c) => plain(c.textContent))).toEqual([
       '05/10/2026, 10:00 a. m.',
-      'Abono · Efectivo',
+      'Abono · Efectivo05/10/2026, 10:00 a. m. · -$ 50.000',
       '-$ 50.000',
       '$ 150.000',
     ]);

@@ -14,7 +14,7 @@ describe('ProductFormPage: editar un producto', () => {
     const { router } = renderApp(`/productos/${ids.pipe}/editar`);
 
     // Amounts come back with a decimal comma: "1.125" would look like a thousands dot.
-    const price = await screen.findByDisplayValue('10000,00');
+    const price = await screen.findByDisplayValue('10000');
     expect(screen.getByLabelText('SKU')).toHaveValue('TUB-PVC-12');
     expect(screen.getByLabelText('Código de barras (opcional)')).toHaveValue('7701234567890');
     await userEvent.clear(price);

@@ -114,6 +114,9 @@ func (h *Handler) CreateLocation(ctx context.Context, req inventoryapi.CreateLoc
 // ListStock returns the stock at a location.
 func (h *Handler) ListStock(ctx context.Context, req inventoryapi.ListStockRequestObject) (inventoryapi.ListStockResponseObject, error) {
 	q := app.StockQuery{LocationID: req.LocationId, VariantID: req.Params.VariantId}
+	if req.Params.VariantIds != nil {
+		q.VariantIDs = *req.Params.VariantIds
+	}
 	q.Limit, q.Offset = page(req.Params.Limit, req.Params.Offset)
 	result, err := h.uc.ListStock(ctx, actor(ctx), q)
 	if errors.Is(err, domain.ErrLocationNotFound) {

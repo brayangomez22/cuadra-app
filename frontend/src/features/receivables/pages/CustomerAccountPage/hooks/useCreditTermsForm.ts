@@ -10,8 +10,8 @@ import {
   creditTermsSchema,
 } from '../../../model/creditTerms/creditTermsSchema';
 
-/** The customer's credit limit and term, saved with the API's errors on their fields. */
-export function useCreditTermsForm(credit: CustomerCredit) {
+/** The customer's credit limit and term, saved with the API's errors on their fields; onSaved runs after a save. */
+export function useCreditTermsForm(credit: CustomerCredit, onSaved: () => void) {
   const { toast } = useToast();
   const save = useSetCustomerCredit(credit.customer_id);
   const form = useForm({ resolver: zodResolver(creditTermsSchema), defaultValues: creditTermsDefaults(credit) });
@@ -23,6 +23,7 @@ export function useCreditTermsForm(credit: CustomerCredit) {
       onSuccess: (saved) => {
         form.reset(creditTermsDefaults(saved));
         toast({ tone: 'success', title: 'Cupo guardado', description: 'Aplica a las ventas a crédito siguientes.' });
+        onSaved();
       },
       onError: handleError,
     });

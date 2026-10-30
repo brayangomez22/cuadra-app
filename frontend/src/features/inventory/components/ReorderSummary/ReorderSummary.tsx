@@ -17,7 +17,8 @@ export function ReorderSummary() {
 
   return (
     <Alert tone="warning" title={`${String(total)} ${total === 1 ? 'producto' : 'productos'} por reponer`}>
-      Llegaron a su stock mínimo. <TextLink to={paths.inventory.reorder()}>Ver qué pedir</TextLink>
+      Llegaron a su stock mínimo, sumando todas las sedes.{' '}
+      <TextLink to={paths.inventory.reorder()}>Ver qué pedir</TextLink>
     </Alert>
   );
 }

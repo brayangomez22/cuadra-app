@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from './Table';
+import { TableNarrow } from './TableNarrow';
 
 function renderTable() {
   render(
@@ -45,5 +46,26 @@ describe('Table', () => {
 
     expect(selected).toHaveAttribute('aria-selected', 'true');
     expect(other).not.toHaveAttribute('aria-selected');
+  });
+
+  it('marca las columnas que solo caben desde una tablet, y lo que las reemplaza en el celular', () => {
+    render(
+      <Table caption="Cartera">
+        <TableBody>
+          <TableRow>
+            <TableCell>
+              Camiseta básica
+              <TableNarrow>Debe $ 80.000</TableNarrow>
+            </TableCell>
+            <TableCell numeric wide>
+              $ 80.000
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>,
+    );
+
+    expect(screen.getByRole('cell', { name: '$ 80.000' })).toHaveAttribute('data-wide', 'true');
+    expect(screen.getByText('Debe $ 80.000')).toHaveAttribute('data-narrow', 'true');
   });
 });
