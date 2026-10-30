@@ -1,15 +1,12 @@
 @use '@/styles/abstracts' as *;
 
-// One column on a phone, two on a tablet, the four in a row from a laptop up.
+// Two by two up to a laptop (the list starts on a phone's first screen),
+// the four in a row from there.
 .root {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
   align-items: end;
-
-  @include respond-to(sm) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 
   @include respond-to(lg) {
     grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));

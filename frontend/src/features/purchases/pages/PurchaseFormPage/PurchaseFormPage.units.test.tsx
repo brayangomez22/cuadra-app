@@ -10,12 +10,15 @@ import {
   lineGroup,
   pickProduct,
   registerPurchase,
+  preloadPurchasePages,
 } from '../../testing/purchaseSteps';
 
 const withUnitConversions = (): Me => ({ ...aUser('admin'), modules: ['unit_conversions'] });
 const tubes = { 'GET /api/v1/products': json(200, page([withUnits(aProduct(), [boxOf12])])) };
 
 describe('PurchaseFormPage: unidades de compra', () => {
+  beforeAll(preloadPurchasePages);
+
   it('una línea en cajas muestra lo que entra en unidad base y envía unit_id', async () => {
     const api = purchasesApi({ user: withUnitConversions(), routes: tubes });
     renderApp('/compras/nueva');

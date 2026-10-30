@@ -21,8 +21,8 @@ describe('SupplierFormPage', () => {
 
     await userEvent.type(await screen.findByLabelText('Nombre o razón social'), 'Ferretería Mayorista del Sur');
     await userEvent.type(screen.getByLabelText('NIT'), '901.555.444-2');
-    await userEvent.clear(screen.getByLabelText('Plazo de pago'));
-    await userEvent.type(screen.getByLabelText('Plazo de pago'), '15');
+    await userEvent.clear(screen.getByLabelText('Plazo de pago (días)'));
+    await userEvent.type(screen.getByLabelText('Plazo de pago (días)'), '15');
     await userEvent.type(screen.getByLabelText('Correo (opcional)'), 'ventas@mayoristasur.co');
     await userEvent.click(screen.getByRole('button', { name: 'Guardar proveedor' }));
 

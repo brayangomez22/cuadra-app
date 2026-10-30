@@ -42,10 +42,12 @@ export function AppLayout() {
         <AccountPanel user={user} onLogout={logout} className={styles.sidebarAccount} />
       </aside>
 
-      <main id="contenido" tabIndex={-1} className={styles.main}>
+      <div className={styles.content}>
         {user.demo && <DemoBanner />}
-        <Outlet />
-      </main>
+        <main id="contenido" tabIndex={-1} className={styles.main}>
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

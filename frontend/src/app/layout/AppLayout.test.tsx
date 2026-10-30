@@ -1,6 +1,6 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { aUser, fakeApi, signedIn } from '@/test/fakeApi';
+import { aUser, fakeApi, json, signedIn } from '@/test/fakeApi';
 import { renderApp } from '@/test/renderApp';
 
 async function mainMenu() {
@@ -127,16 +127,31 @@ describe('AppLayout', () => {
     expect(api.calls('POST /api/v1/auth/logout')).toHaveLength(1);
   });
 
+  it('cerrar sesión en la demo vuelve a elegir tipo de negocio y rol', async () => {
+    fakeApi({
+      ...signedIn({ ...aUser('owner'), demo: true }),
+      'POST /api/v1/auth/logout': new Response(null, { status: 204 }),
+      'GET /api/v1/auth/demo': json(200, { items: [] }),
+    });
+    const { router } = renderApp('/');
+
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Cerrar sesión' }))[0]!);
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/demo'));
+  });
+
   it('avisa del modo demostración solo en una empresa de demostración', async () => {
     fakeApi(signedIn({ ...aUser('cashier'), demo: true }));
     renderApp('/');
-    const banner = await screen.findByRole('status', { name: 'Modo demostración' });
+    const banner = await screen.findByRole('complementary', { name: 'Modo demostración' });
+    // Outside the main content: skipping to it lands on the screen's title, not on the notice.
+    expect(screen.getByRole('main')).not.toContainElement(banner);
     expect(banner).toHaveTextContent('Los datos se reinician cada noche');
     cleanup();
 
     fakeApi(signedIn(aUser('cashier')));
     renderApp('/');
     await mainMenu();
-    expect(screen.queryByRole('status', { name: 'Modo demostración' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Modo demostración' })).not.toBeInTheDocument();
   });
 });

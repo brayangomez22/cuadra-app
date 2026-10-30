@@ -12,7 +12,7 @@ const demoUser = {
 };
 
 describe('DemoPage', () => {
-  it('entra a la demo del tipo de negocio con el rol elegido', async () => {
+  it('entra a la demo del tipo de negocio con el rol elegido; el cajero empieza en el POS', async () => {
     const api = demoApi({ 'POST /api/v1/auth/demo': json(200, anAuthSession(demoUser)) });
     const { router } = renderApp('/demo');
 
@@ -20,12 +20,12 @@ describe('DemoPage', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Cajero' }));
     await userEvent.click(screen.getByRole('button', { name: 'Entrar a la demo' }));
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/vender'));
     expect(await api.calls('POST /api/v1/auth/demo')[0]?.json()).toEqual({
       business_template: 'ropa_calzado',
       role: 'cashier',
     });
-    expect(await screen.findByRole('status', { name: 'Modo demostración' })).toBeInTheDocument();
+    expect(await screen.findByRole('complementary', { name: 'Modo demostración' })).toBeInTheDocument();
   });
 
   it('propone el primer tipo de negocio y el rol de dueño', async () => {
@@ -41,6 +41,15 @@ describe('DemoPage', () => {
       business_template: 'ferreteria',
       role: 'owner',
     });
+  });
+
+  it('el dueño empieza en el inicio', async () => {
+    demoApi({ 'POST /api/v1/auth/demo': json(200, anAuthSession({ ...aUser('owner'), demo: true })) });
+    const { router } = renderApp('/demo');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Entrar a la demo' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
   });
 
   it('muestra el error de la API si la demo dejó de estar disponible', async () => {

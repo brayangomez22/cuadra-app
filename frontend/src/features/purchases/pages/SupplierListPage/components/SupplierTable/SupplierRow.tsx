@@ -41,6 +41,7 @@ export function SupplierRow({ supplier, canWrite }: Props) {
       <TableCell>
         <TextLink
           tone="quiet"
+          className={styles.purchases}
           to={paths.purchases.list({ proveedor: supplier.id })}
           aria-label={`Compras de ${supplier.name}`}
         >

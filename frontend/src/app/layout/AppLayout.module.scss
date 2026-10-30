@@ -89,6 +89,14 @@
   margin-block-start: auto;
 }
 
+// The demo notice, when there is one, and the screen under it.
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
 .main {
   flex: 1;
   min-inline-size: 0;

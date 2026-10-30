@@ -31,10 +31,14 @@
     border-color: var(--color-border-strong);
   }
 
-  // The chosen type: accent border and subtle background, plus the radio itself.
+  // The chosen type: accent border with a thick bar on the start, as a chosen
+  // table row, plus the radio itself. The background stays the surface: a
+  // grey one read as disabled in the light theme. The padding gives back the
+  // bar's width, so the text does not move.
   &:has(:checked) {
+    padding-inline-start: calc(var(--space-3) - var(--space-1));
     border-color: var(--color-border-accent);
-    background: var(--color-bg-subtle);
+    border-inline-start-width: var(--space-1);
   }
 }
 

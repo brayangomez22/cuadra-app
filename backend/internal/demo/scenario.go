@@ -70,6 +70,10 @@ type Product struct {
 	Supplier    int
 	Step        decimal.Decimal
 	MaxQuantity int
+	// PurchaseUnit and PurchaseFactor are the unit it is bought in and how
+	// many of Unit it brings; empty and zero when it is bought in Unit.
+	PurchaseUnit   string
+	PurchaseFactor decimal.Decimal
 }
 
 // Variant is what is sold and counted. Axes is empty for a simple product.
@@ -114,11 +118,14 @@ type Sale struct {
 	Credit   bool
 }
 
-// Line is a sale line of a product's variant.
+// Line is a sale or purchase line of a product's variant. Quantity is in
+// the product's unit; InPurchaseUnit says a purchase line was bought in the
+// product's purchase unit (Quantity is then a multiple of its factor).
 type Line struct {
-	Product  int
-	Variant  int
-	Quantity decimal.Decimal
+	Product        int
+	Variant        int
+	Quantity       decimal.Decimal
+	InPurchaseUnit bool
 }
 
 // Purchase is a supplier invoice received at a location.

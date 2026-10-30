@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useImperativeHandle, useRef, type KeyboardEvent, type Ref } from 'react';
 import { Field, Input } from '@/shared/ui';
 import { useProductSearch } from '../../hooks/useProductSearch';
 import type { Sellable } from '../../model/variants/variants';
@@ -13,16 +13,20 @@ type Props = {
   error?: string;
   /** Called after the user picks a variant, e.g. to move the focus on. */
   onPicked?: (item: Sellable) => void;
+  /** Lets a form focus the search, e.g. react-hook-form's field.ref. */
+  ref?: Ref<{ focus: () => void }>;
 };
 
 /**
  * Finds an active product by name, SKU or barcode and picks one of its
  * variants: a product with variants offers one option for each. A barcode
  * reader types the code and Enter: Enter picks the variant with that exact
- * code, or the only option.
+ * code, or the only option. Down from the search goes to the options.
  */
-export function ProductPicker({ label, value, onChange, error, onPicked }: Props) {
+export function ProductPicker({ label, value, onChange, error, onPicked, ref }: Props) {
   const searchInput = useRef<HTMLInputElement>(null);
+  useImperativeHandle(ref, () => ({ focus: () => searchInput.current?.focus() }), []);
+  const resultsList = useRef<HTMLDivElement>(null);
   const search = useProductSearch({
     enabled: !value,
     onPick: (item) => {
@@ -47,19 +51,34 @@ export function ProductPicker({ label, value, onChange, error, onPicked }: Props
           type="search"
           value={search.text}
           onChange={(event) => search.change(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter') return;
-            event.preventDefault(); // Enter belongs to the search, not to the form.
-            void search.submit();
-          }}
+          onKeyDown={(event) => onSearchKey(event, search.submit, resultsList.current)}
           autoComplete="off"
           spellCheck={false}
           enterKeyHint="search"
         />
       </Field>
       {search.term && (
-        <PickerResults term={search.term} products={search.products} results={search.results} onPick={search.pick} />
+        <PickerResults
+          ref={resultsList}
+          term={search.term}
+          products={search.products}
+          results={search.results}
+          onPick={search.pick}
+          onLeave={() => searchInput.current?.focus()}
+        />
       )}
     </div>
   );
+}
+
+// onSearchKey: down goes to the first option; Enter searches now (a barcode
+// reader ends with it) instead of submitting the form.
+function onSearchKey(event: KeyboardEvent, submit: () => Promise<void>, results: HTMLElement | null) {
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    results?.querySelector('button')?.focus();
+  }
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  void submit();
 }

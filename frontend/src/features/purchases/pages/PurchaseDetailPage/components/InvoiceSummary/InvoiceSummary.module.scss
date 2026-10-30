@@ -7,10 +7,10 @@
   background: var(--color-bg-surface);
 }
 
-// One column on a phone; the data side by side as the width allows.
+// Two columns on a phone; the data side by side as the width allows.
 .data {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 8rem), 1fr));
   gap: var(--space-4);
   margin: 0;
 }

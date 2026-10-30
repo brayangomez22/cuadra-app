@@ -30,15 +30,16 @@ describe('PurchaseListPage', () => {
     renderApp('/compras');
 
     const table = within(await screen.findByRole('table', { name: 'Compras' }));
+    // The first cell repeats the supplier and the day for a phone, where their columns are hidden.
     expect(cells(table.getByRole('row', { name: /FE 1234/ }))).toEqual([
-      'FE 1234',
+      'FE 1234Distribuidora Andina SAS · 20/10/2026',
       'Distribuidora Andina SAS',
       '20/10/2026',
       '19/11/2026',
-      '$ 318.480',
+      '$ 318.480Debe $ 318.480Por pagar',
       '$ 318.480Por pagar',
     ]);
-    expect(cells(table.getByRole('row', { name: /CV-88/ })).slice(3)).toEqual(['Contado', '$ 90.000', 'Pagada']);
+    expect(cells(table.getByRole('row', { name: /CV-88/ })).slice(3)).toEqual(['Contado', '$ 90.000Pagada', 'Pagada']);
     expect(table.getByRole('link', { name: 'FE 1234' })).toHaveAttribute('href', `/compras/${purchaseId}`);
   });
 

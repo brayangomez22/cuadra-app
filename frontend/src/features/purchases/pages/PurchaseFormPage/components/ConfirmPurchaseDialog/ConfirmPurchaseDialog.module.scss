@@ -1,0 +1,40 @@
+@use '@/styles/abstracts' as *;
+
+// The invoice read back: the term on the left and its value on the right,
+// the total last and larger, as on the paper.
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.datum {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+
+  dt {
+    color: var(--color-text-muted);
+  }
+
+  dd {
+    margin: 0;
+    min-inline-size: 0;
+    text-align: end;
+    overflow-wrap: anywhere;
+  }
+
+  &[data-emphasis] {
+    padding-block-start: var(--space-3);
+    border-block-start: 1px solid var(--color-border-default);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+
+    dt {
+      color: var(--color-text-default);
+    }
+  }
+}

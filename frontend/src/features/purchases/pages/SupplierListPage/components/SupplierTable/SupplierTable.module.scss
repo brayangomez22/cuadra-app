@@ -1,3 +1,5 @@
+@use '@/styles/abstracts' as *;
+
 .name {
   display: inline-flex;
   flex-wrap: wrap;
@@ -13,4 +15,12 @@
 .contact {
   display: block;
   overflow-wrap: anywhere;
+}
+
+// A link in a row is still tapped with a finger: 44px of target.
+.purchases {
+  display: inline-flex;
+  align-items: center;
+
+  @include touch-target;
 }

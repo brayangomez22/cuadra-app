@@ -12,6 +12,7 @@ import {
   lineGroup,
   pickProduct,
   registerPurchase,
+  preloadPurchasePages,
 } from '../../testing/purchaseSteps';
 
 const detailRoutes = {
@@ -20,6 +21,8 @@ const detailRoutes = {
 };
 
 describe('PurchaseFormPage: registrar', () => {
+  beforeAll(preloadPurchasePages);
+
   it('registra una compra a crédito con el vencimiento propuesto por el plazo del proveedor', async () => {
     const api = purchasesApi({ routes: detailRoutes });
     renderApp('/compras/nueva');
