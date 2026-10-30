@@ -44,6 +44,14 @@ describe('StockCountsPage', () => {
     expect(query(api.calls(listKey)[0]!).get('location_id')).toBe(ids.main);
   });
 
+  it('nombra las categorías de un conteo parcial en el historial', async () => {
+    countsApi(aUser(), page([anApprovedCount({ category_ids: [ids.plumbing] })]));
+    renderApp('/inventario/conteos');
+
+    const history = within(await screen.findByRole('table', { name: 'Conteos de Bodega principal' }));
+    expect(await history.findByRole('cell', { name: 'Plomería' })).toBeInTheDocument();
+  });
+
   it('inicia un conteo parcial por categorías en modo revisión y abre la pantalla de conteo', async () => {
     const api = countsApi(aUser(), page([anApprovedCount()]));
     renderApp('/inventario/conteos');

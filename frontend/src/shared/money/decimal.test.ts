@@ -1,4 +1,4 @@
-import { fromUnits, fromUnitsTrimmed, mulRound2, mulTrunc2, toUnits } from './decimal';
+import { roundToWhole, fromUnits, fromUnitsTrimmed, mulRound2, mulTrunc2, toUnits } from './decimal';
 
 describe('decimal', () => {
   it('lee y escribe decimales de la API sin pasar por float', () => {
@@ -41,5 +41,16 @@ describe('decimal', () => {
   it('trunca a centavos', () => {
     expect(fromUnits(mulTrunc2(toUnits('10000'), toUnits('0.3333')))).toBe('3333.00');
     expect(fromUnits(mulTrunc2(toUnits('99.99'), toUnits('0.15')))).toBe('14.99');
+  });
+});
+
+describe('roundToWhole', () => {
+  it.each([
+    ['12500.5', '12501.00'],
+    ['12500.49', '12500.00'],
+    ['12500', '12500.00'],
+    ['-12500.5', '-12501.00'],
+  ])('%s queda en %s, como la muestra formatMoney', (value, expected) => {
+    expect(fromUnits(roundToWhole(toUnits(value)))).toBe(expected);
   });
 });

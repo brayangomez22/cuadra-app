@@ -32,7 +32,40 @@ async function kardexTable() {
   return within(await screen.findByRole('table', { name: 'Movimientos de Tubo PVC presión 1/2 pulgada' }));
 }
 
+const purchaseId = '01920000-0000-7000-8000-000000000b01';
+
 describe('KardexPage', () => {
+  it('enlaza la entrada de una compra con su factura', async () => {
+    kardexApi({
+      [`GET /api/v1/variants/${ids.pipe}/kardex`]: json(
+        200,
+        page([aMovement({ reference: { kind: 'purchase', id: purchaseId } })]),
+      ),
+    });
+    renderApp(`/productos/${ids.pipe}/kardex`);
+
+    const table = await kardexTable();
+    expect(await table.findByRole('link', { name: 'Entrada de mercancía' })).toHaveAttribute(
+      'href',
+      `/compras/${purchaseId}`,
+    );
+  });
+
+  it('sin permiso de ver compras la entrada no enlaza', async () => {
+    kardexApi({
+      ...signedIn(aUser('cashier')),
+      [`GET /api/v1/variants/${ids.pipe}/kardex`]: json(
+        200,
+        page([aMovement({ reference: { kind: 'purchase', id: purchaseId } })]),
+      ),
+    });
+    renderApp(`/productos/${ids.pipe}/kardex`);
+
+    const table = await kardexTable();
+    expect(await table.findByText('Entrada de mercancía')).toBeInTheDocument();
+    expect(table.queryByRole('link', { name: 'Entrada de mercancía' })).not.toBeInTheDocument();
+  });
+
   it('lista los movimientos con su signo, su saldo y la hora de Bogotá', async () => {
     kardexApi();
     renderApp(`/productos/${ids.pipe}/kardex`);

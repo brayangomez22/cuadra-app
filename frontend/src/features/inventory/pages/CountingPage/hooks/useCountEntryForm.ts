@@ -46,6 +46,8 @@ export function useCountEntryForm(countId: string) {
         description: `${formatQuantity(values.quantity)} ${unit} de ${name}`,
       });
       form.reset(empty);
+      // The next scan of a barcode reader has to land on the product.
+      requestAnimationFrame(() => form.setFocus('item'));
     } catch (error) {
       handleError(error);
     }

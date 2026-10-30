@@ -23,7 +23,7 @@ export function aStockCount(overrides: Partial<Schemas['StockCount']> = {}): Sch
 }
 
 /** A count approved with 95 % accuracy and 48.500 pesos missing. */
-export function anApprovedCount(): Schemas['StockCount'] {
+export function anApprovedCount(overrides: Partial<Schemas['StockCount']> = {}): Schemas['StockCount'] {
   return aStockCount({
     id: '01920000-0000-7000-8000-000000000a02',
     status: 'approved',
@@ -40,6 +40,7 @@ export function anApprovedCount(): Schemas['StockCount'] {
       net_difference_value: '-48500.00',
       absolute_difference_value: '61500.00',
     },
+    ...overrides,
   });
 }
 

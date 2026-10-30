@@ -1,8 +1,10 @@
 import { useId } from 'react';
 import { paths } from '@/app/routes/paths';
+import { useCategories } from '@/features/catalog';
 import { formatDateTime } from '@/shared/format';
 import { Badge, ButtonLink, Inline } from '@/shared/ui';
 import type { StockCount } from '../../../../api/types';
+import { countScope } from '../../../../model/stockCount/countScope';
 import { countedText } from '../../../../model/stockCount/countSummary';
 import styles from './OpenCount.module.scss';
 
@@ -11,7 +13,8 @@ type Props = { count: StockCount; canReview: boolean };
 /** The count in progress at the location: how far it went, a link to count and, for who manages it, to the differences. */
 export function OpenCount({ count, canReview }: Props) {
   const titleId = useId();
-  const scope = count.category_ids.length > 0 ? 'Algunas categorías' : 'Toda la sede';
+  const categories = useCategories();
+  const scope = countScope(count.category_ids, categories.data);
   return (
     <section className={styles.root} aria-labelledby={titleId}>
       <Inline justify="between" align="center" wrap>
