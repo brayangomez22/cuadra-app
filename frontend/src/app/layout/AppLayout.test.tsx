@@ -32,6 +32,17 @@ describe('AppLayout', () => {
     expect((await mainMenu()).queryByRole('link', { name: 'Configuración' })).not.toBeInTheDocument();
   });
 
+  it('muestra Ventas a quien las puede ver, no al bodeguero', async () => {
+    fakeApi(signedIn(aUser('cashier')));
+    renderApp('/');
+    expect((await mainMenu()).getByRole('link', { name: 'Ventas' })).toBeInTheDocument();
+    cleanup();
+
+    fakeApi(signedIn(aUser('warehouse')));
+    renderApp('/');
+    expect((await mainMenu()).queryByRole('link', { name: 'Ventas' })).not.toBeInTheDocument();
+  });
+
   it('muestra Compras al dueño y al administrador, no al cajero ni al bodeguero', async () => {
     for (const role of ['owner', 'admin'] as const) {
       fakeApi(signedIn(aUser(role)));

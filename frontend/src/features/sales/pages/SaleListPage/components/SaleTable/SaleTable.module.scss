@@ -1,0 +1,13 @@
+@use '@/styles/abstracts' as *;
+
+.time {
+  white-space: nowrap;
+
+  @include numeric;
+}
+
+// A voided sale brought no money: its total reads crossed out.
+.total[data-voided] {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}

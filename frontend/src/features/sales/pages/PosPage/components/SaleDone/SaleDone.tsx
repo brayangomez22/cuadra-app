@@ -1,8 +1,9 @@
 import { formatMoney, isZero } from '@/shared/format';
-import { Button, Field, IconPrinter, IconSuccess, Select } from '@/shared/ui';
+import { Button, IconPrinter, IconSuccess } from '@/shared/ui';
 import type { Sale } from '../../../../api/types';
 import { methodLabels } from '../../../../model/payments/paymentMethods';
 import type { Paper } from '../../../../model/paper';
+import { PaperSelect } from '../../../../components/PaperSelect/PaperSelect';
 import styles from './SaleDone.module.scss';
 
 type Props = {
@@ -14,11 +15,6 @@ type Props = {
   /** Prints the confirmed sale's receipt. */
   onPrint: () => void;
 };
-
-const paperOptions = [
-  { value: '80', label: '80 mm' },
-  { value: '58', label: '58 mm' },
-];
 
 /** The confirmed sale: the change to hand back, how it was paid, and its receipt. */
 export function SaleDone({ sale, onNewSale, paper, onPaperChange, onPrint }: Props) {
@@ -45,13 +41,7 @@ export function SaleDone({ sale, onNewSale, paper, onPaperChange, onPrint }: Pro
       </dl>
       <div className={styles.footer}>
         <div className={styles.print}>
-          <Field label="Papel" className={styles.paper}>
-            <Select
-              options={paperOptions}
-              value={paper}
-              onValueChange={(value) => onPaperChange(value === '58' ? '58' : '80')}
-            />
-          </Field>
+          <PaperSelect paper={paper} onPaperChange={onPaperChange} className={styles.paper} />
           <Button variant="secondary" size="lg" icon={<IconPrinter />} onClick={onPrint}>
             Imprimir tirilla
           </Button>

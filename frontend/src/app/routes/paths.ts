@@ -81,6 +81,8 @@ export const paths = {
     cash: route('/caja'),
     closeCash: route('/caja/cerrar'),
     cashReport: route('/caja/:sessionId'),
+    list: route('/ventas', ['fecha', 'sede', 'pagina']),
+    detail: route('/ventas/:saleId'),
   },
   settings: {
     home: route('/configuracion'),

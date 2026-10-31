@@ -25,6 +25,11 @@ describe('paths', () => {
     expect(paths.inventory.kardex('p1', { sede: 'a&b' })).toBe('/productos/p1/kardex?sede=a%26b');
   });
 
+  it('arma las ventas de un día y el detalle de una venta', () => {
+    expect(paths.sales.list({ fecha: '2026-10-11', sede: 's1' })).toBe('/ventas?fecha=2026-10-11&sede=s1');
+    expect(paths.sales.detail('v1')).toBe('/ventas/v1');
+  });
+
   it('expone el patrón que usa el router', () => {
     expect(paths.products.edit.pattern).toBe('/productos/:productId/editar');
     expect(paths.settings.units.pattern).toBe('/configuracion/unidades');

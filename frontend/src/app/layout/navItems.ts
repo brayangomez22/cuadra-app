@@ -3,6 +3,7 @@ import type { Gated } from '@/features/auth';
 import {
   IconBox,
   IconCart,
+  IconReceipt,
   IconCash,
   IconClipboardCheck,
   IconHome,
@@ -30,6 +31,7 @@ export const navItems: NavItem[] = [
   { to: paths.home(), label: 'Inicio', icon: IconHome },
   { to: paths.sales.pos(), label: 'Vender', icon: IconCart, permission: 'sales:create' },
   { to: paths.sales.cash(), label: 'Caja', icon: IconCash, permission: 'sales:create' },
+  { to: paths.sales.list(), label: 'Ventas', icon: IconReceipt, permission: 'sales:read' },
   { to: paths.products.list(), label: 'Productos', icon: IconTag, permission: 'catalog:read' },
   { to: paths.customers.list(), label: 'Clientes', icon: IconUsers, permission: 'customers:read' },
   { to: paths.receivables.aging(), label: 'Cartera', icon: IconWallet, permission: 'receivables:read' },

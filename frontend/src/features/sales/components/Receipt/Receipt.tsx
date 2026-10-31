@@ -13,8 +13,8 @@ type Props = {
   business: { name: string; nit: string };
   /** The name of the location the sale came from. */
   location: string;
-  /** The name of who charged. */
-  cashier: string;
+  /** The name of who charged, when known: users have no endpoint yet. */
+  cashier?: string;
   /** Who bought, with the document as it reads ("CC 1020304050"); without it, a final consumer. */
   customer?: { name: string; document: string };
   /** Width of the thermal roll, in millimeters. */
@@ -42,7 +42,7 @@ export function Receipt({ sale, business, location, cashier, customer, paper, cl
       <dl className={styles.figures}>
         <Figure term="Venta N.º" value={String(sale.number)} />
         <Figure term="Fecha" value={formatDateTime(sale.confirmed_at)} />
-        <Figure term="Cajero" value={cashier} />
+        {cashier && <Figure term="Cajero" value={cashier} />}
         <Figure term="Cliente" value={customer?.name ?? 'Consumidor final'} />
         {customer && <Figure term="Documento" value={customer.document} />}
       </dl>

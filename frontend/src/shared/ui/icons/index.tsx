@@ -69,6 +69,13 @@ export const IconPrinter = createIcon(
     <path d="M6 14h12v7H6z" />
   </>,
 );
+// A paper roll with lines: the past sales (Ventas).
+export const IconReceipt = createIcon(
+  <>
+    <path d="M5 3v18l2.5-1.5L10 21l2-1.5 2 1.5 2.5-1.5L19 21V3z" />
+    <path d="M9 8h6M9 12h6" />
+  </>,
+);
 // A bill: the cash drawer (Caja).
 export const IconCash = createIcon(
   <>
