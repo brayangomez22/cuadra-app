@@ -8,18 +8,21 @@ El punto de venta y la caja: vender desde el teclado o el lector, cobrar con pag
 - `CashPage` (`/caja`): sin caja, `OpenCashForm` (`useOpenCashForm`); con caja, `OpenSession` con `CashMovementsTable` y `CashMovementDialog`.
 - `CloseCashPage` (`/caja/cerrar`): el arqueo ciego. `CountForm` (`useCashCount`) con `DenominationCounts`, `CountSummary` y `ConfirmCloseDialog`.
 - `CashReportPage` (`/caja/:sessionId`): `useCashReport` arma el reporte; `CashResultSummary` y `CashReport` para leer e imprimir.
+- `SaleListPage` (`/ventas`): las ventas de un día (`useSaleListParams`: `fecha`, `sede`, `pagina`), con `SaleFilters` y `SaleTable`.
+- `SaleDetailPage` (`/ventas/:saleId`): `useSaleReceipt` arma la tirilla para leerla y reimprimirla; `VoidedNotice` dice por qué se anuló y `VoidSaleDialog` (`useVoidSaleForm`, con `sales:void`) pide el motivo y avisa qué hacer con el dinero.
 
 `index.ts` es la API pública y hoy solo exporta `salesRoutes`, para el router: ninguna otra feature usa `sales`.
 
 ## Carpetas
 
 - `api/`: `sales` (ventas y tope de descuento) y `cashSessions` (caja), con `keys` y `types`. La caché solo vive aquí (la venta invalida el inventario y `useRefreshCurrentCash` relee la caja).
-- `components/`: lo que comparten el POS y la caja: `Receipt` (con `ReceiptLines` y `ReceiptTaxes`), `PrintableReceipt`, `CashReport` y `Printable`.
+- `components/`: lo que comparten el POS, la caja y las ventas: `Receipt` (con `ReceiptLines` y `ReceiptTaxes`), `PrintableReceipt`, `PaperSelect`, `CashReport` y `Printable`.
 - `model/cart/`: el carrito como lo calcula el backend (decisión T17), un archivo por regla, cada uno con su test.
 - `model/cash/`: `denominations` (el conteo de la caja), `moneyField` y `cashSchemas` (los formularios de caja), `cashLabels` y `negated`.
 - `model/payments/`: `payments` y `paymentMethods`.
+- `model/void/`: `voidNotice` (qué hacer con el dinero al anular) y `voidSaleSchema`.
 - `model/`: `searchText`, `storage` (el carrito de la pestaña y la sede y el papel del equipo), `saleCustomer` (el cliente de la venta, junto al carrito) y `paper`.
-- `testing/`: `fixtures` (`aSale`, `anOpenCashSession`, `aClosedCashSession`), `posApi` y `posSteps`, `cart`, `cashApi` (`cashApi`, `closeApi`, `CLOSE_KEY`) y `receipt` (`aMixedSale`, `renderReceipt`, `figure`).
+- `testing/`: `fixtures` (`aSale`, `anOpenCashSession`, `aClosedCashSession`), `posApi` y `posSteps`, `cart`, `cashApi` (`cashApi`, `closeApi`, `CLOSE_KEY`) `receipt` (`aMixedSale`, `renderReceipt`, `figure`) y `salesApi` (`salesApi`, `aSaleSummary`, `aVoidedSale`).
 
 ## Probar la cámara en un celular
 

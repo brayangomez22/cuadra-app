@@ -146,17 +146,20 @@ P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31), P20 en `chore
 | [x] | P134 | Un conteo parcial no decía qué cubre («Algunas categorías»): el conteo, el conteo abierto y el historial nombran sus categorías | Recorrido de la fase 3 |
 | [x] | P135 | La demo no traía tomas físicas: el generador deja un conteo aprobado por sede después del último cierre, con algunos faltantes | Recorrido de la fase 3 |
 | [x] | P136 | En el kardex, la entrada de una compra no llevaba a su factura: enlaza a la compra para quien puede verlas | Recorrido de la fase 3 |
-| [ ] | P137 | **Ventas pasadas:** lista y detalle de ventas con reimpresión de la tirilla. La API existe (`GET /sales`, `GET /sales/{id}`) y el frontend no la usa; ninguna tarea pedía la pantalla. Enlazar también la venta desde el kardex | Recorrido de la fase 3 |
-| [ ] | P138 | **Anular una venta sin factura:** la API existe (`POST /sales/{id}/void`) y no hay pantalla. T37 agrega después la nota crédito de las facturadas | Recorrido de la fase 3 |
+| [x] | P137 | **Ventas pasadas:** lista y detalle de ventas con reimpresión de la tirilla. La API existe (`GET /sales`, `GET /sales/{id}`) y el frontend no la usa; ninguna tarea pedía la pantalla. Enlazar también la venta desde el kardex. Hecho en `chore/P137-P138-past-sales`: `/ventas` (por día y sede) y `/ventas/:saleId` | Recorrido de la fase 3 |
+| [x] | P138 | **Anular una venta sin factura:** la API existe (`POST /sales/{id}/void`) y no hay pantalla. T37 agrega después la nota crédito de las facturadas. Hecho en `chore/P137-P138-past-sales`: `VoidSaleDialog` en el detalle, con `sales:void`. **T36/T37 deben impedir anular así una venta facturada** | Recorrido de la fase 3 |
 | [ ] | P139 | **Ajuste manual de inventario** (rotura, pérdida): la API existe (`POST /inventory/adjustments`) y no hay pantalla | Recorrido de la fase 3 |
 | [ ] | P140 | **Traslado directo entre sedes:** la API existe (`POST /inventory/transfers`) y no hay pantalla. El flujo con envío y recepción sigue en V2-4 | Recorrido de la fase 3 |
 | [ ] | P141 | **E2E** de los flujos que no lo tienen: compra → stock → reposición, toma física, caja con cierre, y los de P137–P140 | Recorrido de la fase 3 |
 | [ ] | P142 | Demo: el mismo tipo de producto varía demasiado de precio según la marca («Barniz negro» de $ 41.000 a $ 188.000 con IVA). Acotar el rango en el generador | Recorrido de la fase 3 |
+| [ ] | P143 | La tirilla reimpresa y el detalle de una venta omiten el cajero si no es el usuario actual, porque no hay endpoint de usuarios. Mostrarlo cuando exista (también en el motivo de anulación: quién anuló) | P137 |
+| [ ] | P145 | `SupplierListPage.test.tsx` («busca por nombre o NIT y filtra por estado») falló una vez por tiempo (4 s) en la suite completa y pasó al repetirla, tres veces solo y una en la suite. Puede ser el arranque en frío de P131: el archivo no usa `preloadPages`. Confirmar y corregir | P137 |
 
 ## Para validar con los pilotos
 
 | | ID | Pendiente | Origen |
 |---|---|---|---|
+| [ ] | P144 | Ventas pasadas: confirmar si basta buscar por día y sede o si hace falta buscar por número o cliente y ver el cliente y el medio de pago en la lista. La API solo filtra por día y `SaleSummary` no trae esos datos | P137 |
 | [ ] | P27 | Redondeo del efectivo a múltiplos de 50 (no hay monedas menores): hoy queda dentro de la diferencia del arqueo | Decisión 113 (T17), T23 |
 | [ ] | P28 | Cronometrar la meta de una venta de 5 productos en 20 s con un cajero real | PR #28 (T21) |
 | [ ] | P51 | Confirmar el IVA por defecto de cada plantilla con negocios reales: `drogueria` propone 0 % (medicamentos excluidos) y `papeleria` 19 %, aunque parte de los útiles escolares estén excluidos | T24i |

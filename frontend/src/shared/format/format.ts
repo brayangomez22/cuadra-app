@@ -19,6 +19,7 @@ const quantity = new Intl.NumberFormat(locale, { maximumFractionDigits: 4 });
 const signedQuantity = new Intl.NumberFormat(locale, { maximumFractionDigits: 4, signDisplay: 'exceptZero' });
 const rate = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 2 });
 const percent = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
+const time = new Intl.DateTimeFormat(locale, { timeZone, hour: 'numeric', minute: '2-digit' });
 const dateTime = new Intl.DateTimeFormat(locale, {
   timeZone,
   day: '2-digit',
@@ -52,6 +53,11 @@ export function formatPercent(value: string, kind: 'rate' | 'percent'): string {
           .join('')
       : percent.format(value as NumericString);
   return `${number}\u00a0%`;
+}
+
+/** The time of an instant of the API in Bogotá: "3:05 p. m.". */
+export function formatTime(iso: string): string {
+  return time.format(new Date(iso));
 }
 
 /** An instant of the API in Bogotá time: "10/10/2026, 3:05 p. m.". */

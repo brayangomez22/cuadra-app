@@ -1,6 +1,7 @@
 import { plain } from '@/test/fixtures';
 import {
   formatDateTime,
+  formatTime,
   formatMoney,
   formatPercent,
   formatQuantity,
@@ -56,6 +57,12 @@ describe('formatPercent', () => {
     ['-5', '-5 %'],
   ])('formatea el porcentaje %s como %s', (value, expected) => {
     expect(plain(formatPercent(value, 'percent'))).toBe(expected);
+  });
+});
+
+describe('formatTime', () => {
+  it('da la hora de Bogotá, sin la fecha', () => {
+    expect(plain(formatTime('2026-10-10T20:05:00Z'))).toBe('3:05 p. m.');
   });
 });
 

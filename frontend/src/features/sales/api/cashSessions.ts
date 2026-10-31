@@ -21,8 +21,9 @@ export function useRefreshCurrentCash() {
   return () => void queryClient.invalidateQueries({ queryKey: salesKeys.currentCash });
 }
 
-export function useCashSession(id: string) {
+export function useCashSession(id: string, { enabled = true } = {}) {
   return useQuery({
+    enabled,
     queryKey: salesKeys.cashSession(id),
     queryFn: async () =>
       unwrap(
