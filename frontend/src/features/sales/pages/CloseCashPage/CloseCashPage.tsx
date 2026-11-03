@@ -5,7 +5,7 @@ import { QueryState } from '@/shared/query';
 import { Page, Spinner } from '@/shared/ui';
 import { useCurrentCashSession, useRefreshCurrentCash } from '../../api/cashSessions';
 import styles from './CloseCashPage.module.scss';
-import { CountForm } from './components/CountForm/CountForm';
+import { CountForm } from '../../components/CashCount/CountForm/CountForm';
 
 const title = 'Cerrar caja';
 const description =

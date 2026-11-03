@@ -40,7 +40,7 @@ func (s *Service) ListPurchases(ctx context.Context, a Actor, q PurchaseQuery) (
 	defer func() { usecase.End(span, err) }()
 
 	switch q.Status {
-	case "", domain.PurchaseOpen, domain.PurchasePaid:
+	case "", domain.PurchaseOpen, domain.PurchasePaid, domain.PurchaseVoided:
 	default:
 		return PurchasePage{}, ErrInvalidStatus
 	}

@@ -28,8 +28,23 @@ func (f *fakeCatalog) Variants(_ context.Context, _ uuid.UUID, ids []uuid.UUID) 
 // fakeStock is a PurchaseStock that converts like the inventory does and
 // records what it received. err, if set, fails the receipt.
 type fakeStock struct {
-	calls []stockCall
-	err   error
+	calls      []stockCall
+	err        error
+	reversals  []reversal
+	reverseErr error
+}
+
+func (f *fakeStock) ReversePurchase(_ context.Context, _, userID, purchaseID uuid.UUID) error {
+	if f.reverseErr != nil {
+		return f.reverseErr
+	}
+	f.reversals = append(f.reversals, reversal{PurchaseID: purchaseID, UserID: userID})
+	return nil
+}
+
+// reversal is a purchase whose stock was taken out, and by whom.
+type reversal struct {
+	PurchaseID, UserID uuid.UUID
 }
 
 type stockCall struct {

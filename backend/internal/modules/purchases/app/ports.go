@@ -51,4 +51,21 @@ type PurchaseStock interface {
 	// and in line order. It fails with the purchases domain's errors
 	// (ErrLocationNotFound, ErrLocationInactive, ErrQuantityPrecision...).
 	ReceivePurchase(ctx context.Context, tenantID, userID, locationID, purchaseID uuid.UUID, lines []StockLine) ([]domain.Received, error)
+	// ReversePurchase takes out, in the purchase's transaction (through ctx),
+	// the stock its entries put in. It fails with a *VariantError wrapping
+	// ErrInsufficientStock if a variant no longer has it.
+	ReversePurchase(ctx context.Context, tenantID, userID, purchaseID uuid.UUID) error
 }
+
+// VariantError is the error of one variant's stock; it unwraps to the
+// purchases domain error (ErrInsufficientStock...).
+type VariantError struct {
+	VariantID uuid.UUID
+	Err       error
+}
+
+func (e *VariantError) Error() string {
+	return "variant " + e.VariantID.String() + ": " + e.Err.Error()
+}
+
+func (e *VariantError) Unwrap() error { return e.Err }

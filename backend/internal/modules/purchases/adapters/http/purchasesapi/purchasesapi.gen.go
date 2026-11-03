@@ -20,16 +20,16 @@ import (
 
 // Defines values for PurchasePayment.
 const (
-	Cash   PurchasePayment = "cash"
-	Credit PurchasePayment = "credit"
+	PurchasePaymentCash   PurchasePayment = "cash"
+	PurchasePaymentCredit PurchasePayment = "credit"
 )
 
 // Valid indicates whether the value is a known member of the PurchasePayment enum.
 func (e PurchasePayment) Valid() bool {
 	switch e {
-	case Cash:
+	case PurchasePaymentCash:
 		return true
-	case Credit:
+	case PurchasePaymentCredit:
 		return true
 	default:
 		return false
@@ -38,8 +38,9 @@ func (e PurchasePayment) Valid() bool {
 
 // Defines values for PurchaseStatus.
 const (
-	PurchaseStatusOpen PurchaseStatus = "open"
-	PurchaseStatusPaid PurchaseStatus = "paid"
+	PurchaseStatusOpen   PurchaseStatus = "open"
+	PurchaseStatusPaid   PurchaseStatus = "paid"
+	PurchaseStatusVoided PurchaseStatus = "voided"
 )
 
 // Valid indicates whether the value is a known member of the PurchaseStatus enum.
@@ -49,6 +50,35 @@ func (e PurchaseStatus) Valid() bool {
 		return true
 	case PurchaseStatusPaid:
 		return true
+	case PurchaseStatusVoided:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupplierPaymentMethod.
+const (
+	SupplierPaymentMethodCard      SupplierPaymentMethod = "card"
+	SupplierPaymentMethodCash      SupplierPaymentMethod = "cash"
+	SupplierPaymentMethodDaviplata SupplierPaymentMethod = "daviplata"
+	SupplierPaymentMethodNequi     SupplierPaymentMethod = "nequi"
+	SupplierPaymentMethodTransfer  SupplierPaymentMethod = "transfer"
+)
+
+// Valid indicates whether the value is a known member of the SupplierPaymentMethod enum.
+func (e SupplierPaymentMethod) Valid() bool {
+	switch e {
+	case SupplierPaymentMethodCard:
+		return true
+	case SupplierPaymentMethodCash:
+		return true
+	case SupplierPaymentMethodDaviplata:
+		return true
+	case SupplierPaymentMethodNequi:
+		return true
+	case SupplierPaymentMethodTransfer:
+		return true
 	default:
 		return false
 	}
@@ -56,9 +86,10 @@ func (e PurchaseStatus) Valid() bool {
 
 // Defines values for ListPurchasesParamsStatus.
 const (
-	ListPurchasesParamsStatusAll  ListPurchasesParamsStatus = "all"
-	ListPurchasesParamsStatusOpen ListPurchasesParamsStatus = "open"
-	ListPurchasesParamsStatusPaid ListPurchasesParamsStatus = "paid"
+	ListPurchasesParamsStatusAll    ListPurchasesParamsStatus = "all"
+	ListPurchasesParamsStatusOpen   ListPurchasesParamsStatus = "open"
+	ListPurchasesParamsStatusPaid   ListPurchasesParamsStatus = "paid"
+	ListPurchasesParamsStatusVoided ListPurchasesParamsStatus = "voided"
 )
 
 // Valid indicates whether the value is a known member of the ListPurchasesParamsStatus enum.
@@ -69,6 +100,8 @@ func (e ListPurchasesParamsStatus) Valid() bool {
 	case ListPurchasesParamsStatusOpen:
 		return true
 	case ListPurchasesParamsStatusPaid:
+		return true
+	case ListPurchasesParamsStatusVoided:
 		return true
 	default:
 		return false
@@ -120,6 +153,34 @@ type ErrorDetail struct {
 // Example: 12500.00
 type Money = string
 
+// PayablesPage defines model for PayablesPage.
+type PayablesPage struct {
+	Items []SupplierPayable `json:"items"`
+
+	// Total Cuántos proveedores se deben.
+	Total  int            `json:"total"`
+	Totals PayablesTotals `json:"totals"`
+}
+
+// PayablesTotals defines model for PayablesTotals.
+type PayablesTotals struct {
+	// Balance Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Balance Money `json:"balance"`
+
+	// DueSoon Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	DueSoon Money `json:"due_soon"`
+
+	// Overdue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Overdue   Money `json:"overdue"`
+	Suppliers int   `json:"suppliers"`
+}
+
 // Purchase defines model for Purchase.
 type Purchase struct {
 	// BalanceDue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
@@ -141,7 +202,7 @@ type Purchase struct {
 	// Payment De contado (queda pagada) o a crédito (queda con saldo por pagar).
 	Payment PurchasePayment `json:"payment"`
 
-	// Status Con saldo por pagar (`open`) o pagada (`paid`).
+	// Status Con saldo por pagar (`open`), pagada (`paid`) o anulada (`voided`).
 	Status PurchaseStatus `json:"status"`
 
 	// Subtotal Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
@@ -162,6 +223,15 @@ type Purchase struct {
 	//
 	// Example: 12500.00
 	Total Money `json:"total"`
+
+	// VoidReason Por qué se anuló; solo en una compra anulada.
+	VoidReason *string `json:"void_reason,omitempty"`
+
+	// VoidedAt Cuándo se anuló; solo en una compra anulada.
+	VoidedAt *time.Time `json:"voided_at,omitempty"`
+
+	// VoidedBy Quién la anuló; solo en una compra anulada.
+	VoidedBy *openapi_types.UUID `json:"voided_by,omitempty"`
 }
 
 // PurchaseInput defines model for PurchaseInput.
@@ -287,7 +357,7 @@ type PurchasePage struct {
 // PurchasePayment De contado (queda pagada) o a crédito (queda con saldo por pagar).
 type PurchasePayment string
 
-// PurchaseStatus Con saldo por pagar (`open`) o pagada (`paid`).
+// PurchaseStatus Con saldo por pagar (`open`), pagada (`paid`) o anulada (`voided`).
 type PurchaseStatus string
 
 // PurchaseSummary defines model for PurchaseSummary.
@@ -309,7 +379,7 @@ type PurchaseSummary struct {
 	// Payment De contado (queda pagada) o a crédito (queda con saldo por pagar).
 	Payment PurchasePayment `json:"payment"`
 
-	// Status Con saldo por pagar (`open`) o pagada (`paid`).
+	// Status Con saldo por pagar (`open`), pagada (`paid`) o anulada (`voided`).
 	Status       PurchaseStatus     `json:"status"`
 	SupplierId   openapi_types.UUID `json:"supplier_id"`
 	SupplierName string             `json:"supplier_name"`
@@ -393,10 +463,86 @@ type SupplierPage struct {
 	Total int `json:"total"`
 }
 
+// SupplierPayable defines model for SupplierPayable.
+type SupplierPayable struct {
+	// Balance Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Balance Money `json:"balance"`
+
+	// DueSoon Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	DueSoon Money `json:"due_soon"`
+
+	// NextDue El vencimiento más cercano (o el más antiguo, si hay vencidas).
+	NextDue openapi_types.Date `json:"next_due"`
+
+	// Overdue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Overdue Money `json:"overdue"`
+
+	// Purchases Cuántas compras le debe.
+	Purchases    int                `json:"purchases"`
+	SupplierId   openapi_types.UUID `json:"supplier_id"`
+	SupplierName string             `json:"supplier_name"`
+}
+
+// SupplierPayment defines model for SupplierPayment.
+type SupplierPayment struct {
+	// Amount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Amount Money `json:"amount"`
+
+	// BalanceAfter Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	BalanceAfter Money              `json:"balance_after"`
+	CreatedAt    time.Time          `json:"created_at"`
+	CreatedBy    openapi_types.UUID `json:"created_by"`
+	Id           openapi_types.UUID `json:"id"`
+
+	// Method Medio con que se pagó al proveedor.
+	Method     SupplierPaymentMethod `json:"method"`
+	PaidOn     openapi_types.Date    `json:"paid_on"`
+	PurchaseId openapi_types.UUID    `json:"purchase_id"`
+	SupplierId openapi_types.UUID    `json:"supplier_id"`
+}
+
+// SupplierPaymentInput defines model for SupplierPaymentInput.
+type SupplierPaymentInput struct {
+	// Amount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Amount Money `json:"amount"`
+
+	// Method Medio con que se pagó al proveedor.
+	Method SupplierPaymentMethod `json:"method"`
+
+	// PaidOn El día del pago; por defecto, hoy en hora de Colombia.
+	PaidOn *openapi_types.Date `json:"paid_on,omitempty"`
+}
+
+// SupplierPaymentList defines model for SupplierPaymentList.
+type SupplierPaymentList struct {
+	Items []SupplierPayment `json:"items"`
+}
+
+// SupplierPaymentMethod Medio con que se pagó al proveedor.
+type SupplierPaymentMethod string
+
 // TaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
 //
 // Example: 0.19
 type TaxRate = string
+
+// VoidPurchaseInput defines model for VoidPurchaseInput.
+type VoidPurchaseInput struct {
+	// Reason Example: La factura se registró dos veces
+	Reason string `json:"reason"`
+}
 
 // AttributeId defines model for AttributeId.
 type AttributeId = openapi_types.UUID
@@ -473,12 +619,21 @@ type NotFound = Error
 // Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Unauthorized = Error
 
+// ListPayablesParams defines parameters for ListPayables.
+type ListPayablesParams struct {
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // ListPurchasesParams defines parameters for ListPurchases.
 type ListPurchasesParams struct {
 	// SupplierId Solo las compras de este proveedor.
 	SupplierId *openapi_types.UUID `form:"supplier_id,omitempty" json:"supplier_id,omitempty"`
 
-	// Status Compras con saldo por pagar (`open`), pagadas (`paid`) o todas (por defecto).
+	// Status Compras con saldo por pagar (`open`), pagadas (`paid`), anuladas (`voided`) o todas (por defecto).
 	Status *ListPurchasesParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// From Facturas desde este día (incluido).
@@ -518,6 +673,12 @@ type ListSuppliersParamsStatus string
 // RegisterPurchaseJSONRequestBody defines body for RegisterPurchase for application/json ContentType.
 type RegisterPurchaseJSONRequestBody = PurchaseInput
 
+// RecordSupplierPaymentJSONRequestBody defines body for RecordSupplierPayment for application/json ContentType.
+type RecordSupplierPaymentJSONRequestBody = SupplierPaymentInput
+
+// VoidPurchaseJSONRequestBody defines body for VoidPurchase for application/json ContentType.
+type VoidPurchaseJSONRequestBody = VoidPurchaseInput
+
 // CreateSupplierJSONRequestBody defines body for CreateSupplier for application/json ContentType.
 type CreateSupplierJSONRequestBody = SupplierInput
 
@@ -526,6 +687,9 @@ type UpdateSupplierJSONRequestBody = SupplierInput
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// ListPayables Cuentas por pagar
+	// (GET /api/v1/payables)
+	ListPayables(w http.ResponseWriter, r *http.Request, params ListPayablesParams)
 	// ListPurchases Listar compras
 	// (GET /api/v1/purchases)
 	ListPurchases(w http.ResponseWriter, r *http.Request, params ListPurchasesParams)
@@ -535,6 +699,15 @@ type ServerInterface interface {
 	// GetPurchase Ver una compra
 	// (GET /api/v1/purchases/{purchaseId})
 	GetPurchase(w http.ResponseWriter, r *http.Request, purchaseId PurchaseId)
+	// ListSupplierPayments Pagos de una compra
+	// (GET /api/v1/purchases/{purchaseId}/payments)
+	ListSupplierPayments(w http.ResponseWriter, r *http.Request, purchaseId PurchaseId)
+	// RecordSupplierPayment Registrar un pago al proveedor
+	// (POST /api/v1/purchases/{purchaseId}/payments)
+	RecordSupplierPayment(w http.ResponseWriter, r *http.Request, purchaseId PurchaseId)
+	// VoidPurchase Anular una compra
+	// (POST /api/v1/purchases/{purchaseId}/void)
+	VoidPurchase(w http.ResponseWriter, r *http.Request, purchaseId PurchaseId)
 	// ListSuppliers Buscar proveedores
 	// (GET /api/v1/suppliers)
 	ListSuppliers(w http.ResponseWriter, r *http.Request, params ListSuppliersParams)
@@ -557,6 +730,52 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListPayables operation middleware
+func (siw *ServerInterfaceWrapper) ListPayables(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPayablesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPayables(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListPurchases operation middleware
 func (siw *ServerInterfaceWrapper) ListPurchases(w http.ResponseWriter, r *http.Request) {
@@ -687,6 +906,84 @@ func (siw *ServerInterfaceWrapper) GetPurchase(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetPurchase(w, r, purchaseId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSupplierPayments operation middleware
+func (siw *ServerInterfaceWrapper) ListSupplierPayments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "purchaseId" -------------
+	var purchaseId PurchaseId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "purchaseId", r.PathValue("purchaseId"), &purchaseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "purchaseId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSupplierPayments(w, r, purchaseId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordSupplierPayment operation middleware
+func (siw *ServerInterfaceWrapper) RecordSupplierPayment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "purchaseId" -------------
+	var purchaseId PurchaseId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "purchaseId", r.PathValue("purchaseId"), &purchaseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "purchaseId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordSupplierPayment(w, r, purchaseId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// VoidPurchase operation middleware
+func (siw *ServerInterfaceWrapper) VoidPurchase(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "purchaseId" -------------
+	var purchaseId PurchaseId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "purchaseId", r.PathValue("purchaseId"), &purchaseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "purchaseId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VoidPurchase(w, r, purchaseId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -961,6 +1258,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/purchases", wrapper.ListPurchases)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/purchases", wrapper.RegisterPurchase)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/purchases/{purchaseId}", wrapper.GetPurchase)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/purchases/{purchaseId}/void", wrapper.VoidPurchase)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/purchases/{purchaseId}/payments", wrapper.ListSupplierPayments)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/purchases/{purchaseId}/payments", wrapper.RecordSupplierPayment)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/payables", wrapper.ListPayables)
 
 	return m
 }
@@ -976,6 +1277,84 @@ type InvalidSupplierJSONResponse Error
 type NotFoundJSONResponse Error
 
 type UnauthorizedJSONResponse Error
+
+type ListPayablesRequestObject struct {
+	Params ListPayablesParams
+}
+
+type ListPayablesResponseObject interface {
+	VisitListPayablesResponse(w http.ResponseWriter) error
+}
+
+type ListPayables200JSONResponse PayablesPage
+
+func (response ListPayables200JSONResponse) VisitListPayablesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPayables400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListPayables400JSONResponse) VisitListPayablesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPayables401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListPayables401JSONResponse) VisitListPayablesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPayables403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListPayables403JSONResponse) VisitListPayablesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPayables500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListPayables500JSONResponse) VisitListPayablesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type ListPurchasesRequestObject struct {
 	Params ListPurchasesParams
@@ -1242,6 +1621,340 @@ func (response GetPurchase404JSONResponse) VisitGetPurchaseResponse(w http.Respo
 type GetPurchase500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response GetPurchase500JSONResponse) VisitGetPurchaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSupplierPaymentsRequestObject struct {
+	PurchaseId PurchaseId `json:"purchaseId"`
+}
+
+type ListSupplierPaymentsResponseObject interface {
+	VisitListSupplierPaymentsResponse(w http.ResponseWriter) error
+}
+
+type ListSupplierPayments200JSONResponse SupplierPaymentList
+
+func (response ListSupplierPayments200JSONResponse) VisitListSupplierPaymentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSupplierPayments400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListSupplierPayments400JSONResponse) VisitListSupplierPaymentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSupplierPayments401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListSupplierPayments401JSONResponse) VisitListSupplierPaymentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSupplierPayments403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListSupplierPayments403JSONResponse) VisitListSupplierPaymentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSupplierPayments404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListSupplierPayments404JSONResponse) VisitListSupplierPaymentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSupplierPayments500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListSupplierPayments500JSONResponse) VisitListSupplierPaymentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordSupplierPaymentRequestObject struct {
+	PurchaseId PurchaseId `json:"purchaseId"`
+	Body       *RecordSupplierPaymentJSONRequestBody
+}
+
+type RecordSupplierPaymentResponseObject interface {
+	VisitRecordSupplierPaymentResponse(w http.ResponseWriter) error
+}
+
+type RecordSupplierPayment201JSONResponse SupplierPayment
+
+func (response RecordSupplierPayment201JSONResponse) VisitRecordSupplierPaymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordSupplierPayment400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RecordSupplierPayment400JSONResponse) VisitRecordSupplierPaymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordSupplierPayment401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RecordSupplierPayment401JSONResponse) VisitRecordSupplierPaymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordSupplierPayment403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RecordSupplierPayment403JSONResponse) VisitRecordSupplierPaymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordSupplierPayment404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RecordSupplierPayment404JSONResponse) VisitRecordSupplierPaymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordSupplierPayment409JSONResponse Error
+
+func (response RecordSupplierPayment409JSONResponse) VisitRecordSupplierPaymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordSupplierPayment422JSONResponse Error
+
+func (response RecordSupplierPayment422JSONResponse) VisitRecordSupplierPaymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordSupplierPayment500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RecordSupplierPayment500JSONResponse) VisitRecordSupplierPaymentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VoidPurchaseRequestObject struct {
+	PurchaseId PurchaseId `json:"purchaseId"`
+	Body       *VoidPurchaseJSONRequestBody
+}
+
+type VoidPurchaseResponseObject interface {
+	VisitVoidPurchaseResponse(w http.ResponseWriter) error
+}
+
+type VoidPurchase200JSONResponse Purchase
+
+func (response VoidPurchase200JSONResponse) VisitVoidPurchaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VoidPurchase400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response VoidPurchase400JSONResponse) VisitVoidPurchaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VoidPurchase401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response VoidPurchase401JSONResponse) VisitVoidPurchaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VoidPurchase403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response VoidPurchase403JSONResponse) VisitVoidPurchaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VoidPurchase404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response VoidPurchase404JSONResponse) VisitVoidPurchaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VoidPurchase409JSONResponse Error
+
+func (response VoidPurchase409JSONResponse) VisitVoidPurchaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VoidPurchase422JSONResponse Error
+
+func (response VoidPurchase422JSONResponse) VisitVoidPurchaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VoidPurchase500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response VoidPurchase500JSONResponse) VisitVoidPurchaseResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -1652,6 +2365,9 @@ func (response UpdateSupplier500JSONResponse) VisitUpdateSupplierResponse(w http
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// ListPayables Cuentas por pagar
+	// (GET /api/v1/payables)
+	ListPayables(ctx context.Context, request ListPayablesRequestObject) (ListPayablesResponseObject, error)
 	// ListPurchases Listar compras
 	// (GET /api/v1/purchases)
 	ListPurchases(ctx context.Context, request ListPurchasesRequestObject) (ListPurchasesResponseObject, error)
@@ -1661,6 +2377,15 @@ type StrictServerInterface interface {
 	// GetPurchase Ver una compra
 	// (GET /api/v1/purchases/{purchaseId})
 	GetPurchase(ctx context.Context, request GetPurchaseRequestObject) (GetPurchaseResponseObject, error)
+	// ListSupplierPayments Pagos de una compra
+	// (GET /api/v1/purchases/{purchaseId}/payments)
+	ListSupplierPayments(ctx context.Context, request ListSupplierPaymentsRequestObject) (ListSupplierPaymentsResponseObject, error)
+	// RecordSupplierPayment Registrar un pago al proveedor
+	// (POST /api/v1/purchases/{purchaseId}/payments)
+	RecordSupplierPayment(ctx context.Context, request RecordSupplierPaymentRequestObject) (RecordSupplierPaymentResponseObject, error)
+	// VoidPurchase Anular una compra
+	// (POST /api/v1/purchases/{purchaseId}/void)
+	VoidPurchase(ctx context.Context, request VoidPurchaseRequestObject) (VoidPurchaseResponseObject, error)
 	// ListSuppliers Buscar proveedores
 	// (GET /api/v1/suppliers)
 	ListSuppliers(ctx context.Context, request ListSuppliersRequestObject) (ListSuppliersResponseObject, error)
@@ -1712,6 +2437,32 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListPayables operation middleware
+func (sh *strictHandler) ListPayables(w http.ResponseWriter, r *http.Request, params ListPayablesParams) {
+	var request ListPayablesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPayables(ctx, request.(ListPayablesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPayables")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPayablesResponseObject); ok {
+		if err := validResponse.VisitListPayablesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ListPurchases operation middleware
@@ -1790,6 +2541,98 @@ func (sh *strictHandler) GetPurchase(w http.ResponseWriter, r *http.Request, pur
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetPurchaseResponseObject); ok {
 		if err := validResponse.VisitGetPurchaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSupplierPayments operation middleware
+func (sh *strictHandler) ListSupplierPayments(w http.ResponseWriter, r *http.Request, purchaseId PurchaseId) {
+	var request ListSupplierPaymentsRequestObject
+
+	request.PurchaseId = purchaseId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSupplierPayments(ctx, request.(ListSupplierPaymentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSupplierPayments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSupplierPaymentsResponseObject); ok {
+		if err := validResponse.VisitListSupplierPaymentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RecordSupplierPayment operation middleware
+func (sh *strictHandler) RecordSupplierPayment(w http.ResponseWriter, r *http.Request, purchaseId PurchaseId) {
+	var request RecordSupplierPaymentRequestObject
+
+	request.PurchaseId = purchaseId
+
+	var body RecordSupplierPaymentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RecordSupplierPayment(ctx, request.(RecordSupplierPaymentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecordSupplierPayment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RecordSupplierPaymentResponseObject); ok {
+		if err := validResponse.VisitRecordSupplierPaymentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// VoidPurchase operation middleware
+func (sh *strictHandler) VoidPurchase(w http.ResponseWriter, r *http.Request, purchaseId PurchaseId) {
+	var request VoidPurchaseRequestObject
+
+	request.PurchaseId = purchaseId
+
+	var body VoidPurchaseJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.VoidPurchase(ctx, request.(VoidPurchaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "VoidPurchase")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(VoidPurchaseResponseObject); ok {
+		if err := validResponse.VisitVoidPurchaseResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

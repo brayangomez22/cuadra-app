@@ -16,22 +16,25 @@ type MovementType string
 
 // Movement types. Inbound types have a positive quantity, outbound types a
 // negative one; an adjustment can be either. sale_void gives back the stock
-// of a voided sale; initial_in is the initial stock a business loads.
+// of a voided sale, purchase_void takes out the stock of a voided purchase;
+// initial_in is the initial stock a business loads.
 const (
-	MovementPurchaseIn  MovementType = "purchase_in"
-	MovementInitialIn   MovementType = "initial_in"
-	MovementSaleOut     MovementType = "sale_out"
-	MovementSaleVoid    MovementType = "sale_void"
-	MovementAdjustment  MovementType = "adjustment"
-	MovementTransferOut MovementType = "transfer_out"
-	MovementTransferIn  MovementType = "transfer_in"
+	MovementPurchaseIn   MovementType = "purchase_in"
+	MovementInitialIn    MovementType = "initial_in"
+	MovementSaleOut      MovementType = "sale_out"
+	MovementSaleVoid     MovementType = "sale_void"
+	MovementPurchaseVoid MovementType = "purchase_void"
+	MovementAdjustment   MovementType = "adjustment"
+	MovementTransferOut  MovementType = "transfer_out"
+	MovementTransferIn   MovementType = "transfer_in"
 )
 
 // ParseMovementType returns the movement type with code s. Matching is exact.
 func ParseMovementType(s string) (MovementType, error) {
 	t := MovementType(s)
 	switch t {
-	case MovementPurchaseIn, MovementInitialIn, MovementSaleOut, MovementSaleVoid, MovementAdjustment, MovementTransferOut, MovementTransferIn:
+	case MovementPurchaseIn, MovementInitialIn, MovementSaleOut, MovementSaleVoid, MovementPurchaseVoid,
+		MovementAdjustment, MovementTransferOut, MovementTransferIn:
 		return t, nil
 	}
 	return "", ErrInvalidMovementType
@@ -48,7 +51,7 @@ func (t MovementType) validQuantity(q decimal.Decimal) bool {
 	switch t {
 	case MovementPurchaseIn, MovementInitialIn, MovementSaleVoid, MovementTransferIn:
 		return q.IsPositive()
-	case MovementSaleOut, MovementTransferOut:
+	case MovementSaleOut, MovementPurchaseVoid, MovementTransferOut:
 		return q.IsNegative()
 	default:
 		return !q.IsZero()
@@ -192,7 +195,7 @@ func (t MovementType) reason(text string) (string, error) {
 
 // checkReference checks the document of a movement of type t: a transfer
 // always references a transfer, and nothing else does; giving stock back is
-// always for a sale.
+// always for a sale, and taking it out again for a purchase.
 func (t MovementType) checkReference(ref *DocumentRef) error {
 	if ref != nil && !ref.valid() {
 		return ErrInvalidReference
@@ -201,10 +204,22 @@ func (t MovementType) checkReference(ref *DocumentRef) error {
 	if isTransferRef != t.isTransfer() {
 		return ErrInvalidReference
 	}
-	if t == MovementSaleVoid && (ref == nil || ref.Kind != DocumentSale) {
+	if kind, ok := t.undoes(); ok && (ref == nil || ref.Kind != kind) {
 		return ErrInvalidReference
 	}
 	return nil
+}
+
+// undoes is the kind of document whose movements t undoes, which it must
+// reference: sale_void undoes a sale, purchase_void a purchase.
+func (t MovementType) undoes() (DocumentKind, bool) {
+	switch t {
+	case MovementSaleVoid:
+		return DocumentSale, true
+	case MovementPurchaseVoid:
+		return DocumentPurchase, true
+	}
+	return "", false
 }
 
 // normalizeReason trims an adjustment reason; it is required and at most

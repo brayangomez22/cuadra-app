@@ -154,3 +154,37 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (int64, 
 	}
 	return result.RowsAffected(), nil
 }
+
+const userNames = `-- name: UserNames :many
+SELECT id, name FROM users WHERE tenant_id = $1 AND id = ANY($2::uuid[])
+`
+
+type UserNamesParams struct {
+	TenantID uuid.UUID
+	Ids      []uuid.UUID
+}
+
+type UserNamesRow struct {
+	ID   uuid.UUID
+	Name string
+}
+
+func (q *Queries) UserNames(ctx context.Context, arg UserNamesParams) ([]UserNamesRow, error) {
+	rows, err := q.db.Query(ctx, userNames, arg.TenantID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UserNamesRow
+	for rows.Next() {
+		var i UserNamesRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

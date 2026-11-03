@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/domain"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 )
@@ -29,6 +30,7 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrSaleWithoutLines, Status: http.StatusUnprocessableEntity, Code: "sale_without_lines", Message: "Agregue al menos un producto a la venta."},
 	{Err: domain.ErrUnitNotAvailable, Status: http.StatusUnprocessableEntity, Code: "unit_not_available", Message: "El producto no se vende en esa unidad."},
 	{Err: domain.ErrQuantityPrecision, Status: http.StatusUnprocessableEntity, Code: "quantity_precision", Message: "La cantidad es demasiado pequeña para esa unidad: en la unidad base tendría más de 4 decimales."},
+	{Err: app.ErrInvalidCashStatus, Status: http.StatusBadRequest, Code: "invalid_request", Message: "El estado del filtro no es válido."},
 	{Err: domain.ErrInvalidQuantity, Status: http.StatusUnprocessableEntity, Code: "invalid_quantity", Message: "La cantidad debe ser mayor que cero y tener máximo 4 decimales."},
 	{Err: domain.ErrInvalidDiscount, Status: http.StatusUnprocessableEntity, Code: "invalid_discount", Message: "El descuento no puede ser negativo, tiene máximo 2 decimales y no puede superar el valor de la línea."},
 	{Err: domain.ErrInvalidPaymentAmount, Status: http.StatusUnprocessableEntity, Code: "invalid_payment_amount", Message: "Cada pago debe ser mayor que cero y tener máximo 2 decimales."},
@@ -52,7 +54,7 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrCashSessionRequired, Status: http.StatusConflict, Code: "cash_session_required", Message: "Se necesita una caja abierta para vender."},
 	{Err: domain.ErrCashSessionClosed, Status: http.StatusConflict, Code: "cash_session_closed", Message: "La caja ya está cerrada. Para seguir vendiendo, abra una nueva."},
 	{Err: domain.ErrCashSessionAlreadyOpen, Status: http.StatusConflict, Code: "cash_session_already_open", Message: "Ya tiene una caja abierta. Ciérrela antes de abrir otra."},
-	{Err: domain.ErrCashSessionNotOwner, Status: http.StatusForbidden, Code: "cash_session_not_owner", Message: "Esta caja es de otro usuario: solo quien la abrió registra movimientos en ella o la cierra."},
+	{Err: domain.ErrCashSessionNotOwner, Status: http.StatusForbidden, Code: "cash_session_not_owner", Message: "Esta caja es de otro usuario: solo quien la abrió registra movimientos en ella, y solo quien la abrió o un administrador la cierra."},
 	{Err: domain.ErrCashSessionNotFound, Status: http.StatusNotFound, Code: "cash_session_not_found", Message: "La caja no existe."},
 	{Err: domain.ErrCashSessionLocationMismatch, Status: http.StatusUnprocessableEntity, Code: "cash_session_location_mismatch", Message: "La caja está abierta en otra sede. Venda en esa sede o cierre la caja."},
 	{Err: domain.ErrInvalidOpeningFloat, Status: http.StatusUnprocessableEntity, Code: "invalid_opening_float", Message: "La base no puede ser negativa y tiene máximo 2 decimales."},

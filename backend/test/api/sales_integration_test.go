@@ -201,8 +201,11 @@ func TestSalesFlow(t *testing.T) {
 			`{"kind":"out","amount":"7100","reason":"Pago del domicilio"}`, cashierToken)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
+		// Another cashier does not close it; the owner could (cash:manage, TestCashHistory).
+		otherCashier, _, err := f.tokens.Issue(f.tenantID, uuid.Must(uuid.NewV7()), "cashier")
+		require.NoError(t, err)
 		rec = do(t, http.MethodPost, "/api/v1/cash-sessions/"+sessionID+"/close",
-			`{"counts":[{"denomination":"100000","quantity":1}]}`, ownerToken)
+			`{"counts":[{"denomination":"100000","quantity":1}]}`, otherCashier)
 		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), "cash_session_not_owner")
 

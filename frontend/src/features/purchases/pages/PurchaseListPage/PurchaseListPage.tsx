@@ -1,10 +1,10 @@
-import { paths } from '@/app/routes/paths';
 import { useCan } from '@/features/auth';
 import { QueryState } from '@/shared/query';
-import { ButtonLink, IconPlus, Inline, Page, Pagination, Spinner } from '@/shared/ui';
+import { Page, Pagination, Spinner } from '@/shared/ui';
 import { PURCHASE_PAGE_SIZE, usePurchases } from '../../api/purchases';
 import { useSuppliers } from '../../api/suppliers';
 import { NoPurchases } from './components/NoPurchases/NoPurchases';
+import { PurchaseListActions } from './components/PurchaseListActions/PurchaseListActions';
 import { PurchaseFilters } from './components/PurchaseFilters/PurchaseFilters';
 import { PurchaseTable } from './components/PurchaseTable/PurchaseTable';
 import { usePurchaseListParams } from './hooks/usePurchaseListParams';
@@ -23,18 +23,7 @@ export function PurchaseListPage() {
     <Page
       title="Compras"
       description="Las facturas de sus proveedores: lo que entró al inventario y lo que falta pagar."
-      actions={
-        <Inline wrap>
-          <ButtonLink to={paths.purchases.suppliers()} variant="secondary">
-            Proveedores
-          </ButtonLink>
-          {canWrite && (
-            <ButtonLink to={paths.purchases.new()} icon={<IconPlus />}>
-              Registrar compra
-            </ButtonLink>
-          )}
-        </Inline>
-      }
+      actions={<PurchaseListActions canWrite={canWrite} />}
     >
       <PurchaseFilters params={params} suppliers={suppliers.data?.items ?? []} />
       <QueryState

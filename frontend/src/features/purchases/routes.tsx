@@ -9,6 +9,7 @@ export const purchasesRoutes: RouteObject[] = [
     element: <RequirePermission permission="purchases:read" />,
     children: [
       { path: paths.purchases.list.pattern, ...lazyPage(async () => (await import('./pages')).PurchaseListPage) },
+      { path: paths.purchases.payables.pattern, ...lazyPage(async () => (await import('./pages')).PayablesPage) },
       { path: paths.purchases.detail.pattern, ...lazyPage(async () => (await import('./pages')).PurchaseDetailPage) },
       { path: paths.purchases.suppliers.pattern, ...lazyPage(async () => (await import('./pages')).SupplierListPage) },
     ],

@@ -40,8 +40,23 @@ var errorRules = []httpx.ErrorRule{
 	lineRule(domain.ErrInvalidQuantity, "invalid_quantity", "La cantidad debe ser mayor que cero, con hasta 4 decimales."),
 	lineRule(domain.ErrInvalidUnitCost, "invalid_unit_cost", "El costo no puede ser negativo."),
 	lineRule(domain.ErrInvalidTaxRate, "invalid_tax_rate", "La tasa de IVA debe estar entre 0 y 1."),
+	{Err: domain.ErrPurchaseAlreadyVoided, Status: http.StatusConflict, Code: "purchase_already_voided", Message: "La compra ya está anulada."},
+	{Err: domain.ErrPurchaseHasPayments, Status: http.StatusConflict, Code: "purchase_has_payments", Message: "La compra ya tiene pagos al proveedor: no se puede anular."},
+	{Err: domain.ErrPurchaseVoided, Status: http.StatusConflict, Code: "purchase_voided", Message: "La compra está anulada: no se le registran pagos."},
+	{Err: domain.ErrPaymentExceedsBalance, Status: http.StatusConflict, Code: "payment_exceeds_balance", Message: "El pago pasa de lo que falta pagar de la compra."},
+	{
+		Err: domain.ErrInsufficientStock, Status: http.StatusConflict, Code: "insufficient_stock",
+		Message: stockGoneMessage, Describe: describeLine(stockGoneMessage),
+	},
+	{Err: domain.ErrInvalidVoidReason, Status: http.StatusUnprocessableEntity, Code: "invalid_void_reason", Message: "Escriba el motivo de la anulación (máximo 500 caracteres)."},
+	{Err: domain.ErrInvalidPaymentAmount, Status: http.StatusUnprocessableEntity, Code: "invalid_payment_amount", Message: "El valor del pago debe ser mayor que cero, con hasta 2 decimales."},
+	{Err: domain.ErrInvalidPaymentMethod, Status: http.StatusUnprocessableEntity, Code: "invalid_payment_method", Message: "El medio de pago no es válido."},
+	{Err: domain.ErrPaymentDateInFuture, Status: http.StatusUnprocessableEntity, Code: "payment_date_in_future", Message: "La fecha del pago no puede ser posterior a hoy."},
+	{Err: domain.ErrPaymentBeforeInvoice, Status: http.StatusUnprocessableEntity, Code: "payment_before_invoice", Message: "La fecha del pago no puede ser anterior a la de la factura."},
 	{Err: app.ErrInvalidStatus, Status: http.StatusBadRequest, Code: "invalid_request", Message: "El estado del filtro no es válido."},
 }
+
+const stockGoneMessage = "Ya no hay en la sede todo el stock que entró con la compra: se vendió o se movió."
 
 // errSupplierPathNotFound is the supplier of the path that does not exist:
 // a 404, unlike the supplier of a purchase's body.
@@ -51,14 +66,19 @@ var errSupplierPathNotFound = errors.New("purchases: supplier of the path not fo
 // names the line.
 func lineRule(err error, code, message string) httpx.ErrorRule {
 	return httpx.ErrorRule{
-		Err: err, Status: http.StatusUnprocessableEntity, Code: code, Message: message,
-		Describe: func(err error) (string, map[string]string, bool) {
-			var line *app.LineError
-			if !errors.As(err, &line) {
-				return "", nil, false
-			}
-			return "Línea " + strconv.Itoa(line.Index+1) + ": " + message,
-				map[string]string{"line": strconv.Itoa(line.Index)}, true
-		},
+		Err: err, Status: http.StatusUnprocessableEntity, Code: code, Message: message, Describe: describeLine(message),
+	}
+}
+
+// describeLine names the line of an *app.LineError in details.line (from 0)
+// and in the message (from 1).
+func describeLine(message string) func(error) (string, map[string]string, bool) {
+	return func(err error) (string, map[string]string, bool) {
+		var line *app.LineError
+		if !errors.As(err, &line) {
+			return "", nil, false
+		}
+		return "Línea " + strconv.Itoa(line.Index+1) + ": " + message,
+			map[string]string{"line": strconv.Itoa(line.Index)}, true
 	}
 }

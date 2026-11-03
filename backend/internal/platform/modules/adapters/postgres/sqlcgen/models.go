@@ -279,6 +279,9 @@ type Purchase struct {
 	BalanceDue    pgtype.Numeric
 	CreatedBy     uuid.UUID
 	CreatedAt     time.Time
+	VoidedAt      pgtype.Timestamptz
+	VoidedBy      *uuid.UUID
+	VoidReason    *string
 }
 
 type PurchaseLine struct {
@@ -542,6 +545,19 @@ type Supplier struct {
 	SearchName      string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+}
+
+type SupplierPayment struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	PurchaseID   uuid.UUID
+	SupplierID   uuid.UUID
+	Method       string
+	Amount       pgtype.Numeric
+	BalanceAfter pgtype.Numeric
+	PaidOn       pgtype.Date
+	CreatedBy    uuid.UUID
+	CreatedAt    time.Time
 }
 
 type Tenant struct {

@@ -135,6 +135,34 @@ func (q *Queries) CloseCashSession(ctx context.Context, arg CloseCashSessionPara
 	return result.RowsAffected(), nil
 }
 
+const countCashSessions = `-- name: CountCashSessions :one
+SELECT count(*)
+FROM cash_sessions s
+WHERE ($1::uuid IS NULL OR s.location_id = $1)
+  AND ($2::text IS NULL OR s.status = $2)
+  AND ($3::timestamptz IS NULL OR s.opened_at >= $3)
+  AND ($4::timestamptz IS NULL OR s.opened_at < $4)
+`
+
+type CountCashSessionsParams struct {
+	LocationID   *uuid.UUID
+	Status       *string
+	OpenedFrom   *time.Time
+	OpenedBefore *time.Time
+}
+
+func (q *Queries) CountCashSessions(ctx context.Context, arg CountCashSessionsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countCashSessions,
+		arg.LocationID,
+		arg.Status,
+		arg.OpenedFrom,
+		arg.OpenedBefore,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const currentCashSession = `-- name: CurrentCashSession :one
 SELECT id, tenant_id, location_id, user_id, status, opening_float, opened_at, closed_at, closed_by, notes, cash_received, change_given, cash_in, cash_out, sales_count, expected, counted, difference FROM cash_sessions WHERE user_id = $1 AND status = 'open'
 `
@@ -418,6 +446,84 @@ func (q *Queries) LockCashSession(ctx context.Context, id uuid.UUID) (CashSessio
 		&i.Difference,
 	)
 	return i, err
+}
+
+const searchCashSessions = `-- name: SearchCashSessions :many
+SELECT s.id, s.location_id, s.user_id, s.status, s.opening_float, s.opened_at, s.closed_at, s.closed_by,
+       s.sales_count, s.difference,
+       coalesce((SELECT sum(p.amount) FROM cash_session_payments p
+                 WHERE p.tenant_id = s.tenant_id AND p.session_id = s.id), 0)::numeric(18,4) AS sales_total
+FROM cash_sessions s
+WHERE ($1::uuid IS NULL OR s.location_id = $1)
+  AND ($2::text IS NULL OR s.status = $2)
+  AND ($3::timestamptz IS NULL OR s.opened_at >= $3)
+  AND ($4::timestamptz IS NULL OR s.opened_at < $4)
+ORDER BY s.opened_at DESC, s.id DESC
+LIMIT $6 OFFSET $5
+`
+
+type SearchCashSessionsParams struct {
+	LocationID   *uuid.UUID
+	Status       *string
+	OpenedFrom   *time.Time
+	OpenedBefore *time.Time
+	RowOffset    int32
+	RowLimit     int32
+}
+
+type SearchCashSessionsRow struct {
+	ID           uuid.UUID
+	LocationID   uuid.UUID
+	UserID       uuid.UUID
+	Status       string
+	OpeningFloat decimal.Decimal
+	OpenedAt     time.Time
+	ClosedAt     *time.Time
+	ClosedBy     *uuid.UUID
+	SalesCount   *int32
+	Difference   *decimal.Decimal
+	SalesTotal   decimal.Decimal
+}
+
+// SearchCashSessions is a page of the history, the latest opened first. A
+// closed session's sales total is what its closing stored by method.
+func (q *Queries) SearchCashSessions(ctx context.Context, arg SearchCashSessionsParams) ([]SearchCashSessionsRow, error) {
+	rows, err := q.db.Query(ctx, searchCashSessions,
+		arg.LocationID,
+		arg.Status,
+		arg.OpenedFrom,
+		arg.OpenedBefore,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchCashSessionsRow
+	for rows.Next() {
+		var i SearchCashSessionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.LocationID,
+			&i.UserID,
+			&i.Status,
+			&i.OpeningFloat,
+			&i.OpenedAt,
+			&i.ClosedAt,
+			&i.ClosedBy,
+			&i.SalesCount,
+			&i.Difference,
+			&i.SalesTotal,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const shareLockCashSession = `-- name: ShareLockCashSession :one

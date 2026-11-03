@@ -53,6 +53,8 @@ type Service struct {
 	lines             metric.Int64Counter
 	duplicateInvoices metric.Int64Counter
 	suppliersCreated  metric.Int64Counter
+	voided            metric.Int64Counter
+	supplierPayments  metric.Int64Counter
 }
 
 // NewService builds a Service. It fails if a dependency is missing or a
@@ -76,6 +78,10 @@ func NewService(d Deps) (*Service, error) {
 			"Purchases rejected because the supplier's invoice was already registered.", "{rejection}"),
 		usecase.Counter(&s.suppliersCreated, "cuadra.purchases.suppliers_created",
 			"Suppliers created.", "{supplier}"),
+		usecase.Counter(&s.voided, "cuadra.purchases.voided",
+			"Purchases voided, by payment (cash or credit).", "{purchase}"),
+		usecase.Counter(&s.supplierPayments, "cuadra.purchases.supplier_payments",
+			"Payments to suppliers recorded, by method.", "{payment}"),
 	)
 	if err != nil {
 		return nil, err

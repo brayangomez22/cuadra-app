@@ -25,3 +25,22 @@ export function useStock(locationId: string | undefined, offset: number, variant
     placeholderData: keepPreviousData,
   });
 }
+
+/** What a location has of a variant; a variant that never moved there has no row, which is zero. */
+export function useVariantStock(variantId: string | undefined, locationId: string | undefined) {
+  return useQuery({
+    queryKey: inventoryKeys.variantStock(variantId ?? '', locationId ?? ''),
+    queryFn: async () => {
+      const stock = unwrap(
+        await api.GET('/api/v1/locations/{locationId}/stock', {
+          params: {
+            path: { locationId: locationId ?? '' },
+            query: { limit: 1, variant_ids: variantId ? [variantId] : [] },
+          },
+        }),
+      );
+      return stock.items[0]?.quantity ?? '0';
+    },
+    enabled: Boolean(variantId) && Boolean(locationId),
+  });
+}

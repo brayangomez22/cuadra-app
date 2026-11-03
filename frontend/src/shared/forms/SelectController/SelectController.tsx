@@ -16,11 +16,8 @@ export function SelectController<T extends FieldValues>({ control, name, ...sele
       control={control}
       name={name}
       render={({ field }) => (
-        <Select
-          {...select}
-          value={typeof field.value === 'string' && field.value !== '' ? field.value : undefined}
-          onValueChange={field.onChange}
-        />
+        // Always a string: undefined would make Radix uncontrolled, and a reset would keep showing the last choice.
+        <Select {...select} value={typeof field.value === 'string' ? field.value : ''} onValueChange={field.onChange} />
       )}
     />
   );

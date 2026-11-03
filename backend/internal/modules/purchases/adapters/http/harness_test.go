@@ -36,11 +36,17 @@ type stubUseCases struct {
 	supplierQuery app.SupplierQuery
 	input         app.PurchaseInput
 	purchaseQuery app.PurchaseQuery
+	reason        string
+	payment       app.SupplierPaymentRequest
+	payablesQuery app.PayablesQuery
 
 	supplier  app.SupplierView
 	suppliers app.SupplierPage
 	purchase  *domain.Purchase
 	purchases app.PurchasePage
+	paid      app.SupplierPaymentResult
+	payments  []*domain.SupplierPayment
+	payables  domain.PayablesPage
 	err       error
 }
 

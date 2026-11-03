@@ -38,7 +38,9 @@ export function CashReport({ session, business, location, cashier, paper, classN
         <ReportFigure term="Abierta" value={formatDateTime(session.opened_at)} />
         <ReportFigure term="Cerrada" value={formatDateTime(c.closed_at)} />
         {cashier && <ReportFigure term="Cajero" value={cashier} />}
+        {c.closed_by !== session.user_id && <ReportFigure term="Cerrada por" value="El dueño o un administrador" />}
         <ReportFigure term="Ventas" value={String(c.sales_count)} />
+        <ReportFigure term="Total vendido" value={formatMoney(c.sales_total)} />
       </dl>
 
       <dl className={styles.block}>

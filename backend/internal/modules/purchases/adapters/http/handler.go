@@ -24,6 +24,7 @@ const defaultPageSize = 20
 type UseCases interface {
 	SupplierUseCases
 	PurchaseUseCases
+	PaymentUseCases
 }
 
 // Handler implements purchasesapi.StrictServerInterface with a handler per
@@ -31,6 +32,7 @@ type UseCases interface {
 type Handler struct {
 	supplierHandlers
 	purchaseHandlers
+	paymentHandlers
 }
 
 var _ purchasesapi.StrictServerInterface = (*Handler)(nil)
@@ -38,7 +40,10 @@ var _ purchasesapi.StrictServerInterface = (*Handler)(nil)
 // Register mounts the purchases operations on mux, with the module's error
 // mapping.
 func Register(mux *http.ServeMux, uc UseCases, log *slog.Logger) {
-	h := &Handler{supplierHandlers: supplierHandlers{uc: uc}, purchaseHandlers: purchaseHandlers{uc: uc}}
+	h := &Handler{
+		supplierHandlers: supplierHandlers{uc: uc}, purchaseHandlers: purchaseHandlers{uc: uc},
+		paymentHandlers: paymentHandlers{uc: uc},
+	}
 	errs := httpx.NewErrorMapper(log, errorRules...)
 	purchasesapi.HandlerWithOptions(
 		purchasesapi.NewStrictHandlerWithOptions(h, []purchasesapi.StrictMiddlewareFunc{auth.RequirePrincipal[purchasesapi.StrictHandlerFunc]}, purchasesapi.StrictHTTPServerOptions{

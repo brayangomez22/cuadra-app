@@ -5,3 +5,5 @@ export { CloseCashPage } from './pages/CloseCashPage/CloseCashPage';
 export { PosPage } from './pages/PosPage/PosPage';
 export { SaleDetailPage } from './pages/SaleDetailPage/SaleDetailPage';
 export { SaleListPage } from './pages/SaleListPage/SaleListPage';
+export { CashHistoryPage } from './pages/CashHistoryPage/CashHistoryPage';
+export { CloseCashOfPage } from './pages/CloseCashOfPage/CloseCashOfPage';

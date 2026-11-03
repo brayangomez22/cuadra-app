@@ -38,6 +38,22 @@ describe('KardexPage: documentos', () => {
     );
   });
 
+  it('la salida de una compra anulada se nombra así y enlaza a la compra', async () => {
+    kardexApi({
+      [`GET /api/v1/variants/${ids.pipe}/kardex`]: json(
+        200,
+        page([aMovement({ type: 'purchase_void', quantity: '-10', reference: { kind: 'purchase', id: purchaseId } })]),
+      ),
+    });
+    renderApp(`/productos/${ids.pipe}/kardex`);
+
+    const table = await kardexTable();
+    expect(await table.findByRole('link', { name: 'Compra anulada' })).toHaveAttribute(
+      'href',
+      `/compras/${purchaseId}`,
+    );
+  });
+
   it('sin permiso de ver compras la entrada no enlaza', async () => {
     kardexApi({
       ...signedIn(aUser('cashier')),

@@ -57,6 +57,19 @@ describe('PurchaseListPage', () => {
     expect(query(api.calls('GET /api/v1/purchases').at(-1)!).get('supplier_id')).toBe(supplierIds.hardware);
   });
 
+  it('filtra las anuladas y las muestra como anuladas', async () => {
+    const api = purchasesApi({
+      routes: {
+        'GET /api/v1/purchases': json(200, page([aPurchaseSummary({ status: 'voided', balance_due: '0.00' })])),
+      },
+    });
+    renderApp('/compras?estado=anuladas');
+
+    const table = within(await screen.findByRole('table', { name: 'Compras' }));
+    expect(await table.findAllByText('Anulada')).not.toHaveLength(0);
+    expect(query(api.calls('GET /api/v1/purchases')[0]!).get('status')).toBe('voided');
+  });
+
   it('sin compras invita a registrar la primera', async () => {
     purchasesApi({ routes: { 'GET /api/v1/purchases': json(200, page([])) } });
     renderApp('/compras');

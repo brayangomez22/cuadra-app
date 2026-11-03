@@ -8,8 +8,8 @@ import (
 )
 
 // StockLevel is a variant's stock at a location and its weighted average
-// cost. Every change goes through Receive, Issue, ReturnSale, Adjust or
-// Transfer, which return the StockMovement that records it, so the level and
+// cost. Every change goes through Receive, Issue, ReturnSale, ReturnPurchase,
+// Adjust or Transfer, which return the StockMovement that records it, so the level and
 // the kardex cannot disagree. On error the level is unchanged.
 type StockLevel struct {
 	tenantID    uuid.UUID

@@ -98,8 +98,8 @@ func (s *Service) RecordCashMovement(ctx context.Context, a Actor, sessionID uui
 	return m, nil
 }
 
-// CloseCashSession closes the actor's open session with the count of the
-// drawer. The expected cash comes from the confirmed sales charged in it and
+// CloseCashSession closes an open session with the count of the drawer: the
+// actor's own or, if their role manages cash, one another user left open. The expected cash comes from the confirmed sales charged in it and
 // its movements, read while the session is locked, so no sale slips in
 // between. The closing never changes afterwards.
 func (s *Service) CloseCashSession(ctx context.Context, a Actor, sessionID uuid.UUID, in CloseCashSessionInput) (_ CashSessionView, err error) {
@@ -112,7 +112,7 @@ func (s *Service) CloseCashSession(ctx context.Context, a Actor, sessionID uuid.
 	}
 	session, err := s.CashSessions.Close(ctx, a.TenantID, sessionID, func(session *domain.CashSession, activity domain.CashActivity) error {
 		return session.Close(domain.CloseCashInput{
-			UserID: a.UserID, Count: count, Activity: activity, Notes: in.Notes, At: s.Now(),
+			UserID: a.UserID, ManagesCash: a.ManagesCash, Count: count, Activity: activity, Notes: in.Notes, At: s.Now(),
 		})
 	})
 	if err != nil {

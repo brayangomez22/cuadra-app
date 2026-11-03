@@ -83,43 +83,6 @@ func ExpectedCash(openingFloat decimal.Decimal, a CashActivity) decimal.Decimal 
 	return openingFloat.Add(a.CashReceived).Add(a.CashIn).Sub(a.CashOut).Sub(a.ChangeGiven)
 }
 
-// CloseCashInput is a closing: who closes, the count of the drawer, the
-// session's activity (which the repository reads while the session is
-// locked) and optional notes.
-type CloseCashInput struct {
-	UserID   uuid.UUID
-	Count    CashCount
-	Activity CashActivity
-	Notes    string
-	At       time.Time
-}
-
-// CashClosing is the closing of a session. Expected is ExpectedCash of the
-// activity, Counted the count's total and Difference = Counted − Expected:
-// negative is a shortage, positive an overage.
-type CashClosing struct {
-	ClosedBy   uuid.UUID
-	ClosedAt   time.Time
-	Notes      string
-	Count      CashCount
-	Activity   CashActivity
-	Expected   decimal.Decimal
-	Counted    decimal.Decimal
-	Difference decimal.Decimal
-}
-
-// Result says whether the count matched the expected cash, fell short or was
-// over.
-func (c CashClosing) Result() CashResult {
-	switch c.Difference.Sign() {
-	case -1:
-		return CashShortage
-	case 1:
-		return CashOverage
-	}
-	return CashExact
-}
-
 // CashSession is a cashier's drawer at a location, from its opening to its
 // closing with the count (arqueo). The sales the cashier confirms while it is
 // open are charged in it. A closed session is immutable.
@@ -168,13 +131,14 @@ func (s *CashSession) RecordMovement(in CashMovementInput) (CashMovement, error)
 }
 
 // Close closes an open session with the count of the drawer and the
-// session's activity, computing the expected cash and the difference. Only
-// the session's cashier closes it, once. On error the session is unchanged.
+// session's activity, computing the expected cash and the difference. The
+// session's cashier closes it, or who manages cash closes one left open; it
+// closes once. On error the session is unchanged.
 func (s *CashSession) Close(in CloseCashInput) error {
 	if s.status != CashSessionOpen {
 		return ErrCashSessionClosed
 	}
-	if in.UserID != s.userID {
+	if in.UserID != s.userID && !in.ManagesCash {
 		return ErrCashSessionNotOwner
 	}
 	notes := strings.TrimSpace(in.Notes)
@@ -277,13 +241,14 @@ func RehydrateCashSession(snap CashSessionSnapshot) (*CashSession, error) {
 }
 
 // rehydrateClosing closes the session with the stored count and checks the
-// stored expected, counted and difference.
+// stored expected, counted and difference. Who closed it may be another
+// user: their role let them when they did.
 func (s *CashSession) rehydrateClosing(c CashClosing) error {
 	count, err := NewCashCount(c.Count.Counts())
 	if err != nil {
 		return err
 	}
-	if err := s.Close(CloseCashInput{UserID: c.ClosedBy, Count: count, Activity: c.Activity, Notes: c.Notes, At: c.ClosedAt}); err != nil {
+	if err := s.Close(CloseCashInput{UserID: c.ClosedBy, ManagesCash: true, Count: count, Activity: c.Activity, Notes: c.Notes, At: c.ClosedAt}); err != nil {
 		return err
 	}
 	got := s.closing

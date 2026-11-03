@@ -22,7 +22,7 @@ func (r *PurchaseRepository) Search(ctx context.Context, f domain.PurchaseFilter
 		return nil, 0, err
 	}
 	params := sqlcgen.SearchPurchasesParams{
-		SupplierID: f.SupplierID, Open: openFilter(f.Status), IssuedFrom: dayTime(f.From), IssuedTo: dayTime(f.To),
+		SupplierID: f.SupplierID, Status: statusFilter(f.Status), IssuedFrom: dayTime(f.From), IssuedTo: dayTime(f.To),
 		RowLimit: limit, RowOffset: offset,
 	}
 	var rows []sqlcgen.SearchPurchasesRow
@@ -34,7 +34,7 @@ func (r *PurchaseRepository) Search(ctx context.Context, f domain.PurchaseFilter
 			return err
 		}
 		total, err = q.CountPurchases(ctx, sqlcgen.CountPurchasesParams{
-			SupplierID: params.SupplierID, Open: params.Open, IssuedFrom: params.IssuedFrom, IssuedTo: params.IssuedTo,
+			SupplierID: params.SupplierID, Status: params.Status, IssuedFrom: params.IssuedFrom, IssuedTo: params.IssuedTo,
 		})
 		return err
 	})
@@ -46,7 +46,8 @@ func (r *PurchaseRepository) Search(ctx context.Context, f domain.PurchaseFilter
 		out[i] = domain.PurchaseSummary{
 			ID: row.ID, SupplierID: row.SupplierID, SupplierName: row.SupplierName, LocationID: row.LocationID,
 			InvoiceNumber: row.InvoiceNumber, IssuedOn: domain.DateOf(row.IssuedOn), Payment: domain.Payment(row.Payment),
-			Total: row.Total, BalanceDue: row.BalanceDue, Lines: int(row.LineCount), CreatedAt: row.CreatedAt,
+			Total: row.Total, BalanceDue: row.BalanceDue, Lines: int(row.LineCount), Voided: row.Voided,
+			CreatedAt: row.CreatedAt,
 		}
 		if row.DueOn != nil {
 			out[i].DueOn = new(domain.DateOf(*row.DueOn))
@@ -71,17 +72,12 @@ func (r *PurchaseRepository) BalancesDue(ctx context.Context, tenantID uuid.UUID
 	return out, nil
 }
 
-// openFilter is whether a status asks for purchases with a balance; nil for
-// every status.
-func openFilter(s domain.PurchaseStatus) *bool {
-	switch s {
-	case domain.PurchaseOpen:
-		return new(true)
-	case domain.PurchasePaid:
-		return new(false)
-	default:
+// statusFilter is the status a search asks for; nil for every status.
+func statusFilter(s domain.PurchaseStatus) *string {
+	if s == "" {
 		return nil
 	}
+	return new(string(s))
 }
 
 func dayTime(d *domain.Date) *time.Time {

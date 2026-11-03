@@ -130,3 +130,18 @@ func (r *UserRepository) FirstByRole(ctx context.Context, tenantID uuid.UUID, ro
 		return q.GetFirstUserByRole(ctx, sqlcgen.GetFirstUserByRoleParams{TenantID: tenantID, Role: role.String()})
 	})
 }
+
+// Names returns the name of each user of tenantID among ids.
+func (r *UserRepository) Names(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	rows, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) ([]sqlcgen.UserNamesRow, error) {
+		return sqlcgen.New(tx).UserNames(ctx, sqlcgen.UserNamesParams{TenantID: tenantID, Ids: ids})
+	})
+	if err != nil {
+		return nil, fmt.Errorf("identity: user names: %w", err)
+	}
+	out := make(map[uuid.UUID]string, len(rows))
+	for _, row := range rows {
+		out[row.ID] = row.Name
+	}
+	return out, nil
+}

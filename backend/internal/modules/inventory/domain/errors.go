@@ -25,6 +25,7 @@ var (
 	ErrTransferMismatch         = errors.New("inventory: transfer between different variants or tenants")
 	ErrLocationInactive         = errors.New("inventory: location is inactive")
 	ErrSaleAlreadyReversed      = errors.New("inventory: the sale's stock was already given back")
+	ErrPurchaseAlreadyReversed  = errors.New("inventory: the purchase's stock was already taken out")
 
 	ErrLocationNotFound    = errors.New("inventory: location not found")
 	ErrLocationNameTaken   = errors.New("inventory: location name taken")

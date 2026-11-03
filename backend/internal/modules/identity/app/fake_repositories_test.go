@@ -151,6 +151,18 @@ func (f *fakeUsers) Update(_ context.Context, u *domain.User) error {
 }
 
 // FirstByRole returns the oldest active user of tenantID with role.
+func (f *fakeUsers) Names(_ context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := map[uuid.UUID]string{}
+	for _, id := range ids {
+		if u, ok := f.byID[id]; ok && u.TenantID() == tenantID {
+			out[id] = u.Name()
+		}
+	}
+	return out, nil
+}
+
 func (f *fakeUsers) FirstByRole(_ context.Context, tenantID uuid.UUID, role domain.Role) (*domain.User, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

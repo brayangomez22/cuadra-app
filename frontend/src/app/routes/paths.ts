@@ -53,6 +53,8 @@ export const paths = {
   inventory: {
     stock: route('/inventario', ['sede']),
     receipt: route('/inventario/entrada', ['producto', 'variante', 'sede']),
+    adjustment: route('/inventario/ajuste', ['producto', 'variante', 'sede']),
+    transfer: route('/inventario/traslado', ['producto', 'variante', 'sede']),
     reorder: route('/inventario/reponer', ['sede']),
     kardex: route('/productos/:productId/kardex', ['variante', 'sede']),
     counts: route('/inventario/conteos', ['sede', 'pagina']),
@@ -65,7 +67,8 @@ export const paths = {
     edit: route('/clientes/:customerId/editar'),
   },
   purchases: {
-    list: route('/compras', ['proveedor']),
+    list: route('/compras', ['proveedor', 'estado']),
+    payables: route('/compras/por-pagar', ['pagina']),
     new: route('/compras/nueva'),
     detail: route('/compras/:purchaseId'),
     suppliers: route('/compras/proveedores'),
@@ -80,7 +83,9 @@ export const paths = {
     pos: route('/vender'),
     cash: route('/caja'),
     closeCash: route('/caja/cerrar'),
+    cashHistory: route('/caja/cierres', ['estado', 'sede', 'desde', 'hasta', 'pagina']),
     cashReport: route('/caja/:sessionId'),
+    closeCashOf: route('/caja/:sessionId/cerrar'),
     list: route('/ventas', ['fecha', 'sede', 'pagina']),
     detail: route('/ventas/:saleId'),
   },

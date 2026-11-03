@@ -20,6 +20,9 @@ func purchaseBody(p *domain.Purchase) purchasesapi.Purchase {
 	if due := p.DueOn(); due != nil {
 		body.DueOn = new(date(*due))
 	}
+	if v := p.Voided(); v != nil {
+		body.VoidedAt, body.VoidedBy, body.VoidReason = &v.At, &v.By, &v.Reason
+	}
 	for _, l := range p.Lines() {
 		body.Lines = append(body.Lines, lineBody(l))
 	}

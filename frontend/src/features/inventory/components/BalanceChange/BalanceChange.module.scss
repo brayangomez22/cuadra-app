@@ -1,0 +1,11 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+
+  &[data-tone='danger'] {
+    color: var(--color-feedback-danger);
+  }
+}

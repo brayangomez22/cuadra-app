@@ -2869,11 +2869,11 @@ paths:
             format: uuid
         - name: status
           in: query
-          description: Compras con saldo por pagar (`open`), pagadas (`paid`) o todas (por defecto).
+          description: Compras con saldo por pagar (`open`), pagadas (`paid`), anuladas (`voided`) o todas (por defecto).
           required: false
           schema:
             type: string
-            enum: [open, paid, all]
+            enum: [open, paid, voided, all]
             default: all
         - name: from
           in: query
@@ -2987,6 +2987,163 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/purchases/{purchaseId}/void:
+    parameters:
+      - $ref: "#/components/parameters/PurchaseId"
+    post:
+      tags: [purchases]
+      operationId: voidPurchase
+      summary: Anular una compra
+      description: |
+        Anula una compra registrada por error: saca del inventario lo que entró con ella, con un movimiento
+        `purchase_void` por línea al costo de su entrada, y deja de deber. Se rechaza si una variante ya no tiene ese
+        stock en la sede (se vendió o se movió), sin importar si la empresa permite stock negativo, y si es a crédito
+        y ya tiene pagos al proveedor. Todo se guarda junto: si algo falla, la compra queda como estaba.
+      x-permission: purchases:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoidPurchaseInput"
+      responses:
+        "200":
+          description: La compra anulada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: |
+            La compra ya está anulada (`purchase_already_voided`), tiene pagos al proveedor (`purchase_has_payments`)
+            o una variante ya no tiene el stock que entró (`insufficient_stock`, con la posición de su primera línea,
+            desde 0, en `details.line`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Falta el motivo o tiene más de 500 caracteres (`invalid_void_reason`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/purchases/{purchaseId}/payments:
+    parameters:
+      - $ref: "#/components/parameters/PurchaseId"
+    get:
+      tags: [purchases]
+      operationId: listSupplierPayments
+      summary: Pagos de una compra
+      description: Los pagos al proveedor de una compra, el primero primero.
+      x-permission: purchases:read
+      responses:
+        "200":
+          description: Los pagos de la compra.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierPaymentList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [purchases]
+      operationId: recordSupplierPayment
+      summary: Registrar un pago al proveedor
+      description: |
+        Un pago parcial o total de lo que falta pagar de una compra a crédito. No puede pasar del saldo, ni tener
+        fecha posterior a hoy en hora de Colombia ni anterior a la factura; sin `paid_on`, es de hoy. No mueve la caja:
+        si el dinero sale del cajón, se registra allá como egreso.
+      x-permission: purchases:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierPaymentInput"
+      responses:
+        "201":
+          description: El pago registrado, con lo que queda por pagar de la compra.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierPayment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: |
+            El pago pasa de lo que falta pagar (`payment_exceeds_balance`; una compra de contado no debe nada) o la
+            compra está anulada (`purchase_voided`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            El monto no es positivo o tiene más de 2 decimales (`invalid_payment_amount`), el medio de pago
+            (`invalid_payment_method`), o la fecha es posterior a hoy (`payment_date_in_future`) o anterior a la factura
+            (`payment_before_invoice`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/payables:
+    get:
+      tags: [purchases]
+      operationId: listPayables
+      summary: Cuentas por pagar
+      description: |
+        Lo que la empresa debe a cada proveedor por sus compras a crédito abiertas, con lo vencido (antes de hoy en
+        hora de Colombia) y lo que vence en los próximos 7 días; primero el que más tiene vencido. `totals` suma todos
+        los proveedores, no solo los de la página.
+      x-permission: purchases:read
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de proveedores a los que se debe.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayablesPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -3209,6 +3366,59 @@ paths:
 
 
   /api/v1/cash-sessions:
+    get:
+      tags: [cash]
+      operationId: listCashSessions
+      summary: Historial de cajas
+      description: |
+        Las cajas de la empresa, la abierta más recientemente primero, con su cajero y, si están cerradas, sus ventas,
+        el total vendido y la diferencia del arqueo. `from` y `to` son días en hora de Colombia, ambos incluidos, del
+        día en que se abrió la caja.
+      x-permission: cash:manage
+      parameters:
+        - name: location_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Abiertas (`open`), cerradas (`closed`) o todas (por defecto).
+          required: false
+          schema:
+            type: string
+            enum: [open, closed, all]
+            default: all
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de cajas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashSessionSummaryPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
     post:
       tags: [cash]
       operationId: openCashSession
@@ -3368,7 +3578,8 @@ paths:
       description: |
         Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
         efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
-        diferencia con lo contado. El cierre no se puede modificar después.
+        diferencia con lo contado. El cierre no se puede modificar después. Quien tiene `cash:manage` cierra también la
+        caja que otro usuario dejó abierta, y queda como quien la cerró (`closed_by`).
       x-permission: sales:create
       requestBody:
         required: true
@@ -4820,7 +5031,7 @@ components:
           format: uuid
         type:
           type: string
-          enum: [purchase_in, initial_in, sale_out, sale_void, adjustment, transfer_out, transfer_in]
+          enum: [purchase_in, initial_in, sale_out, sale_void, purchase_void, adjustment, transfer_out, transfer_in]
         quantity:
           $ref: "#/components/schemas/SignedQuantity"
         unit_cost:
@@ -5530,8 +5741,8 @@ components:
       enum: [cash, credit]
     PurchaseStatus:
       type: string
-      description: Con saldo por pagar (`open`) o pagada (`paid`).
-      enum: [open, paid]
+      description: Con saldo por pagar (`open`), pagada (`paid`) o anulada (`voided`).
+      enum: [open, paid, voided]
     PurchaseLineInput:
       type: object
       required: [variant_id, quantity, unit_cost]
@@ -5691,7 +5902,18 @@ components:
           $ref: "#/components/schemas/Money"
         balance_due:
           $ref: "#/components/schemas/Money"
-          description: Lo que falta pagar al proveedor.
+          description: Lo que falta pagar al proveedor. Cero si está anulada.
+        voided_at:
+          type: string
+          format: date-time
+          description: Cuándo se anuló; solo en una compra anulada.
+        voided_by:
+          type: string
+          format: uuid
+          description: Quién la anuló; solo en una compra anulada.
+        void_reason:
+          type: string
+          description: Por qué se anuló; solo en una compra anulada.
         created_by:
           type: string
           format: uuid
@@ -5736,6 +5958,120 @@ components:
         created_at:
           type: string
           format: date-time
+    VoidPurchaseInput:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: La factura se registró dos veces
+    SupplierPaymentMethod:
+      type: string
+      enum: [cash, card, nequi, daviplata, transfer]
+      description: Medio con que se pagó al proveedor.
+    SupplierPaymentInput:
+      type: object
+      required: [method, amount]
+      additionalProperties: false
+      properties:
+        method:
+          $ref: "#/components/schemas/SupplierPaymentMethod"
+        amount:
+          $ref: "#/components/schemas/Money"
+        paid_on:
+          type: string
+          format: date
+          description: El día del pago; por defecto, hoy en hora de Colombia.
+    SupplierPayment:
+      type: object
+      required: [id, purchase_id, supplier_id, method, amount, balance_after, paid_on, created_by, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        purchase_id:
+          type: string
+          format: uuid
+        supplier_id:
+          type: string
+          format: uuid
+        method:
+          $ref: "#/components/schemas/SupplierPaymentMethod"
+        amount:
+          $ref: "#/components/schemas/Money"
+        balance_after:
+          $ref: "#/components/schemas/Money"
+          description: Lo que quedó por pagar de la compra después de este pago.
+        paid_on:
+          type: string
+          format: date
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+    SupplierPaymentList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupplierPayment"
+    SupplierPayable:
+      type: object
+      required: [supplier_id, supplier_name, balance, overdue, due_soon, purchases, next_due]
+      properties:
+        supplier_id:
+          type: string
+          format: uuid
+        supplier_name:
+          type: string
+        balance:
+          $ref: "#/components/schemas/Money"
+          description: Todo lo que se le debe.
+        overdue:
+          $ref: "#/components/schemas/Money"
+          description: Lo vencido antes de hoy.
+        due_soon:
+          $ref: "#/components/schemas/Money"
+          description: Lo que vence de hoy a 7 días.
+        purchases:
+          type: integer
+          description: Cuántas compras le debe.
+        next_due:
+          type: string
+          format: date
+          description: El vencimiento más cercano (o el más antiguo, si hay vencidas).
+    PayablesTotals:
+      type: object
+      required: [balance, overdue, due_soon, suppliers]
+      properties:
+        balance:
+          $ref: "#/components/schemas/Money"
+        overdue:
+          $ref: "#/components/schemas/Money"
+        due_soon:
+          $ref: "#/components/schemas/Money"
+        suppliers:
+          type: integer
+    PayablesPage:
+      type: object
+      required: [items, total, totals]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupplierPayable"
+        total:
+          type: integer
+          description: Cuántos proveedores se deben.
+        totals:
+          $ref: "#/components/schemas/PayablesTotals"
     PurchasePage:
       type: object
       required: [items, total]
@@ -6174,7 +6510,7 @@ components:
         El reporte de cierre. `expected` = base + `cash_received` + `cash_in` − `cash_out` − `change_given`, de las
         ventas confirmadas de la caja (las anuladas antes del cierre no cuentan); `difference` = `counted` −
         `expected`: negativa es faltante (`shortage`) y positiva, sobrante (`overage`).
-      required: [closed_at, closed_by, sales_count, cash_received, change_given, cash_in, cash_out, expected, counted,
+      required: [closed_at, closed_by, sales_count, sales_total, cash_received, change_given, cash_in, cash_out, expected, counted,
         difference, result, counts, payments]
       properties:
         closed_at:
@@ -6188,6 +6524,9 @@ components:
         sales_count:
           type: integer
           description: Ventas confirmadas de la caja.
+        sales_total:
+          $ref: "#/components/schemas/Money"
+          description: Lo que suman sus ventas confirmadas, en todos los medios (el efectivo sin el cambio, y el crédito).
         cash_received:
           $ref: "#/components/schemas/Money"
         change_given:
@@ -6244,6 +6583,58 @@ components:
             $ref: "#/components/schemas/CashMovement"
         closing:
           $ref: "#/components/schemas/CashClosing"
+    CashSessionSummary:
+      type: object
+      description: Una caja del historial. Los datos del cierre solo vienen cuando está cerrada.
+      required: [id, location_id, user_id, status, opening_float, opened_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          description: El cajero.
+        cashier_name:
+          type: string
+          description: El nombre del cajero; no viene si el usuario ya no existe.
+        status:
+          type: string
+          enum: [open, closed]
+        opening_float:
+          $ref: "#/components/schemas/Money"
+        opened_at:
+          type: string
+          format: date-time
+        closed_at:
+          type: string
+          format: date-time
+        closed_by:
+          type: string
+          format: uuid
+          description: Quién la cerró; puede ser un administrador y no el cajero.
+        sales_count:
+          type: integer
+        sales_total:
+          $ref: "#/components/schemas/Money"
+        difference:
+          $ref: "#/components/schemas/SignedMoney"
+        result:
+          type: string
+          enum: [exact, shortage, overage]
+    CashSessionSummaryPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CashSessionSummary"
+        total:
+          type: integer
     CurrentCashSession:
       type: object
       required: [required]

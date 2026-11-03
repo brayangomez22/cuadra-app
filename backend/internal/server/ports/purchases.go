@@ -82,6 +82,18 @@ func (s PurchasesStock) ReceivePurchase(ctx context.Context, tenantID, userID, l
 	return out, nil
 }
 
+// ReversePurchase takes out, in the void's transaction, the stock the
+// purchase's entries put in. A variant without that stock comes back as a
+// purchasesapp.VariantError, so the purchase names its line.
+func (s PurchasesStock) ReversePurchase(ctx context.Context, tenantID, userID, purchaseID uuid.UUID) error {
+	err := s.Inventory.ReversePurchaseStock(ctx, tenantID, userID, purchaseID)
+	var variantErr *inventoryapp.VariantStockError
+	if errors.Is(err, inventorydomain.ErrInsufficientStock) && errors.As(err, &variantErr) {
+		return &purchasesapp.VariantError{VariantID: variantErr.VariantID, Err: purchasesdomain.ErrInsufficientStock}
+	}
+	return err
+}
+
 // purchasesStockError translates the inventory's errors into the purchases
 // domain errors the purchases module maps to HTTP. An error of one variant
 // names its first line. Others pass through as unexpected.

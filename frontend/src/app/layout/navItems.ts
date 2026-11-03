@@ -31,6 +31,7 @@ export const navItems: NavItem[] = [
   { to: paths.home(), label: 'Inicio', icon: IconHome },
   { to: paths.sales.pos(), label: 'Vender', icon: IconCart, permission: 'sales:create' },
   { to: paths.sales.cash(), label: 'Caja', icon: IconCash, permission: 'sales:create' },
+  { to: paths.sales.cashHistory(), label: 'Cierres de caja', icon: IconCash, permission: 'cash:manage' },
   { to: paths.sales.list(), label: 'Ventas', icon: IconReceipt, permission: 'sales:read' },
   { to: paths.products.list(), label: 'Productos', icon: IconTag, permission: 'catalog:read' },
   { to: paths.customers.list(), label: 'Clientes', icon: IconUsers, permission: 'customers:read' },

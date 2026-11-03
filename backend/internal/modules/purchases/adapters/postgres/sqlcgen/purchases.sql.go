@@ -17,14 +17,15 @@ const countPurchases = `-- name: CountPurchases :one
 SELECT count(*)
 FROM purchases p
 WHERE ($1::uuid IS NULL OR p.supplier_id = $1)
-  AND ($2::boolean IS NULL OR (p.balance_due > 0) = $2)
+  AND ($2::text IS NULL OR $2 = CASE
+        WHEN p.voided_at IS NOT NULL THEN 'voided' WHEN p.balance_due > 0 THEN 'open' ELSE 'paid' END)
   AND ($3::date IS NULL OR p.issued_on >= $3)
   AND ($4::date IS NULL OR p.issued_on <= $4)
 `
 
 type CountPurchasesParams struct {
 	SupplierID *uuid.UUID
-	Open       *bool
+	Status     *string
 	IssuedFrom *time.Time
 	IssuedTo   *time.Time
 }
@@ -32,7 +33,7 @@ type CountPurchasesParams struct {
 func (q *Queries) CountPurchases(ctx context.Context, arg CountPurchasesParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countPurchases,
 		arg.SupplierID,
-		arg.Open,
+		arg.Status,
 		arg.IssuedFrom,
 		arg.IssuedTo,
 	)
@@ -43,7 +44,7 @@ func (q *Queries) CountPurchases(ctx context.Context, arg CountPurchasesParams) 
 
 const getPurchase = `-- name: GetPurchase :one
 SELECT id, tenant_id, supplier_id, location_id, invoice_number, issued_on, due_on, payment, notes, balance_due,
-       created_by, created_at
+       voided_at, voided_by, void_reason, created_by, created_at
 FROM purchases WHERE id = $1
 `
 
@@ -58,6 +59,9 @@ type GetPurchaseRow struct {
 	Payment       string
 	Notes         *string
 	BalanceDue    decimal.Decimal
+	VoidedAt      *time.Time
+	VoidedBy      *uuid.UUID
+	VoidReason    *string
 	CreatedBy     uuid.UUID
 	CreatedAt     time.Time
 }
@@ -76,6 +80,9 @@ func (q *Queries) GetPurchase(ctx context.Context, id uuid.UUID) (GetPurchaseRow
 		&i.Payment,
 		&i.Notes,
 		&i.BalanceDue,
+		&i.VoidedAt,
+		&i.VoidedBy,
+		&i.VoidReason,
 		&i.CreatedBy,
 		&i.CreatedAt,
 	)
@@ -183,6 +190,155 @@ func (q *Queries) InsertPurchaseLine(ctx context.Context, arg InsertPurchaseLine
 	return err
 }
 
+const insertSupplierPayment = `-- name: InsertSupplierPayment :exec
+INSERT INTO supplier_payments (id, tenant_id, purchase_id, supplier_id, method, amount, balance_after, paid_on,
+                               created_by, created_at)
+VALUES ($1, $2, $3, $4, $5,
+        $6, $7, $8, $9, $10)
+`
+
+type InsertSupplierPaymentParams struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	PurchaseID   uuid.UUID
+	SupplierID   uuid.UUID
+	Method       string
+	Amount       decimal.Decimal
+	BalanceAfter decimal.Decimal
+	PaidOn       time.Time
+	CreatedBy    uuid.UUID
+	CreatedAt    time.Time
+}
+
+func (q *Queries) InsertSupplierPayment(ctx context.Context, arg InsertSupplierPaymentParams) error {
+	_, err := q.db.Exec(ctx, insertSupplierPayment,
+		arg.ID,
+		arg.TenantID,
+		arg.PurchaseID,
+		arg.SupplierID,
+		arg.Method,
+		arg.Amount,
+		arg.BalanceAfter,
+		arg.PaidOn,
+		arg.CreatedBy,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const lockPurchase = `-- name: LockPurchase :one
+SELECT id FROM purchases WHERE id = $1 FOR UPDATE
+`
+
+func (q *Queries) LockPurchase(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockPurchase, id)
+	var id_2 uuid.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
+const payables = `-- name: Payables :many
+SELECT p.supplier_id, s.name AS supplier_name,
+       sum(p.balance_due)::numeric(18,4) AS balance,
+       coalesce(sum(p.balance_due) FILTER (WHERE p.due_on < $1::date), 0)::numeric(18,4) AS overdue,
+       coalesce(sum(p.balance_due) FILTER (WHERE p.due_on >= $1::date
+                                             AND p.due_on <= $2::date), 0)::numeric(18,4) AS due_soon,
+       count(*) AS purchases,
+       min(p.due_on)::date AS next_due
+FROM purchases p
+JOIN suppliers s ON s.tenant_id = p.tenant_id AND s.id = p.supplier_id
+WHERE p.balance_due > 0
+GROUP BY p.supplier_id, s.name
+ORDER BY overdue DESC, balance DESC, s.name, p.supplier_id
+LIMIT $4 OFFSET $3
+`
+
+type PayablesParams struct {
+	OverdueBefore time.Time
+	DueSoonUntil  time.Time
+	RowOffset     int32
+	RowLimit      int32
+}
+
+type PayablesRow struct {
+	SupplierID   uuid.UUID
+	SupplierName string
+	Balance      decimal.Decimal
+	Overdue      decimal.Decimal
+	DueSoon      decimal.Decimal
+	Purchases    int64
+	NextDue      time.Time
+}
+
+// What the tenant owes each supplier: its open purchases (a voided one owes
+// nothing), split by due date. The one with the most overdue goes first.
+func (q *Queries) Payables(ctx context.Context, arg PayablesParams) ([]PayablesRow, error) {
+	rows, err := q.db.Query(ctx, payables,
+		arg.OverdueBefore,
+		arg.DueSoonUntil,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PayablesRow
+	for rows.Next() {
+		var i PayablesRow
+		if err := rows.Scan(
+			&i.SupplierID,
+			&i.SupplierName,
+			&i.Balance,
+			&i.Overdue,
+			&i.DueSoon,
+			&i.Purchases,
+			&i.NextDue,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const payablesTotals = `-- name: PayablesTotals :one
+SELECT coalesce(sum(balance_due), 0)::numeric(18,4) AS balance,
+       coalesce(sum(balance_due) FILTER (WHERE due_on < $1::date), 0)::numeric(18,4) AS overdue,
+       coalesce(sum(balance_due) FILTER (WHERE due_on >= $1::date
+                                           AND due_on <= $2::date), 0)::numeric(18,4) AS due_soon,
+       count(DISTINCT supplier_id) AS suppliers
+FROM purchases
+WHERE balance_due > 0
+`
+
+type PayablesTotalsParams struct {
+	OverdueBefore time.Time
+	DueSoonUntil  time.Time
+}
+
+type PayablesTotalsRow struct {
+	Balance   decimal.Decimal
+	Overdue   decimal.Decimal
+	DueSoon   decimal.Decimal
+	Suppliers int64
+}
+
+func (q *Queries) PayablesTotals(ctx context.Context, arg PayablesTotalsParams) (PayablesTotalsRow, error) {
+	row := q.db.QueryRow(ctx, payablesTotals, arg.OverdueBefore, arg.DueSoonUntil)
+	var i PayablesTotalsRow
+	err := row.Scan(
+		&i.Balance,
+		&i.Overdue,
+		&i.DueSoon,
+		&i.Suppliers,
+	)
+	return i, err
+}
+
 const purchaseLines = `-- name: PurchaseLines :many
 SELECT variant_id, product_name, variant_label, unit_id, unit_code, unit_factor, quantity, unit_cost, tax_rate,
        base_quantity, base_unit_cost
@@ -237,12 +393,13 @@ func (q *Queries) PurchaseLines(ctx context.Context, purchaseID uuid.UUID) ([]Pu
 
 const searchPurchases = `-- name: SearchPurchases :many
 SELECT p.id, p.supplier_id, s.name AS supplier_name, p.location_id, p.invoice_number, p.issued_on, p.due_on,
-       p.payment, p.total, p.balance_due, p.created_at,
+       p.payment, p.total, p.balance_due, (p.voided_at IS NOT NULL)::boolean AS voided, p.created_at,
        (SELECT count(*) FROM purchase_lines l WHERE l.tenant_id = p.tenant_id AND l.purchase_id = p.id) AS line_count
 FROM purchases p
 JOIN suppliers s ON s.tenant_id = p.tenant_id AND s.id = p.supplier_id
 WHERE ($1::uuid IS NULL OR p.supplier_id = $1)
-  AND ($2::boolean IS NULL OR (p.balance_due > 0) = $2)
+  AND ($2::text IS NULL OR $2 = CASE
+        WHEN p.voided_at IS NOT NULL THEN 'voided' WHEN p.balance_due > 0 THEN 'open' ELSE 'paid' END)
   AND ($3::date IS NULL OR p.issued_on >= $3)
   AND ($4::date IS NULL OR p.issued_on <= $4)
 ORDER BY p.issued_on DESC, p.created_at DESC, p.id DESC
@@ -251,7 +408,7 @@ LIMIT $6 OFFSET $5
 
 type SearchPurchasesParams struct {
 	SupplierID *uuid.UUID
-	Open       *bool
+	Status     *string
 	IssuedFrom *time.Time
 	IssuedTo   *time.Time
 	RowOffset  int32
@@ -269,6 +426,7 @@ type SearchPurchasesRow struct {
 	Payment       string
 	Total         decimal.Decimal
 	BalanceDue    decimal.Decimal
+	Voided        bool
 	CreatedAt     time.Time
 	LineCount     int64
 }
@@ -276,7 +434,7 @@ type SearchPurchasesRow struct {
 func (q *Queries) SearchPurchases(ctx context.Context, arg SearchPurchasesParams) ([]SearchPurchasesRow, error) {
 	rows, err := q.db.Query(ctx, searchPurchases,
 		arg.SupplierID,
-		arg.Open,
+		arg.Status,
 		arg.IssuedFrom,
 		arg.IssuedTo,
 		arg.RowOffset,
@@ -300,6 +458,7 @@ func (q *Queries) SearchPurchases(ctx context.Context, arg SearchPurchasesParams
 			&i.Payment,
 			&i.Total,
 			&i.BalanceDue,
+			&i.Voided,
 			&i.CreatedAt,
 			&i.LineCount,
 		); err != nil {
@@ -343,4 +502,80 @@ func (q *Queries) SupplierBalances(ctx context.Context, ids []uuid.UUID) ([]Supp
 		return nil, err
 	}
 	return items, nil
+}
+
+const supplierPayments = `-- name: SupplierPayments :many
+SELECT id, tenant_id, purchase_id, supplier_id, method, amount, balance_after, paid_on, created_by, created_at
+FROM supplier_payments WHERE purchase_id = $1 ORDER BY created_at, id
+`
+
+func (q *Queries) SupplierPayments(ctx context.Context, purchaseID uuid.UUID) ([]SupplierPayment, error) {
+	rows, err := q.db.Query(ctx, supplierPayments, purchaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SupplierPayment
+	for rows.Next() {
+		var i SupplierPayment
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.PurchaseID,
+			&i.SupplierID,
+			&i.Method,
+			&i.Amount,
+			&i.BalanceAfter,
+			&i.PaidOn,
+			&i.CreatedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updatePurchaseBalance = `-- name: UpdatePurchaseBalance :exec
+UPDATE purchases SET balance_due = $1 WHERE id = $2
+`
+
+type UpdatePurchaseBalanceParams struct {
+	BalanceDue decimal.Decimal
+	ID         uuid.UUID
+}
+
+func (q *Queries) UpdatePurchaseBalance(ctx context.Context, arg UpdatePurchaseBalanceParams) error {
+	_, err := q.db.Exec(ctx, updatePurchaseBalance, arg.BalanceDue, arg.ID)
+	return err
+}
+
+const updatePurchaseVoid = `-- name: UpdatePurchaseVoid :exec
+UPDATE purchases
+SET voided_at = $1, voided_by = $2, void_reason = $3,
+    balance_due = $4
+WHERE id = $5
+`
+
+type UpdatePurchaseVoidParams struct {
+	VoidedAt   *time.Time
+	VoidedBy   *uuid.UUID
+	VoidReason *string
+	BalanceDue decimal.Decimal
+	ID         uuid.UUID
+}
+
+func (q *Queries) UpdatePurchaseVoid(ctx context.Context, arg UpdatePurchaseVoidParams) error {
+	_, err := q.db.Exec(ctx, updatePurchaseVoid,
+		arg.VoidedAt,
+		arg.VoidedBy,
+		arg.VoidReason,
+		arg.BalanceDue,
+		arg.ID,
+	)
+	return err
 }

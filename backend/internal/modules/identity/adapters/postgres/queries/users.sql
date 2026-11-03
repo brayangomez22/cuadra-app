@@ -23,3 +23,6 @@ FROM users
 WHERE tenant_id = $1 AND role = $2 AND active
 ORDER BY created_at, id
 LIMIT 1;
+
+-- name: UserNames :many
+SELECT id, name FROM users WHERE tenant_id = sqlc.arg(tenant_id) AND id = ANY(sqlc.arg(ids)::uuid[]);

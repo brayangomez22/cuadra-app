@@ -20,19 +20,19 @@ import (
 
 // Defines values for CashClosingResult.
 const (
-	Exact    CashClosingResult = "exact"
-	Overage  CashClosingResult = "overage"
-	Shortage CashClosingResult = "shortage"
+	CashClosingResultExact    CashClosingResult = "exact"
+	CashClosingResultOverage  CashClosingResult = "overage"
+	CashClosingResultShortage CashClosingResult = "shortage"
 )
 
 // Valid indicates whether the value is a known member of the CashClosingResult enum.
 func (e CashClosingResult) Valid() bool {
 	switch e {
-	case Exact:
+	case CashClosingResultExact:
 		return true
-	case Overage:
+	case CashClosingResultOverage:
 		return true
-	case Shortage:
+	case CashClosingResultShortage:
 		return true
 	default:
 		return false
@@ -59,16 +59,55 @@ func (e CashMovementKind) Valid() bool {
 
 // Defines values for CashSessionStatus.
 const (
-	Closed CashSessionStatus = "closed"
-	Open   CashSessionStatus = "open"
+	CashSessionStatusClosed CashSessionStatus = "closed"
+	CashSessionStatusOpen   CashSessionStatus = "open"
 )
 
 // Valid indicates whether the value is a known member of the CashSessionStatus enum.
 func (e CashSessionStatus) Valid() bool {
 	switch e {
-	case Closed:
+	case CashSessionStatusClosed:
 		return true
-	case Open:
+	case CashSessionStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CashSessionSummaryResult.
+const (
+	CashSessionSummaryResultExact    CashSessionSummaryResult = "exact"
+	CashSessionSummaryResultOverage  CashSessionSummaryResult = "overage"
+	CashSessionSummaryResultShortage CashSessionSummaryResult = "shortage"
+)
+
+// Valid indicates whether the value is a known member of the CashSessionSummaryResult enum.
+func (e CashSessionSummaryResult) Valid() bool {
+	switch e {
+	case CashSessionSummaryResultExact:
+		return true
+	case CashSessionSummaryResultOverage:
+		return true
+	case CashSessionSummaryResultShortage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CashSessionSummaryStatus.
+const (
+	CashSessionSummaryStatusClosed CashSessionSummaryStatus = "closed"
+	CashSessionSummaryStatusOpen   CashSessionSummaryStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the CashSessionSummaryStatus enum.
+func (e CashSessionSummaryStatus) Valid() bool {
+	switch e {
+	case CashSessionSummaryStatusClosed:
+		return true
+	case CashSessionSummaryStatusOpen:
 		return true
 	default:
 		return false
@@ -117,6 +156,27 @@ func (e SaleStatus) Valid() bool {
 	case Confirmed:
 		return true
 	case Voided:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListCashSessionsParamsStatus.
+const (
+	ListCashSessionsParamsStatusAll    ListCashSessionsParamsStatus = "all"
+	ListCashSessionsParamsStatusClosed ListCashSessionsParamsStatus = "closed"
+	ListCashSessionsParamsStatusOpen   ListCashSessionsParamsStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the ListCashSessionsParamsStatus enum.
+func (e ListCashSessionsParamsStatus) Valid() bool {
+	switch e {
+	case ListCashSessionsParamsStatusAll:
+		return true
+	case ListCashSessionsParamsStatusClosed:
+		return true
+	case ListCashSessionsParamsStatusOpen:
 		return true
 	default:
 		return false
@@ -172,6 +232,11 @@ type CashClosing struct {
 
 	// SalesCount Ventas confirmadas de la caja.
 	SalesCount int `json:"sales_count"`
+
+	// SalesTotal Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	SalesTotal Money `json:"sales_total"`
 }
 
 // CashClosingResult defines model for CashClosing.Result.
@@ -246,6 +311,52 @@ type CashSession struct {
 
 // CashSessionStatus defines model for CashSession.Status.
 type CashSessionStatus string
+
+// CashSessionSummary Una caja del historial. Los datos del cierre solo vienen cuando está cerrada.
+type CashSessionSummary struct {
+	// CashierName El nombre del cajero; no viene si el usuario ya no existe.
+	CashierName *string    `json:"cashier_name,omitempty"`
+	ClosedAt    *time.Time `json:"closed_at,omitempty"`
+
+	// ClosedBy Quién la cerró; puede ser un administrador y no el cajero.
+	ClosedBy *openapi_types.UUID `json:"closed_by,omitempty"`
+
+	// Difference Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Difference *SignedMoney       `json:"difference,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
+	LocationId openapi_types.UUID `json:"location_id"`
+	OpenedAt   time.Time          `json:"opened_at"`
+
+	// OpeningFloat Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	OpeningFloat Money                     `json:"opening_float"`
+	Result       *CashSessionSummaryResult `json:"result,omitempty"`
+	SalesCount   *int                      `json:"sales_count,omitempty"`
+
+	// SalesTotal Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	SalesTotal *Money                   `json:"sales_total,omitempty"`
+	Status     CashSessionSummaryStatus `json:"status"`
+
+	// UserId El cajero.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// CashSessionSummaryResult defines model for CashSessionSummary.Result.
+type CashSessionSummaryResult string
+
+// CashSessionSummaryStatus defines model for CashSessionSummary.Status.
+type CashSessionSummaryStatus string
+
+// CashSessionSummaryPage defines model for CashSessionSummaryPage.
+type CashSessionSummaryPage struct {
+	Items []CashSessionSummary `json:"items"`
+	Total int                  `json:"total"`
+}
 
 // CloseCashSessionInput defines model for CloseCashSessionInput.
 type CloseCashSessionInput struct {
@@ -692,6 +803,25 @@ type InternalError = Error
 // Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Unauthorized = Error
 
+// ListCashSessionsParams defines parameters for ListCashSessions.
+type ListCashSessionsParams struct {
+	LocationId *openapi_types.UUID `form:"location_id,omitempty" json:"location_id,omitempty"`
+
+	// Status Abiertas (`open`), cerradas (`closed`) o todas (por defecto).
+	Status *ListCashSessionsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	From   *openapi_types.Date           `form:"from,omitempty" json:"from,omitempty"`
+	To     *openapi_types.Date           `form:"to,omitempty" json:"to,omitempty"`
+
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// ListCashSessionsParamsStatus defines parameters for ListCashSessions.
+type ListCashSessionsParamsStatus string
+
 // ListSalesParams defines parameters for ListSales.
 type ListSalesParams struct {
 	// Date Día en hora de Colombia (`YYYY-MM-DD`).
@@ -724,6 +854,9 @@ type VoidSaleJSONRequestBody = VoidSaleInput
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// ListCashSessions Historial de cajas
+	// (GET /api/v1/cash-sessions)
+	ListCashSessions(w http.ResponseWriter, r *http.Request, params ListCashSessionsParams)
 	// OpenCashSession Abrir la caja
 	// (POST /api/v1/cash-sessions)
 	OpenCashSession(w http.ResponseWriter, r *http.Request)
@@ -764,6 +897,104 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListCashSessions operation middleware
+func (siw *ServerInterfaceWrapper) ListCashSessions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCashSessionsParams
+
+	// ------------- Optional query parameter "location_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "location_id", r.URL.Query(), &params.LocationId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "location_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "location_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCashSessions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // OpenCashSession operation middleware
 func (siw *ServerInterfaceWrapper) OpenCashSession(w http.ResponseWriter, r *http.Request) {
@@ -1148,6 +1379,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sales/discount-limit", wrapper.GetDiscountLimit)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sales/{saleId}", wrapper.GetSale)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/sales/{saleId}/void", wrapper.VoidSale)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/cash-sessions", wrapper.ListCashSessions)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/cash-sessions", wrapper.OpenCashSession)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/cash-sessions/current", wrapper.GetCurrentCashSession)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/cash-sessions/{cashSessionId}", wrapper.GetCashSession)
@@ -1164,6 +1396,84 @@ type ForbiddenJSONResponse Error
 type InternalErrorJSONResponse Error
 
 type UnauthorizedJSONResponse Error
+
+type ListCashSessionsRequestObject struct {
+	Params ListCashSessionsParams
+}
+
+type ListCashSessionsResponseObject interface {
+	VisitListCashSessionsResponse(w http.ResponseWriter) error
+}
+
+type ListCashSessions200JSONResponse CashSessionSummaryPage
+
+func (response ListCashSessions200JSONResponse) VisitListCashSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCashSessions400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListCashSessions400JSONResponse) VisitListCashSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCashSessions401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListCashSessions401JSONResponse) VisitListCashSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCashSessions403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListCashSessions403JSONResponse) VisitListCashSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCashSessions500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListCashSessions500JSONResponse) VisitListCashSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type OpenCashSessionRequestObject struct {
 	Body *OpenCashSessionJSONRequestBody
@@ -2144,6 +2454,9 @@ func (response VoidSale500JSONResponse) VisitVoidSaleResponse(w http.ResponseWri
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// ListCashSessions Historial de cajas
+	// (GET /api/v1/cash-sessions)
+	ListCashSessions(ctx context.Context, request ListCashSessionsRequestObject) (ListCashSessionsResponseObject, error)
 	// OpenCashSession Abrir la caja
 	// (POST /api/v1/cash-sessions)
 	OpenCashSession(ctx context.Context, request OpenCashSessionRequestObject) (OpenCashSessionResponseObject, error)
@@ -2213,6 +2526,32 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListCashSessions operation middleware
+func (sh *strictHandler) ListCashSessions(w http.ResponseWriter, r *http.Request, params ListCashSessionsParams) {
+	var request ListCashSessionsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCashSessions(ctx, request.(ListCashSessionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCashSessions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCashSessionsResponseObject); ok {
+		if err := validResponse.VisitListCashSessionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // OpenCashSession operation middleware

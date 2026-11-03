@@ -42,3 +42,28 @@ export function useRegisterPurchase() {
     },
   });
 }
+
+/**
+ * Voids the purchase: its stock leaves the location and it owes nothing. The
+ * purchases, the suppliers' balances, what is owed and the inventory are
+ * asked again.
+ */
+export function useVoidPurchase(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (reason: string) =>
+      unwrap(
+        await api.POST('/api/v1/purchases/{purchaseId}/void', {
+          params: { path: { purchaseId: id } },
+          body: { reason },
+        }),
+      ),
+    onSuccess: (purchase) => {
+      queryClient.setQueryData(purchasesKeys.purchase(purchase.id), purchase);
+      void queryClient.invalidateQueries({ queryKey: purchasesKeys.purchases });
+      void queryClient.invalidateQueries({ queryKey: purchasesKeys.suppliers });
+      void queryClient.invalidateQueries({ queryKey: purchasesKeys.payables });
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+    },
+  });
+}

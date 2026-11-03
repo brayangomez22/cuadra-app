@@ -14,6 +14,13 @@ export const salesRoutes: RouteObject[] = [
     ],
   },
   {
+    element: <RequirePermission permission="cash:manage" />,
+    children: [
+      { path: paths.sales.cashHistory.pattern, ...lazyPage(async () => (await import('./pages')).CashHistoryPage) },
+      { path: paths.sales.closeCashOf.pattern, ...lazyPage(async () => (await import('./pages')).CloseCashOfPage) },
+    ],
+  },
+  {
     element: <RequirePermission permission="sales:read" />,
     children: [
       { path: paths.sales.cashReport.pattern, ...lazyPage(async () => (await import('./pages')).CashReportPage) },
