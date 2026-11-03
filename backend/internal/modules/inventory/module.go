@@ -116,6 +116,13 @@ func (m *Module) ReceiveInitialStock(ctx context.Context, tenantID, userID, loca
 	return m.service.ReceiveInitialStock(ctx, app.Actor{TenantID: tenantID, UserID: userID}, locationID, lines)
 }
 
+// SetReorderRules stores the minimum and maximum of variants at a location
+// (see app.Service.SetReorderRules). It is for the imports module; with a
+// ctx from db.InTenantTx it joins the import's batch.
+func (m *Module) SetReorderRules(ctx context.Context, tenantID, userID, locationID uuid.UUID, lines []app.ReorderLine) error {
+	return m.service.SetReorderRules(ctx, app.Actor{TenantID: tenantID, UserID: userID}, locationID, lines)
+}
+
 // CheckLocation fails unless id is an active location of tenantID (see
 // app.Service.CheckLocation). It is for the imports module.
 func (m *Module) CheckLocation(ctx context.Context, tenantID, userID, id uuid.UUID) error {

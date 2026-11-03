@@ -19,6 +19,8 @@ const (
 	ColumnCost        = "costo"
 	ColumnPrice       = "precio"
 	ColumnStock       = "stock_inicial"
+	ColumnReorderMin  = "stock_mínimo"
+	ColumnReorderMax  = "stock_máximo"
 	// AttributePrefix and AxisPrefix start the column of an attribute (by
 	// its label) and of a variant axis (by its name).
 	AttributePrefix = "atributo: "
@@ -28,7 +30,7 @@ const (
 // baseColumns are the columns every file has, in the template's order.
 var baseColumns = []string{
 	ColumnProduct, ColumnDescription, ColumnCategory, ColumnUnit, ColumnTaxRate,
-	ColumnSKU, ColumnBarcode, ColumnCost, ColumnPrice, ColumnStock,
+	ColumnSKU, ColumnBarcode, ColumnCost, ColumnPrice, ColumnStock, ColumnReorderMin, ColumnReorderMax,
 }
 
 // requiredColumns must be in every file; the others may be left out.
