@@ -165,3 +165,26 @@ func parseYesNo(s string) (value, ok bool) {
 	}
 	return false, false
 }
+
+// reorder reads the minimum and maximum stock; ok is false when both are
+// empty or the row has an error in them (already reported).
+func (r *rowReader) reorder() (_ Reorder, ok bool) {
+	minText, maxText := r.text(ColumnReorderMin), r.text(ColumnReorderMax)
+	if minText == "" && maxText == "" {
+		return Reorder{}, false
+	}
+	minimum, minOK := r.amount(ColumnReorderMin)
+	maximum, maxOK := r.amount(ColumnReorderMax)
+	switch {
+	case minText == "":
+		r.fail(ColumnReorderMin, CodeReorderIncomplete)
+	case maxText == "":
+		r.fail(ColumnReorderMax, CodeReorderIncomplete)
+	case !minOK || !maxOK:
+	case minimum.GreaterThan(maximum):
+		r.fail(ColumnReorderMin, CodeReorderRange)
+	default:
+		return Reorder{Min: minimum, Max: maximum}, true
+	}
+	return Reorder{}, false
+}

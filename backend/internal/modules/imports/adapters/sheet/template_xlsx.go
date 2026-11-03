@@ -22,6 +22,7 @@ var helpIntro = []string{
 	"IVA: 19, 19 % o 0,19. Si lo deja vacío, se usa el de la empresa.",
 	"Categoría: si no existe, se crea.",
 	"stock_inicial: solo entra a los productos nuevos, en la sede que elija al subir el archivo.",
+	"stock_mínimo y stock_máximo: opcionales, en la unidad del producto y para la sede que elija. Escriba los dos: cuando el stock baje al mínimo, Cuadra sugiere pedir hasta el máximo. Si los deja vacíos, no cambia lo que ya tenía.",
 	"Sí/no: escriba sí o no.",
 }
 

@@ -88,8 +88,8 @@ func (s *Service) writeFile(ctx context.Context, imp *domain.Import) ([]domain.R
 	return nil, err
 }
 
-// writeBatch writes one batch with its initial stock and moves the
-// checkpoint, in one transaction. A rejected batch is rolled back and its
+// writeBatch writes one batch with its initial stock and reorder rules and
+// moves the checkpoint, in one transaction. A rejected batch is rolled back and its
 // problem returned.
 func (s *Service) writeBatch(ctx context.Context, a Actor, imp *domain.Import, groups []domain.Group) ([]domain.RowError, error) {
 	var problem *domain.RowError
@@ -105,6 +105,9 @@ func (s *Service) writeBatch(ctx context.Context, a Actor, imp *domain.Import, g
 			return errBatchRejected
 		}
 		if err := s.receive(ctx, a, imp, groups, results); err != nil {
+			return err
+		}
+		if err := s.setReorder(ctx, a, imp, groups, results); err != nil {
 			return err
 		}
 		tally = tallyResults(results)
@@ -138,6 +141,26 @@ func (s *Service) receive(ctx context.Context, a Actor, imp *domain.Import, grou
 		return nil
 	}
 	return s.Stock.ReceiveInitial(ctx, a, imp.LocationID(), entries)
+}
+
+// setReorder sets the reorder rules of the variants the batch created or
+// updated; a skipped product keeps its rules.
+func (s *Service) setReorder(ctx context.Context, a Actor, imp *domain.Import, groups []domain.Group, results []ProductResult) error {
+	var rules []ReorderEntry
+	for i, r := range results {
+		if r.Outcome == OutcomeSkipped {
+			continue
+		}
+		for j, v := range r.Variants {
+			if line := groups[i].Variants[j]; line.HasReorder {
+				rules = append(rules, ReorderEntry{VariantID: v.ID, Min: line.Reorder.Min, Max: line.Reorder.Max})
+			}
+		}
+	}
+	if len(rules) == 0 {
+		return nil
+	}
+	return s.Stock.SetReorderRules(ctx, a, imp.LocationID(), rules)
 }
 
 func tallyResults(results []ProductResult) domain.BatchResult {

@@ -14,6 +14,8 @@ const policies: SelectOption[] = [
   { value: 'skip', label: 'Dejar el producto como está' },
 ];
 
+const locationHint = 'Si el archivo trae stock mínimo y máximo, son para esta sede.';
+
 /** The template, the location of the initial stock, what to do with known SKUs and the file to check. */
 export function UploadForm(props: Props) {
   const { form, formError, submit, isPending } = useUploadForm(props);
@@ -23,7 +25,7 @@ export function UploadForm(props: Props) {
     <form className={styles.root} noValidate onSubmit={(event) => void submit(event)}>
       <TemplateDownloads />
       {formError && <Alert tone="danger">{formError}</Alert>}
-      <Field label="Sede del stock inicial" error={errorOf('location_id')}>
+      <Field label="Sede del stock inicial" hint={locationHint} error={errorOf('location_id')}>
         <SelectController
           control={form.control}
           name="location_id"

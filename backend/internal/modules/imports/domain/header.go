@@ -71,6 +71,7 @@ func (h Header) Parse(number int, cells []string, style NumberStyle) (Row, []Row
 		Variant: r.variant(),
 	}
 	row.Stock, row.HasStock = r.amount(ColumnStock)
+	row.Reorder, row.HasReorder = r.reorder()
 	row.ProductErrors = r.productErrs
 	return row, r.errs
 }

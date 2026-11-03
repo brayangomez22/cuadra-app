@@ -24,18 +24,20 @@ var errorRules = []httpx.ErrorRule{
 // rowProblems are the user's words for the problems the import finds on its
 // own; the catalog's come with their message.
 var rowProblems = map[string]string{
-	domain.CodeMissingColumn:    "falta esta columna, que es obligatoria",
-	domain.CodeUnknownColumn:    "la columna no es de la plantilla; revise el nombre o descargue la plantilla de nuevo",
-	domain.CodeDuplicateColumn:  "la columna está repetida",
-	domain.CodeEmptyFile:        "el archivo no tiene filas de productos",
-	domain.CodeTooManyRows:      "el archivo pasa de 20.000 filas; divídalo en varios archivos",
-	domain.CodeRequired:         "falta el valor, que es obligatorio",
-	domain.CodeNotANumber:       "no es un número",
-	domain.CodeNegativeNumber:   "no puede ser negativo",
-	domain.CodeInvalidBoolean:   "escriba sí o no",
-	domain.CodeDuplicateSKU:     "el SKU ya está en otra fila del archivo",
-	domain.CodeProductSplit:     "el producto ya apareció más arriba; sus filas deben ir seguidas",
-	domain.CodeVariantsInactive: "el producto ya está en la fila anterior; para varias variantes active el módulo de variantes",
+	domain.CodeMissingColumn:     "falta esta columna, que es obligatoria",
+	domain.CodeUnknownColumn:     "la columna no es de la plantilla; revise el nombre o descargue la plantilla de nuevo",
+	domain.CodeDuplicateColumn:   "la columna está repetida",
+	domain.CodeEmptyFile:         "el archivo no tiene filas de productos",
+	domain.CodeTooManyRows:       "el archivo pasa de 20.000 filas; divídalo en varios archivos",
+	domain.CodeRequired:          "falta el valor, que es obligatorio",
+	domain.CodeNotANumber:        "no es un número",
+	domain.CodeNegativeNumber:    "no puede ser negativo",
+	domain.CodeInvalidBoolean:    "escriba sí o no",
+	domain.CodeDuplicateSKU:      "el SKU ya está en otra fila del archivo",
+	domain.CodeProductSplit:      "el producto ya apareció más arriba; sus filas deben ir seguidas",
+	domain.CodeVariantsInactive:  "el producto ya está en la fila anterior; para varias variantes active el módulo de variantes",
+	domain.CodeReorderIncomplete: "escriba el stock mínimo y el máximo, o deje los dos vacíos",
+	domain.CodeReorderRange:      "el stock mínimo no puede ser mayor que el máximo",
 }
 
 // rowMessage describes a row error to the user: "Fila 154, columna

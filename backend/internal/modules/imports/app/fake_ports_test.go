@@ -115,12 +115,16 @@ func (c *fakeCatalog) restore(products map[string]string, ids map[string]uuid.UU
 	c.products, c.ids = products, ids
 }
 
-// fakeStock keeps the initial stock entries it received.
+// fakeStock keeps the initial stock entries it received and the reorder
+// rules, one per variant and location as the inventory stores them.
 type fakeStock struct {
 	mu        sync.Mutex
 	locations map[uuid.UUID]bool
 	entries   []app.StockEntry
+	rules     map[reorderKey]app.ReorderEntry
 }
+
+type reorderKey struct{ location, variant uuid.UUID }
 
 func (s *fakeStock) RequireLocation(_ context.Context, _ app.Actor, id uuid.UUID) error {
 	if !s.locations[id] {
@@ -133,6 +137,18 @@ func (s *fakeStock) ReceiveInitial(_ context.Context, _ app.Actor, _ uuid.UUID, 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.entries = append(s.entries, entries...)
+	return nil
+}
+
+func (s *fakeStock) SetReorderRules(_ context.Context, _ app.Actor, locationID uuid.UUID, rules []app.ReorderEntry) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.rules == nil {
+		s.rules = map[reorderKey]app.ReorderEntry{}
+	}
+	for _, r := range rules {
+		s.rules[reorderKey{locationID, r.VariantID}] = r
+	}
 	return nil
 }
 
@@ -172,13 +188,13 @@ type fakeTx struct {
 func (tx fakeTx) InTx(ctx context.Context, _ uuid.UUID, fn func(context.Context) error) error {
 	products, ids := tx.catalog.snapshot()
 	tx.stock.mu.Lock()
-	entries := slices.Clone(tx.stock.entries)
+	entries, rules := slices.Clone(tx.stock.entries), maps.Clone(tx.stock.rules)
 	tx.stock.mu.Unlock()
 	saved := tx.imports.snapshot()
 	if err := fn(ctx); err != nil {
 		tx.catalog.restore(products, ids)
 		tx.stock.mu.Lock()
-		tx.stock.entries = entries
+		tx.stock.entries, tx.stock.rules = entries, rules
 		tx.stock.mu.Unlock()
 		tx.imports.restore(saved)
 		return err

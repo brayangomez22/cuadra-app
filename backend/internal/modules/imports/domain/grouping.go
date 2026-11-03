@@ -22,8 +22,10 @@ type Group struct {
 type VariantLine struct {
 	Row int
 	VariantFields
-	Stock    decimal.Decimal
-	HasStock bool
+	Stock      decimal.Decimal
+	HasStock   bool
+	Reorder    Reorder
+	HasReorder bool
 }
 
 // Grouper groups the rows of a file, in order, into products: consecutive
@@ -99,6 +101,7 @@ func (g *Grouper) Flush() (Group, bool) {
 func (gr *Group) add(r Row, valid bool) {
 	gr.Variants = append(gr.Variants, VariantLine{
 		Row: r.Number, VariantFields: r.Variant, Stock: r.Stock, HasStock: r.HasStock,
+		Reorder: r.Reorder, HasReorder: r.HasReorder,
 	})
 	gr.Invalid = gr.Invalid || !valid
 }

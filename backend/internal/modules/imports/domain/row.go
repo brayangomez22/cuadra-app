@@ -15,6 +15,10 @@ type Row struct {
 	// product's base unit, when HasStock.
 	Stock    decimal.Decimal
 	HasStock bool
+	// Reorder is the variant's minimum and maximum stock at the import's
+	// location, when HasReorder.
+	Reorder    Reorder
+	HasReorder bool
 	// ProductErrors are the required product values the row leaves empty
 	// (its unit, a required attribute). They only count when the row starts
 	// a product: the next rows of a product may leave them empty.
@@ -55,6 +59,14 @@ type VariantFields struct {
 	Axes      map[string]string
 }
 
+// Reorder is a variant's minimum and maximum stock, in the product's base
+// unit: when the stock falls to the minimum, it is reordered up to the
+// maximum. A row gives both or neither, with 0 ≤ Min ≤ Max.
+type Reorder struct {
+	Min decimal.Decimal
+	Max decimal.Decimal
+}
+
 // RowError is a problem of one row (Row 1 is the header). Column names the
 // column, if the problem is in one. Code is stable; Message, when set,
 // already describes the problem (the catalog's reasons come with theirs),
@@ -80,6 +92,10 @@ const (
 	CodeDuplicateSKU     = "duplicate_sku"
 	CodeProductSplit     = "product_split"
 	CodeVariantsInactive = "variants_inactive"
+	// CodeReorderIncomplete is a minimum without a maximum or the other
+	// way around; CodeReorderRange a minimum above the maximum.
+	CodeReorderIncomplete = "reorder_incomplete"
+	CodeReorderRange      = "reorder_range"
 )
 
 // MaxErrors is how many row errors an import keeps; the count goes on.

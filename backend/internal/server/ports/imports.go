@@ -78,11 +78,7 @@ type ImportsStock struct{ Inventory *inventory.Module }
 
 // RequireLocation checks the import's location.
 func (s ImportsStock) RequireLocation(ctx context.Context, a importsapp.Actor, id uuid.UUID) error {
-	err := s.Inventory.CheckLocation(ctx, a.TenantID, a.UserID, id)
-	if errors.Is(err, inventorydomain.ErrLocationNotFound) || errors.Is(err, inventorydomain.ErrLocationInactive) {
-		return importsapp.ErrLocationNotFound
-	}
-	return err
+	return locationErr(s.Inventory.CheckLocation(ctx, a.TenantID, a.UserID, id))
 }
 
 // ReceiveInitial registers the initial stock, in the batch's transaction.
@@ -93,7 +89,22 @@ func (s ImportsStock) ReceiveInitial(ctx context.Context, a importsapp.Actor, lo
 	for _, e := range entries {
 		lines = append(lines, inventoryapp.InitialStockLine{VariantID: e.VariantID, Quantity: e.Quantity, UnitCost: e.UnitCost})
 	}
-	err := s.Inventory.ReceiveInitialStock(ctx, a.TenantID, a.UserID, locationID, lines)
+	return locationErr(s.Inventory.ReceiveInitialStock(ctx, a.TenantID, a.UserID, locationID, lines))
+}
+
+// SetReorderRules sets the reorder rules, in the batch's transaction. A
+// location deactivated after the upload fails the batch like a missing one.
+func (s ImportsStock) SetReorderRules(ctx context.Context, a importsapp.Actor, locationID uuid.UUID, rules []importsapp.ReorderEntry) error {
+	lines := make([]inventoryapp.ReorderLine, 0, len(rules))
+	for _, r := range rules {
+		lines = append(lines, inventoryapp.ReorderLine{VariantID: r.VariantID, Min: r.Min, Max: r.Max})
+	}
+	return locationErr(s.Inventory.SetReorderRules(ctx, a.TenantID, a.UserID, locationID, lines))
+}
+
+// locationErr is the imports' error for a location that is missing or
+// inactive in the inventory.
+func locationErr(err error) error {
 	if errors.Is(err, inventorydomain.ErrLocationNotFound) || errors.Is(err, inventorydomain.ErrLocationInactive) {
 		return importsapp.ErrLocationNotFound
 	}

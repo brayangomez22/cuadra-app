@@ -66,7 +66,8 @@ type Problem struct {
 	Message string
 }
 
-// Stock checks the import's location and receives the initial stock.
+// Stock checks the import's location, receives the initial stock and sets
+// the reorder rules.
 type Stock interface {
 	// RequireLocation fails with ErrLocationNotFound unless id is an
 	// active location of the tenant.
@@ -74,6 +75,9 @@ type Stock interface {
 	// ReceiveInitial registers the entries at locationID, joining the
 	// batch's transaction like Catalog.ImportProducts.
 	ReceiveInitial(ctx context.Context, a Actor, locationID uuid.UUID, entries []StockEntry) error
+	// SetReorderRules creates or replaces the rules at locationID, joining
+	// the batch's transaction like ReceiveInitial.
+	SetReorderRules(ctx context.Context, a Actor, locationID uuid.UUID, rules []ReorderEntry) error
 }
 
 // StockEntry is the initial stock of a new variant, in its base unit, at
@@ -82,6 +86,14 @@ type StockEntry struct {
 	VariantID uuid.UUID
 	Quantity  decimal.Decimal
 	UnitCost  decimal.Decimal
+}
+
+// ReorderEntry is the minimum and maximum stock of a variant, in its base
+// unit.
+type ReorderEntry struct {
+	VariantID uuid.UUID
+	Min       decimal.Decimal
+	Max       decimal.Decimal
 }
 
 // Modules reports which activable modules a tenant has on.

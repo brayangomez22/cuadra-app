@@ -86,11 +86,16 @@ func file(rows ...string) []byte {
 // line is a data row of file: product, category, unit, SKU, cost, price,
 // initial stock and the size axis; the other columns stay empty.
 func line(product, sku, price, stock, size string) string {
-	values := map[string]string{
+	return lineOf(map[string]string{
 		domain.ColumnProduct: product, domain.ColumnUnit: "und", domain.ColumnSKU: sku,
 		domain.ColumnCost: "100", domain.ColumnPrice: price, domain.ColumnStock: stock,
 		domain.AxisPrefix + "talla": size,
-	}
+	})
+}
+
+// lineOf is a data row of file with values by column; the other columns
+// stay empty.
+func lineOf(values map[string]string) string {
 	headers := domain.Layout{Variants: true, Axes: testAxes}.Headers()
 	cells := make([]string, len(headers))
 	for i, h := range headers {
