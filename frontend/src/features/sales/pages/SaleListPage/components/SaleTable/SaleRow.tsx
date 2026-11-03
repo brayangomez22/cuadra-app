@@ -4,11 +4,14 @@ import { Badge, TableCell, TableNarrow, TableRow, TextLink } from '@/shared/ui';
 import type { SaleSummary } from '../../../../api/types';
 import styles from './SaleTable.module.scss';
 
-/** A sale of the list; its number opens it. Numbers repeat between locations, so the location goes with it. */
+/**
+ * A sale of the list; its number opens it. Numbers repeat between locations, so
+ * the location goes with it. Only a voided sale carries a badge: nearly all are
+ * confirmed, and a badge on every row would hide the few that are not.
+ */
 export function SaleRow({ sale, location }: { sale: SaleSummary; location: string }) {
   const voided = sale.status === 'voided';
   const time = formatTime(sale.confirmed_at);
-  const status = <Badge tone={voided ? 'danger' : 'success'}>{voided ? 'Anulada' : 'Confirmada'}</Badge>;
   return (
     <TableRow>
       <TableCell>
@@ -23,9 +26,12 @@ export function SaleRow({ sale, location }: { sale: SaleSummary; location: strin
         <span className={styles.total} data-voided={voided || undefined}>
           {formatMoney(sale.total)}
         </span>
-        <TableNarrow>{status}</TableNarrow>
+        {voided && (
+          <span className={styles.status}>
+            <Badge tone="danger">Anulada</Badge>
+          </span>
+        )}
       </TableCell>
-      <TableCell wide>{status}</TableCell>
     </TableRow>
   );
 }

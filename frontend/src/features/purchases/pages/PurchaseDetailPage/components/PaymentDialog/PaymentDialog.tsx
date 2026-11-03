@@ -1,6 +1,8 @@
 import { useId } from 'react';
 import { SelectController } from '@/shared/forms/SelectController/SelectController';
 import { useFieldError } from '@/shared/forms/useFieldError';
+import { CashOutOption } from '@/features/sales';
+import { formatDay, formatMoney } from '@/shared/format';
 import { Alert, Button, Dialog, DialogClose, Field, Input, Stack } from '@/shared/ui';
 import type { Purchase } from '../../../../api/types';
 import { paymentMethodLabels } from '../../../../model/purchaseLabels';
@@ -10,17 +12,25 @@ const methods = Object.entries(paymentMethodLabels).map(([value, label]) => ({ v
 
 type Props = { purchase: Purchase; supplierName: string; onClose: () => void };
 
-/** A payment to the supplier of a purchase on credit. It does not touch the cash drawer. Mounted per opening. */
+function owed(purchase: Purchase): string {
+  const due = purchase.due_on ? `, vence el ${formatDay(purchase.due_on)}` : '';
+  return `Se deben ${formatMoney(purchase.balance_due)}${due}.`;
+}
+
+/**
+ * A payment to the supplier of a purchase on credit, with what is owed in
+ * view. In cash it can come out of the user's open drawer. Mounted per opening.
+ */
 export function PaymentDialog({ purchase, supplierName, onClose }: Props) {
   const formId = useId();
-  const { form, submit, formError, pending } = usePaymentForm(purchase, onClose);
+  const { form, submit, formError, cashOut, pending } = usePaymentForm(purchase, supplierName, onClose);
   const errorOf = useFieldError(form.control);
   return (
     <Dialog
       open
       onOpenChange={(open) => !open && onClose()}
       title={`Registrar un pago a ${supplierName}`}
-      description="Si el dinero sale del cajón, regístrelo también como egreso en la caja."
+      description={owed(purchase)}
       footer={
         <>
           <DialogClose asChild>
@@ -44,6 +54,10 @@ export function PaymentDialog({ purchase, supplierName, onClose }: Props) {
           <Field label="Fecha del pago" error={errorOf('paid_on')}>
             <Input type="date" {...form.register('paid_on')} />
           </Field>
+          {cashOut.option && <CashOutOption {...cashOut.option} />}
+          {cashOut.recordByHand && (
+            <Alert tone="info">Si el dinero sale del cajón, regístrelo como egreso en la caja.</Alert>
+          )}
         </Stack>
       </form>
     </Dialog>

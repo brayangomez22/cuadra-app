@@ -28,6 +28,26 @@ describe('GeneralSettings: reglas del negocio', () => {
     });
   });
 
+  it('solo el bloque con cambios sin guardar destaca su botón', async () => {
+    generalApi();
+    renderApp('/configuracion/general');
+
+    const discount = await screen.findByLabelText('Descuento máximo del cajero (%)');
+    const salesButton = screen.getByRole('button', { name: 'Guardar reglas de venta' });
+    expect(salesButton).toHaveAttribute('data-variant', 'secondary');
+    expect(screen.getByRole('button', { name: 'Guardar datos del negocio' })).toHaveAttribute(
+      'data-variant',
+      'secondary',
+    );
+    await userEvent.type(discount, '5');
+
+    expect(salesButton).toHaveAttribute('data-variant', 'primary');
+    expect(screen.getByRole('button', { name: 'Guardar datos del negocio' })).toHaveAttribute(
+      'data-variant',
+      'secondary',
+    );
+  });
+
   it('no envía un descuento de más de 100 %', async () => {
     const api = generalApi();
     renderApp('/configuracion/general');

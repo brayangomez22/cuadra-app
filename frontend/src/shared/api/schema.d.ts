@@ -3318,6 +3318,10 @@ export interface components {
             items: components["schemas"]["SaleSummary"][];
             /** @description Cantidad total de ventas que cumplen el filtro, sin paginar. */
             total: number;
+            /** @description Cuántas de esas ventas están anuladas. */
+            voided: number;
+            /** @description Lo que suman las ventas que cumplen el filtro y siguen confirmadas (sin las anuladas), sin paginar. */
+            sold: components["schemas"]["Money"];
         };
         /**
          * @description Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).

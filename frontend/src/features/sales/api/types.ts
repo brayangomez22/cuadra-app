@@ -2,6 +2,7 @@ import type { components, operations } from '@/shared/api/schema';
 
 export type Sale = components['schemas']['Sale'];
 export type SaleSummary = components['schemas']['SaleSummary'];
+export type SalePage = components['schemas']['SalePage'];
 export type ConfirmSaleInput = components['schemas']['ConfirmSaleInput'];
 export type CashSession = components['schemas']['CashSession'];
 export type CashMovement = components['schemas']['CashMovement'];

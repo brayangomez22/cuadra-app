@@ -36,6 +36,8 @@ func TestSaleRepositoryList(t *testing.T) {
 		page, err := f.sales.List(t.Context(), tn.id, domain.SaleFilter{From: day, To: day.Add(24 * time.Hour), Limit: 10})
 		require.NoError(t, err)
 		require.Equal(t, 3, page.Total)
+		require.Equal(t, 1, page.Voided)
+		require.True(t, dec("247520").Equal(page.Sold), "sold %s", page.Sold)
 		ids := []uuid.UUID{page.Items[0].ID, page.Items[1].ID, page.Items[2].ID}
 		require.Equal(t, []uuid.UUID{late.ID(), elsewhere.ID(), early.ID()}, ids)
 
@@ -51,8 +53,19 @@ func TestSaleRepositoryList(t *testing.T) {
 		page, err = f.sales.List(t.Context(), tn.id, domain.SaleFilter{From: day, To: day.Add(24 * time.Hour), LocationID: &tn.location, Limit: 1, Offset: 1})
 		require.NoError(t, err)
 		require.Equal(t, 2, page.Total)
+		require.Equal(t, 1, page.Voided)
+		require.True(t, dec("123760").Equal(page.Sold), "sold %s", page.Sold)
 		require.Len(t, page.Items, 1)
 		require.Equal(t, early.ID(), page.Items[0].ID)
+	})
+
+	t.Run("un día sin ventas suma cero", func(t *testing.T) {
+		tn := f.createTenant(t)
+		page, err := f.sales.List(t.Context(), tn.id, domain.SaleFilter{From: now, To: now.Add(time.Hour), Limit: 10})
+		require.NoError(t, err)
+		require.Zero(t, page.Total)
+		require.Zero(t, page.Voided)
+		require.True(t, page.Sold.IsZero())
 	})
 
 	t.Run("rechaza un límite de página fuera de rango", func(t *testing.T) {
@@ -79,6 +92,7 @@ func TestSaleRepositoryIsolation(t *testing.T) {
 		page, err := f.sales.List(t.Context(), b.id, domain.SaleFilter{From: now.Add(-time.Hour), To: now.Add(time.Hour), Limit: 10})
 		require.NoError(t, err)
 		require.Zero(t, page.Total)
+		require.True(t, page.Sold.IsZero())
 
 		_, err = f.sales.Void(t.Context(), b.id, s.ID(), func(_ context.Context, s *domain.Sale) error {
 			return s.Void(newID(), "Ajena", now)

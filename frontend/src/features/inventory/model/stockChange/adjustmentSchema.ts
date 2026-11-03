@@ -2,30 +2,40 @@ import { z } from 'zod';
 import type { Sellable } from '@/features/catalog';
 import { decimalField } from '@/shared/forms/decimalField';
 import type { FieldsByErrorCode } from '@/shared/forms/useApiFormErrors';
-import type { AdjustmentDirection } from './stockChange';
+import { isZero } from '@/shared/format';
+import type { AdjustmentMode } from './stockChange';
 
-export const DIRECTIONS: { value: AdjustmentDirection; label: string }[] = [
-  { value: 'out', label: 'Sacar de la existencia' },
-  { value: 'in', label: 'Agregar a la existencia' },
+export const MODES: { value: AdjustmentMode; label: string }[] = [
+  { value: 'out', label: 'Sale' },
+  { value: 'in', label: 'Entra' },
+  { value: 'count', label: 'Contar lo que hay' },
 ];
 
 /** The usual reasons, as shortcuts: the reason itself is free text. */
-export const REASONS: Record<AdjustmentDirection, string[]> = {
+export const REASONS: Record<AdjustmentMode, string[]> = {
   out: ['Rotura', 'Pérdida', 'Vencido', 'Consumo interno'],
   in: ['Mercancía encontrada', 'Corrección de un error'],
+  count: ['Diferencia al contar'],
 };
 
 const quantityMessages = { empty: 'Escriba la cantidad', belowMin: 'La cantidad debe ser mayor que cero' };
 
 // Same limits as AdjustmentInput in api/openapi.yaml. There is no default
 // direction: adding what broke instead of removing it doubles the mistake.
-export const adjustmentSchema = z.object({
-  item: z.custom<Sellable | null>().refine((item) => item !== null, 'Elija el producto'),
-  location_id: z.string().min(1, 'Elija la sede'),
-  direction: z.custom<AdjustmentDirection | ''>().refine(Boolean, 'Elija si saca o agrega'),
-  quantity: decimalField('positive', quantityMessages),
-  reason: z.string().trim().min(1, 'Escriba el motivo').max(500, 'Use máximo 500 caracteres'),
-});
+// A count may be zero (nothing left); what leaves or enters may not.
+export const adjustmentSchema = z
+  .object({
+    item: z.custom<Sellable | null>().refine((item) => item !== null, 'Elija el producto'),
+    location_id: z.string().min(1, 'Elija la sede'),
+    direction: z.custom<AdjustmentMode | ''>().refine(Boolean, 'Elija si sale, entra o cuenta lo que hay'),
+    quantity: decimalField('nonnegative', quantityMessages),
+    reason: z.string().trim().min(1, 'Escriba el motivo').max(500, 'Use máximo 500 caracteres'),
+  })
+  .superRefine(({ direction, quantity }, ctx) => {
+    if (direction !== 'count' && isZero(quantity)) {
+      ctx.addIssue({ code: 'custom', path: ['quantity'], message: quantityMessages.belowMin });
+    }
+  });
 
 export type AdjustmentFormInput = z.input<typeof adjustmentSchema>;
 export type AdjustmentValues = z.output<typeof adjustmentSchema>;

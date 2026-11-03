@@ -30,4 +30,13 @@
     margin: 0;
     overflow-wrap: anywhere;
   }
+
+  &[data-wide] {
+    grid-column: span 2;
+  }
+
+  &[data-strong] dd {
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
 }

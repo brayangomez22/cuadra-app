@@ -34,4 +34,8 @@
   &[data-tone='danger'] dd {
     color: var(--color-feedback-danger);
   }
+
+  &[data-tone='warning'] dd {
+    color: var(--color-feedback-warning);
+  }
 }

@@ -15,6 +15,7 @@ export function StockRulesForm({ rules }: { rules: StockRules }) {
       title="Inventario"
       submitLabel="Guardar reglas de inventario"
       saving={save.isPending}
+      changed={allowNegative !== rules.allow_negative_stock}
       error={save.isError ? describeError(save.error).message : null}
       onSubmit={(event) => {
         event.preventDefault();

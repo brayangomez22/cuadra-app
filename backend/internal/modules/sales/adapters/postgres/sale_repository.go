@@ -205,7 +205,7 @@ func (r *SaleRepository) List(ctx context.Context, tenantID uuid.UUID, f domain.
 		return domain.SalePage{}, err
 	}
 	var rows []sqlcgen.ListSalesRow
-	var total int64
+	var sum sqlcgen.SummarizeSalesRow
 	err = r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
 		var err error
@@ -214,13 +214,15 @@ func (r *SaleRepository) List(ctx context.Context, tenantID uuid.UUID, f domain.
 		}); err != nil {
 			return err
 		}
-		total, err = q.CountSales(ctx, sqlcgen.CountSalesParams{FromTime: f.From, ToTime: f.To, LocationID: f.LocationID})
+		sum, err = q.SummarizeSales(ctx, sqlcgen.SummarizeSalesParams{FromTime: f.From, ToTime: f.To, LocationID: f.LocationID})
 		return err
 	})
 	if err != nil {
 		return domain.SalePage{}, fmt.Errorf("sales: list sales: %w", err)
 	}
-	page := domain.SalePage{Items: make([]domain.SaleSummary, 0, len(rows)), Total: int(total)}
+	page := domain.SalePage{
+		Items: make([]domain.SaleSummary, 0, len(rows)), Total: int(sum.Total), Voided: int(sum.Voided), Sold: sum.Sold,
+	}
 	for _, row := range rows {
 		sum := domain.SaleSummary{
 			ID: row.ID, Number: row.Number, LocationID: row.LocationID, UserID: row.UserID,

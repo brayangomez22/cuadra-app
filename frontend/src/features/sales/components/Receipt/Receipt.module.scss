@@ -77,11 +77,14 @@
   }
 }
 
+// Running text (the legal notice wraps to several lines): normal leading,
+// not the tight one of the figures above.
 .footer {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   padding-block-start: var(--space-2);
   border-block-start: 1px dashed currentcolor;
+  line-height: var(--line-height-normal);
   text-align: center;
 }

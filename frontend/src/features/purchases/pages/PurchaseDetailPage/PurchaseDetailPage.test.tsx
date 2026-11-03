@@ -26,9 +26,20 @@ describe('PurchaseDetailPage', () => {
     expect(await summary.findByText('Bodega principal')).toBeInTheDocument();
     expect(summary.getByText('Crédito')).toBeInTheDocument();
     expect(summary.getByText('19/11/2026')).toBeInTheDocument();
+    // What paying needs goes first, not after the lines.
+    expect(plain(summary.getByText('Saldo').nextElementSibling?.textContent)).toBe('$ 318.480');
     const totals = within(screen.getByRole('region', { name: 'Totales de la compra' }));
     expect(plain(totals.getByText('IVA 19 %').nextElementSibling?.textContent)).toBe('$ 36.480');
     expect(plain(totals.getByText('Por pagar').nextElementSibling?.textContent)).toBe('$ 318.480');
+  });
+
+  it('deja anular la compra al final, lejos de registrar el pago', async () => {
+    purchasesApi({ routes });
+    renderApp(`/compras/${purchaseId}`);
+
+    const zone = within(await screen.findByRole('region', { name: 'Anular la compra' }));
+    expect(zone.getByRole('button', { name: 'Anular compra' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Anular compra' })).toHaveLength(1);
   });
 
   it('muestra las líneas en su unidad y lo que entró en la base', async () => {

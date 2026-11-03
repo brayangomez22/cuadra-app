@@ -68,10 +68,14 @@ func SummaryOf(s *Sale) SaleSummary {
 	return sum
 }
 
-// SalePage is one page of sales and how many match in total.
+// SalePage is one page of sales, how many match in total, how many of them
+// were voided and what the confirmed ones add up to, so a day's figures do
+// not depend on the page.
 type SalePage struct {
-	Items []SaleSummary
-	Total int
+	Items  []SaleSummary
+	Total  int
+	Voided int
+	Sold   decimal.Decimal
 }
 
 // PolicyRepository reads and stores the tenant's sales rules.

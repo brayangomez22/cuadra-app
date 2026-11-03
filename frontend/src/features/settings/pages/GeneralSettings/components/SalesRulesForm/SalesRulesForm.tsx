@@ -15,6 +15,7 @@ export function SalesRulesForm({ rules }: { rules: SalesRules }) {
       submitLabel="Guardar reglas de venta"
       onSubmit={submit}
       saving={saving}
+      changed={form.formState.isDirty}
       error={formError}
     >
       <Field

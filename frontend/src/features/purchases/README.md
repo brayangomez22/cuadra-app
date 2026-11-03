@@ -10,8 +10,9 @@ al inventario de una sede y actualiza el costo promedio. Decisiones de T33 y T33
   y días de la factura, paginadas y en la URL (`?proveedor=` llega desde la lista de proveedores).
 - `PurchaseDetailPage` (`/compras/:id`, `purchases:read`): la factura, sus líneas en la unidad de compra con lo que
   entró en la unidad base, el IVA por tasa, el saldo por pagar y los pagos (`SupplierPayments`). Con `purchases:write`,
-  `PurchaseActions` registra un pago (`PaymentDialog`) o anula la compra (`VoidPurchaseDialog`); las reglas de cuándo
-  se puede están en `model/purchaseStatus`.
+  `PayAction` registra un pago (`PaymentDialog`; en efectivo, con `useCashOut` de `sales` lo saca de la caja abierta)
+  y, al final, `VoidZone` anula la compra (`VoidPurchaseDialog`); las reglas de cuándo se puede están en
+  `model/purchaseStatus`.
 - `PayablesPage` (`/compras/por-pagar`, `purchases:read`): lo que se debe a cada proveedor, con lo vencido y lo que
   vence en 7 días (`GET /payables`).
 - `PurchaseFormPage` (`/compras/nueva`, `purchases:write`): proveedor, sede, número y fecha, contado o crédito (con el

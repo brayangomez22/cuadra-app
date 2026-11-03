@@ -15,18 +15,22 @@ export function cashToReturn(sale: Sale): string {
   return fromUnits(paidWith(sale, 'cash') - toUnits(sale.change));
 }
 
-function cashNotice(amount: string, drawer: DrawerState): string {
+/** fromMyDrawer: the cash comes out of the user's open drawer, recorded as an out movement along with the void. */
+type Options = { fromMyDrawer?: boolean };
+
+function cashNotice(amount: string, drawer: DrawerState, { fromMyDrawer = false }: Options): string {
   const cash = `Devuelva ${formatMoney(amount)} en efectivo`;
   if (drawer === 'open') return `${cash}. La caja deja de contar esta venta.`;
   const why = drawer === 'closed' ? 'la caja de esta venta ya se cerró' : 'esta venta no quedó en ninguna caja';
+  if (fromMyDrawer) return `${cash} de su caja: ${why}, así que sale como egreso de la suya.`;
   return `${cash} y regístrelo como egreso de la caja actual: ${why}.`;
 }
 
 /** What voiding the sale does, and what the user must do with the money: the API only reverses stock and debt. */
-export function voidNotices(sale: Sale, drawer: DrawerState): string[] {
+export function voidNotices(sale: Sale, drawer: DrawerState, options: Options = {}): string[] {
   const notices = ['Lo vendido vuelve al inventario.'];
   const cash = cashToReturn(sale);
-  if (toUnits(cash) > 0n) notices.push(cashNotice(cash, drawer));
+  if (toUnits(cash) > 0n) notices.push(cashNotice(cash, drawer, options));
   for (const { method, amount } of sale.payments) {
     if (method === 'credit') {
       notices.push(`Se cancela la deuda de ${formatMoney(amount)} que dejó esta venta en la cuenta del cliente.`);

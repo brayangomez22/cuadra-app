@@ -19,6 +19,7 @@ export function DefaultTaxForm() {
       title="Impuestos"
       submitLabel="Guardar IVA"
       saving={save.isPending}
+      changed={rate !== current}
       error={save.isError ? describeError(save.error).message : null}
       onSubmit={(event) => {
         event.preventDefault();

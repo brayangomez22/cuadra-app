@@ -48,6 +48,15 @@ describe('voidNotices', () => {
     );
   });
 
+  it('si el efectivo sale de la caja abierta del usuario no pide registrar nada a mano', () => {
+    expect(texts(aSale(), 'closed', { fromMyDrawer: true })).toContain(
+      'Devuelva $ 11.900 en efectivo de su caja: la caja de esta venta ya se cerró, así que sale como egreso de la suya.',
+    );
+    expect(texts(fabricSale, 'none', { fromMyDrawer: true })).toContain(
+      'Devuelva $ 11.900 en efectivo de su caja: esta venta no quedó en ninguna caja, así que sale como egreso de la suya.',
+    );
+  });
+
   it('una venta sin caja también pide registrar el egreso', () => {
     expect(texts(aSale(), 'none')).toContain(
       'Devuelva $ 11.900 en efectivo y regístrelo como egreso de la caja actual: esta venta no quedó en ninguna caja.',

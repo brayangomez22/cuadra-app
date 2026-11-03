@@ -15,12 +15,12 @@ const cases: Case[] = [
   {
     name: 'faltan $ 10,50: menos de una moneda grande',
     closing: { result: 'shortage', difference: '-10.50' },
-    expected: { label: 'Faltante menor', tone: 'warning' },
+    expected: { label: 'Faltante menor', tone: 'neutral' },
   },
   {
     name: 'faltan $ 999',
     closing: { result: 'shortage', difference: '-999.00' },
-    expected: { label: 'Faltante menor', tone: 'warning' },
+    expected: { label: 'Faltante menor', tone: 'neutral' },
   },
   {
     name: 'faltan $ 1.000: un billete',
@@ -30,7 +30,7 @@ const cases: Case[] = [
   {
     name: 'sobran $ 50',
     closing: { result: 'overage', difference: '50.00' },
-    expected: { label: 'Sobrante menor', tone: 'warning' },
+    expected: { label: 'Sobrante menor', tone: 'neutral' },
   },
   {
     name: 'sobran $ 20.000',

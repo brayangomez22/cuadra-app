@@ -2,10 +2,10 @@ import { Table, TableBody, TableHead, TableHeaderCell, TableRow } from '@/shared
 import type { CashSessionSummary } from '../../../../api/types';
 import { CashHistoryRow } from './CashHistoryRow';
 
-type Props = { sessions: CashSessionSummary[]; locationName: (id: string) => string; myId: string | undefined };
+type Props = { sessions: CashSessionSummary[]; locationName: (id: string) => string };
 
 /** One row per drawer: when it opened, who and where, what it sold and how the count came out. */
-export function CashHistoryTable({ sessions, locationName, myId }: Props) {
+export function CashHistoryTable({ sessions, locationName }: Props) {
   return (
     <Table caption="Cajas">
       <TableHead>
@@ -17,12 +17,14 @@ export function CashHistoryTable({ sessions, locationName, myId }: Props) {
             Ventas
           </TableHeaderCell>
           <TableHeaderCell numeric>Total vendido</TableHeaderCell>
-          <TableHeaderCell numeric>Arqueo</TableHeaderCell>
+          <TableHeaderCell numeric wide>
+            Arqueo
+          </TableHeaderCell>
         </TableRow>
       </TableHead>
       <TableBody>
         {sessions.map((s) => (
-          <CashHistoryRow key={s.id} session={s} location={locationName(s.location_id)} mine={s.user_id === myId} />
+          <CashHistoryRow key={s.id} session={s} location={locationName(s.location_id)} />
         ))}
       </TableBody>
     </Table>

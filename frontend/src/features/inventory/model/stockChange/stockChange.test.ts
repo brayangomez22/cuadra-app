@@ -32,6 +32,16 @@ describe('adjustmentDelta', () => {
   ] as const)('$name', ({ direction, text, expected }) => {
     expect(adjustmentDelta(direction, text)).toBe(expected);
   });
+
+  it.each([
+    { name: 'ropa: contó 3 camisetas donde había 5', text: '3', current: '5', expected: '-2' },
+    { name: 'ferretería: midió 2,5 m de cable donde había 2', text: '2,5', current: '2', expected: '0.5' },
+    { name: 'no quedó ninguno', text: '0', current: '4', expected: '-4' },
+    { name: 'lo contado es lo que hay', text: '7', current: '7', expected: '0' },
+    { name: 'sin saber cuánto hay no hay cambio', text: '3', current: undefined, expected: null },
+  ])('al contar lo que hay es la diferencia: $name', ({ text, current, expected }) => {
+    expect(adjustmentDelta('count', text, current)).toBe(expected);
+  });
 });
 
 describe('balanceAfter', () => {

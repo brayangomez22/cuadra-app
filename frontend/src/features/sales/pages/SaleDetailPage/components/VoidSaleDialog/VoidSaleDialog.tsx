@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { Alert, Button, Dialog, DialogClose, Field, Textarea } from '@/shared/ui';
 import type { Sale } from '../../../../api/types';
+import { CashOutOption } from '../../../../components/CashOutOption/CashOutOption';
 import { useVoidSaleForm } from '../../hooks/useVoidSaleForm';
 import styles from './VoidSaleDialog.module.scss';
 
@@ -12,7 +13,10 @@ type Props = { sale: Sale; onClose: () => void };
  */
 export function VoidSaleDialog({ sale, onClose }: Props) {
   const formId = useId();
-  const { form, submit, formError, notices, drawerFailed, canSubmit, pending } = useVoidSaleForm(sale, onClose);
+  const { form, submit, formError, notices, cashOut, drawerFailed, canSubmit, pending } = useVoidSaleForm(
+    sale,
+    onClose,
+  );
   return (
     <Dialog
       open
@@ -42,6 +46,7 @@ export function VoidSaleDialog({ sale, onClose }: Props) {
             ))}
           </ul>
         )}
+        {cashOut && <CashOutOption {...cashOut} />}
         <Field label="Motivo" error={form.formState.errors.reason?.message}>
           <Textarea autoFocus maxLength={500} rows={3} {...form.register('reason')} />
         </Field>

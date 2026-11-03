@@ -6584,7 +6584,7 @@ components:
           format: date-time
     SalePage:
       type: object
-      required: [items, total]
+      required: [items, total, voided, sold]
       properties:
         items:
           type: array
@@ -6593,6 +6593,12 @@ components:
         total:
           type: integer
           description: Cantidad total de ventas que cumplen el filtro, sin paginar.
+        voided:
+          type: integer
+          description: Cuántas de esas ventas están anuladas.
+        sold:
+          $ref: "#/components/schemas/Money"
+          description: Lo que suman las ventas que cumplen el filtro y siguen confirmadas (sin las anuladas), sin paginar.
     SignedMoney:
       type: string
       description: Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).

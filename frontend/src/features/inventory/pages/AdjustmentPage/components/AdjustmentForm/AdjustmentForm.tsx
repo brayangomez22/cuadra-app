@@ -1,26 +1,30 @@
 import { FormProvider, useWatch } from 'react-hook-form';
 import { SelectController } from '@/shared/forms/SelectController/SelectController';
 import { useFieldError } from '@/shared/forms/useFieldError';
-import { Alert, Button, Field } from '@/shared/ui';
+import { Alert, Button, Field, SegmentedControl } from '@/shared/ui';
 import { BalanceChange } from '../../../../components/BalanceChange/BalanceChange';
 import { ProductField } from '../../../../components/ProductField/ProductField';
 import { QuantityField } from '../../../../components/QuantityField/QuantityField';
-import { DIRECTIONS } from '../../../../model/stockChange/adjustmentSchema';
+import { MODES } from '../../../../model/stockChange/adjustmentSchema';
 import { adjustmentDelta } from '../../../../model/stockChange/stockChange';
 import { useAdjustmentForm, type AdjustmentSetup } from '../../hooks/useAdjustmentForm';
 import { ReasonField } from '../ReasonField/ReasonField';
 import styles from './AdjustmentForm.module.scss';
 
-/** The product, the location, whether it leaves or enters, how much and why, with what it would leave. */
+/**
+ * The product, the location, whether it leaves, enters or what there is now,
+ * how much and why. What there is shows as soon as the product and the
+ * location are chosen, and then what the adjustment would leave.
+ */
 export function AdjustmentForm(setup: AdjustmentSetup) {
-  const { form, formError, submit, isPending } = useAdjustmentForm(setup);
-  const { control } = form;
+  const { form, formError, submit, current, isPending } = useAdjustmentForm(setup);
+  const { control, register } = form;
   const errorOf = useFieldError(control);
   const [item, locationId, direction, quantity] = useWatch({
     control,
     name: ['item', 'location_id', 'direction', 'quantity'],
   });
-  const delta = adjustmentDelta(direction, quantity);
+  const delta = adjustmentDelta(direction, quantity, current);
 
   return (
     <FormProvider {...form}>
@@ -35,11 +39,7 @@ export function AdjustmentForm(setup: AdjustmentSetup) {
             placeholder="Elija la sede"
           />
         </Field>
-        <Field label="Movimiento" error={errorOf('direction')}>
-          <SelectController control={control} name="direction" options={DIRECTIONS} placeholder="¿Sale o entra?" />
-        </Field>
-        <QuantityField />
-        {item && locationId && delta && (
+        {item && locationId && (
           <BalanceChange
             variantId={item.variant.id}
             locationId={locationId}
@@ -48,6 +48,8 @@ export function AdjustmentForm(setup: AdjustmentSetup) {
             delta={delta}
           />
         )}
+        <SegmentedControl legend="Movimiento" options={MODES} error={errorOf('direction')} {...register('direction')} />
+        <QuantityField label={direction === 'count' ? 'Cuántas hay' : 'Cantidad'} />
         <ReasonField />
         <div className={styles.footer}>
           <Button type="submit" size="lg" loading={isPending}>

@@ -9,7 +9,7 @@ export function TransferPage() {
   return (
     <Page
       title="Trasladar mercancía"
-      description="Saca la cantidad de una sede y la entra en otra en el mismo momento, al costo promedio del origen."
+      description="Pasa mercancía de una sede a otra en un solo paso. Llega con el mismo costo que tenía en la sede de donde sale."
     >
       <StockFormState
         setup={setup}

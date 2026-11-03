@@ -1,8 +1,9 @@
 import { useLocations } from '@/features/inventory';
-import { formatDay } from '@/shared/format';
 import { QueryState } from '@/shared/query';
-import { EmptyState, IconReceipt, Page, Pagination, Spinner } from '@/shared/ui';
+import { Page, Pagination, Spinner } from '@/shared/ui';
 import { SALE_PAGE_SIZE, useSales } from '../../api/sales';
+import { NoSalesThatDay } from './components/NoSalesThatDay/NoSalesThatDay';
+import { SaleDaySummary } from './components/SaleDaySummary/SaleDaySummary';
 import { SaleFilters } from './components/SaleFilters/SaleFilters';
 import { SaleTable } from './components/SaleTable/SaleTable';
 import { useSaleListParams } from './hooks/useSaleListParams';
@@ -22,11 +23,12 @@ export function SaleListPage() {
         errorTitle="No pudimos cargar las ventas"
         loading={<Spinner label="Cargando ventas…" className={styles.loading} />}
         isEmpty={sales.data?.items.length === 0}
-        empty={<EmptyState icon={<IconReceipt />} title={`No hay ventas el ${formatDay(params.day)}`} />}
+        empty={<NoSalesThatDay day={params.day} location={params.location} />}
       >
         {() =>
           sales.data && (
             <div className={styles.results} aria-busy={sales.isPlaceholderData || undefined}>
+              <SaleDaySummary page={sales.data} />
               <SaleTable sales={sales.data.items} locationName={locationName} />
               <Pagination
                 label="Páginas de ventas"

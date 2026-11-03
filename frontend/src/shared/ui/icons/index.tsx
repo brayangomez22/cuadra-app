@@ -84,6 +84,15 @@ export const IconCash = createIcon(
     <path d="M6 12h.01M18 12h.01" />
   </>,
 );
+
+// A stack of bills: the drawers already counted, their history.
+export const IconCashStack = createIcon(
+  <>
+    <rect x="2" y="8" width="17" height="11" rx="2" />
+    <circle cx="10.5" cy="13.5" r="2.5" />
+    <path d="M5 5h15a2 2 0 0 1 2 2v9" />
+  </>,
+);
 // Sliders: the business settings (Configuración).
 export const IconSettings = createIcon(
   <>

@@ -4,7 +4,7 @@ import { SaleRow } from './SaleRow';
 
 type Props = { sales: SaleSummary[]; locationName: (id: string) => string };
 
-/** The sales of a page. On a phone the time and location go under the number and the status under the total: two columns. */
+/** The sales of a page. On a phone the time and location go under the number: two columns. A voided sale says so under its total. */
 export function SaleTable({ sales, locationName }: Props) {
   return (
     <Table caption="Ventas">
@@ -14,7 +14,6 @@ export function SaleTable({ sales, locationName }: Props) {
           <TableHeaderCell wide>Hora</TableHeaderCell>
           <TableHeaderCell wide>Sede</TableHeaderCell>
           <TableHeaderCell numeric>Total</TableHeaderCell>
-          <TableHeaderCell wide>Estado</TableHeaderCell>
         </TableRow>
       </TableHead>
       <TableBody>

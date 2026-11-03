@@ -5,18 +5,19 @@ import { ButtonLink, Inline, Page, Spinner, Stack } from '@/shared/ui';
 import { usePurchase } from '../../api/purchases';
 import { PurchaseTotals } from '../../components/PurchaseTotals/PurchaseTotals';
 import { InvoiceSummary } from './components/InvoiceSummary/InvoiceSummary';
-import { PurchaseActions } from './components/PurchaseActions/PurchaseActions';
+import { PayAction } from './components/PayAction/PayAction';
 import { PurchaseLines } from './components/PurchaseLines/PurchaseLines';
 import { SupplierPayments } from './components/SupplierPayments/SupplierPayments';
 import { VoidedNotice } from './components/VoidedNotice/VoidedNotice';
+import { VoidZone } from './components/VoidZone/VoidZone';
 
-/** A registered purchase at /compras/:purchaseId: its invoice, its lines, what is owed and what was paid. */
+/** A registered purchase at /compras/:purchaseId: its invoice with what is owed, its lines, what was paid and, last, voiding it. */
 export function PurchaseDetailPage() {
   const { purchaseId } = useParams();
   const purchase = usePurchase(purchaseId);
   const actions = (
     <Inline wrap>
-      {purchase.data && <PurchaseActions purchase={purchase.data} />}
+      {purchase.data && <PayAction purchase={purchase.data} />}
       <ButtonLink to={paths.purchases.list()} variant="secondary">
         Todas las compras
       </ButtonLink>
@@ -37,6 +38,7 @@ export function PurchaseDetailPage() {
               <PurchaseLines lines={purchase.data.lines} />
               <PurchaseTotals {...purchase.data} balanceDue={purchase.data.balance_due} />
               {purchase.data.payment === 'credit' && <SupplierPayments purchase={purchase.data} />}
+              <VoidZone purchase={purchase.data} />
             </Stack>
           )
         }

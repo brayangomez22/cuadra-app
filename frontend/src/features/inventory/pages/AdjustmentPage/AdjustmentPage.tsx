@@ -9,7 +9,7 @@ export function AdjustmentPage() {
   return (
     <Page
       title="Registrar ajuste"
-      description="Corrige la existencia de una sede. Queda en el kardex con su motivo y no cambia el costo promedio."
+      description="Corrige la existencia de una sede: algo se rompió, se perdió, apareció o el conteo no da. Queda en el kardex con su motivo y no cambia el costo."
     >
       <StockFormState
         setup={setup}
