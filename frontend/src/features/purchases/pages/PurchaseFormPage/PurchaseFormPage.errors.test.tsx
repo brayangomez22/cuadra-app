@@ -2,7 +2,6 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { apiError } from '@/test/fakeApi';
 import { renderApp } from '@/test/renderApp';
-import { preloadPages } from '@/test/preloadPages';
 import { purchasesApi } from '../../testing/purchasesApi';
 import {
   fillAmounts,
@@ -12,6 +11,7 @@ import {
   registerPurchase,
   submitPurchase,
 } from '../../testing/purchaseSteps';
+import { warmUpPurchaseForm } from '../../testing/warmUp';
 
 async function fillOneLine() {
   await fillInvoice();
@@ -27,7 +27,7 @@ async function fillTwoLines() {
 }
 
 describe('PurchaseFormPage: errores', () => {
-  beforeAll(preloadPages('/compras/nueva'));
+  beforeAll(warmUpPurchaseForm());
 
   it('la factura repetida se marca en el número', async () => {
     purchasesApi({

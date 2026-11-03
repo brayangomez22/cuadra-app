@@ -74,11 +74,13 @@ type SalePage struct {
 	Total int
 }
 
-// PolicyRepository reads the tenant's sales rules.
+// PolicyRepository reads and stores the tenant's sales rules.
 type PolicyRepository interface {
 	// Get returns the tenant's policy, or the zero SalesPolicy if it has not
 	// set one.
 	Get(ctx context.Context, tenantID uuid.UUID) (SalesPolicy, error)
+	// Save replaces the tenant's policy.
+	Save(ctx context.Context, tenantID uuid.UUID, policy SalesPolicy) error
 }
 
 // CashSessionRepository persists cash sessions and their movements. Every

@@ -73,3 +73,10 @@ func (m *Module) VariantProducts(ctx context.Context, tenantID uuid.UUID, varian
 func (m *Module) VariantsInCategories(ctx context.Context, tenantID uuid.UUID, categoryIDs []uuid.UUID) ([]uuid.UUID, error) {
 	return m.products.VariantsInCategories(ctx, tenantID, categoryIDs)
 }
+
+// InactiveVariants returns those of variantIDs that are no longer sold in
+// tenantID: inactive, or of an archived product. It is for the inventory,
+// whose reorder alerts leave them out.
+func (m *Module) InactiveVariants(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) ([]uuid.UUID, error) {
+	return m.products.InactiveVariants(ctx, tenantID, variantIDs)
+}

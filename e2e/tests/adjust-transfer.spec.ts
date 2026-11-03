@@ -33,6 +33,6 @@ test('saca lo roto con un ajuste y traslada a otra sede', async ({ page }) => {
     await chooseOption(page, 'Sede de destino', /^Sede norte$/);
     await page.getByLabel('Cantidad').fill('3');
     await page.getByRole('button', { name: 'Registrar traslado' }).click();
-    await expect(page.getByText(/Principal queda con 5 und y Sede norte con 3 und/)).toBeVisible();
+    await expect(page.getByText(/Principal queda con 5 und y Sede norte con 3 und/).first()).toBeVisible();
   });
 });

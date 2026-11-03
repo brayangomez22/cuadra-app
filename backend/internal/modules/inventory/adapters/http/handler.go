@@ -26,6 +26,7 @@ type UseCases interface {
 	StockUseCases
 	CountUseCases
 	CountEntryUseCases
+	SettingsUseCases
 }
 
 // StockUseCases are the use cases of locations, stock movements and reorder
@@ -44,12 +45,14 @@ type StockUseCases interface {
 }
 
 // Handler implements inventoryapi.StrictServerInterface: the stock
-// operations itself, the stock counts through its embedded handlers.
+// operations itself, the stock counts and the settings through its embedded
+// handlers.
 type Handler struct {
 	uc  StockUseCases
 	can auth.Authorizer
 	countHandler
 	entryHandler
+	settingsHandler
 }
 
 var _ inventoryapi.StrictServerInterface = (*Handler)(nil)
@@ -57,7 +60,7 @@ var _ inventoryapi.StrictServerInterface = (*Handler)(nil)
 // Register mounts the inventory operations on mux, with the module's error
 // mapping. can decides who sees costs.
 func Register(mux *http.ServeMux, uc UseCases, can auth.Authorizer, log *slog.Logger) {
-	h := &Handler{uc: uc, can: can, countHandler: countHandler{uc: uc, can: can}, entryHandler: entryHandler{uc: uc, can: can}}
+	h := &Handler{uc: uc, can: can, countHandler: countHandler{uc: uc, can: can}, entryHandler: entryHandler{uc: uc, can: can}, settingsHandler: settingsHandler{uc: uc}}
 	errs := httpx.NewErrorMapper(log, errorRules...)
 	inventoryapi.HandlerWithOptions(
 		inventoryapi.NewStrictHandlerWithOptions(h, []inventoryapi.StrictMiddlewareFunc{auth.RequirePrincipal[inventoryapi.StrictHandlerFunc]}, inventoryapi.StrictHTTPServerOptions{

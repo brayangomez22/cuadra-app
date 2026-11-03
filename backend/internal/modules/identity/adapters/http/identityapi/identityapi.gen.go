@@ -190,15 +190,24 @@ type Me struct {
 	//
 	//
 	// Example: ["catalog:read","sales:create"]
-	Permissions []string           `json:"permissions"`
-	Role        MeRole             `json:"role"`
-	TenantId    openapi_types.UUID `json:"tenant_id"`
-	TenantName  string             `json:"tenant_name"`
+	Permissions []string `json:"permissions"`
+	Role        MeRole   `json:"role"`
+
+	// TenantAddress Dirección de la empresa, para la tirilla y el cierre de caja. Vacía si no se ha registrado.
+	TenantAddress string `json:"tenant_address"`
+
+	// TenantCity Ciudad o municipio de la empresa. Vacía si no se ha registrado.
+	TenantCity string             `json:"tenant_city"`
+	TenantId   openapi_types.UUID `json:"tenant_id"`
+	TenantName string             `json:"tenant_name"`
 
 	// TenantNit NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
 	//
 	// Example: 900123456-8
 	TenantNit string `json:"tenant_nit"`
+
+	// TenantPhone Teléfono de la empresa. Vacío si no se ha registrado.
+	TenantPhone string `json:"tenant_phone"`
 }
 
 // MeRole defines model for Me.Role.
@@ -242,8 +251,14 @@ type TaxRate = string
 
 // Tenant La empresa (tenant) y su configuración.
 type Tenant struct {
+	// Address Dirección del negocio, para la tirilla y los documentos. Vacía si no se ha registrado.
+	Address string `json:"address"`
+
 	// BusinessTemplate Example: generica
 	BusinessTemplate string `json:"business_template"`
+
+	// City Ciudad o municipio del negocio. Vacía si no se ha registrado.
+	City string `json:"city"`
 
 	// DefaultTaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
 	//
@@ -254,6 +269,9 @@ type Tenant struct {
 
 	// Nit Example: 900123456-8
 	Nit string `json:"nit"`
+
+	// Phone Teléfono del negocio. Vacío si no se ha registrado.
+	Phone string `json:"phone"`
 }
 
 // TenantOption defines model for TenantOption.
@@ -270,8 +288,17 @@ type TenantSelectionRequired struct {
 
 // TenantUpdate defines model for TenantUpdate.
 type TenantUpdate struct {
+	// Address Dirección del negocio. Vacía la borra.
+	Address *string `json:"address,omitempty"`
+
+	// City Ciudad o municipio. Vacía la borra.
+	City *string `json:"city,omitempty"`
+
 	// DefaultTaxRate La tasa de IVA que se propone a un producto nuevo. No cambia la de los productos que ya existen.
 	DefaultTaxRate *TaxRate `json:"default_tax_rate,omitempty"`
+
+	// Phone Teléfono, con dígitos, espacios, `+`, `-` y paréntesis. Vacío lo borra.
+	Phone *string `json:"phone,omitempty"`
 }
 
 // AttributeId defines model for AttributeId.

@@ -42,3 +42,36 @@ func TestVariantsInCategories(t *testing.T) {
 		}
 	})
 }
+
+func TestInactiveVariants(t *testing.T) {
+	f := newFixture(t)
+
+	t.Run("devuelve las variantes inactivas y las de productos archivados, no las que se venden", func(t *testing.T) {
+		tenant := f.createTenant(t)
+		archived := f.createProduct(t, tenant, "PEG-1", "Pegante")
+		archived.Deactivate()
+		require.NoError(t, f.products.Update(t.Context(), archived))
+		sold := f.createProduct(t, tenant, "CAM-S", "Camiseta básica")
+		hidden := f.createProduct(t, tenant, "LAP-1", "Lápiz rojo")
+		require.NoError(t, hidden.SetVariantActive(hidden.DefaultVariant().ID(), false))
+		require.NoError(t, f.products.Update(t.Context(), hidden))
+		ids := []uuid.UUID{archived.DefaultVariant().ID(), sold.DefaultVariant().ID(), hidden.DefaultVariant().ID()}
+
+		got, err := f.products.InactiveVariants(t.Context(), tenant, ids)
+
+		require.NoError(t, err)
+		require.ElementsMatch(t, []uuid.UUID{archived.DefaultVariant().ID(), hidden.DefaultVariant().ID()}, got)
+	})
+
+	t.Run("no ve las variantes de otro tenant", func(t *testing.T) {
+		tenantA, tenantB := f.createTenant(t), f.createTenant(t)
+		p := f.createProduct(t, tenantA, "PEG-2", "Pegante")
+		p.Deactivate()
+		require.NoError(t, f.products.Update(t.Context(), p))
+
+		got, err := f.products.InactiveVariants(t.Context(), tenantB, []uuid.UUID{p.DefaultVariant().ID()})
+
+		require.NoError(t, err)
+		require.Empty(t, got)
+	})
+}

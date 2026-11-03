@@ -1,5 +1,5 @@
 // One narrow column: a setting and its explanation read together.
-.form {
+.root {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);

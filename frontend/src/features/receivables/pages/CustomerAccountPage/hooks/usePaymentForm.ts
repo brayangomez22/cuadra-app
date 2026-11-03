@@ -20,19 +20,21 @@ export function usePaymentForm({ customerId, balance, onDone }: Options) {
     payment_exceeds_balance: 'amount',
   });
 
-  const submit = form.handleSubmit((values) => {
+  // mutateAsync, not mutate's callbacks: paying the whole balance hides the
+  // dialog (the customer no longer owes) and its callbacks would not run.
+  const submit = form.handleSubmit(async (values) => {
     clearFormError();
-    record.mutate(values, {
-      onSuccess: (payment) => {
-        toast({
-          tone: 'success',
-          title: 'Abono registrado',
-          description: `Queda debiendo ${formatMoney(payment.balance)}`,
-        });
-        onDone();
-      },
-      onError: handleError,
-    });
+    try {
+      const payment = await record.mutateAsync(values);
+      toast({
+        tone: 'success',
+        title: 'Abono registrado',
+        description: `Queda debiendo ${formatMoney(payment.balance)}`,
+      });
+      onDone();
+    } catch (error) {
+      handleError(error);
+    }
   });
 
   // Each opening starts empty, in cash.

@@ -3,6 +3,7 @@ import { useAuth, type Me } from '@/features/auth';
 import { useLocations } from '@/features/inventory';
 import { useCashSession } from '../../../api/cashSessions';
 import type { CashReport } from '../../../components/CashReport/CashReport';
+import { businessOf } from '../../../model/business';
 import { loadPaper } from '../../../model/storage';
 
 export type CashReportData = ComponentProps<typeof CashReport>;
@@ -29,10 +30,6 @@ export function useCashReport(sessionId: string) {
     paper: loadPaper(),
   };
   return { session, report };
-}
-
-function businessOf(user: Me | undefined) {
-  return { name: user?.tenant_name ?? '', nit: user?.tenant_nit ?? '' };
 }
 
 function locationName(locations: { id: string; name: string }[] | undefined, id: string): string {

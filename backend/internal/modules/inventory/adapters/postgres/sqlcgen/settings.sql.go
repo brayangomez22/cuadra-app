@@ -23,3 +23,19 @@ func (q *Queries) GetStockPolicy(ctx context.Context, tenantID uuid.UUID) (bool,
 	err := row.Scan(&allow_negative_stock)
 	return allow_negative_stock, err
 }
+
+const saveStockPolicy = `-- name: SaveStockPolicy :exec
+INSERT INTO inventory_settings (tenant_id, allow_negative_stock)
+VALUES ($1, $2)
+ON CONFLICT (tenant_id) DO UPDATE SET allow_negative_stock = EXCLUDED.allow_negative_stock
+`
+
+type SaveStockPolicyParams struct {
+	TenantID           uuid.UUID
+	AllowNegativeStock bool
+}
+
+func (q *Queries) SaveStockPolicy(ctx context.Context, arg SaveStockPolicyParams) error {
+	_, err := q.db.Exec(ctx, saveStockPolicy, arg.TenantID, arg.AllowNegativeStock)
+	return err
+}

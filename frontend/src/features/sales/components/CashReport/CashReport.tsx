@@ -3,6 +3,8 @@ import { formatDateTime, formatMoney } from '@/shared/format';
 import type { CashSession } from '../../api/types';
 import { cashResult } from '../../model/cash/cashResult';
 import { negated } from '../../model/cash/negated';
+import type { Business } from '../../model/business';
+import { BusinessContact } from '../BusinessContact/BusinessContact';
 import type { Paper } from '../../model/paper';
 import styles from './CashReport.module.scss';
 import { CashReportBreakdown } from './CashReportBreakdown';
@@ -11,7 +13,8 @@ import { ReportFigure } from './ReportFigure';
 type Props = {
   /** A closed session: the report is its closing. */
   session: CashSession & { closing: NonNullable<CashSession['closing']> };
-  business: { name: string; nit: string };
+  /** Who sells: the tenant's name, NIT, address and phone. */
+  business: Business;
   location: string;
   /** The cashier's name, when it is known. */
   cashier?: string;
@@ -30,6 +33,7 @@ export function CashReport({ session, business, location, cashier, paper, classN
       <header className={styles.header}>
         <h2 className={styles.business}>{business.name}</h2>
         <p>NIT {business.nit}</p>
+        <BusinessContact business={business} />
         <p>{location}</p>
         <p className={styles.heading}>CIERRE DE CAJA</p>
       </header>

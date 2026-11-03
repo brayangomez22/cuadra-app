@@ -57,7 +57,8 @@ func (f fakeReorder) Alerts(_ context.Context, tenantID uuid.UUID, filter domain
 	f.reorderFilters = append(f.reorderFilters, filter)
 	var all []domain.RuleStock
 	for k, r := range f.rules {
-		if k.tenantID != tenantID || filter.LocationID != nil && *filter.LocationID != k.locationID {
+		if k.tenantID != tenantID || filter.LocationID != nil && *filter.LocationID != k.locationID ||
+			slices.Contains(filter.ExcludedVariants, k.variantID) {
 			continue
 		}
 		onHand := f.levels[k].Quantity
@@ -71,4 +72,16 @@ func (f fakeReorder) Alerts(_ context.Context, tenantID uuid.UUID, filter domain
 	page := domain.RuleStockPage{Total: len(all)}
 	page.Items = all[min(filter.Offset, len(all)):min(filter.Offset+filter.Limit, len(all))]
 	return page, nil
+}
+
+func (f fakeReorder) RuleVariants(_ context.Context, tenantID uuid.UUID, locationID *uuid.UUID) ([]uuid.UUID, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []uuid.UUID
+	for k := range f.rules {
+		if k.tenantID == tenantID && (locationID == nil || *locationID == k.locationID) && !slices.Contains(out, k.variantID) {
+			out = append(out, k.variantID)
+		}
+	}
+	return out, nil
 }

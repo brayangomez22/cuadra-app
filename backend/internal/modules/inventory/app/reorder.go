@@ -86,6 +86,8 @@ func (s *Service) DeleteReorderRule(ctx context.Context, a Actor, variantID, loc
 // ListReorderAlerts returns one page of the variants at or below their
 // minimum, with how much to order, the furthest below it first;
 // ErrLocationNotFound if the location given is not of the actor's tenant.
+// The variants the catalog no longer sells (inactive, or of an archived
+// product) keep their rules but raise no alert.
 func (s *Service) ListReorderAlerts(ctx context.Context, a Actor, q ReorderQuery) (_ AlertPage, err error) {
 	var attrs []attribute.KeyValue
 	if q.LocationID != nil {
@@ -99,7 +101,11 @@ func (s *Service) ListReorderAlerts(ctx context.Context, a Actor, q ReorderQuery
 			return AlertPage{}, err
 		}
 	}
-	f := domain.ReorderFilter{LocationID: q.LocationID}
+	excluded, err := s.inactiveRuleVariants(ctx, a, q.LocationID)
+	if err != nil {
+		return AlertPage{}, err
+	}
+	f := domain.ReorderFilter{LocationID: q.LocationID, ExcludedVariants: excluded}
 	f.Limit, f.Offset = pageBounds(q.Limit, q.Offset)
 	page, err := s.Reorder.Alerts(ctx, a.TenantID, f)
 	if err != nil {
@@ -110,6 +116,16 @@ func (s *Service) ListReorderAlerts(ctx context.Context, a Actor, q ReorderQuery
 		return AlertPage{}, err
 	}
 	return AlertPage{Items: items, Total: page.Total}, nil
+}
+
+// inactiveRuleVariants returns the variants with a rule at locationID (any
+// location when nil) that the catalog no longer sells.
+func (s *Service) inactiveRuleVariants(ctx context.Context, a Actor, locationID *uuid.UUID) ([]uuid.UUID, error) {
+	ruled, err := s.Reorder.RuleVariants(ctx, a.TenantID, locationID)
+	if err != nil || len(ruled) == 0 {
+		return nil, err
+	}
+	return s.Variants.InactiveVariants(ctx, a.TenantID, ruled)
 }
 
 // alertsWithProducts turns each rule and its stock into the domain's alert,

@@ -1,44 +1,31 @@
-import { useState } from 'react';
-import { useAuth } from '@/features/auth';
-import { taxRateOptions } from '@/features/catalog';
-import { describeError } from '@/shared/api/errors';
-import { Alert, Button, Field, Select, useToast } from '@/shared/ui';
-import { useUpdateTenant } from '../../api/tenant';
+import { QueryState } from '@/shared/query';
+import { Stack } from '@/shared/ui';
+import { useSalesRules, useStockRules } from '../../api/businessRules';
 import { SettingsSection } from '../../components/SettingsSection/SettingsSection';
-import styles from './GeneralSettings.module.scss';
+import { BusinessContactForm } from './components/BusinessContactForm/BusinessContactForm';
+import { DefaultTaxForm } from './components/DefaultTaxForm/DefaultTaxForm';
+import { SalesRulesForm } from './components/SalesRulesForm/SalesRulesForm';
+import { StockRulesForm } from './components/StockRulesForm/StockRulesForm';
 
-/** /configuracion/general: the business's own settings. Owner only (tenant:manage). */
+/** /configuracion/general: the business's own data and rules. Owner only (tenant:manage). */
 export function GeneralSettings() {
-  const auth = useAuth();
-  const current = auth.status === 'authenticated' ? auth.user.default_tax_rate : '0.19';
-  const { toast } = useToast();
-  const [rate, setRate] = useState(current);
-  const save = useUpdateTenant();
+  const sales = useSalesRules();
+  const stock = useStockRules();
 
   return (
-    <SettingsSection title="General" description="Lo que Cuadra propone por defecto en su negocio.">
-      <form
-        className={styles.form}
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          save.mutate(
-            { default_tax_rate: rate },
-            { onSuccess: () => toast({ tone: 'success', title: 'Configuración guardada' }) },
-          );
-        }}
-      >
-        {save.isError && <Alert tone="danger">{describeError(save.error).message}</Alert>}
-        <Field
-          label="IVA por defecto"
-          hint="La tasa que se propone a un producto nuevo. No cambia la de los productos que ya existen."
-        >
-          <Select options={taxRateOptions(rate)} value={rate} onValueChange={setRate} />
-        </Field>
-        <Button type="submit" className={styles.submit} loading={save.isPending}>
-          Guardar
-        </Button>
-      </form>
+    <SettingsSection title="General" description="Los datos de su negocio y las reglas con las que trabaja su equipo.">
+      <Stack gap="8">
+        <BusinessContactForm />
+        <DefaultTaxForm />
+        <QueryState queries={[sales, stock]} errorTitle="No pudimos cargar las reglas del negocio">
+          {() => (
+            <>
+              {sales.data && <SalesRulesForm rules={sales.data} />}
+              {stock.data && <StockRulesForm rules={stock.data} />}
+            </>
+          )}
+        </QueryState>
+      </Stack>
     </SettingsSection>
   );
 }

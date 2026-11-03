@@ -129,6 +129,7 @@ type Service struct {
 	voided             metric.Int64Counter
 	priceRules         metric.Int64Counter
 	alternateUnitLines metric.Int64Counter
+	settingsChanges    metric.Int64Counter
 
 	cashOpened          metric.Int64Counter
 	cashClosed          metric.Int64Counter
@@ -186,6 +187,8 @@ func (s *Service) instruments() []usecase.Instrument {
 			"Lines of confirmed sales priced, by the rule that gave the price (price.rule).", "{line}"),
 		usecase.Counter(&s.alternateUnitLines, "cuadra.sales.alternate_unit_lines",
 			"Lines of confirmed sales sold in an alternate unit of the variant.", "{line}"),
+		usecase.Counter(&s.settingsChanges, "cuadra.sales.settings_changes",
+			"Changes to the tenant's sales rules, by setting.", "{change}"),
 
 		usecase.Counter(&s.cashOpened, "cuadra.sales.cash_sessions_opened", "Cash sessions opened.", "{session}"),
 		usecase.Counter(&s.cashClosed, "cuadra.sales.cash_sessions_closed",

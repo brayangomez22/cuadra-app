@@ -48,6 +48,8 @@ type stubUseCases struct {
 	recorded domain.CashMovement
 	cashPage app.CashSessionPage
 	err      error
+
+	settingsStub
 }
 
 func (s *stubUseCases) GetDiscountLimit(_ context.Context, a app.Actor) (domain.DiscountLimit, error) {

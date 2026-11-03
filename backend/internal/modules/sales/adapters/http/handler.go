@@ -33,6 +33,7 @@ const defaultPageSize = 20
 type UseCases interface {
 	SaleUseCases
 	CashUseCases
+	SettingsUseCases
 }
 
 // SaleUseCases are the use cases of the sales.

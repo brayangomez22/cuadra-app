@@ -68,6 +68,42 @@ func TestUpdateTenant(t *testing.T) {
 		require.Equal(t, codes.Error, e.span(t, "identity.UpdateTenant").Status().Code)
 	})
 
+	t.Run("cambia solo los datos de contacto que se envían", func(t *testing.T) {
+		text := func(s string) *string { return &s }
+		e := newEnv(t)
+		tenant, user := e.seed(t, "ana@eltornillo.co", validPassword, domain.RoleOwner)
+		_, err := e.svc.UpdateTenant(t.Context(), tenant.ID(), user.ID(), app.TenantUpdate{
+			Address: text("Calle 45 # 12-30"), City: text("Medellín"), Phone: text("604 444 1234"),
+		})
+		require.NoError(t, err)
+
+		got, err := e.svc.UpdateTenant(t.Context(), tenant.ID(), user.ID(), app.TenantUpdate{Phone: text(" ")})
+
+		require.NoError(t, err)
+		require.Equal(t, "Calle 45 # 12-30", got.Contact().Address())
+		require.Equal(t, "Medellín", got.Contact().City())
+		require.Empty(t, got.Contact().Phone())
+		stored, err := e.tenants.GetByID(t.Context(), tenant.ID())
+		require.NoError(t, err)
+		require.Equal(t, got.Contact(), stored.Contact())
+	})
+
+	t.Run("un teléfono inválido no guarda ningún cambio", func(t *testing.T) {
+		text := func(s string) *string { return &s }
+		e := newEnv(t)
+		tenant, user := e.seed(t, "ana@eltornillo.co", validPassword, domain.RoleOwner)
+
+		_, err := e.svc.UpdateTenant(t.Context(), tenant.ID(), user.ID(), app.TenantUpdate{
+			DefaultTaxRate: rate("0.05"), Address: text("Cra. 7 # 20-15"), Phone: text("llamar al dueño"),
+		})
+
+		require.ErrorIs(t, err, domain.ErrInvalidTenantPhone)
+		stored, err := e.tenants.GetByID(t.Context(), tenant.ID())
+		require.NoError(t, err)
+		require.Equal(t, domain.Contact{}, stored.Contact())
+		require.Equal(t, tenant.DefaultTaxRate().String(), stored.DefaultTaxRate().String())
+	})
+
 	t.Run("una empresa que no existe responde ErrTenantNotFound", func(t *testing.T) {
 		e := newEnv(t)
 

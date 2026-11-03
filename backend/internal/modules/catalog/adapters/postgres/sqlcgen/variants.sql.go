@@ -105,6 +105,37 @@ func (q *Queries) DeleteVariantUnits(ctx context.Context, variantIds []uuid.UUID
 	return err
 }
 
+const inactiveVariants = `-- name: InactiveVariants :many
+SELECT v.id
+FROM product_variants v
+JOIN products p ON p.id = v.product_id
+WHERE v.id = ANY($1::uuid[])
+  AND NOT (v.active AND p.active)
+ORDER BY v.id
+`
+
+// InactiveVariants returns those of the given variants that are no longer
+// sold: inactive, or of an archived (inactive) product.
+func (q *Queries) InactiveVariants(ctx context.Context, variantIds []uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, inactiveVariants, variantIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listVariantUnits = `-- name: ListVariantUnits :many
 SELECT vu.variant_id, vu.unit_id, u.code AS unit_code, u.name AS unit_name, vu.factor, vu.price, vu.barcode
 FROM variant_units vu

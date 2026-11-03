@@ -135,6 +135,35 @@ func TestListReorderAlerts(t *testing.T) {
 		require.Equal(t, 0, got.Offset)
 	})
 
+	t.Run("no lista ni cuenta las variantes inactivas ni las de productos archivados", func(t *testing.T) {
+		e := newEnv(t)
+		loc := e.createLocation(t, "Bodega")
+		_, glue := e.addProduct(0)   // un pegante que la ferretería dejó de vender
+		_, shirts := e.addProduct(2) // una camisa en tres tallas; la XL ya no se vende
+		for _, id := range append(glue, shirts...) {
+			e.setRule(t, id, loc.ID(), "2", "6")
+		}
+		e.discontinue(glue[0], shirts[2])
+
+		page, err := e.svc.ListReorderAlerts(t.Context(), e.actor, app.ReorderQuery{LocationID: new(loc.ID())})
+
+		require.NoError(t, err)
+		require.Equal(t, 2, page.Total)
+		got := []uuid.UUID{page.Items[0].Rule.VariantID(), page.Items[1].Rule.VariantID()}
+		require.ElementsMatch(t, shirts[:2], got)
+		require.ElementsMatch(t, []uuid.UUID{glue[0], shirts[2]}, e.store.reorderFilters[0].ExcludedVariants)
+	})
+
+	t.Run("sin reglas no excluye ninguna variante", func(t *testing.T) {
+		e := newEnv(t)
+
+		page, err := e.svc.ListReorderAlerts(t.Context(), e.actor, app.ReorderQuery{})
+
+		require.NoError(t, err)
+		require.Zero(t, page.Total)
+		require.Empty(t, e.store.reorderFilters[0].ExcludedVariants)
+	})
+
 	t.Run("las alertas de una sede inexistente fallan con ErrLocationNotFound", func(t *testing.T) {
 		e := newEnv(t)
 		_, err := e.svc.ListReorderAlerts(t.Context(), e.actor, app.ReorderQuery{LocationID: new(newID())})

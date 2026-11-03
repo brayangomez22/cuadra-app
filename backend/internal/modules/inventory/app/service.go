@@ -59,6 +59,9 @@ type ProductVariants interface {
 	// stock count; domain.ErrCategoryNotFound if a category does not exist
 	// in tenantID.
 	VariantsInCategories(ctx context.Context, tenantID uuid.UUID, categoryIDs []uuid.UUID) ([]uuid.UUID, error)
+	// InactiveVariants returns those of variantIDs that are no longer sold:
+	// inactive, or of an archived product. The reorder alerts leave them out.
+	InactiveVariants(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) ([]uuid.UUID, error)
 }
 
 // Service runs the inventory use cases.
@@ -69,6 +72,7 @@ type Service struct {
 	movements         metric.Int64Counter
 	insufficientStock metric.Int64Counter
 	reorderChanges    metric.Int64Counter
+	settingsChanges   metric.Int64Counter
 	stockCounts       metric.Int64Counter
 	countEntries      metric.Int64Counter
 	countAccuracy     metric.Float64Histogram
@@ -93,6 +97,8 @@ func NewService(d Deps) (*Service, error) {
 			"Stock exits rejected for lack of stock, by the movement type attempted.", "{rejection}"),
 		usecase.Counter(&s.reorderChanges, "cuadra.inventory.reorder_rule_changes",
 			"Reorder rules set or deleted, by action.", "{change}"),
+		usecase.Counter(&s.settingsChanges, "cuadra.inventory.settings_changes",
+			"Changes to the tenant's stock rules, by setting.", "{change}"),
 		usecase.Counter(&s.stockCounts, "cuadra.inventory.stock_counts",
 			"Stock counts started, approved or canceled, by result.", "{count}"),
 		usecase.Counter(&s.countEntries, "cuadra.inventory.count_entries",

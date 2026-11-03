@@ -192,6 +192,8 @@ func (f fakeStock) MovementsByReference(_ context.Context, tenantID uuid.UUID, r
 type catalogVariant struct {
 	tenantID, productID uuid.UUID
 	isDefault           bool
+	// discontinued marks an inactive variant or one of an archived product.
+	discontinued bool
 }
 
 // fakeVariants is the catalog behind the ProductVariants port.
@@ -204,6 +206,18 @@ func (f fakeVariants) ProductsOf(_ context.Context, tenantID uuid.UUID, variantI
 	for _, id := range variantIDs {
 		if v, ok := f.variants[id]; ok && v.tenantID == tenantID {
 			out[id] = v.productID
+		}
+	}
+	return out, nil
+}
+
+func (f fakeVariants) InactiveVariants(_ context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) ([]uuid.UUID, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []uuid.UUID
+	for _, id := range variantIDs {
+		if v, ok := f.variants[id]; ok && v.tenantID == tenantID && v.discontinued {
+			out = append(out, id)
 		}
 	}
 	return out, nil
@@ -292,6 +306,18 @@ func (e *env) addProduct(extra int) (productID uuid.UUID, variantIDs []uuid.UUID
 	return productID, variantIDs
 }
 
+// discontinue makes the variants stop being sold, as when their product is
+// archived or they are deactivated in the catalog.
+func (e *env) discontinue(variantIDs ...uuid.UUID) {
+	e.store.mu.Lock()
+	defer e.store.mu.Unlock()
+	for _, id := range variantIDs {
+		v := e.store.variants[id]
+		v.discontinued = true
+		e.store.variants[id] = v
+	}
+}
+
 // level returns the stored level of a variant at a location, or an empty one.
 func (e *env) level(variantID, locationID uuid.UUID) domain.StockLevelSnapshot {
 	e.store.mu.Lock()
@@ -338,4 +364,11 @@ func (e *env) counter(t *testing.T, name, key, value string) int64 {
 		}
 	}
 	return total
+}
+
+func (f fakePolicies) Save(_ context.Context, tenantID uuid.UUID, policy domain.StockPolicy) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.policies[tenantID] = policy
+	return nil
 }

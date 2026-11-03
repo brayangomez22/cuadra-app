@@ -569,6 +569,9 @@ type Tenant struct {
 	BusinessTemplate string
 	DefaultTaxRate   pgtype.Numeric
 	Demo             bool
+	Address          string
+	City             string
+	Phone            string
 }
 
 type TenantModule struct {

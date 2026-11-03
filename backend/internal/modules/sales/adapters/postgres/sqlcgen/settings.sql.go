@@ -29,3 +29,21 @@ func (q *Queries) GetSalesPolicy(ctx context.Context, tenantID uuid.UUID) (GetSa
 	err := row.Scan(&i.MaxDiscount, &i.RequireCashSession)
 	return i, err
 }
+
+const saveSalesPolicy = `-- name: SaveSalesPolicy :exec
+INSERT INTO sales_settings (tenant_id, max_discount, require_cash_session)
+VALUES ($1, $2, $3)
+ON CONFLICT (tenant_id) DO UPDATE
+SET max_discount = EXCLUDED.max_discount, require_cash_session = EXCLUDED.require_cash_session
+`
+
+type SaveSalesPolicyParams struct {
+	TenantID           uuid.UUID
+	MaxDiscount        decimal.Decimal
+	RequireCashSession bool
+}
+
+func (q *Queries) SaveSalesPolicy(ctx context.Context, arg SaveSalesPolicyParams) error {
+	_, err := q.db.Exec(ctx, saveSalesPolicy, arg.TenantID, arg.MaxDiscount, arg.RequireCashSession)
+	return err
+}

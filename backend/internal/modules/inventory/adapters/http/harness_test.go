@@ -55,6 +55,7 @@ type stubUseCases struct {
 	err      error
 
 	countStub
+	settingsStub
 }
 
 func (s *stubUseCases) CreateLocation(_ context.Context, a app.Actor, name string) (*domain.Location, error) {

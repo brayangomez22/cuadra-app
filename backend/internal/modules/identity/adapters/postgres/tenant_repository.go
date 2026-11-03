@@ -72,6 +72,9 @@ func createTenant(ctx context.Context, q *sqlcgen.Queries, t *domain.Tenant) err
 		Status:           string(t.Status()),
 		BusinessTemplate: t.BusinessTemplate(),
 		DefaultTaxRate:   t.DefaultTaxRate(),
+		Address:          t.Contact().Address(),
+		City:             t.Contact().City(),
+		Phone:            t.Contact().Phone(),
 		Demo:             t.IsDemo(),
 		CreatedAt:        t.CreatedAt(),
 	})
@@ -91,8 +94,8 @@ func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.T
 	return tenantFromRow(row)
 }
 
-// Update stores the name, status and default tax rate; domain.ErrTenantNotFound if the tenant
-// does not exist.
+// Update stores the name, status, default tax rate and contact;
+// domain.ErrTenantNotFound if the tenant does not exist.
 func (r *TenantRepository) Update(ctx context.Context, t *domain.Tenant) error {
 	affected, err := db.Affected(ctx, r.db, t.ID(), func(tx pgx.Tx) (int64, error) {
 		return sqlcgen.New(tx).UpdateTenant(ctx, sqlcgen.UpdateTenantParams{
@@ -100,6 +103,9 @@ func (r *TenantRepository) Update(ctx context.Context, t *domain.Tenant) error {
 			Name:           t.Name(),
 			Status:         string(t.Status()),
 			DefaultTaxRate: t.DefaultTaxRate(),
+			Address:        t.Contact().Address(),
+			City:           t.Contact().City(),
+			Phone:          t.Contact().Phone(),
 		})
 	})
 	switch {
@@ -116,6 +122,10 @@ func tenantFromRow(row sqlcgen.GetTenantRow) (*domain.Tenant, error) {
 	if err != nil {
 		return nil, fmt.Errorf("identity: tenant %s: stored NIT: %w", row.ID, err)
 	}
+	contact, err := domain.NewContact(row.Address, row.City, row.Phone)
+	if err != nil {
+		return nil, fmt.Errorf("identity: tenant %s: stored contact: %w", row.ID, err)
+	}
 	t, err := domain.RehydrateTenant(domain.TenantSnapshot{
 		ID:               row.ID,
 		Name:             row.Name,
@@ -123,6 +133,7 @@ func tenantFromRow(row sqlcgen.GetTenantRow) (*domain.Tenant, error) {
 		Status:           domain.TenantStatus(row.Status),
 		BusinessTemplate: row.BusinessTemplate,
 		DefaultTaxRate:   row.DefaultTaxRate,
+		Contact:          contact,
 		Demo:             row.Demo,
 		CreatedAt:        row.CreatedAt,
 	})

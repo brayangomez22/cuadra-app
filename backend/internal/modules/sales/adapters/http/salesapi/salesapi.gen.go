@@ -408,6 +408,12 @@ type DenominationCount struct {
 	Quantity     int64 `json:"quantity"`
 }
 
+// DiscountFraction Descuento máximo por línea de quien no tiene `sales:discount`, como fracción del bruto (`0.10` es 10 %),
+// de 0 a 1 y con hasta 4 decimales.
+//
+// Example: 0.10
+type DiscountFraction = string
+
 // DiscountLimit Tope de descuento de una línea como fracción de su bruto (`0.10` permite descontar el 10 %). Con
 // `unlimited`, `max` es `1`.
 type DiscountLimit struct {
@@ -695,6 +701,30 @@ type SaleVoid struct {
 	VoidedAt time.Time          `json:"voided_at"`
 }
 
+// SalesSettings Las reglas de venta de la empresa.
+type SalesSettings struct {
+	// MaxDiscount Descuento máximo por línea de quien no tiene `sales:discount`, como fracción del bruto (`0.10` es 10 %),
+	// de 0 a 1 y con hasta 4 decimales.
+	//
+	//
+	// Example: 0.10
+	MaxDiscount DiscountFraction `json:"max_discount"`
+
+	// RequireCashSession Solo se vende con una caja abierta en la sede.
+	RequireCashSession bool `json:"require_cash_session"`
+}
+
+// SalesSettingsUpdate defines model for SalesSettingsUpdate.
+type SalesSettingsUpdate struct {
+	// MaxDiscount Descuento máximo por línea de quien no tiene `sales:discount`, como fracción del bruto (`0.10` es 10 %),
+	// de 0 a 1 y con hasta 4 decimales.
+	//
+	//
+	// Example: 0.10
+	MaxDiscount        *DiscountFraction `json:"max_discount,omitempty"`
+	RequireCashSession *bool             `json:"require_cash_session,omitempty"`
+}
+
 // SignedMoney Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
 //
 // Example: -4800.00
@@ -849,6 +879,9 @@ type RecordCashMovementJSONRequestBody = CashMovementInput
 // ConfirmSaleJSONRequestBody defines body for ConfirmSale for application/json ContentType.
 type ConfirmSaleJSONRequestBody = ConfirmSaleInput
 
+// UpdateSalesSettingsJSONRequestBody defines body for UpdateSalesSettings for application/json ContentType.
+type UpdateSalesSettingsJSONRequestBody = SalesSettingsUpdate
+
 // VoidSaleJSONRequestBody defines body for VoidSale for application/json ContentType.
 type VoidSaleJSONRequestBody = VoidSaleInput
 
@@ -881,6 +914,12 @@ type ServerInterface interface {
 	// GetDiscountLimit Tope de descuento del usuario
 	// (GET /api/v1/sales/discount-limit)
 	GetDiscountLimit(w http.ResponseWriter, r *http.Request)
+	// GetSalesSettings Reglas de venta de la empresa
+	// (GET /api/v1/sales/settings)
+	GetSalesSettings(w http.ResponseWriter, r *http.Request)
+	// UpdateSalesSettings Cambiar las reglas de venta
+	// (PATCH /api/v1/sales/settings)
+	UpdateSalesSettings(w http.ResponseWriter, r *http.Request)
 	// GetSale Detalle de una venta
 	// (GET /api/v1/sales/{saleId})
 	GetSale(w http.ResponseWriter, r *http.Request, saleId SaleId)
@@ -1202,6 +1241,34 @@ func (siw *ServerInterfaceWrapper) GetDiscountLimit(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetSalesSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetSalesSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSalesSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSalesSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSalesSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSalesSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSale operation middleware
 func (siw *ServerInterfaceWrapper) GetSale(w http.ResponseWriter, r *http.Request) {
 
@@ -1376,6 +1443,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sales", wrapper.ListSales)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/sales", wrapper.ConfirmSale)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sales/settings", wrapper.GetSalesSettings)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/sales/settings", wrapper.UpdateSalesSettings)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sales/discount-limit", wrapper.GetDiscountLimit)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sales/{saleId}", wrapper.GetSale)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/sales/{saleId}/void", wrapper.VoidSale)
@@ -2239,6 +2308,161 @@ func (response GetDiscountLimit500JSONResponse) VisitGetDiscountLimitResponse(w 
 	return err
 }
 
+type GetSalesSettingsRequestObject struct {
+}
+
+type GetSalesSettingsResponseObject interface {
+	VisitGetSalesSettingsResponse(w http.ResponseWriter) error
+}
+
+type GetSalesSettings200JSONResponse SalesSettings
+
+func (response GetSalesSettings200JSONResponse) VisitGetSalesSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSalesSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetSalesSettings401JSONResponse) VisitGetSalesSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSalesSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetSalesSettings403JSONResponse) VisitGetSalesSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSalesSettings500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetSalesSettings500JSONResponse) VisitGetSalesSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSalesSettingsRequestObject struct {
+	Body *UpdateSalesSettingsJSONRequestBody
+}
+
+type UpdateSalesSettingsResponseObject interface {
+	VisitUpdateSalesSettingsResponse(w http.ResponseWriter) error
+}
+
+type UpdateSalesSettings200JSONResponse SalesSettings
+
+func (response UpdateSalesSettings200JSONResponse) VisitUpdateSalesSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSalesSettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateSalesSettings400JSONResponse) VisitUpdateSalesSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSalesSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateSalesSettings401JSONResponse) VisitUpdateSalesSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSalesSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateSalesSettings403JSONResponse) VisitUpdateSalesSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSalesSettings422JSONResponse Error
+
+func (response UpdateSalesSettings422JSONResponse) VisitUpdateSalesSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSalesSettings500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateSalesSettings500JSONResponse) VisitUpdateSalesSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetSaleRequestObject struct {
 	SaleId SaleId `json:"saleId"`
 }
@@ -2481,6 +2705,12 @@ type StrictServerInterface interface {
 	// GetDiscountLimit Tope de descuento del usuario
 	// (GET /api/v1/sales/discount-limit)
 	GetDiscountLimit(ctx context.Context, request GetDiscountLimitRequestObject) (GetDiscountLimitResponseObject, error)
+	// GetSalesSettings Reglas de venta de la empresa
+	// (GET /api/v1/sales/settings)
+	GetSalesSettings(ctx context.Context, request GetSalesSettingsRequestObject) (GetSalesSettingsResponseObject, error)
+	// UpdateSalesSettings Cambiar las reglas de venta
+	// (PATCH /api/v1/sales/settings)
+	UpdateSalesSettings(ctx context.Context, request UpdateSalesSettingsRequestObject) (UpdateSalesSettingsResponseObject, error)
 	// GetSale Detalle de una venta
 	// (GET /api/v1/sales/{saleId})
 	GetSale(ctx context.Context, request GetSaleRequestObject) (GetSaleResponseObject, error)
@@ -2775,6 +3005,61 @@ func (sh *strictHandler) GetDiscountLimit(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetDiscountLimitResponseObject); ok {
 		if err := validResponse.VisitGetDiscountLimitResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSalesSettings operation middleware
+func (sh *strictHandler) GetSalesSettings(w http.ResponseWriter, r *http.Request) {
+	var request GetSalesSettingsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSalesSettings(ctx, request.(GetSalesSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSalesSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSalesSettingsResponseObject); ok {
+		if err := validResponse.VisitGetSalesSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateSalesSettings operation middleware
+func (sh *strictHandler) UpdateSalesSettings(w http.ResponseWriter, r *http.Request) {
+	var request UpdateSalesSettingsRequestObject
+
+	var body UpdateSalesSettingsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateSalesSettings(ctx, request.(UpdateSalesSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateSalesSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateSalesSettingsResponseObject); ok {
+		if err := validResponse.VisitUpdateSalesSettingsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { apiError, json } from '@/test/fakeApi';
-import { customerIds, page, plain, query, statement } from '@/test/fixtures';
+import { aCredit, customerIds, page, plain, query, statement } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 import { builderAccount, receivablesApi } from '../../testing/receivablesApi';
 
@@ -43,6 +43,29 @@ describe('CustomerAccountPage: abonos', () => {
     expect(await post!.json()).toEqual({ method: 'nequi', amount: '100000' });
     await waitFor(() => expect(api.calls(`GET /api/v1/customers/${customerIds.builder}/credit`)).toHaveLength(2));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('al saldar toda la deuda avisa aunque el botón de abonar desaparezca', async () => {
+    // P147: with nothing owed, the dialog unmounts as soon as the credit reloads.
+    let balance = '350000.00';
+    receivablesApi({
+      routes: {
+        'GET /api/v1/customers/{customerId}/credit': () => json(200, aCredit({ balance })),
+        'POST /api/v1/customers/{customerId}/payments': () => {
+          balance = '0.00';
+          return json(201, { ...payment, amount: '350000.00', balance: '0.00' });
+        },
+      },
+    });
+    renderApp(builderAccount);
+
+    const dialog = await openPayment();
+    await user().type(dialog.getByLabelText('Valor del abono'), '350.000');
+    await user().click(dialog.getByRole('button', { name: 'Registrar abono' }));
+
+    expect(await screen.findByText('Abono registrado')).toBeInTheDocument();
+    expect(plain(screen.getByText(/^Queda debiendo/).textContent)).toBe('Queda debiendo $ 0');
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Registrar abono' })).not.toBeInTheDocument());
   });
 
   it('no deja abonar más de lo que debe', async () => {

@@ -1471,6 +1471,12 @@ type DenominationCount struct {
 	Quantity     int64 `json:"quantity"`
 }
 
+// DiscountFraction Descuento máximo por línea de quien no tiene `sales:discount`, como fracción del bruto (`0.10` es 10 %),
+// de 0 a 1 y con hasta 4 decimales.
+//
+// Example: 0.10
+type DiscountFraction = string
+
 // DiscountLimit Tope de descuento de una línea como fracción de su bruto (`0.10` permite descontar el 10 %). Con
 // `unlimited`, `max` es `1`.
 type DiscountLimit struct {
@@ -1629,6 +1635,17 @@ type ImportVariantPreview struct {
 	Sku   string `json:"sku"`
 }
 
+// InventorySettings Las reglas de inventario de la empresa.
+type InventorySettings struct {
+	// AllowNegativeStock Las ventas, los ajustes y los traslados pueden sacar más de lo que hay.
+	AllowNegativeStock bool `json:"allow_negative_stock"`
+}
+
+// InventorySettingsUpdate defines model for InventorySettingsUpdate.
+type InventorySettingsUpdate struct {
+	AllowNegativeStock *bool `json:"allow_negative_stock,omitempty"`
+}
+
 // Location defines model for Location.
 type Location struct {
 	Active    bool               `json:"active"`
@@ -1683,15 +1700,24 @@ type Me struct {
 	//
 	//
 	// Example: ["catalog:read","sales:create"]
-	Permissions []string           `json:"permissions"`
-	Role        MeRole             `json:"role"`
-	TenantId    openapi_types.UUID `json:"tenant_id"`
-	TenantName  string             `json:"tenant_name"`
+	Permissions []string `json:"permissions"`
+	Role        MeRole   `json:"role"`
+
+	// TenantAddress Dirección de la empresa, para la tirilla y el cierre de caja. Vacía si no se ha registrado.
+	TenantAddress string `json:"tenant_address"`
+
+	// TenantCity Ciudad o municipio de la empresa. Vacía si no se ha registrado.
+	TenantCity string             `json:"tenant_city"`
+	TenantId   openapi_types.UUID `json:"tenant_id"`
+	TenantName string             `json:"tenant_name"`
 
 	// TenantNit NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
 	//
 	// Example: 900123456-8
 	TenantNit string `json:"tenant_nit"`
+
+	// TenantPhone Teléfono de la empresa. Vacío si no se ha registrado.
+	TenantPhone string `json:"tenant_phone"`
 }
 
 // MeRole defines model for Me.Role.
@@ -2627,6 +2653,30 @@ type SaleVoid struct {
 	VoidedAt time.Time          `json:"voided_at"`
 }
 
+// SalesSettings Las reglas de venta de la empresa.
+type SalesSettings struct {
+	// MaxDiscount Descuento máximo por línea de quien no tiene `sales:discount`, como fracción del bruto (`0.10` es 10 %),
+	// de 0 a 1 y con hasta 4 decimales.
+	//
+	//
+	// Example: 0.10
+	MaxDiscount DiscountFraction `json:"max_discount"`
+
+	// RequireCashSession Solo se vende con una caja abierta en la sede.
+	RequireCashSession bool `json:"require_cash_session"`
+}
+
+// SalesSettingsUpdate defines model for SalesSettingsUpdate.
+type SalesSettingsUpdate struct {
+	// MaxDiscount Descuento máximo por línea de quien no tiene `sales:discount`, como fracción del bruto (`0.10` es 10 %),
+	// de 0 a 1 y con hasta 4 decimales.
+	//
+	//
+	// Example: 0.10
+	MaxDiscount        *DiscountFraction `json:"max_discount,omitempty"`
+	RequireCashSession *bool             `json:"require_cash_session,omitempty"`
+}
+
 // SignUpRequest defines model for SignUpRequest.
 type SignUpRequest struct {
 	// BusinessTemplate Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Siembra las unidades,
@@ -3048,8 +3098,14 @@ type TaxResponsibility string
 
 // Tenant La empresa (tenant) y su configuración.
 type Tenant struct {
+	// Address Dirección del negocio, para la tirilla y los documentos. Vacía si no se ha registrado.
+	Address string `json:"address"`
+
 	// BusinessTemplate Example: generica
 	BusinessTemplate string `json:"business_template"`
+
+	// City Ciudad o municipio del negocio. Vacía si no se ha registrado.
+	City string `json:"city"`
 
 	// DefaultTaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
 	//
@@ -3060,6 +3116,9 @@ type Tenant struct {
 
 	// Nit Example: 900123456-8
 	Nit string `json:"nit"`
+
+	// Phone Teléfono del negocio. Vacío si no se ha registrado.
+	Phone string `json:"phone"`
 }
 
 // TenantOption defines model for TenantOption.
@@ -3076,8 +3135,17 @@ type TenantSelectionRequired struct {
 
 // TenantUpdate defines model for TenantUpdate.
 type TenantUpdate struct {
+	// Address Dirección del negocio. Vacía la borra.
+	Address *string `json:"address,omitempty"`
+
+	// City Ciudad o municipio. Vacía la borra.
+	City *string `json:"city,omitempty"`
+
 	// DefaultTaxRate La tasa de IVA que se propone a un producto nuevo. No cambia la de los productos que ya existen.
 	DefaultTaxRate *TaxRate `json:"default_tax_rate,omitempty"`
+
+	// Phone Teléfono, con dígitos, espacios, `+`, `-` y paréntesis. Vacío lo borra.
+	Phone *string `json:"phone,omitempty"`
 }
 
 // TransferInput defines model for TransferInput.
@@ -3620,6 +3688,9 @@ type AdjustStockJSONRequestBody = AdjustmentInput
 // ReceiveStockJSONRequestBody defines body for ReceiveStock for application/json ContentType.
 type ReceiveStockJSONRequestBody = ReceiptInput
 
+// UpdateInventorySettingsJSONRequestBody defines body for UpdateInventorySettings for application/json ContentType.
+type UpdateInventorySettingsJSONRequestBody = InventorySettingsUpdate
+
 // TransferStockJSONRequestBody defines body for TransferStock for application/json ContentType.
 type TransferStockJSONRequestBody = TransferInput
 
@@ -3667,6 +3738,9 @@ type VoidPurchaseJSONRequestBody = VoidPurchaseInput
 
 // ConfirmSaleJSONRequestBody defines body for ConfirmSale for application/json ContentType.
 type ConfirmSaleJSONRequestBody = ConfirmSaleInput
+
+// UpdateSalesSettingsJSONRequestBody defines body for UpdateSalesSettings for application/json ContentType.
+type UpdateSalesSettingsJSONRequestBody = SalesSettingsUpdate
 
 // VoidSaleJSONRequestBody defines body for VoidSale for application/json ContentType.
 type VoidSaleJSONRequestBody = VoidSaleInput
@@ -4247,6 +4321,31 @@ type ClientInterface interface {
 	// Corresponds with GET /api/v1/inventory/reorder-alerts (the `ListReorderAlerts` operationId).
 	ListReorderAlerts(ctx context.Context, params *ListReorderAlertsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetInventorySettings Reglas de inventario de la empresa
+	//
+	// Si la empresa deja vender, ajustar o trasladar más de lo que hay (stock negativo). Por defecto, no.
+	//
+	// Corresponds with GET /api/v1/inventory/settings (the `GetInventorySettings` operationId).
+	GetInventorySettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateInventorySettingsWithBody Cambiar las reglas de inventario
+	//
+	// Cambia los campos que se envían y conserva los demás. Rige desde el siguiente movimiento.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /api/v1/inventory/settings (the `UpdateInventorySettings` operationId).
+	UpdateInventorySettingsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateInventorySettings Cambiar las reglas de inventario
+	//
+	// Cambia los campos que se envían y conserva los demás. Rige desde el siguiente movimiento.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /api/v1/inventory/settings (the `UpdateInventorySettings` operationId).
+	UpdateInventorySettings(ctx context.Context, body UpdateInventorySettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// TransferStockWithBody Trasladar mercancía entre sedes
 	//
 	// Saca la cantidad de la sede de origen y la entra en la de destino, valorada al costo promedio del origen.
@@ -4729,6 +4828,32 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /api/v1/sales/discount-limit (the `GetDiscountLimit` operationId).
 	GetDiscountLimit(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSalesSettings Reglas de venta de la empresa
+	//
+	// El descuento máximo por línea de quien no tiene `sales:discount` y si se exige una caja abierta para
+	// vender. Por defecto, 0 % y caja obligatoria.
+	//
+	// Corresponds with GET /api/v1/sales/settings (the `GetSalesSettings` operationId).
+	GetSalesSettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateSalesSettingsWithBody Cambiar las reglas de venta
+	//
+	// Cambia los campos que se envían y conserva los demás. Rige desde la siguiente venta.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /api/v1/sales/settings (the `UpdateSalesSettings` operationId).
+	UpdateSalesSettingsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateSalesSettings Cambiar las reglas de venta
+	//
+	// Cambia los campos que se envían y conserva los demás. Rige desde la siguiente venta.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /api/v1/sales/settings (the `UpdateSalesSettings` operationId).
+	UpdateSalesSettings(ctx context.Context, body UpdateSalesSettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetSale Detalle de una venta
 	//
@@ -6062,6 +6187,61 @@ func (c *Client) ListReorderAlerts(ctx context.Context, params *ListReorderAlert
 	return c.Client.Do(req)
 }
 
+// GetInventorySettings Reglas de inventario de la empresa
+//
+// Si la empresa deja vender, ajustar o trasladar más de lo que hay (stock negativo). Por defecto, no.
+//
+// Corresponds with GET /api/v1/inventory/settings (the `GetInventorySettings` operationId).
+func (c *Client) GetInventorySettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetInventorySettingsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateInventorySettingsWithBody Cambiar las reglas de inventario
+//
+// Cambia los campos que se envían y conserva los demás. Rige desde el siguiente movimiento.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /api/v1/inventory/settings (the `UpdateInventorySettings` operationId).
+func (c *Client) UpdateInventorySettingsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateInventorySettingsRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateInventorySettings Cambiar las reglas de inventario
+//
+// Cambia los campos que se envían y conserva los demás. Rige desde el siguiente movimiento.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /api/v1/inventory/settings (the `UpdateInventorySettings` operationId).
+func (c *Client) UpdateInventorySettings(ctx context.Context, body UpdateInventorySettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateInventorySettingsRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // TransferStockWithBody Trasladar mercancía entre sedes
 //
 // Saca la cantidad de la sede de origen y la entra en la de destino, valorada al costo promedio del origen.
@@ -7045,6 +7225,62 @@ func (c *Client) ConfirmSale(ctx context.Context, body ConfirmSaleJSONRequestBod
 // Corresponds with GET /api/v1/sales/discount-limit (the `GetDiscountLimit` operationId).
 func (c *Client) GetDiscountLimit(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetDiscountLimitRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSalesSettings Reglas de venta de la empresa
+//
+// El descuento máximo por línea de quien no tiene `sales:discount` y si se exige una caja abierta para
+// vender. Por defecto, 0 % y caja obligatoria.
+//
+// Corresponds with GET /api/v1/sales/settings (the `GetSalesSettings` operationId).
+func (c *Client) GetSalesSettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSalesSettingsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateSalesSettingsWithBody Cambiar las reglas de venta
+//
+// Cambia los campos que se envían y conserva los demás. Rige desde la siguiente venta.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /api/v1/sales/settings (the `UpdateSalesSettings` operationId).
+func (c *Client) UpdateSalesSettingsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateSalesSettingsRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateSalesSettings Cambiar las reglas de venta
+//
+// Cambia los campos que se envían y conserva los demás. Rige desde la siguiente venta.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /api/v1/sales/settings (the `UpdateSalesSettings` operationId).
+func (c *Client) UpdateSalesSettings(ctx context.Context, body UpdateSalesSettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateSalesSettingsRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9447,6 +9683,73 @@ func NewListReorderAlertsRequest(server string, params *ListReorderAlertsParams)
 	return req, nil
 }
 
+// NewGetInventorySettingsRequest constructs an http.Request for the GetInventorySettings method
+func NewGetInventorySettingsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/inventory/settings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateInventorySettingsRequest calls the generic UpdateInventorySettings builder with application/json body
+func NewUpdateInventorySettingsRequest(server string, body UpdateInventorySettingsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateInventorySettingsRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewUpdateInventorySettingsRequestWithBody constructs an http.Request for the UpdateInventorySettings method, with any body, and a specified content type
+func NewUpdateInventorySettingsRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/inventory/settings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewTransferStockRequest calls the generic TransferStock builder with application/json body
 func NewTransferStockRequest(server string, body TransferStockJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -11149,6 +11452,73 @@ func NewGetDiscountLimitRequest(server string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewGetSalesSettingsRequest constructs an http.Request for the GetSalesSettings method
+func NewGetSalesSettingsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/sales/settings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateSalesSettingsRequest calls the generic UpdateSalesSettings builder with application/json body
+func NewUpdateSalesSettingsRequest(server string, body UpdateSalesSettingsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateSalesSettingsRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewUpdateSalesSettingsRequestWithBody constructs an http.Request for the UpdateSalesSettings method, with any body, and a specified content type
+func NewUpdateSalesSettingsRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/sales/settings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -13013,6 +13383,33 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /api/v1/inventory/reorder-alerts (the `ListReorderAlerts` operationId).
 	ListReorderAlertsWithResponse(ctx context.Context, params *ListReorderAlertsParams, reqEditors ...RequestEditorFn) (*ListReorderAlertsResponse, error)
 
+	// GetInventorySettingsWithResponse Reglas de inventario de la empresa
+	//
+	// Si la empresa deja vender, ajustar o trasladar más de lo que hay (stock negativo). Por defecto, no.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/inventory/settings (the `GetInventorySettings` operationId).
+	GetInventorySettingsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetInventorySettingsResponse, error)
+
+	// UpdateInventorySettingsWithBodyWithResponse Cambiar las reglas de inventario
+	//
+	// Cambia los campos que se envían y conserva los demás. Rige desde el siguiente movimiento.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /api/v1/inventory/settings (the `UpdateInventorySettings` operationId).
+	UpdateInventorySettingsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateInventorySettingsResponse, error)
+
+	// UpdateInventorySettingsWithResponse Cambiar las reglas de inventario
+	//
+	// Cambia los campos que se envían y conserva los demás. Rige desde el siguiente movimiento.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /api/v1/inventory/settings (the `UpdateInventorySettings` operationId).
+	UpdateInventorySettingsWithResponse(ctx context.Context, body UpdateInventorySettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateInventorySettingsResponse, error)
+
 	// TransferStockWithBodyWithResponse Trasladar mercancía entre sedes
 	//
 	// Saca la cantidad de la sede de origen y la entra en la de destino, valorada al costo promedio del origen.
@@ -13533,6 +13930,34 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /api/v1/sales/discount-limit (the `GetDiscountLimit` operationId).
 	GetDiscountLimitWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetDiscountLimitResponse, error)
+
+	// GetSalesSettingsWithResponse Reglas de venta de la empresa
+	//
+	// El descuento máximo por línea de quien no tiene `sales:discount` y si se exige una caja abierta para
+	// vender. Por defecto, 0 % y caja obligatoria.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/sales/settings (the `GetSalesSettings` operationId).
+	GetSalesSettingsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSalesSettingsResponse, error)
+
+	// UpdateSalesSettingsWithBodyWithResponse Cambiar las reglas de venta
+	//
+	// Cambia los campos que se envían y conserva los demás. Rige desde la siguiente venta.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /api/v1/sales/settings (the `UpdateSalesSettings` operationId).
+	UpdateSalesSettingsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSalesSettingsResponse, error)
+
+	// UpdateSalesSettingsWithResponse Cambiar las reglas de venta
+	//
+	// Cambia los campos que se envían y conserva los demás. Rige desde la siguiente venta.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /api/v1/sales/settings (the `UpdateSalesSettings` operationId).
+	UpdateSalesSettingsWithResponse(ctx context.Context, body UpdateSalesSettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSalesSettingsResponse, error)
 
 	// GetSaleWithResponse Detalle de una venta
 	//
@@ -16703,6 +17128,137 @@ func (r ListReorderAlertsResponse) ContentType() string {
 	return ""
 }
 
+type GetInventorySettingsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InventorySettings
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetInventorySettingsResponse) GetJSON200() *InventorySettings {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetInventorySettingsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetInventorySettingsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetInventorySettingsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetInventorySettingsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetInventorySettingsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetInventorySettingsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetInventorySettingsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateInventorySettingsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InventorySettings
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateInventorySettingsResponse) GetJSON200() *InventorySettings {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateInventorySettingsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateInventorySettingsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateInventorySettingsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateInventorySettingsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateInventorySettingsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateInventorySettingsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateInventorySettingsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateInventorySettingsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type TransferStockResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -19399,6 +19955,144 @@ func (r GetDiscountLimitResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetDiscountLimitResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSalesSettingsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SalesSettings
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSalesSettingsResponse) GetJSON200() *SalesSettings {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetSalesSettingsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetSalesSettingsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetSalesSettingsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSalesSettingsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSalesSettingsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSalesSettingsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSalesSettingsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateSalesSettingsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SalesSettings
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateSalesSettingsResponse) GetJSON200() *SalesSettings {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateSalesSettingsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateSalesSettingsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateSalesSettingsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r UpdateSalesSettingsResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateSalesSettingsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateSalesSettingsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateSalesSettingsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateSalesSettingsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateSalesSettingsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -22342,6 +23036,51 @@ func (c *ClientWithResponses) ListReorderAlertsWithResponse(ctx context.Context,
 	return ParseListReorderAlertsResponse(rsp)
 }
 
+// GetInventorySettingsWithResponse Reglas de inventario de la empresa
+//
+// Si la empresa deja vender, ajustar o trasladar más de lo que hay (stock negativo). Por defecto, no.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/inventory/settings (the `GetInventorySettings` operationId).
+func (c *ClientWithResponses) GetInventorySettingsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetInventorySettingsResponse, error) {
+	rsp, err := c.GetInventorySettings(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetInventorySettingsResponse(rsp)
+}
+
+// UpdateInventorySettingsWithBodyWithResponse Cambiar las reglas de inventario
+//
+// Cambia los campos que se envían y conserva los demás. Rige desde el siguiente movimiento.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /api/v1/inventory/settings (the `UpdateInventorySettings` operationId).
+func (c *ClientWithResponses) UpdateInventorySettingsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateInventorySettingsResponse, error) {
+	rsp, err := c.UpdateInventorySettingsWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateInventorySettingsResponse(rsp)
+}
+
+// UpdateInventorySettingsWithResponse Cambiar las reglas de inventario
+//
+// Cambia los campos que se envían y conserva los demás. Rige desde el siguiente movimiento.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /api/v1/inventory/settings (the `UpdateInventorySettings` operationId).
+func (c *ClientWithResponses) UpdateInventorySettingsWithResponse(ctx context.Context, body UpdateInventorySettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateInventorySettingsResponse, error) {
+	rsp, err := c.UpdateInventorySettings(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateInventorySettingsResponse(rsp)
+}
+
 // TransferStockWithBodyWithResponse Trasladar mercancía entre sedes
 //
 // Saca la cantidad de la sede de origen y la entra en la de destino, valorada al costo promedio del origen.
@@ -23167,6 +23906,52 @@ func (c *ClientWithResponses) GetDiscountLimitWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseGetDiscountLimitResponse(rsp)
+}
+
+// GetSalesSettingsWithResponse Reglas de venta de la empresa
+//
+// El descuento máximo por línea de quien no tiene `sales:discount` y si se exige una caja abierta para
+// vender. Por defecto, 0 % y caja obligatoria.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/sales/settings (the `GetSalesSettings` operationId).
+func (c *ClientWithResponses) GetSalesSettingsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSalesSettingsResponse, error) {
+	rsp, err := c.GetSalesSettings(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSalesSettingsResponse(rsp)
+}
+
+// UpdateSalesSettingsWithBodyWithResponse Cambiar las reglas de venta
+//
+// Cambia los campos que se envían y conserva los demás. Rige desde la siguiente venta.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /api/v1/sales/settings (the `UpdateSalesSettings` operationId).
+func (c *ClientWithResponses) UpdateSalesSettingsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSalesSettingsResponse, error) {
+	rsp, err := c.UpdateSalesSettingsWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateSalesSettingsResponse(rsp)
+}
+
+// UpdateSalesSettingsWithResponse Cambiar las reglas de venta
+//
+// Cambia los campos que se envían y conserva los demás. Rige desde la siguiente venta.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /api/v1/sales/settings (the `UpdateSalesSettings` operationId).
+func (c *ClientWithResponses) UpdateSalesSettingsWithResponse(ctx context.Context, body UpdateSalesSettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSalesSettingsResponse, error) {
+	rsp, err := c.UpdateSalesSettings(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateSalesSettingsResponse(rsp)
 }
 
 // GetSaleWithResponse Detalle de una venta
@@ -26064,6 +26849,107 @@ func ParseListReorderAlertsResponse(rsp *http.Response) (*ListReorderAlertsRespo
 	return response, nil
 }
 
+// ParseGetInventorySettingsResponse parses an HTTP response from a GetInventorySettingsWithResponse call
+func ParseGetInventorySettingsResponse(rsp *http.Response) (*GetInventorySettingsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetInventorySettingsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InventorySettings
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateInventorySettingsResponse parses an HTTP response from a UpdateInventorySettingsWithResponse call
+func ParseUpdateInventorySettingsResponse(rsp *http.Response) (*UpdateInventorySettingsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateInventorySettingsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InventorySettings
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseTransferStockResponse parses an HTTP response from a TransferStockWithResponse call
 func ParseTransferStockResponse(rsp *http.Response) (*TransferStockResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -28234,6 +29120,114 @@ func ParseGetDiscountLimitResponse(rsp *http.Response) (*GetDiscountLimitRespons
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSalesSettingsResponse parses an HTTP response from a GetSalesSettingsWithResponse call
+func ParseGetSalesSettingsResponse(rsp *http.Response) (*GetSalesSettingsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSalesSettingsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SalesSettings
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateSalesSettingsResponse parses an HTTP response from a UpdateSalesSettingsWithResponse call
+func ParseUpdateSalesSettingsResponse(rsp *http.Response) (*UpdateSalesSettingsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateSalesSettingsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SalesSettings
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalError

@@ -406,7 +406,9 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
         "422":
-          description: El IVA por defecto no es válido (`invalid_default_tax_rate`).
+          description: |
+            El IVA por defecto no es válido (`invalid_default_tax_rate`), la dirección o la ciudad tienen saltos de línea
+            (`invalid_tenant_address`) o el teléfono tiene caracteres que no son de un teléfono (`invalid_tenant_phone`).
           content:
             application/json:
               schema:
@@ -1690,6 +1692,54 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/inventory/settings:
+    get:
+      tags: [inventory]
+      operationId: getInventorySettings
+      summary: Reglas de inventario de la empresa
+      description: Si la empresa deja vender, ajustar o trasladar más de lo que hay (stock negativo). Por defecto, no.
+      x-permission: tenant:manage
+      responses:
+        "200":
+          description: Las reglas de inventario.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventorySettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [inventory]
+      operationId: updateInventorySettings
+      summary: Cambiar las reglas de inventario
+      description: Cambia los campos que se envían y conserva los demás. Rige desde el siguiente movimiento.
+      x-permission: tenant:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventorySettingsUpdate"
+      responses:
+        "200":
+          description: Las reglas de inventario nuevas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventorySettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -3257,6 +3307,62 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/sales/settings:
+    get:
+      tags: [sales]
+      operationId: getSalesSettings
+      summary: Reglas de venta de la empresa
+      description: |
+        El descuento máximo por línea de quien no tiene `sales:discount` y si se exige una caja abierta para
+        vender. Por defecto, 0 % y caja obligatoria.
+      x-permission: tenant:manage
+      responses:
+        "200":
+          description: Las reglas de venta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [sales]
+      operationId: updateSalesSettings
+      summary: Cambiar las reglas de venta
+      description: Cambia los campos que se envían y conserva los demás. Rige desde la siguiente venta.
+      x-permission: tenant:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalesSettingsUpdate"
+      responses:
+        "200":
+          description: Las reglas de venta nuevas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          description: El descuento máximo no es una fracción de 0 a 1 con hasta 4 decimales (`invalid_discount_limit`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/v1/sales/discount-limit:
     get:
       tags: [sales]
@@ -4213,7 +4319,7 @@ components:
           $ref: "#/components/schemas/Me"
     Me:
       type: object
-      required: [id, tenant_id, tenant_name, tenant_nit, business_template, default_tax_rate, name, email, role, permissions, modules, demo]
+      required: [id, tenant_id, tenant_name, tenant_nit, tenant_address, tenant_city, tenant_phone, business_template, default_tax_rate, name, email, role, permissions, modules, demo]
       properties:
         id:
           type: string
@@ -4227,6 +4333,15 @@ components:
           type: string
           description: NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
           example: 900123456-8
+        tenant_address:
+          type: string
+          description: Dirección de la empresa, para la tirilla y el cierre de caja. Vacía si no se ha registrado.
+        tenant_city:
+          type: string
+          description: Ciudad o municipio de la empresa. Vacía si no se ha registrado.
+        tenant_phone:
+          type: string
+          description: Teléfono de la empresa. Vacío si no se ha registrado.
         business_template:
           type: string
           description: Plantilla de tipo de negocio con la que se registró la empresa.
@@ -4262,7 +4377,7 @@ components:
           description: La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso.
     Tenant:
       type: object
-      required: [id, name, nit, business_template, default_tax_rate]
+      required: [id, name, nit, business_template, default_tax_rate, address, city, phone]
       description: La empresa (tenant) y su configuración.
       properties:
         id:
@@ -4278,6 +4393,18 @@ components:
           example: generica
         default_tax_rate:
           $ref: "#/components/schemas/TaxRate"
+        address:
+          type: string
+          maxLength: 200
+          description: Dirección del negocio, para la tirilla y los documentos. Vacía si no se ha registrado.
+        city:
+          type: string
+          maxLength: 100
+          description: Ciudad o municipio del negocio. Vacía si no se ha registrado.
+        phone:
+          type: string
+          maxLength: 30
+          description: Teléfono del negocio. Vacío si no se ha registrado.
     TenantUpdate:
       type: object
       minProperties: 1
@@ -4287,6 +4414,18 @@ components:
           allOf:
             - $ref: "#/components/schemas/TaxRate"
           description: La tasa de IVA que se propone a un producto nuevo. No cambia la de los productos que ya existen.
+        address:
+          type: string
+          maxLength: 200
+          description: Dirección del negocio. Vacía la borra.
+        city:
+          type: string
+          maxLength: 100
+          description: Ciudad o municipio. Vacía la borra.
+        phone:
+          type: string
+          maxLength: 30
+          description: Teléfono, con dígitos, espacios, `+`, `-` y paréntesis. Vacío lo borra.
     TenantSelectionRequired:
       type: object
       required: [error, tenants]
@@ -6201,6 +6340,47 @@ components:
           minLength: 1
           maxLength: 500
           example: El cliente desistió de la compra
+    InventorySettings:
+      type: object
+      required: [allow_negative_stock]
+      description: Las reglas de inventario de la empresa.
+      properties:
+        allow_negative_stock:
+          type: boolean
+          description: Las ventas, los ajustes y los traslados pueden sacar más de lo que hay.
+    InventorySettingsUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        allow_negative_stock:
+          type: boolean
+    SalesSettings:
+      type: object
+      required: [max_discount, require_cash_session]
+      description: Las reglas de venta de la empresa.
+      properties:
+        max_discount:
+          $ref: "#/components/schemas/DiscountFraction"
+        require_cash_session:
+          type: boolean
+          description: Solo se vende con una caja abierta en la sede.
+    SalesSettingsUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        max_discount:
+          $ref: "#/components/schemas/DiscountFraction"
+        require_cash_session:
+          type: boolean
+    DiscountFraction:
+      type: string
+      description: |
+        Descuento máximo por línea de quien no tiene `sales:discount`, como fracción del bruto (`0.10` es 10 %),
+        de 0 a 1 y con hasta 4 decimales.
+      pattern: '^(0(\.\d{1,4})?|1(\.0{1,4})?)$'
+      example: "0.10"
     DiscountLimit:
       type: object
       description: |

@@ -31,6 +31,7 @@ type Tenant struct {
 	template string
 	// defaultTaxRate is the IVA rate a new product starts with.
 	defaultTaxRate decimal.Decimal
+	contact        Contact
 	// demo marks the public demonstration tenants, which are reset every
 	// night and never reach real third parties (DIAN, messages).
 	demo      bool
@@ -79,7 +80,7 @@ func newTenant(s TenantSnapshot) (*Tenant, error) {
 	}
 	return &Tenant{
 		id: s.ID, name: name, nit: s.NIT, status: s.Status, template: s.BusinessTemplate,
-		defaultTaxRate: s.DefaultTaxRate, demo: s.Demo, createdAt: s.CreatedAt.UTC(),
+		defaultTaxRate: s.DefaultTaxRate, contact: s.Contact, demo: s.Demo, createdAt: s.CreatedAt.UTC(),
 	}, nil
 }
 
@@ -113,6 +114,13 @@ func (t *Tenant) BusinessTemplate() string { return t.template }
 // DefaultTaxRate returns the IVA rate proposed to a new product.
 func (t *Tenant) DefaultTaxRate() decimal.Decimal { return t.defaultTaxRate }
 
+// Contact returns the address, city and phone the business registered.
+func (t *Tenant) Contact() Contact { return t.contact }
+
+// SetContact replaces the address, city and phone; NewContact already
+// checked them.
+func (t *Tenant) SetContact(c Contact) { t.contact = c }
+
 // IsActive reports whether the tenant can operate.
 func (t *Tenant) IsActive() bool { return t.status == TenantActive }
 
@@ -137,6 +145,7 @@ type TenantSnapshot struct {
 	Status           TenantStatus
 	BusinessTemplate string
 	DefaultTaxRate   decimal.Decimal
+	Contact          Contact
 	Demo             bool
 	CreatedAt        time.Time
 }

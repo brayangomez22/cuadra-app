@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/adapters/http/identityapi"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/app"
@@ -178,33 +177,6 @@ func (h *Handler) GetMe(ctx context.Context, _ identityapi.GetMeRequestObject) (
 	return identityapi.GetMe200JSONResponse(me(profile)), nil
 }
 
-// UpdateTenant changes the settings of the user's tenant.
-func (h *Handler) UpdateTenant(ctx context.Context, req identityapi.UpdateTenantRequestObject) (identityapi.UpdateTenantResponseObject, error) {
-	p, ok := auth.PrincipalFrom(ctx)
-	if !ok {
-		return identityapi.UpdateTenant401JSONResponse{UnauthorizedJSONResponse: identityapi.UnauthorizedJSONResponse(errorBody("unauthorized", unauthorizedMessage))}, nil
-	}
-	var in app.TenantUpdate
-	if req.Body.DefaultTaxRate != nil {
-		rate, err := decimal.NewFromString(*req.Body.DefaultTaxRate)
-		if err != nil {
-			return nil, domain.ErrInvalidDefaultTaxRate
-		}
-		in.DefaultTaxRate = &rate
-	}
-	tenant, err := h.uc.UpdateTenant(ctx, p.TenantID, p.UserID, in)
-	if err != nil {
-		return nil, err
-	}
-	return identityapi.UpdateTenant200JSONResponse{
-		Id:               tenant.ID(),
-		Name:             tenant.Name(),
-		Nit:              tenant.NIT().String(),
-		BusinessTemplate: tenant.BusinessTemplate(),
-		DefaultTaxRate:   tenant.DefaultTaxRate().String(),
-	}, nil
-}
-
 // authSession builds the response body and the refresh cookie of a session.
 func (h *Handler) authSession(s app.Session) (identityapi.AuthSession, string) {
 	now := h.now()
@@ -230,6 +202,9 @@ func me(p app.Profile) identityapi.Me {
 		TenantId:         p.Tenant.ID(),
 		TenantName:       p.Tenant.Name(),
 		TenantNit:        p.Tenant.NIT().String(),
+		TenantAddress:    p.Tenant.Contact().Address(),
+		TenantCity:       p.Tenant.Contact().City(),
+		TenantPhone:      p.Tenant.Contact().Phone(),
 		BusinessTemplate: p.Tenant.BusinessTemplate(),
 		DefaultTaxRate:   p.Tenant.DefaultTaxRate().String(),
 		Name:             p.User.Name(),

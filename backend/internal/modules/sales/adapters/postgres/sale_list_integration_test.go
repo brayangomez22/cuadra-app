@@ -123,4 +123,23 @@ func TestPolicyRepository(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, p.MaxDiscount.Max().IsZero())
 	})
+
+	t.Run("guarda el tope y la caja obligatoria, los cambia y no toca otro tenant", func(t *testing.T) {
+		a, b := f.createTenant(t), f.createTenant(t)
+		limit, err := domain.NewDiscountLimit(dec("0.15"))
+		require.NoError(t, err)
+		require.NoError(t, f.policies.Save(t.Context(), a.id, domain.SalesPolicy{MaxDiscount: limit, CashSessionOptional: true}))
+		require.NoError(t, f.policies.Save(t.Context(), b.id, domain.SalesPolicy{MaxDiscount: limit, CashSessionOptional: true}))
+
+		require.NoError(t, f.policies.Save(t.Context(), a.id, domain.SalesPolicy{}))
+
+		p, err := f.policies.Get(t.Context(), a.id)
+		require.NoError(t, err)
+		require.True(t, p.MaxDiscount.Max().IsZero())
+		require.False(t, p.CashSessionOptional)
+		p, err = f.policies.Get(t.Context(), b.id)
+		require.NoError(t, err)
+		require.True(t, dec("0.15").Equal(p.MaxDiscount.Max()))
+		require.True(t, p.CashSessionOptional)
+	})
 }

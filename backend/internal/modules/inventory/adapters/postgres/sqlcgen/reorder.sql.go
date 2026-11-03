@@ -22,11 +22,17 @@ LEFT JOIN LATERAL (
     WHERE l.variant_id = r.variant_id AND l.location_id = r.location_id
 ) s ON true
 WHERE ($1::uuid IS NULL OR r.location_id = $1)
+  AND r.variant_id <> ALL($2::uuid[])
   AND COALESCE(s.quantity, 0) <= r.min_quantity
 `
 
-func (q *Queries) CountReorderAlerts(ctx context.Context, locationID *uuid.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, countReorderAlerts, locationID)
+type CountReorderAlertsParams struct {
+	LocationID       *uuid.UUID
+	ExcludedVariants []uuid.UUID
+}
+
+func (q *Queries) CountReorderAlerts(ctx context.Context, arg CountReorderAlertsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countReorderAlerts, arg.LocationID, arg.ExcludedVariants)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -60,17 +66,19 @@ LEFT JOIN LATERAL (
     WHERE l.variant_id = r.variant_id AND l.location_id = r.location_id
 ) s ON true
 WHERE ($1::uuid IS NULL OR r.location_id = $1)
+  AND r.variant_id <> ALL($2::uuid[])
   AND COALESCE(s.quantity, 0) <= r.min_quantity
 ORDER BY COALESCE(s.quantity, 0) > 0,
          COALESCE(s.quantity, 0) / NULLIF(r.min_quantity, 0),
          r.location_id, r.variant_id
-LIMIT $3 OFFSET $2
+LIMIT $4 OFFSET $3
 `
 
 type ListReorderAlertsParams struct {
-	LocationID *uuid.UUID
-	RowOffset  int32
-	RowLimit   int32
+	LocationID       *uuid.UUID
+	ExcludedVariants []uuid.UUID
+	RowOffset        int32
+	RowLimit         int32
 }
 
 type ListReorderAlertsRow struct {
@@ -85,10 +93,16 @@ type ListReorderAlertsRow struct {
 // ListReorderAlerts pages the rules whose stock at their location (of every
 // lot, zero without a level) is at or below their minimum: what ran out first,
 // then the furthest below its minimum in proportion (1 of 5 before 40 of 50).
+// excluded_variants are the ones the catalog no longer sells.
 // The condition is the one of domain.ReorderRule.NeedsReorder; the
 // integration tests check both agree.
 func (q *Queries) ListReorderAlerts(ctx context.Context, arg ListReorderAlertsParams) ([]ListReorderAlertsRow, error) {
-	rows, err := q.db.Query(ctx, listReorderAlerts, arg.LocationID, arg.RowOffset, arg.RowLimit)
+	rows, err := q.db.Query(ctx, listReorderAlerts,
+		arg.LocationID,
+		arg.ExcludedVariants,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +121,33 @@ func (q *Queries) ListReorderAlerts(ctx context.Context, arg ListReorderAlertsPa
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReorderRuleVariants = `-- name: ListReorderRuleVariants :many
+SELECT DISTINCT variant_id
+FROM reorder_rules
+WHERE $1::uuid IS NULL OR location_id = $1
+ORDER BY variant_id
+`
+
+func (q *Queries) ListReorderRuleVariants(ctx context.Context, locationID *uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listReorderRuleVariants, locationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var variant_id uuid.UUID
+		if err := rows.Scan(&variant_id); err != nil {
+			return nil, err
+		}
+		items = append(items, variant_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

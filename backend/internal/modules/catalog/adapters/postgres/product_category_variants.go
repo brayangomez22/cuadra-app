@@ -9,6 +9,7 @@ import (
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/adapters/postgres/sqlcgen"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
 )
 
 // VariantsInCategories returns the variants, active or not, of the products
@@ -37,4 +38,16 @@ func (r *ProductRepository) VariantsInCategories(ctx context.Context, tenantID u
 		return nil, domain.ErrCategoryNotFound
 	}
 	return variants, nil
+}
+
+// InactiveVariants returns those of variantIDs in tenantID that are no
+// longer sold: inactive, or of an archived product.
+func (r *ProductRepository) InactiveVariants(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) ([]uuid.UUID, error) {
+	ids, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) ([]uuid.UUID, error) {
+		return sqlcgen.New(tx).InactiveVariants(ctx, variantIDs)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("catalog: inactive variants: %w", err)
+	}
+	return ids, nil
 }
