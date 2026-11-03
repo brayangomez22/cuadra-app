@@ -7,6 +7,7 @@ const statusOptions: { value: PurchaseStatusFilter; label: string }[] = [
   { value: 'all', label: 'Todas' },
   { value: 'open', label: 'Por pagar' },
   { value: 'paid', label: 'Pagadas' },
+  { value: 'voided', label: 'Anuladas' },
 ];
 
 const isStatus = (value: string): value is PurchaseStatusFilter =>

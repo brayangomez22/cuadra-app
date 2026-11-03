@@ -101,6 +101,14 @@ func (m *Module) ReverseSaleStock(ctx context.Context, tenantID, userID, saleID 
 	return err
 }
 
+// ReversePurchaseStock takes out the stock of a voided purchase (see
+// app.Service.ReversePurchaseStock), joining the void's transaction like
+// ReceivePurchaseStock.
+func (m *Module) ReversePurchaseStock(ctx context.Context, tenantID, userID, purchaseID uuid.UUID) error {
+	_, err := m.service.ReversePurchaseStock(ctx, app.Actor{TenantID: tenantID, UserID: userID}, purchaseID)
+	return err
+}
+
 // ReceiveInitialStock registers the initial stock of new variants at a
 // location (see app.Service.ReceiveInitialStock). It is for the imports
 // module; with a ctx from db.InTenantTx it joins the import's batch.

@@ -14,7 +14,60 @@ import (
 // checks the invoice before calling receive and stores nothing if receive
 // fails.
 type fakePurchases struct {
-	rows []domain.PurchaseSnapshot
+	rows     []domain.PurchaseSnapshot
+	payments []*domain.SupplierPayment
+	window   domain.PayablesWindow
+}
+
+// change rehydrates the tenant's purchase, lets fn change it and stores it
+// only if fn succeeds, like the transaction of the real one.
+func (f *fakePurchases) change(ctx context.Context, tenantID, id uuid.UUID, fn func(*domain.Purchase) error) (*domain.Purchase, error) {
+	p, err := f.GetByID(ctx, tenantID, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := fn(p); err != nil {
+		return nil, err
+	}
+	for i := range f.rows {
+		if f.rows[i].ID == id {
+			f.rows[i] = p.Snapshot()
+		}
+	}
+	return p, nil
+}
+
+func (f *fakePurchases) Void(ctx context.Context, tenantID, id uuid.UUID, fn func(context.Context, *domain.Purchase) error) (*domain.Purchase, error) {
+	return f.change(ctx, tenantID, id, func(p *domain.Purchase) error { return fn(ctx, p) })
+}
+
+func (f *fakePurchases) Pay(ctx context.Context, tenantID, id uuid.UUID, fn func(*domain.Purchase) (*domain.SupplierPayment, error)) (*domain.Purchase, *domain.SupplierPayment, error) {
+	var pay *domain.SupplierPayment
+	p, err := f.change(ctx, tenantID, id, func(p *domain.Purchase) error {
+		var err error
+		pay, err = fn(p)
+		return err
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	f.payments = append(f.payments, pay)
+	return p, pay, nil
+}
+
+func (f *fakePurchases) Payments(_ context.Context, tenantID, purchaseID uuid.UUID) ([]*domain.SupplierPayment, error) {
+	var out []*domain.SupplierPayment
+	for _, p := range f.payments {
+		if p.TenantID() == tenantID && p.PurchaseID() == purchaseID {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+}
+
+func (f *fakePurchases) Payables(_ context.Context, _ uuid.UUID, w domain.PayablesWindow, _, _ int) (domain.PayablesPage, error) {
+	f.window = w
+	return domain.PayablesPage{}, nil
 }
 
 func (f *fakePurchases) Save(ctx context.Context, p *domain.Purchase, receive func(context.Context) error) error {
@@ -57,6 +110,7 @@ func (f *fakePurchases) Search(_ context.Context, flt domain.PurchaseFilter) ([]
 		out = append(out, domain.PurchaseSummary{
 			ID: p.ID(), SupplierID: p.SupplierID(), InvoiceNumber: p.InvoiceNumber(), IssuedOn: p.IssuedOn(),
 			Payment: p.Payment(), Total: p.Totals().Total, BalanceDue: p.BalanceDue(), Lines: len(p.Lines()),
+			Voided: p.Voided() != nil,
 		})
 	}
 	return out, len(out), nil

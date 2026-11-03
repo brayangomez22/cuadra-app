@@ -74,3 +74,26 @@ SET status = 'closed', closed_at = sqlc.arg(closed_at), closed_by = sqlc.arg(clo
     cash_in = sqlc.arg(cash_in), cash_out = sqlc.arg(cash_out), sales_count = sqlc.arg(sales_count),
     expected = sqlc.arg(expected), counted = sqlc.arg(counted), difference = sqlc.arg(difference)
 WHERE id = sqlc.arg(id) AND status = 'open';
+
+-- SearchCashSessions is a page of the history, the latest opened first. A
+-- closed session's sales total is what its closing stored by method.
+-- name: SearchCashSessions :many
+SELECT s.id, s.location_id, s.user_id, s.status, s.opening_float, s.opened_at, s.closed_at, s.closed_by,
+       s.sales_count, s.difference,
+       coalesce((SELECT sum(p.amount) FROM cash_session_payments p
+                 WHERE p.tenant_id = s.tenant_id AND p.session_id = s.id), 0)::numeric(18,4) AS sales_total
+FROM cash_sessions s
+WHERE (sqlc.narg(location_id)::uuid IS NULL OR s.location_id = sqlc.narg(location_id))
+  AND (sqlc.narg(status)::text IS NULL OR s.status = sqlc.narg(status))
+  AND (sqlc.narg(opened_from)::timestamptz IS NULL OR s.opened_at >= sqlc.narg(opened_from))
+  AND (sqlc.narg(opened_before)::timestamptz IS NULL OR s.opened_at < sqlc.narg(opened_before))
+ORDER BY s.opened_at DESC, s.id DESC
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: CountCashSessions :one
+SELECT count(*)
+FROM cash_sessions s
+WHERE (sqlc.narg(location_id)::uuid IS NULL OR s.location_id = sqlc.narg(location_id))
+  AND (sqlc.narg(status)::text IS NULL OR s.status = sqlc.narg(status))
+  AND (sqlc.narg(opened_from)::timestamptz IS NULL OR s.opened_at >= sqlc.narg(opened_from))
+  AND (sqlc.narg(opened_before)::timestamptz IS NULL OR s.opened_at < sqlc.narg(opened_before));

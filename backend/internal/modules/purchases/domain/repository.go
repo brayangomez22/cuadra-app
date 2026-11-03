@@ -69,11 +69,16 @@ type PurchaseSummary struct {
 	Total         decimal.Decimal
 	BalanceDue    decimal.Decimal
 	Lines         int
+	Voided        bool
 	CreatedAt     time.Time
 }
 
-// Status returns open while something is left to pay, paid otherwise.
+// Status returns voided once voided, open while something is left to pay,
+// and paid otherwise.
 func (s PurchaseSummary) Status() PurchaseStatus {
+	if s.Voided {
+		return PurchaseVoided
+	}
 	if s.BalanceDue.IsPositive() {
 		return PurchaseOpen
 	}
@@ -95,4 +100,25 @@ type PurchaseRepository interface {
 	// BalancesDue returns what the tenant owes to each supplier among ids
 	// that it owes something: the sum of its purchases' balances.
 	BalancesDue(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]decimal.Decimal, error)
+	// Void locks the tenant's purchase (ErrPurchaseNotFound), calls void
+	// with it in the same transaction (through ctx) and stores it voided.
+	// If void fails, nothing changes.
+	Void(ctx context.Context, tenantID, id uuid.UUID, void func(context.Context, *Purchase) error) (*Purchase, error)
+	// Pay locks the tenant's purchase (ErrPurchaseNotFound), calls pay with
+	// it and stores its new balance and the payment pay returns, together.
+	Pay(ctx context.Context, tenantID, id uuid.UUID, pay func(*Purchase) (*SupplierPayment, error)) (*Purchase, *SupplierPayment, error)
+	// Payments returns the payments of a purchase of the tenant, the first
+	// one first.
+	Payments(ctx context.Context, tenantID, purchaseID uuid.UUID) ([]*SupplierPayment, error)
+	// Payables returns a page of what the tenant owes each supplier it owes
+	// something, the one with the most overdue first, split by w, and the
+	// totals of every supplier.
+	Payables(ctx context.Context, tenantID uuid.UUID, w PayablesWindow, limit, offset int) (PayablesPage, error)
+}
+
+// PayablesPage is a page of what the tenant owes each supplier, the totals
+// of all of them and how many suppliers it owes.
+type PayablesPage struct {
+	Items  []SupplierPayable
+	Totals PayablesTotals
 }

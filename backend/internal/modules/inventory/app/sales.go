@@ -104,15 +104,7 @@ func (s *Service) ReverseSaleStock(ctx context.Context, a Actor, saleID uuid.UUI
 			exits = append(exits, m)
 		}
 	}
-	// Same lock order as IssueSaleStock.
-	slices.SortFunc(exits, func(x, y *domain.StockMovement) int {
-		vx, vy := x.VariantID(), y.VariantID()
-		if c := bytes.Compare(vx[:], vy[:]); c != 0 {
-			return c
-		}
-		lx, ly := x.LocationID(), y.LocationID()
-		return bytes.Compare(lx[:], ly[:])
-	})
+	sortByLevel(exits) // same lock order as IssueSaleStock
 
 	info := s.info(a)
 	info.Reference = &ref

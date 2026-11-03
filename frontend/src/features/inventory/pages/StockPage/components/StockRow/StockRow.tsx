@@ -6,6 +6,7 @@ import type { StockLevel } from '../../../../api/types';
 import { VariantLabel } from '../../../../components/VariantLabel/VariantLabel';
 import { rowVariant } from '../../../../model/rowVariant';
 import { ReorderCell } from '../ReorderCell/ReorderCell';
+import { StockRowLinks } from './StockRowLinks';
 import styles from './StockRow.module.scss';
 
 type Props = { level: StockLevel; product?: Product; loading: boolean; canSeeCost: boolean; canEditReorder: boolean };
@@ -17,6 +18,7 @@ export function StockRow({ level, product, loading, canSeeCost, canEditReorder }
     <TableRow>
       <TableCell>
         <VariantLabel product={product} variantId={level.variant_id} to={kardex} loading={loading} />
+        {canEditReorder && <StockRowLinks level={level} name={rowVariant(product, level.variant_id).name} />}
       </TableCell>
       <TableCell numeric>
         <span className={styles.quantity}>

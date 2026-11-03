@@ -1,0 +1,13 @@
+@use '@/styles/abstracts' as *;
+
+// Two per row on a phone so the list starts on the first screen; all four side by side from lg.
+.root {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+
+  @include respond-to(lg) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

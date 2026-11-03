@@ -5,7 +5,7 @@ import { useFieldError } from '@/shared/forms/useFieldError';
 import { Alert, Button, Field } from '@/shared/ui';
 import { useReceiptForm, type ReceiptSetup } from '../../hooks/useReceiptForm';
 import { AmountFields } from '../AmountFields/AmountFields';
-import { ProductField } from '../ProductField/ProductField';
+import { ProductField } from '../../../../components/ProductField/ProductField';
 import { UnitField } from '../../../../components/UnitField/UnitField';
 import styles from './ReceiptForm.module.scss';
 
@@ -19,7 +19,7 @@ export function ReceiptForm(setup: ReceiptSetup) {
     <FormProvider {...form}>
       <form className={styles.root} noValidate onSubmit={(event) => void submit(event)}>
         {formError && <Alert tone="danger">{formError}</Alert>}
-        <ProductField onChange={choose} />
+        <ProductField onChange={choose} onPicked={() => form.setFocus('quantity')} />
         <Field label="Sede" error={errorOf('location_id')}>
           <SelectController
             control={form.control}

@@ -280,6 +280,9 @@ type Purchase struct {
 	BalanceDue    decimal.Decimal
 	CreatedBy     uuid.UUID
 	CreatedAt     time.Time
+	VoidedAt      *time.Time
+	VoidedBy      pgtype.UUID
+	VoidReason    *string
 }
 
 type PurchaseLine struct {
@@ -543,6 +546,19 @@ type Supplier struct {
 	SearchName      string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+}
+
+type SupplierPayment struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	PurchaseID   uuid.UUID
+	SupplierID   uuid.UUID
+	Method       string
+	Amount       decimal.Decimal
+	BalanceAfter decimal.Decimal
+	PaidOn       pgtype.Date
+	CreatedBy    uuid.UUID
+	CreatedAt    time.Time
 }
 
 type Tenant struct {

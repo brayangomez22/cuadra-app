@@ -50,6 +50,39 @@ describe('StockPage', () => {
     expect(api.calls('GET /api/v1/products')).toHaveLength(1);
   });
 
+  it('lleva a ajustar o trasladar desde la sede y desde cada fila, con la variante ya elegida', async () => {
+    stockApi();
+    renderApp('/inventario');
+
+    const table = within(await screen.findByRole('table', { name: 'Existencias en Bodega principal' }));
+    const query = `producto=${ids.pipe}&variante=${ids.pipe}&sede=${ids.main}`;
+    expect(await table.findByRole('link', { name: 'Ajustar Tubo PVC presión 1/2 pulgada' })).toHaveAttribute(
+      'href',
+      `/inventario/ajuste?${query}`,
+    );
+    expect(table.getByRole('link', { name: 'Trasladar Tubo PVC presión 1/2 pulgada' })).toHaveAttribute(
+      'href',
+      `/inventario/traslado?${query}`,
+    );
+    expect(screen.getByRole('link', { name: 'Registrar ajuste' })).toHaveAttribute(
+      'href',
+      `/inventario/ajuste?sede=${ids.main}`,
+    );
+    expect(screen.getByRole('link', { name: 'Trasladar' })).toHaveAttribute(
+      'href',
+      `/inventario/traslado?sede=${ids.main}`,
+    );
+  });
+
+  it('quien no puede mover stock no ve esos accesos', async () => {
+    stockApi({ ...signedIn(aUser('cashier')) });
+    renderApp('/inventario');
+
+    await screen.findByRole('table', { name: 'Existencias en Bodega principal' });
+    expect(screen.queryByRole('link', { name: 'Registrar ajuste' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^Ajustar/ })).not.toBeInTheDocument();
+  });
+
   it('muestra una fila por variante con su etiqueta y su SKU', async () => {
     const api = stockApi({
       [`GET /api/v1/locations/${ids.main}/stock`]: json(

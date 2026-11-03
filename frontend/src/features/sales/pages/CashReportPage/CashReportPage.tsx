@@ -32,7 +32,7 @@ export function CashReportPage() {
   if (!report) {
     return (
       <Page title={title}>
-        <SessionStillOpen />
+        <SessionStillOpen session={session.data} />
       </Page>
     );
   }

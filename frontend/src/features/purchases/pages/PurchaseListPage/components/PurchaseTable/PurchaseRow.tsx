@@ -3,6 +3,7 @@ import { formatDay, formatMoney } from '@/shared/format';
 import { Badge, TableCell, TableNarrow, TableRow, TextLink } from '@/shared/ui';
 import type { PurchaseSummary } from '../../../../api/types';
 import { paymentLabels, statusLabels } from '../../../../model/purchaseLabels';
+import { statusTone } from '../../../../model/purchaseStatus/purchaseStatus';
 import styles from './PurchaseTable.module.scss';
 
 /**
@@ -31,13 +32,13 @@ export function PurchaseRow({ purchase }: { purchase: PurchaseSummary }) {
         {formatMoney(purchase.total)}
         <TableNarrow>
           {open && <span className={styles.owed}>{`Debe ${formatMoney(purchase.balance_due)}`}</span>}
-          <Badge tone={open ? 'warning' : 'success'}>{statusLabels[purchase.status]}</Badge>
+          <Badge tone={statusTone(purchase.status)}>{statusLabels[purchase.status]}</Badge>
         </TableNarrow>
       </TableCell>
       <TableCell numeric wide>
         <span className={styles.balance}>
           {open && formatMoney(purchase.balance_due)}
-          <Badge tone={open ? 'warning' : 'success'}>{statusLabels[purchase.status]}</Badge>
+          <Badge tone={statusTone(purchase.status)}>{statusLabels[purchase.status]}</Badge>
         </span>
       </TableCell>
     </TableRow>

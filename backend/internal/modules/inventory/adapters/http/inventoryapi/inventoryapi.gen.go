@@ -107,13 +107,14 @@ func (e StockCountStatus) Valid() bool {
 
 // Defines values for StockMovementType.
 const (
-	Adjustment  StockMovementType = "adjustment"
-	InitialIn   StockMovementType = "initial_in"
-	PurchaseIn  StockMovementType = "purchase_in"
-	SaleOut     StockMovementType = "sale_out"
-	SaleVoid    StockMovementType = "sale_void"
-	TransferIn  StockMovementType = "transfer_in"
-	TransferOut StockMovementType = "transfer_out"
+	Adjustment   StockMovementType = "adjustment"
+	InitialIn    StockMovementType = "initial_in"
+	PurchaseIn   StockMovementType = "purchase_in"
+	PurchaseVoid StockMovementType = "purchase_void"
+	SaleOut      StockMovementType = "sale_out"
+	SaleVoid     StockMovementType = "sale_void"
+	TransferIn   StockMovementType = "transfer_in"
+	TransferOut  StockMovementType = "transfer_out"
 )
 
 // Valid indicates whether the value is a known member of the StockMovementType enum.
@@ -124,6 +125,8 @@ func (e StockMovementType) Valid() bool {
 	case InitialIn:
 		return true
 	case PurchaseIn:
+		return true
+	case PurchaseVoid:
 		return true
 	case SaleOut:
 		return true

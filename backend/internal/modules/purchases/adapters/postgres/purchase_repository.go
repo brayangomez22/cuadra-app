@@ -93,22 +93,30 @@ func insertLines(ctx context.Context, q *sqlcgen.Queries, p *domain.Purchase) er
 // GetByID returns domain.ErrPurchaseNotFound when the purchase does not
 // exist in tenantID.
 func (r *PurchaseRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*domain.Purchase, error) {
-	var row sqlcgen.GetPurchaseRow
-	var lines []sqlcgen.PurchaseLinesRow
+	var p *domain.Purchase
 	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
-		q := sqlcgen.New(tx)
 		var err error
-		if row, err = q.GetPurchase(ctx, id); err != nil {
-			return err
-		}
-		lines, err = q.PurchaseLines(ctx, id)
+		p, err = loadPurchase(ctx, sqlcgen.New(tx), id)
 		return err
 	})
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+// loadPurchase reads a purchase and its lines in q's transaction.
+func loadPurchase(ctx context.Context, q *sqlcgen.Queries, id uuid.UUID) (*domain.Purchase, error) {
+	row, err := q.GetPurchase(ctx, id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrPurchaseNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("purchases: get purchase: %w", err)
+	}
+	lines, err := q.PurchaseLines(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("purchases: get purchase lines: %w", err)
 	}
 	return purchaseFromRows(row, lines)
 }
@@ -121,6 +129,9 @@ func purchaseFromRows(row sqlcgen.GetPurchaseRow, lines []sqlcgen.PurchaseLinesR
 	}
 	if row.DueOn != nil {
 		s.DueOn = new(domain.DateOf(*row.DueOn))
+	}
+	if row.VoidedAt != nil && row.VoidedBy != nil {
+		s.Voided = &domain.Voiding{By: *row.VoidedBy, Reason: value(row.VoidReason), At: row.VoidedAt.UTC()}
 	}
 	for _, l := range lines {
 		s.Lines = append(s.Lines, domain.LineSnapshot{

@@ -16,6 +16,7 @@ type PurchaseUseCases interface {
 	RegisterPurchase(ctx context.Context, a app.Actor, in app.PurchaseInput) (*domain.Purchase, error)
 	GetPurchase(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Purchase, error)
 	ListPurchases(ctx context.Context, a app.Actor, q app.PurchaseQuery) (app.PurchasePage, error)
+	VoidPurchase(ctx context.Context, a app.Actor, id uuid.UUID, reason string) (*domain.Purchase, error)
 }
 
 // purchaseHandlers are the operations on purchases.
@@ -65,6 +66,15 @@ func (h *purchaseHandlers) GetPurchase(ctx context.Context, req purchasesapi.Get
 		return nil, err
 	}
 	return purchasesapi.GetPurchase200JSONResponse(purchaseBody(p)), nil
+}
+
+// VoidPurchase voids a purchase registered by mistake and takes out its stock.
+func (h *purchaseHandlers) VoidPurchase(ctx context.Context, req purchasesapi.VoidPurchaseRequestObject) (purchasesapi.VoidPurchaseResponseObject, error) {
+	p, err := h.uc.VoidPurchase(ctx, actor(ctx), req.PurchaseId, req.Body.Reason)
+	if err != nil {
+		return nil, err
+	}
+	return purchasesapi.VoidPurchase200JSONResponse(purchaseBody(p)), nil
 }
 
 // purchaseInput translates the body. An amount that cannot be read is the

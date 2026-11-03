@@ -108,6 +108,13 @@ func (m *Module) DefaultTaxRate(ctx context.Context, tenantID uuid.UUID) (decima
 	return m.service.DefaultTaxRate(ctx, tenantID)
 }
 
+// UserNames returns the name of each user of tenantID among ids (see
+// app.Service.UserNames). It is for the sales module, which names the
+// cashier of each cash session through the port internal/server adapts.
+func (m *Module) UserNames(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	return m.service.UserNames(ctx, tenantID, ids)
+}
+
 // Permissions is the permission matrix of the core and the registered
 // modules. It is built once, at startup, before the modules that authorize
 // with it.

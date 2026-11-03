@@ -27,6 +27,7 @@ type PurchaseSnapshot struct {
 	Notes         string
 	Lines         []LineSnapshot
 	BalanceDue    decimal.Decimal
+	Voided        *Voiding
 	CreatedBy     uuid.UUID
 	CreatedAt     time.Time
 }
@@ -36,7 +37,7 @@ func (p *Purchase) Snapshot() PurchaseSnapshot {
 	s := PurchaseSnapshot{
 		ID: p.id, TenantID: p.tenantID, SupplierID: p.supplierID, LocationID: p.locationID,
 		InvoiceNumber: p.invoiceNumber, IssuedOn: p.issuedOn, DueOn: p.DueOn(), Payment: p.payment,
-		Notes: p.notes, BalanceDue: p.balanceDue, CreatedBy: p.createdBy, CreatedAt: p.createdAt,
+		Notes: p.notes, BalanceDue: p.balanceDue, Voided: p.Voided(), CreatedBy: p.createdBy, CreatedAt: p.createdAt,
 	}
 	for _, l := range p.Lines() {
 		s.Lines = append(s.Lines, LineSnapshot{LineInput: l.in, Received: l.received})
@@ -46,7 +47,8 @@ func (p *Purchase) Snapshot() PurchaseSnapshot {
 
 // RehydratePurchase rebuilds a stored purchase, checking the invariants of
 // every purchase: its lines were received and its balance is between zero
-// and its total (zero in cash). The rules of registering (an active
+// and its total (zero in cash, and once voided, when it also has a reason
+// and who voided it). The rules of registering (an active
 // supplier, the invoice date) held when it was registered.
 func RehydratePurchase(s PurchaseSnapshot) (*Purchase, error) {
 	lines := make([]LineInput, len(s.Lines))
@@ -65,10 +67,22 @@ func RehydratePurchase(s PurchaseSnapshot) (*Purchase, error) {
 	if err := p.Receive(received); err != nil {
 		return nil, ErrInvalidPurchase
 	}
-	if s.BalanceDue.IsNegative() || s.BalanceDue.GreaterThan(p.totals.Total) ||
-		(s.Payment == PaymentCash && !s.BalanceDue.IsZero()) {
+	if !s.validBalance(p.totals.Total) {
 		return nil, ErrInvalidPurchase
 	}
 	p.balanceDue = s.BalanceDue
+	p.voided = s.Voided.clone()
 	return p, nil
+}
+
+// validBalance reports whether the stored balance is between zero and the
+// total, and zero in cash or once voided (with who voided it and why).
+func (s PurchaseSnapshot) validBalance(total decimal.Decimal) bool {
+	if s.BalanceDue.IsNegative() || s.BalanceDue.GreaterThan(total) {
+		return false
+	}
+	if s.Payment == PaymentCash && !s.BalanceDue.IsZero() {
+		return false
+	}
+	return s.Voided == nil || (s.BalanceDue.IsZero() && s.Voided.valid())
 }

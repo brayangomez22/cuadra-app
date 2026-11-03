@@ -40,6 +40,9 @@ type UserRepository interface {
 	// Update stores the name, password hash, role and active flag;
 	// ErrUserNotFound if the user does not exist in its tenant.
 	Update(ctx context.Context, u *User) error
+	// Names returns the name of each user of tenantID among ids; a missing
+	// one is not the tenant's.
+	Names(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]string, error)
 }
 
 // LoginCandidate is a user registered with a given email, in some tenant.

@@ -30,6 +30,8 @@ export const inventoryRoutes: RouteObject[] = [
     element: <RequirePermission permission="inventory:adjust" />,
     children: [
       { path: paths.inventory.receipt.pattern, ...lazyPage(async () => (await import('./pages')).ReceiptPage) },
+      { path: paths.inventory.adjustment.pattern, ...lazyPage(async () => (await import('./pages')).AdjustmentPage) },
+      { path: paths.inventory.transfer.pattern, ...lazyPage(async () => (await import('./pages')).TransferPage) },
     ],
   },
 ];

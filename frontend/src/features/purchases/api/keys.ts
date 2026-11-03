@@ -8,4 +8,7 @@ export const purchasesKeys = {
   purchases: ['purchases', 'purchases'] as const,
   purchaseList: (query: PurchaseQuery) => ['purchases', 'purchases', 'list', query] as const,
   purchase: (id: string) => ['purchases', 'purchases', 'purchase', id] as const,
+  payments: (id: string) => ['purchases', 'purchases', 'purchase', id, 'payments'] as const,
+  payables: ['purchases', 'payables'] as const,
+  payablesPage: (offset: number) => ['purchases', 'payables', offset] as const,
 };

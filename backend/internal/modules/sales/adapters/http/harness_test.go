@@ -34,9 +34,10 @@ type stubUseCases struct {
 	reason  string
 	list    app.ListSalesInput
 
-	openCash app.OpenCashSessionInput
-	movement app.CashMovementRequest
-	closing  app.CloseCashSessionInput
+	openCash  app.OpenCashSessionInput
+	movement  app.CashMovementRequest
+	closing   app.CloseCashSessionInput
+	cashQuery app.CashSessionQuery
 
 	sale     *domain.Sale
 	page     domain.SalePage
@@ -45,6 +46,7 @@ type stubUseCases struct {
 	view     app.CashSessionView
 	current  app.CurrentCashSession
 	recorded domain.CashMovement
+	cashPage app.CashSessionPage
 	err      error
 }
 
@@ -73,9 +75,9 @@ func (s *stubUseCases) ListSales(_ context.Context, a app.Actor, in app.ListSale
 	return s.page, s.err
 }
 
-// discountOnlyOwner grants sales:discount only to owners.
+// discountOnlyOwner grants sales:discount and cash:manage only to owners.
 func discountOnlyOwner(role, permission string) bool {
-	return role == "owner" || permission != "sales:discount"
+	return role == "owner" || (permission != "sales:discount" && permission != "cash:manage")
 }
 
 var owner = auth.Principal{TenantID: newID(), UserID: newID(), Role: "owner"}

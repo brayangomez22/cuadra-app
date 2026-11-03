@@ -6,6 +6,7 @@ export const movementLabels: Record<StockMovement['type'], string> = {
   initial_in: 'Inventario inicial',
   sale_out: 'Venta',
   sale_void: 'Venta anulada',
+  purchase_void: 'Compra anulada',
   adjustment: 'Ajuste',
   transfer_out: 'Traslado (sale)',
   transfer_in: 'Traslado (entra)',

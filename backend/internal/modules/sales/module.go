@@ -36,6 +36,9 @@ type Config struct {
 	// internal/server adapts the receivables and identity modules to them.
 	Credit     app.CreditLedger
 	Authorizer app.CreditAuthorizer
+	// Users names the cashier of each cash session; internal/server passes
+	// the identity module.
+	Users app.UserDirectory
 	// Prices gives the unit price of each line: the chain of the price rules
 	// of the active modules. Nil sells each variant at its price.
 	Prices         app.PriceResolver
@@ -66,6 +69,7 @@ func New(cfg Config) (*Module, error) {
 		Customers:      cfg.Customers,
 		Credit:         cfg.Credit,
 		Authorizer:     cfg.Authorizer,
+		Users:          cfg.Users,
 		Sales:          postgres.NewSaleRepository(cfg.DB),
 		Policies:       postgres.NewPolicyRepository(cfg.DB),
 		CashSessions:   postgres.NewCashSessionRepository(cfg.DB),

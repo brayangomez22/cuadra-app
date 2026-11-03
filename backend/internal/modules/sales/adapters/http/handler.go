@@ -23,22 +23,35 @@ import (
 // names it.
 const permissionSalesDiscount = "sales:discount"
 
+// permissionCashManage lets a role close the cash sessions others left open.
+const permissionCashManage = "cash:manage"
+
 // defaultPageSize is the contract's default limit.
 const defaultPageSize = 20
 
 // UseCases are the sales and cash use cases the handlers call (*app.Service).
 type UseCases interface {
+	SaleUseCases
+	CashUseCases
+}
+
+// SaleUseCases are the use cases of the sales.
+type SaleUseCases interface {
 	ConfirmSale(ctx context.Context, a app.Actor, in app.ConfirmSaleInput) (*domain.Sale, error)
 	VoidSale(ctx context.Context, a app.Actor, id uuid.UUID, reason string) (*domain.Sale, error)
 	GetSale(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Sale, error)
 	ListSales(ctx context.Context, a app.Actor, in app.ListSalesInput) (domain.SalePage, error)
 	GetDiscountLimit(ctx context.Context, a app.Actor) (domain.DiscountLimit, error)
+}
 
+// CashUseCases are the use cases of the cash sessions.
+type CashUseCases interface {
 	OpenCashSession(ctx context.Context, a app.Actor, in app.OpenCashSessionInput) (*domain.CashSession, error)
 	RecordCashMovement(ctx context.Context, a app.Actor, sessionID uuid.UUID, in app.CashMovementRequest) (domain.CashMovement, error)
 	CloseCashSession(ctx context.Context, a app.Actor, sessionID uuid.UUID, in app.CloseCashSessionInput) (app.CashSessionView, error)
 	GetCashSession(ctx context.Context, a app.Actor, id uuid.UUID) (app.CashSessionView, error)
 	GetCurrentCashSession(ctx context.Context, a app.Actor) (app.CurrentCashSession, error)
+	ListCashSessions(ctx context.Context, a app.Actor, q app.CashSessionQuery) (app.CashSessionPage, error)
 }
 
 // Handler implements salesapi.StrictServerInterface.
@@ -64,10 +77,13 @@ func Register(mux *http.ServeMux, uc UseCases, can auth.Authorizer, log *slog.Lo
 }
 
 // actor returns who calls: tenant and user come only from the access token,
-// and whether they discount without limit from their role.
+// and whether they discount without limit and manage cash from their role.
 func (h *Handler) actor(ctx context.Context) app.Actor {
 	p, _ := auth.PrincipalFrom(ctx)
-	return app.Actor{TenantID: p.TenantID, UserID: p.UserID, UnlimitedDiscount: h.can(p.Role, permissionSalesDiscount)}
+	return app.Actor{
+		TenantID: p.TenantID, UserID: p.UserID,
+		UnlimitedDiscount: h.can(p.Role, permissionSalesDiscount), ManagesCash: h.can(p.Role, permissionCashManage),
+	}
 }
 
 // ConfirmSale checks out a cart.

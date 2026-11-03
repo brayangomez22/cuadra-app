@@ -107,4 +107,7 @@ type CashSessionRepository interface {
 	// in it and its movements) and calls closeFn with both, then stores the
 	// closing. If closeFn fails, nothing is stored and its error is returned.
 	Close(ctx context.Context, tenantID, id uuid.UUID, closeFn func(*CashSession, CashActivity) error) (*CashSession, error)
+	// Search returns a page of the filter, the latest opened first, and how
+	// many sessions match it.
+	Search(ctx context.Context, f CashSessionFilter) ([]CashSessionSummary, int, error)
 }

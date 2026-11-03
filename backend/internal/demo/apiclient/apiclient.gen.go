@@ -114,6 +114,45 @@ func (e CashSessionStatus) Valid() bool {
 	}
 }
 
+// Defines values for CashSessionSummaryResult.
+const (
+	CashSessionSummaryResultExact    CashSessionSummaryResult = "exact"
+	CashSessionSummaryResultOverage  CashSessionSummaryResult = "overage"
+	CashSessionSummaryResultShortage CashSessionSummaryResult = "shortage"
+)
+
+// Valid indicates whether the value is a known member of the CashSessionSummaryResult enum.
+func (e CashSessionSummaryResult) Valid() bool {
+	switch e {
+	case CashSessionSummaryResultExact:
+		return true
+	case CashSessionSummaryResultOverage:
+		return true
+	case CashSessionSummaryResultShortage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CashSessionSummaryStatus.
+const (
+	CashSessionSummaryStatusClosed CashSessionSummaryStatus = "closed"
+	CashSessionSummaryStatusOpen   CashSessionSummaryStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the CashSessionSummaryStatus enum.
+func (e CashSessionSummaryStatus) Valid() bool {
+	switch e {
+	case CashSessionSummaryStatusClosed:
+		return true
+	case CashSessionSummaryStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreditMovementKind.
 const (
 	Cancellation CreditMovementKind = "cancellation"
@@ -425,8 +464,9 @@ func (e PurchasePayment) Valid() bool {
 
 // Defines values for PurchaseStatus.
 const (
-	PurchaseStatusOpen PurchaseStatus = "open"
-	PurchaseStatusPaid PurchaseStatus = "paid"
+	PurchaseStatusOpen   PurchaseStatus = "open"
+	PurchaseStatusPaid   PurchaseStatus = "paid"
+	PurchaseStatusVoided PurchaseStatus = "voided"
 )
 
 // Valid indicates whether the value is a known member of the PurchaseStatus enum.
@@ -435,6 +475,8 @@ func (e PurchaseStatus) Valid() bool {
 	case PurchaseStatusOpen:
 		return true
 	case PurchaseStatusPaid:
+		return true
+	case PurchaseStatusVoided:
 		return true
 	default:
 		return false
@@ -479,16 +521,16 @@ func (e ReceivableStatus) Valid() bool {
 
 // Defines values for SaleStatus.
 const (
-	Confirmed SaleStatus = "confirmed"
-	Voided    SaleStatus = "voided"
+	SaleStatusConfirmed SaleStatus = "confirmed"
+	SaleStatusVoided    SaleStatus = "voided"
 )
 
 // Valid indicates whether the value is a known member of the SaleStatus enum.
 func (e SaleStatus) Valid() bool {
 	switch e {
-	case Confirmed:
+	case SaleStatusConfirmed:
 		return true
-	case Voided:
+	case SaleStatusVoided:
 		return true
 	default:
 		return false
@@ -560,13 +602,14 @@ func (e StockCountStatus) Valid() bool {
 
 // Defines values for StockMovementType.
 const (
-	StockMovementTypeAdjustment  StockMovementType = "adjustment"
-	StockMovementTypeInitialIn   StockMovementType = "initial_in"
-	StockMovementTypePurchaseIn  StockMovementType = "purchase_in"
-	StockMovementTypeSaleOut     StockMovementType = "sale_out"
-	StockMovementTypeSaleVoid    StockMovementType = "sale_void"
-	StockMovementTypeTransferIn  StockMovementType = "transfer_in"
-	StockMovementTypeTransferOut StockMovementType = "transfer_out"
+	StockMovementTypeAdjustment   StockMovementType = "adjustment"
+	StockMovementTypeInitialIn    StockMovementType = "initial_in"
+	StockMovementTypePurchaseIn   StockMovementType = "purchase_in"
+	StockMovementTypePurchaseVoid StockMovementType = "purchase_void"
+	StockMovementTypeSaleOut      StockMovementType = "sale_out"
+	StockMovementTypeSaleVoid     StockMovementType = "sale_void"
+	StockMovementTypeTransferIn   StockMovementType = "transfer_in"
+	StockMovementTypeTransferOut  StockMovementType = "transfer_out"
 )
 
 // Valid indicates whether the value is a known member of the StockMovementType enum.
@@ -578,6 +621,8 @@ func (e StockMovementType) Valid() bool {
 		return true
 	case StockMovementTypePurchaseIn:
 		return true
+	case StockMovementTypePurchaseVoid:
+		return true
 	case StockMovementTypeSaleOut:
 		return true
 	case StockMovementTypeSaleVoid:
@@ -585,6 +630,33 @@ func (e StockMovementType) Valid() bool {
 	case StockMovementTypeTransferIn:
 		return true
 	case StockMovementTypeTransferOut:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupplierPaymentMethod.
+const (
+	SupplierPaymentMethodCard      SupplierPaymentMethod = "card"
+	SupplierPaymentMethodCash      SupplierPaymentMethod = "cash"
+	SupplierPaymentMethodDaviplata SupplierPaymentMethod = "daviplata"
+	SupplierPaymentMethodNequi     SupplierPaymentMethod = "nequi"
+	SupplierPaymentMethodTransfer  SupplierPaymentMethod = "transfer"
+)
+
+// Valid indicates whether the value is a known member of the SupplierPaymentMethod enum.
+func (e SupplierPaymentMethod) Valid() bool {
+	switch e {
+	case SupplierPaymentMethodCard:
+		return true
+	case SupplierPaymentMethodCash:
+		return true
+	case SupplierPaymentMethodDaviplata:
+		return true
+	case SupplierPaymentMethodNequi:
+		return true
+	case SupplierPaymentMethodTransfer:
 		return true
 	default:
 		return false
@@ -612,6 +684,27 @@ func (e TaxResponsibility) Valid() bool {
 	case O47:
 		return true
 	case R99PN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListCashSessionsParamsStatus.
+const (
+	ListCashSessionsParamsStatusAll    ListCashSessionsParamsStatus = "all"
+	ListCashSessionsParamsStatusClosed ListCashSessionsParamsStatus = "closed"
+	ListCashSessionsParamsStatusOpen   ListCashSessionsParamsStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the ListCashSessionsParamsStatus enum.
+func (e ListCashSessionsParamsStatus) Valid() bool {
+	switch e {
+	case ListCashSessionsParamsStatusAll:
+		return true
+	case ListCashSessionsParamsStatusClosed:
+		return true
+	case ListCashSessionsParamsStatusOpen:
 		return true
 	default:
 		return false
@@ -662,9 +755,10 @@ func (e ListProductsParamsStatus) Valid() bool {
 
 // Defines values for ListPurchasesParamsStatus.
 const (
-	ListPurchasesParamsStatusAll  ListPurchasesParamsStatus = "all"
-	ListPurchasesParamsStatusOpen ListPurchasesParamsStatus = "open"
-	ListPurchasesParamsStatusPaid ListPurchasesParamsStatus = "paid"
+	ListPurchasesParamsStatusAll    ListPurchasesParamsStatus = "all"
+	ListPurchasesParamsStatusOpen   ListPurchasesParamsStatus = "open"
+	ListPurchasesParamsStatusPaid   ListPurchasesParamsStatus = "paid"
+	ListPurchasesParamsStatusVoided ListPurchasesParamsStatus = "voided"
 )
 
 // Valid indicates whether the value is a known member of the ListPurchasesParamsStatus enum.
@@ -675,6 +769,8 @@ func (e ListPurchasesParamsStatus) Valid() bool {
 	case ListPurchasesParamsStatusOpen:
 		return true
 	case ListPurchasesParamsStatusPaid:
+		return true
+	case ListPurchasesParamsStatusVoided:
 		return true
 	default:
 		return false
@@ -916,6 +1012,11 @@ type CashClosing struct {
 
 	// SalesCount Ventas confirmadas de la caja.
 	SalesCount int `json:"sales_count"`
+
+	// SalesTotal Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	SalesTotal Money `json:"sales_total"`
 }
 
 // CashClosingResult defines model for CashClosing.Result.
@@ -990,6 +1091,52 @@ type CashSession struct {
 
 // CashSessionStatus defines model for CashSession.Status.
 type CashSessionStatus string
+
+// CashSessionSummary Una caja del historial. Los datos del cierre solo vienen cuando está cerrada.
+type CashSessionSummary struct {
+	// CashierName El nombre del cajero; no viene si el usuario ya no existe.
+	CashierName *string    `json:"cashier_name,omitempty"`
+	ClosedAt    *time.Time `json:"closed_at,omitempty"`
+
+	// ClosedBy Quién la cerró; puede ser un administrador y no el cajero.
+	ClosedBy *openapi_types.UUID `json:"closed_by,omitempty"`
+
+	// Difference Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Difference *SignedMoney       `json:"difference,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
+	LocationId openapi_types.UUID `json:"location_id"`
+	OpenedAt   time.Time          `json:"opened_at"`
+
+	// OpeningFloat Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	OpeningFloat Money                     `json:"opening_float"`
+	Result       *CashSessionSummaryResult `json:"result,omitempty"`
+	SalesCount   *int                      `json:"sales_count,omitempty"`
+
+	// SalesTotal Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	SalesTotal *Money                   `json:"sales_total,omitempty"`
+	Status     CashSessionSummaryStatus `json:"status"`
+
+	// UserId El cajero.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// CashSessionSummaryResult defines model for CashSessionSummary.Result.
+type CashSessionSummaryResult string
+
+// CashSessionSummaryStatus defines model for CashSessionSummary.Status.
+type CashSessionSummaryStatus string
+
+// CashSessionSummaryPage defines model for CashSessionSummaryPage.
+type CashSessionSummaryPage struct {
+	Items []CashSessionSummary `json:"items"`
+	Total int                  `json:"total"`
+}
 
 // Category defines model for Category.
 type Category struct {
@@ -1590,6 +1737,34 @@ type OpenCashSessionInput struct {
 	OpeningFloat Money `json:"opening_float"`
 }
 
+// PayablesPage defines model for PayablesPage.
+type PayablesPage struct {
+	Items []SupplierPayable `json:"items"`
+
+	// Total Cuántos proveedores se deben.
+	Total  int            `json:"total"`
+	Totals PayablesTotals `json:"totals"`
+}
+
+// PayablesTotals defines model for PayablesTotals.
+type PayablesTotals struct {
+	// Balance Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Balance Money `json:"balance"`
+
+	// DueSoon Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	DueSoon Money `json:"due_soon"`
+
+	// Overdue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Overdue   Money `json:"overdue"`
+	Suppliers int   `json:"suppliers"`
+}
+
 // PaymentAllocation defines model for PaymentAllocation.
 type PaymentAllocation struct {
 	// Amount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
@@ -1864,7 +2039,7 @@ type Purchase struct {
 	// Payment De contado (queda pagada) o a crédito (queda con saldo por pagar).
 	Payment PurchasePayment `json:"payment"`
 
-	// Status Con saldo por pagar (`open`) o pagada (`paid`).
+	// Status Con saldo por pagar (`open`), pagada (`paid`) o anulada (`voided`).
 	Status PurchaseStatus `json:"status"`
 
 	// Subtotal Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
@@ -1885,6 +2060,15 @@ type Purchase struct {
 	//
 	// Example: 12500.00
 	Total Money `json:"total"`
+
+	// VoidReason Por qué se anuló; solo en una compra anulada.
+	VoidReason *string `json:"void_reason,omitempty"`
+
+	// VoidedAt Cuándo se anuló; solo en una compra anulada.
+	VoidedAt *time.Time `json:"voided_at,omitempty"`
+
+	// VoidedBy Quién la anuló; solo en una compra anulada.
+	VoidedBy *openapi_types.UUID `json:"voided_by,omitempty"`
 }
 
 // PurchaseInput defines model for PurchaseInput.
@@ -2010,7 +2194,7 @@ type PurchasePage struct {
 // PurchasePayment De contado (queda pagada) o a crédito (queda con saldo por pagar).
 type PurchasePayment string
 
-// PurchaseStatus Con saldo por pagar (`open`) o pagada (`paid`).
+// PurchaseStatus Con saldo por pagar (`open`), pagada (`paid`) o anulada (`voided`).
 type PurchaseStatus string
 
 // PurchaseSummary defines model for PurchaseSummary.
@@ -2032,7 +2216,7 @@ type PurchaseSummary struct {
 	// Payment De contado (queda pagada) o a crédito (queda con saldo por pagar).
 	Payment PurchasePayment `json:"payment"`
 
-	// Status Con saldo por pagar (`open`) o pagada (`paid`).
+	// Status Con saldo por pagar (`open`), pagada (`paid`) o anulada (`voided`).
 	Status       PurchaseStatus     `json:"status"`
 	SupplierId   openapi_types.UUID `json:"supplier_id"`
 	SupplierName string             `json:"supplier_name"`
@@ -2762,6 +2946,76 @@ type SupplierPage struct {
 	Total int `json:"total"`
 }
 
+// SupplierPayable defines model for SupplierPayable.
+type SupplierPayable struct {
+	// Balance Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Balance Money `json:"balance"`
+
+	// DueSoon Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	DueSoon Money `json:"due_soon"`
+
+	// NextDue El vencimiento más cercano (o el más antiguo, si hay vencidas).
+	NextDue openapi_types.Date `json:"next_due"`
+
+	// Overdue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Overdue Money `json:"overdue"`
+
+	// Purchases Cuántas compras le debe.
+	Purchases    int                `json:"purchases"`
+	SupplierId   openapi_types.UUID `json:"supplier_id"`
+	SupplierName string             `json:"supplier_name"`
+}
+
+// SupplierPayment defines model for SupplierPayment.
+type SupplierPayment struct {
+	// Amount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Amount Money `json:"amount"`
+
+	// BalanceAfter Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	BalanceAfter Money              `json:"balance_after"`
+	CreatedAt    time.Time          `json:"created_at"`
+	CreatedBy    openapi_types.UUID `json:"created_by"`
+	Id           openapi_types.UUID `json:"id"`
+
+	// Method Medio con que se pagó al proveedor.
+	Method     SupplierPaymentMethod `json:"method"`
+	PaidOn     openapi_types.Date    `json:"paid_on"`
+	PurchaseId openapi_types.UUID    `json:"purchase_id"`
+	SupplierId openapi_types.UUID    `json:"supplier_id"`
+}
+
+// SupplierPaymentInput defines model for SupplierPaymentInput.
+type SupplierPaymentInput struct {
+	// Amount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Amount Money `json:"amount"`
+
+	// Method Medio con que se pagó al proveedor.
+	Method SupplierPaymentMethod `json:"method"`
+
+	// PaidOn El día del pago; por defecto, hoy en hora de Colombia.
+	PaidOn *openapi_types.Date `json:"paid_on,omitempty"`
+}
+
+// SupplierPaymentList defines model for SupplierPaymentList.
+type SupplierPaymentList struct {
+	Items []SupplierPayment `json:"items"`
+}
+
+// SupplierPaymentMethod Medio con que se pagó al proveedor.
+type SupplierPaymentMethod string
+
 // TaxBreakdown defines model for TaxBreakdown.
 type TaxBreakdown struct {
 	// Base Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
@@ -2965,6 +3219,12 @@ type VariantUnitInput struct {
 	Price Money `json:"price"`
 }
 
+// VoidPurchaseInput defines model for VoidPurchaseInput.
+type VoidPurchaseInput struct {
+	// Reason Example: La factura se registró dos veces
+	Reason string `json:"reason"`
+}
+
 // VoidSaleInput defines model for VoidSaleInput.
 type VoidSaleInput struct {
 	// Reason Example: El cliente desistió de la compra
@@ -3067,6 +3327,25 @@ type RefreshSessionParams struct {
 	CuadraRefresh *RefreshCookie `form:"cuadra_refresh,omitempty" json:"cuadra_refresh,omitempty"`
 }
 
+// ListCashSessionsParams defines parameters for ListCashSessions.
+type ListCashSessionsParams struct {
+	LocationId *openapi_types.UUID `form:"location_id,omitempty" json:"location_id,omitempty"`
+
+	// Status Abiertas (`open`), cerradas (`closed`) o todas (por defecto).
+	Status *ListCashSessionsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	From   *openapi_types.Date           `form:"from,omitempty" json:"from,omitempty"`
+	To     *openapi_types.Date           `form:"to,omitempty" json:"to,omitempty"`
+
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// ListCashSessionsParamsStatus defines parameters for ListCashSessions.
+type ListCashSessionsParamsStatus string
+
 // ListCustomersParams defines parameters for ListCustomers.
 type ListCustomersParams struct {
 	// Q Texto a buscar.
@@ -3139,6 +3418,15 @@ type ListStockParams struct {
 	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// ListPayablesParams defines parameters for ListPayables.
+type ListPayablesParams struct {
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // ListProductsParams defines parameters for ListProducts.
 type ListProductsParams struct {
 	// Q Texto a buscar.
@@ -3169,7 +3457,7 @@ type ListPurchasesParams struct {
 	// SupplierId Solo las compras de este proveedor.
 	SupplierId *openapi_types.UUID `form:"supplier_id,omitempty" json:"supplier_id,omitempty"`
 
-	// Status Compras con saldo por pagar (`open`), pagadas (`paid`) o todas (por defecto).
+	// Status Compras con saldo por pagar (`open`), pagadas (`paid`), anuladas (`voided`) o todas (por defecto).
 	Status *ListPurchasesParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// From Facturas desde este día (incluido).
@@ -3371,6 +3659,12 @@ type SetVariantUnitJSONRequestBody = VariantUnitInput
 // RegisterPurchaseJSONRequestBody defines body for RegisterPurchase for application/json ContentType.
 type RegisterPurchaseJSONRequestBody = PurchaseInput
 
+// RecordSupplierPaymentJSONRequestBody defines body for RecordSupplierPayment for application/json ContentType.
+type RecordSupplierPaymentJSONRequestBody = SupplierPaymentInput
+
+// VoidPurchaseJSONRequestBody defines body for VoidPurchase for application/json ContentType.
+type VoidPurchaseJSONRequestBody = VoidPurchaseInput
+
 // ConfirmSaleJSONRequestBody defines body for ConfirmSale for application/json ContentType.
 type ConfirmSaleJSONRequestBody = ConfirmSaleInput
 
@@ -3570,6 +3864,15 @@ type ClientInterface interface {
 	// Corresponds with GET /api/v1/business-templates (the `ListBusinessTemplates` operationId).
 	ListBusinessTemplates(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListCashSessions Historial de cajas
+	//
+	// Las cajas de la empresa, la abierta más recientemente primero, con su cajero y, si están cerradas, sus ventas,
+	// el total vendido y la diferencia del arqueo. `from` y `to` son días en hora de Colombia, ambos incluidos, del
+	// día en que se abrió la caja.
+	//
+	// Corresponds with GET /api/v1/cash-sessions (the `ListCashSessions` operationId).
+	ListCashSessions(ctx context.Context, params *ListCashSessionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// OpenCashSessionWithBody Abrir la caja
 	//
 	// Abre la caja del usuario autenticado en una sede, con la base inicial en efectivo.
@@ -3607,7 +3910,8 @@ type ClientInterface interface {
 	//
 	// Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
 	// efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
-	// diferencia con lo contado. El cierre no se puede modificar después.
+	// diferencia con lo contado. El cierre no se puede modificar después. Quien tiene `cash:manage` cierra también la
+	// caja que otro usuario dejó abierta, y queda como quien la cerró (`closed_by`).
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -3618,7 +3922,8 @@ type ClientInterface interface {
 	//
 	// Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
 	// efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
-	// diferencia con lo contado. El cierre no se puede modificar después.
+	// diferencia con lo contado. El cierre no se puede modificar después. Quien tiene `cash:manage` cierra también la
+	// caja que otro usuario dejó abierta, y queda como quien la cerró (`closed_by`).
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -4056,6 +4361,15 @@ type ClientInterface interface {
 	// Corresponds with PUT /api/v1/modules/{moduleId} (the `SetModuleActive` operationId).
 	SetModuleActive(ctx context.Context, moduleId ModuleId, body SetModuleActiveJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListPayables Cuentas por pagar
+	//
+	// Lo que la empresa debe a cada proveedor por sus compras a crédito abiertas, con lo vencido (antes de hoy en
+	// hora de Colombia) y lo que vence en los próximos 7 días; primero el que más tiene vencido. `totals` suma todos
+	// los proveedores, no solo los de la página.
+	//
+	// Corresponds with GET /api/v1/payables (the `ListPayables` operationId).
+	ListPayables(ctx context.Context, params *ListPayablesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListAttributes Listar los atributos de producto
 	//
 	// Los atributos que la empresa define para sus productos, ordenados por etiqueta.
@@ -4308,6 +4622,59 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /api/v1/purchases/{purchaseId} (the `GetPurchase` operationId).
 	GetPurchase(ctx context.Context, purchaseId PurchaseId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListSupplierPayments Pagos de una compra
+	//
+	// Los pagos al proveedor de una compra, el primero primero.
+	//
+	// Corresponds with GET /api/v1/purchases/{purchaseId}/payments (the `ListSupplierPayments` operationId).
+	ListSupplierPayments(ctx context.Context, purchaseId PurchaseId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RecordSupplierPaymentWithBody Registrar un pago al proveedor
+	//
+	// Un pago parcial o total de lo que falta pagar de una compra a crédito. No puede pasar del saldo, ni tener
+	// fecha posterior a hoy en hora de Colombia ni anterior a la factura; sin `paid_on`, es de hoy. No mueve la caja:
+	// si el dinero sale del cajón, se registra allá como egreso.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /api/v1/purchases/{purchaseId}/payments (the `RecordSupplierPayment` operationId).
+	RecordSupplierPaymentWithBody(ctx context.Context, purchaseId PurchaseId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RecordSupplierPayment Registrar un pago al proveedor
+	//
+	// Un pago parcial o total de lo que falta pagar de una compra a crédito. No puede pasar del saldo, ni tener
+	// fecha posterior a hoy en hora de Colombia ni anterior a la factura; sin `paid_on`, es de hoy. No mueve la caja:
+	// si el dinero sale del cajón, se registra allá como egreso.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /api/v1/purchases/{purchaseId}/payments (the `RecordSupplierPayment` operationId).
+	RecordSupplierPayment(ctx context.Context, purchaseId PurchaseId, body RecordSupplierPaymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// VoidPurchaseWithBody Anular una compra
+	//
+	// Anula una compra registrada por error: saca del inventario lo que entró con ella, con un movimiento
+	// `purchase_void` por línea al costo de su entrada, y deja de deber. Se rechaza si una variante ya no tiene ese
+	// stock en la sede (se vendió o se movió), sin importar si la empresa permite stock negativo, y si es a crédito
+	// y ya tiene pagos al proveedor. Todo se guarda junto: si algo falla, la compra queda como estaba.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /api/v1/purchases/{purchaseId}/void (the `VoidPurchase` operationId).
+	VoidPurchaseWithBody(ctx context.Context, purchaseId PurchaseId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// VoidPurchase Anular una compra
+	//
+	// Anula una compra registrada por error: saca del inventario lo que entró con ella, con un movimiento
+	// `purchase_void` por línea al costo de su entrada, y deja de deber. Se rechaza si una variante ya no tiene ese
+	// stock en la sede (se vendió o se movió), sin importar si la empresa permite stock negativo, y si es a crédito
+	// y ya tiene pagos al proveedor. Todo se guarda junto: si algo falla, la compra queda como estaba.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /api/v1/purchases/{purchaseId}/void (the `VoidPurchase` operationId).
+	VoidPurchase(ctx context.Context, purchaseId PurchaseId, body VoidPurchaseJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetReceivablesAging Cartera por edades
 	//
@@ -4882,6 +5249,25 @@ func (c *Client) ListBusinessTemplates(ctx context.Context, reqEditors ...Reques
 	return c.Client.Do(req)
 }
 
+// ListCashSessions Historial de cajas
+//
+// Las cajas de la empresa, la abierta más recientemente primero, con su cajero y, si están cerradas, sus ventas,
+// el total vendido y la diferencia del arqueo. `from` y `to` son días en hora de Colombia, ambos incluidos, del
+// día en que se abrió la caja.
+//
+// Corresponds with GET /api/v1/cash-sessions (the `ListCashSessions` operationId).
+func (c *Client) ListCashSessions(ctx context.Context, params *ListCashSessionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListCashSessionsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // OpenCashSessionWithBody Abrir la caja
 //
 // Abre la caja del usuario autenticado en una sede, con la base inicial en efectivo.
@@ -4959,7 +5345,8 @@ func (c *Client) GetCashSession(ctx context.Context, cashSessionId CashSessionId
 //
 // Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
 // efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
-// diferencia con lo contado. El cierre no se puede modificar después.
+// diferencia con lo contado. El cierre no se puede modificar después. Quien tiene `cash:manage` cierra también la
+// caja que otro usuario dejó abierta, y queda como quien la cerró (`closed_by`).
 //
 // Takes any type of body and a specified content type.
 //
@@ -4980,7 +5367,8 @@ func (c *Client) CloseCashSessionWithBody(ctx context.Context, cashSessionId Cas
 //
 // Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
 // efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
-// diferencia con lo contado. El cierre no se puede modificar después.
+// diferencia con lo contado. El cierre no se puede modificar después. Quien tiene `cash:manage` cierra también la
+// caja que otro usuario dejó abierta, y queda como quien la cerró (`closed_by`).
 //
 // Takes a body of the `application/json` content type.
 //
@@ -5918,6 +6306,25 @@ func (c *Client) SetModuleActive(ctx context.Context, moduleId ModuleId, body Se
 	return c.Client.Do(req)
 }
 
+// ListPayables Cuentas por pagar
+//
+// Lo que la empresa debe a cada proveedor por sus compras a crédito abiertas, con lo vencido (antes de hoy en
+// hora de Colombia) y lo que vence en los próximos 7 días; primero el que más tiene vencido. `totals` suma todos
+// los proveedores, no solo los de la página.
+//
+// Corresponds with GET /api/v1/payables (the `ListPayables` operationId).
+func (c *Client) ListPayables(ctx context.Context, params *ListPayablesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListPayablesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ListAttributes Listar los atributos de producto
 //
 // Los atributos que la empresa define para sus productos, ordenados por etiqueta.
@@ -6431,6 +6838,109 @@ func (c *Client) RegisterPurchase(ctx context.Context, body RegisterPurchaseJSON
 // Corresponds with GET /api/v1/purchases/{purchaseId} (the `GetPurchase` operationId).
 func (c *Client) GetPurchase(ctx context.Context, purchaseId PurchaseId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPurchaseRequest(c.Server, purchaseId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListSupplierPayments Pagos de una compra
+//
+// Los pagos al proveedor de una compra, el primero primero.
+//
+// Corresponds with GET /api/v1/purchases/{purchaseId}/payments (the `ListSupplierPayments` operationId).
+func (c *Client) ListSupplierPayments(ctx context.Context, purchaseId PurchaseId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListSupplierPaymentsRequest(c.Server, purchaseId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RecordSupplierPaymentWithBody Registrar un pago al proveedor
+//
+// Un pago parcial o total de lo que falta pagar de una compra a crédito. No puede pasar del saldo, ni tener
+// fecha posterior a hoy en hora de Colombia ni anterior a la factura; sin `paid_on`, es de hoy. No mueve la caja:
+// si el dinero sale del cajón, se registra allá como egreso.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /api/v1/purchases/{purchaseId}/payments (the `RecordSupplierPayment` operationId).
+func (c *Client) RecordSupplierPaymentWithBody(ctx context.Context, purchaseId PurchaseId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRecordSupplierPaymentRequestWithBody(c.Server, purchaseId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RecordSupplierPayment Registrar un pago al proveedor
+//
+// Un pago parcial o total de lo que falta pagar de una compra a crédito. No puede pasar del saldo, ni tener
+// fecha posterior a hoy en hora de Colombia ni anterior a la factura; sin `paid_on`, es de hoy. No mueve la caja:
+// si el dinero sale del cajón, se registra allá como egreso.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /api/v1/purchases/{purchaseId}/payments (the `RecordSupplierPayment` operationId).
+func (c *Client) RecordSupplierPayment(ctx context.Context, purchaseId PurchaseId, body RecordSupplierPaymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRecordSupplierPaymentRequest(c.Server, purchaseId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// VoidPurchaseWithBody Anular una compra
+//
+// Anula una compra registrada por error: saca del inventario lo que entró con ella, con un movimiento
+// `purchase_void` por línea al costo de su entrada, y deja de deber. Se rechaza si una variante ya no tiene ese
+// stock en la sede (se vendió o se movió), sin importar si la empresa permite stock negativo, y si es a crédito
+// y ya tiene pagos al proveedor. Todo se guarda junto: si algo falla, la compra queda como estaba.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /api/v1/purchases/{purchaseId}/void (the `VoidPurchase` operationId).
+func (c *Client) VoidPurchaseWithBody(ctx context.Context, purchaseId PurchaseId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewVoidPurchaseRequestWithBody(c.Server, purchaseId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// VoidPurchase Anular una compra
+//
+// Anula una compra registrada por error: saca del inventario lo que entró con ella, con un movimiento
+// `purchase_void` por línea al costo de su entrada, y deja de deber. Se rechaza si una variante ya no tiene ese
+// stock en la sede (se vendió o se movió), sin importar si la empresa permite stock negativo, y si es a crédito
+// y ya tiene pagos al proveedor. Todo se guarda junto: si algo falla, la compra queda como estaba.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /api/v1/purchases/{purchaseId}/void (the `VoidPurchase` operationId).
+func (c *Client) VoidPurchase(ctx context.Context, purchaseId PurchaseId, body VoidPurchaseJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewVoidPurchaseRequest(c.Server, purchaseId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -7516,6 +8026,120 @@ func NewListBusinessTemplatesRequest(server string) (*http.Request, error) {
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListCashSessionsRequest constructs an http.Request for the ListCashSessions method
+func NewListCashSessionsRequest(server string, params *ListCashSessionsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/cash-sessions")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.LocationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "location_id", *params.LocationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Status != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "status", *params.Status, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.From != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "from", *params.From, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.To != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "to", *params.To, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -9223,6 +9847,72 @@ func NewSetModuleActiveRequestWithBody(server string, moduleId ModuleId, content
 	return req, nil
 }
 
+// NewListPayablesRequest constructs an http.Request for the ListPayables method
+func NewListPayablesRequest(server string, params *ListPayablesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/payables")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListAttributesRequest constructs an http.Request for the ListAttributes method
 func NewListAttributesRequest(server string) (*http.Request, error) {
 	var err error
@@ -10108,6 +10798,134 @@ func NewGetPurchaseRequest(server string, purchaseId PurchaseId) (*http.Request,
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewListSupplierPaymentsRequest constructs an http.Request for the ListSupplierPayments method
+func NewListSupplierPaymentsRequest(server string, purchaseId PurchaseId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "purchaseId", purchaseId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/purchases/%s/payments", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRecordSupplierPaymentRequest calls the generic RecordSupplierPayment builder with application/json body
+func NewRecordSupplierPaymentRequest(server string, purchaseId PurchaseId, body RecordSupplierPaymentJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRecordSupplierPaymentRequestWithBody(server, purchaseId, "application/json", bodyReader)
+}
+
+// NewRecordSupplierPaymentRequestWithBody constructs an http.Request for the RecordSupplierPayment method, with any body, and a specified content type
+func NewRecordSupplierPaymentRequestWithBody(server string, purchaseId PurchaseId, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "purchaseId", purchaseId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/purchases/%s/payments", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewVoidPurchaseRequest calls the generic VoidPurchase builder with application/json body
+func NewVoidPurchaseRequest(server string, purchaseId PurchaseId, body VoidPurchaseJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewVoidPurchaseRequestWithBody(server, purchaseId, "application/json", bodyReader)
+}
+
+// NewVoidPurchaseRequestWithBody constructs an http.Request for the VoidPurchase method, with any body, and a specified content type
+func NewVoidPurchaseRequestWithBody(server string, purchaseId PurchaseId, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "purchaseId", purchaseId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/purchases/%s/void", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -11780,6 +12598,17 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /api/v1/business-templates (the `ListBusinessTemplates` operationId).
 	ListBusinessTemplatesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListBusinessTemplatesResponse, error)
 
+	// ListCashSessionsWithResponse Historial de cajas
+	//
+	// Las cajas de la empresa, la abierta más recientemente primero, con su cajero y, si están cerradas, sus ventas,
+	// el total vendido y la diferencia del arqueo. `from` y `to` son días en hora de Colombia, ambos incluidos, del
+	// día en que se abrió la caja.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/cash-sessions (the `ListCashSessions` operationId).
+	ListCashSessionsWithResponse(ctx context.Context, params *ListCashSessionsParams, reqEditors ...RequestEditorFn) (*ListCashSessionsResponse, error)
+
 	// OpenCashSessionWithBodyWithResponse Abrir la caja
 	//
 	// Abre la caja del usuario autenticado en una sede, con la base inicial en efectivo.
@@ -11821,7 +12650,8 @@ type ClientWithResponsesInterface interface {
 	//
 	// Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
 	// efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
-	// diferencia con lo contado. El cierre no se puede modificar después.
+	// diferencia con lo contado. El cierre no se puede modificar después. Quien tiene `cash:manage` cierra también la
+	// caja que otro usuario dejó abierta, y queda como quien la cerró (`closed_by`).
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -11832,7 +12662,8 @@ type ClientWithResponsesInterface interface {
 	//
 	// Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
 	// efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
-	// diferencia con lo contado. El cierre no se puede modificar después.
+	// diferencia con lo contado. El cierre no se puede modificar después. Quien tiene `cash:manage` cierra también la
+	// caja que otro usuario dejó abierta, y queda como quien la cerró (`closed_by`).
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -12306,6 +13137,17 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PUT /api/v1/modules/{moduleId} (the `SetModuleActive` operationId).
 	SetModuleActiveWithResponse(ctx context.Context, moduleId ModuleId, body SetModuleActiveJSONRequestBody, reqEditors ...RequestEditorFn) (*SetModuleActiveResponse, error)
 
+	// ListPayablesWithResponse Cuentas por pagar
+	//
+	// Lo que la empresa debe a cada proveedor por sus compras a crédito abiertas, con lo vencido (antes de hoy en
+	// hora de Colombia) y lo que vence en los próximos 7 días; primero el que más tiene vencido. `totals` suma todos
+	// los proveedores, no solo los de la página.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/payables (the `ListPayables` operationId).
+	ListPayablesWithResponse(ctx context.Context, params *ListPayablesParams, reqEditors ...RequestEditorFn) (*ListPayablesResponse, error)
+
 	// ListAttributesWithResponse Listar los atributos de producto
 	//
 	// Los atributos que la empresa define para sus productos, ordenados por etiqueta.
@@ -12576,6 +13418,61 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /api/v1/purchases/{purchaseId} (the `GetPurchase` operationId).
 	GetPurchaseWithResponse(ctx context.Context, purchaseId PurchaseId, reqEditors ...RequestEditorFn) (*GetPurchaseResponse, error)
+
+	// ListSupplierPaymentsWithResponse Pagos de una compra
+	//
+	// Los pagos al proveedor de una compra, el primero primero.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/purchases/{purchaseId}/payments (the `ListSupplierPayments` operationId).
+	ListSupplierPaymentsWithResponse(ctx context.Context, purchaseId PurchaseId, reqEditors ...RequestEditorFn) (*ListSupplierPaymentsResponse, error)
+
+	// RecordSupplierPaymentWithBodyWithResponse Registrar un pago al proveedor
+	//
+	// Un pago parcial o total de lo que falta pagar de una compra a crédito. No puede pasar del saldo, ni tener
+	// fecha posterior a hoy en hora de Colombia ni anterior a la factura; sin `paid_on`, es de hoy. No mueve la caja:
+	// si el dinero sale del cajón, se registra allá como egreso.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/purchases/{purchaseId}/payments (the `RecordSupplierPayment` operationId).
+	RecordSupplierPaymentWithBodyWithResponse(ctx context.Context, purchaseId PurchaseId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RecordSupplierPaymentResponse, error)
+
+	// RecordSupplierPaymentWithResponse Registrar un pago al proveedor
+	//
+	// Un pago parcial o total de lo que falta pagar de una compra a crédito. No puede pasar del saldo, ni tener
+	// fecha posterior a hoy en hora de Colombia ni anterior a la factura; sin `paid_on`, es de hoy. No mueve la caja:
+	// si el dinero sale del cajón, se registra allá como egreso.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/purchases/{purchaseId}/payments (the `RecordSupplierPayment` operationId).
+	RecordSupplierPaymentWithResponse(ctx context.Context, purchaseId PurchaseId, body RecordSupplierPaymentJSONRequestBody, reqEditors ...RequestEditorFn) (*RecordSupplierPaymentResponse, error)
+
+	// VoidPurchaseWithBodyWithResponse Anular una compra
+	//
+	// Anula una compra registrada por error: saca del inventario lo que entró con ella, con un movimiento
+	// `purchase_void` por línea al costo de su entrada, y deja de deber. Se rechaza si una variante ya no tiene ese
+	// stock en la sede (se vendió o se movió), sin importar si la empresa permite stock negativo, y si es a crédito
+	// y ya tiene pagos al proveedor. Todo se guarda junto: si algo falla, la compra queda como estaba.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/purchases/{purchaseId}/void (the `VoidPurchase` operationId).
+	VoidPurchaseWithBodyWithResponse(ctx context.Context, purchaseId PurchaseId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*VoidPurchaseResponse, error)
+
+	// VoidPurchaseWithResponse Anular una compra
+	//
+	// Anula una compra registrada por error: saca del inventario lo que entró con ella, con un movimiento
+	// `purchase_void` por línea al costo de su entrada, y deja de deber. Se rechaza si una variante ya no tiene ese
+	// stock en la sede (se vendió o se movió), sin importar si la empresa permite stock negativo, y si es a crédito
+	// y ya tiene pagos al proveedor. Todo se guarda junto: si algo falla, la compra queda como estaba.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/purchases/{purchaseId}/void (the `VoidPurchase` operationId).
+	VoidPurchaseWithResponse(ctx context.Context, purchaseId PurchaseId, body VoidPurchaseJSONRequestBody, reqEditors ...RequestEditorFn) (*VoidPurchaseResponse, error)
 
 	// GetReceivablesAgingWithResponse Cartera por edades
 	//
@@ -13464,6 +14361,75 @@ func (r ListBusinessTemplatesResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListBusinessTemplatesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListCashSessionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *CashSessionSummaryPage
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListCashSessionsResponse) GetJSON200() *CashSessionSummaryPage {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListCashSessionsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListCashSessionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListCashSessionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListCashSessionsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListCashSessionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListCashSessionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListCashSessionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListCashSessionsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -16386,6 +17352,75 @@ func (r SetModuleActiveResponse) ContentType() string {
 	return ""
 }
 
+type ListPayablesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *PayablesPage
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListPayablesResponse) GetJSON200() *PayablesPage {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListPayablesResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListPayablesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListPayablesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListPayablesResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListPayablesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListPayablesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListPayablesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListPayablesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListAttributesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -17818,6 +18853,262 @@ func (r GetPurchaseResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetPurchaseResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListSupplierPaymentsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SupplierPaymentList
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListSupplierPaymentsResponse) GetJSON200() *SupplierPaymentList {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListSupplierPaymentsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListSupplierPaymentsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListSupplierPaymentsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ListSupplierPaymentsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListSupplierPaymentsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListSupplierPaymentsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListSupplierPaymentsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListSupplierPaymentsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListSupplierPaymentsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RecordSupplierPaymentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *SupplierPayment
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Error
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r RecordSupplierPaymentResponse) GetJSON201() *SupplierPayment {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r RecordSupplierPaymentResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RecordSupplierPaymentResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RecordSupplierPaymentResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r RecordSupplierPaymentResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r RecordSupplierPaymentResponse) GetJSON409() *Error {
+	return r.JSON409
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r RecordSupplierPaymentResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r RecordSupplierPaymentResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r RecordSupplierPaymentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RecordSupplierPaymentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RecordSupplierPaymentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RecordSupplierPaymentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type VoidPurchaseResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Purchase
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Error
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r VoidPurchaseResponse) GetJSON200() *Purchase {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r VoidPurchaseResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r VoidPurchaseResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r VoidPurchaseResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r VoidPurchaseResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r VoidPurchaseResponse) GetJSON409() *Error {
+	return r.JSON409
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r VoidPurchaseResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r VoidPurchaseResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r VoidPurchaseResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r VoidPurchaseResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r VoidPurchaseResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r VoidPurchaseResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -20378,6 +21669,23 @@ func (c *ClientWithResponses) ListBusinessTemplatesWithResponse(ctx context.Cont
 	return ParseListBusinessTemplatesResponse(rsp)
 }
 
+// ListCashSessionsWithResponse Historial de cajas
+//
+// Las cajas de la empresa, la abierta más recientemente primero, con su cajero y, si están cerradas, sus ventas,
+// el total vendido y la diferencia del arqueo. `from` y `to` son días en hora de Colombia, ambos incluidos, del
+// día en que se abrió la caja.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/cash-sessions (the `ListCashSessions` operationId).
+func (c *ClientWithResponses) ListCashSessionsWithResponse(ctx context.Context, params *ListCashSessionsParams, reqEditors ...RequestEditorFn) (*ListCashSessionsResponse, error) {
+	rsp, err := c.ListCashSessions(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListCashSessionsResponse(rsp)
+}
+
 // OpenCashSessionWithBodyWithResponse Abrir la caja
 //
 // Abre la caja del usuario autenticado en una sede, con la base inicial en efectivo.
@@ -20443,7 +21751,8 @@ func (c *ClientWithResponses) GetCashSessionWithResponse(ctx context.Context, ca
 //
 // Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
 // efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
-// diferencia con lo contado. El cierre no se puede modificar después.
+// diferencia con lo contado. El cierre no se puede modificar después. Quien tiene `cash:manage` cierra también la
+// caja que otro usuario dejó abierta, y queda como quien la cerró (`closed_by`).
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -20460,7 +21769,8 @@ func (c *ClientWithResponses) CloseCashSessionWithBodyWithResponse(ctx context.C
 //
 // Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
 // efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
-// diferencia con lo contado. El cierre no se puede modificar después.
+// diferencia con lo contado. El cierre no se puede modificar después. Quien tiene `cash:manage` cierra también la
+// caja que otro usuario dejó abierta, y queda como quien la cerró (`closed_by`).
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -21234,6 +22544,23 @@ func (c *ClientWithResponses) SetModuleActiveWithResponse(ctx context.Context, m
 	return ParseSetModuleActiveResponse(rsp)
 }
 
+// ListPayablesWithResponse Cuentas por pagar
+//
+// Lo que la empresa debe a cada proveedor por sus compras a crédito abiertas, con lo vencido (antes de hoy en
+// hora de Colombia) y lo que vence en los próximos 7 días; primero el que más tiene vencido. `totals` suma todos
+// los proveedores, no solo los de la página.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/payables (the `ListPayables` operationId).
+func (c *ClientWithResponses) ListPayablesWithResponse(ctx context.Context, params *ListPayablesParams, reqEditors ...RequestEditorFn) (*ListPayablesResponse, error) {
+	rsp, err := c.ListPayables(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListPayablesResponse(rsp)
+}
+
 // ListAttributesWithResponse Listar los atributos de producto
 //
 // Los atributos que la empresa define para sus productos, ordenados por etiqueta.
@@ -21665,6 +22992,91 @@ func (c *ClientWithResponses) GetPurchaseWithResponse(ctx context.Context, purch
 		return nil, err
 	}
 	return ParseGetPurchaseResponse(rsp)
+}
+
+// ListSupplierPaymentsWithResponse Pagos de una compra
+//
+// Los pagos al proveedor de una compra, el primero primero.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/purchases/{purchaseId}/payments (the `ListSupplierPayments` operationId).
+func (c *ClientWithResponses) ListSupplierPaymentsWithResponse(ctx context.Context, purchaseId PurchaseId, reqEditors ...RequestEditorFn) (*ListSupplierPaymentsResponse, error) {
+	rsp, err := c.ListSupplierPayments(ctx, purchaseId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListSupplierPaymentsResponse(rsp)
+}
+
+// RecordSupplierPaymentWithBodyWithResponse Registrar un pago al proveedor
+//
+// Un pago parcial o total de lo que falta pagar de una compra a crédito. No puede pasar del saldo, ni tener
+// fecha posterior a hoy en hora de Colombia ni anterior a la factura; sin `paid_on`, es de hoy. No mueve la caja:
+// si el dinero sale del cajón, se registra allá como egreso.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/purchases/{purchaseId}/payments (the `RecordSupplierPayment` operationId).
+func (c *ClientWithResponses) RecordSupplierPaymentWithBodyWithResponse(ctx context.Context, purchaseId PurchaseId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RecordSupplierPaymentResponse, error) {
+	rsp, err := c.RecordSupplierPaymentWithBody(ctx, purchaseId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRecordSupplierPaymentResponse(rsp)
+}
+
+// RecordSupplierPaymentWithResponse Registrar un pago al proveedor
+//
+// Un pago parcial o total de lo que falta pagar de una compra a crédito. No puede pasar del saldo, ni tener
+// fecha posterior a hoy en hora de Colombia ni anterior a la factura; sin `paid_on`, es de hoy. No mueve la caja:
+// si el dinero sale del cajón, se registra allá como egreso.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/purchases/{purchaseId}/payments (the `RecordSupplierPayment` operationId).
+func (c *ClientWithResponses) RecordSupplierPaymentWithResponse(ctx context.Context, purchaseId PurchaseId, body RecordSupplierPaymentJSONRequestBody, reqEditors ...RequestEditorFn) (*RecordSupplierPaymentResponse, error) {
+	rsp, err := c.RecordSupplierPayment(ctx, purchaseId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRecordSupplierPaymentResponse(rsp)
+}
+
+// VoidPurchaseWithBodyWithResponse Anular una compra
+//
+// Anula una compra registrada por error: saca del inventario lo que entró con ella, con un movimiento
+// `purchase_void` por línea al costo de su entrada, y deja de deber. Se rechaza si una variante ya no tiene ese
+// stock en la sede (se vendió o se movió), sin importar si la empresa permite stock negativo, y si es a crédito
+// y ya tiene pagos al proveedor. Todo se guarda junto: si algo falla, la compra queda como estaba.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/purchases/{purchaseId}/void (the `VoidPurchase` operationId).
+func (c *ClientWithResponses) VoidPurchaseWithBodyWithResponse(ctx context.Context, purchaseId PurchaseId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*VoidPurchaseResponse, error) {
+	rsp, err := c.VoidPurchaseWithBody(ctx, purchaseId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseVoidPurchaseResponse(rsp)
+}
+
+// VoidPurchaseWithResponse Anular una compra
+//
+// Anula una compra registrada por error: saca del inventario lo que entró con ella, con un movimiento
+// `purchase_void` por línea al costo de su entrada, y deja de deber. Se rechaza si una variante ya no tiene ese
+// stock en la sede (se vendió o se movió), sin importar si la empresa permite stock negativo, y si es a crédito
+// y ya tiene pagos al proveedor. Todo se guarda junto: si algo falla, la compra queda como estaba.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/purchases/{purchaseId}/void (the `VoidPurchase` operationId).
+func (c *ClientWithResponses) VoidPurchaseWithResponse(ctx context.Context, purchaseId PurchaseId, body VoidPurchaseJSONRequestBody, reqEditors ...RequestEditorFn) (*VoidPurchaseResponse, error) {
+	rsp, err := c.VoidPurchase(ctx, purchaseId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseVoidPurchaseResponse(rsp)
 }
 
 // GetReceivablesAgingWithResponse Cartera por edades
@@ -22747,6 +24159,60 @@ func ParseListBusinessTemplatesResponse(rsp *http.Response) (*ListBusinessTempla
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListCashSessionsResponse parses an HTTP response from a ListCashSessionsWithResponse call
+func ParseListCashSessionsResponse(rsp *http.Response) (*ListCashSessionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListCashSessionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CashSessionSummaryPage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalError
@@ -25115,6 +26581,60 @@ func ParseSetModuleActiveResponse(rsp *http.Response) (*SetModuleActiveResponse,
 	return response, nil
 }
 
+// ParseListPayablesResponse parses an HTTP response from a ListPayablesWithResponse call
+func ParseListPayablesResponse(rsp *http.Response) (*ListPayablesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListPayablesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PayablesPage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListAttributesResponse parses an HTTP response from a ListAttributesWithResponse call
 func ParseListAttributesResponse(rsp *http.Response) (*ListAttributesResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -26273,6 +27793,217 @@ func ParseGetPurchaseResponse(rsp *http.Response) (*GetPurchaseResponse, error) 
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListSupplierPaymentsResponse parses an HTTP response from a ListSupplierPaymentsWithResponse call
+func ParseListSupplierPaymentsResponse(rsp *http.Response) (*ListSupplierPaymentsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListSupplierPaymentsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SupplierPaymentList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRecordSupplierPaymentResponse parses an HTTP response from a RecordSupplierPaymentWithResponse call
+func ParseRecordSupplierPaymentResponse(rsp *http.Response) (*RecordSupplierPaymentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RecordSupplierPaymentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SupplierPayment
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseVoidPurchaseResponse parses an HTTP response from a VoidPurchaseWithResponse call
+func ParseVoidPurchaseResponse(rsp *http.Response) (*VoidPurchaseResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &VoidPurchaseResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Purchase
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalError

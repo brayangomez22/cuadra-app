@@ -34,8 +34,10 @@ type store struct {
 	reverseErr error
 	// numbers is the last number given at each location.
 	numbers map[uuid.UUID]int64
-	// filters records the filters List received.
-	filters []domain.SaleFilter
+	// filters records the filters List received; cashFilter, the last one
+	// the cash history received.
+	filters    []domain.SaleFilter
+	cashFilter domain.CashSessionFilter
 	// catalogCalls records the variant ids each catalog lookup received.
 	catalogCalls [][]uuid.UUID
 	// events records, in order, when prices were resolved ("resolve") and

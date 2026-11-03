@@ -1,8 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
 import { unwrap } from '@/shared/api/errors';
 import { salesKeys } from './keys';
-import type { CashMovementInput, CloseCashSessionInput, OpenCashSessionInput } from './types';
+import type { CashMovementInput, CashSessionQuery, CloseCashSessionInput, OpenCashSessionInput } from './types';
+
+export const CASH_HISTORY_PAGE_SIZE = 20;
 
 /** The user's open cash session, if any, and whether the tenant requires one to sell. */
 export function useCurrentCashSession() {
@@ -68,6 +70,19 @@ export function useCloseCashSession(sessionId: string) {
       ),
     // The caller reads the current session again: the closing screen must
     // first know it closed, or it would see no session and send to /caja.
-    onSuccess: (session) => queryClient.setQueryData(salesKeys.cashSession(session.id), session),
+    // The history lists it closed from now on.
+    onSuccess: (session) => {
+      queryClient.setQueryData(salesKeys.cashSession(session.id), session);
+      void queryClient.invalidateQueries({ queryKey: salesKeys.cashHistories });
+    },
+  });
+}
+
+/** A page of the tenant's drawers, the latest opened first. While the next page loads, the previous one stays. */
+export function useCashSessions(query: CashSessionQuery) {
+  return useQuery({
+    queryKey: salesKeys.cashHistory(query),
+    queryFn: async () => unwrap(await api.GET('/api/v1/cash-sessions', { params: { query } })),
+    placeholderData: keepPreviousData,
   });
 }

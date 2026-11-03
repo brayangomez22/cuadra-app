@@ -96,7 +96,7 @@ func sessionBody(v app.CashSessionView) salesapi.CashSession {
 	if c := s.Closing(); c != nil {
 		a := c.Activity
 		closing := salesapi.CashClosing{
-			ClosedAt: c.ClosedAt, ClosedBy: c.ClosedBy, SalesCount: a.Sales,
+			ClosedAt: c.ClosedAt, ClosedBy: c.ClosedBy, SalesCount: a.Sales, SalesTotal: httpx.FormatMoney(a.SalesTotal()),
 			CashReceived: httpx.FormatMoney(a.CashReceived), ChangeGiven: httpx.FormatMoney(a.ChangeGiven),
 			CashIn: httpx.FormatMoney(a.CashIn), CashOut: httpx.FormatMoney(a.CashOut),
 			Expected: httpx.FormatMoney(c.Expected), Counted: httpx.FormatMoney(c.Counted), Difference: httpx.FormatMoney(c.Difference),

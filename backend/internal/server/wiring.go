@@ -169,6 +169,7 @@ func (w *wiring) sales(c *catalog.Module, i *inventory.Module, cu *customers.Mod
 		Customers:      ports.SalesCustomers{Customers: cu},
 		Credit:         cr.ledger,
 		Authorizer:     ports.SalesAuthorizer{Identity: cr.identity},
+		Users:          cr.identity,
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,

@@ -79,6 +79,7 @@ export function aClosedCashSession(overrides: Partial<CashSession> = {}): CashSe
       closed_by: '01920000-0000-7000-8000-000000000001',
       notes: 'Faltó un billete',
       sales_count: 3,
+      sales_total: '105000.00',
       cash_received: '80000.00',
       change_given: '20000.00',
       cash_in: '0.00',

@@ -24,13 +24,15 @@ const (
 	PaymentCredit Payment = "credit"
 )
 
-// PurchaseStatus tells whether a purchase still owes something.
+// PurchaseStatus tells whether a purchase still owes something or was
+// voided.
 type PurchaseStatus string
 
 // Statuses of a purchase.
 const (
-	PurchaseOpen PurchaseStatus = "open"
-	PurchasePaid PurchaseStatus = "paid"
+	PurchaseOpen   PurchaseStatus = "open"
+	PurchasePaid   PurchaseStatus = "paid"
+	PurchaseVoided PurchaseStatus = "voided"
 )
 
 // PurchaseParams are the data of a supplier's invoice. DueOn is optional:
@@ -65,6 +67,7 @@ type Purchase struct {
 	lines         []Line
 	totals        Totals
 	balanceDue    decimal.Decimal
+	voided        *Voiding
 	createdBy     uuid.UUID
 	createdAt     time.Time
 }
@@ -196,8 +199,12 @@ func (p *Purchase) Totals() Totals {
 // BalanceDue returns what is left to pay to the supplier.
 func (p *Purchase) BalanceDue() decimal.Decimal { return p.balanceDue }
 
-// Status returns open while something is left to pay, paid otherwise.
+// Status returns voided once voided, open while something is left to pay,
+// and paid otherwise.
 func (p *Purchase) Status() PurchaseStatus {
+	if p.voided != nil {
+		return PurchaseVoided
+	}
 	if p.balanceDue.IsPositive() {
 		return PurchaseOpen
 	}

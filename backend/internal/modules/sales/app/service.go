@@ -31,6 +31,9 @@ type Actor struct {
 	TenantID          uuid.UUID
 	UserID            uuid.UUID
 	UnlimitedDiscount bool
+	// ManagesCash is whether their role closes the sessions other users left
+	// open.
+	ManagesCash bool
 }
 
 // VariantInfo is what a sale needs of a variant: its product, the
@@ -108,6 +111,7 @@ type Deps struct {
 	Customers      CustomerDirectory
 	Credit         CreditLedger
 	Authorizer     CreditAuthorizer
+	Users          UserDirectory
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -147,7 +151,7 @@ var cashDifferenceBuckets = []float64{0, 50, 500, 1_000, 5_000, 10_000, 20_000, 
 // NewService builds a Service. It fails if a port is missing or a metric
 // instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Catalog, d.Stock, d.Sales, d.Policies, d.CashSessions, d.Customers, d.Credit, d.Authorizer) {
+	if usecase.AnyNil(d.Catalog, d.Stock, d.Sales, d.Policies, d.CashSessions, d.Customers, d.Credit, d.Authorizer, d.Users) {
 		return nil, errors.New("sales: missing service dependency")
 	}
 	if d.Prices == nil {

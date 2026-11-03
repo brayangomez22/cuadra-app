@@ -3,10 +3,20 @@ import { PURCHASE_PAGE_SIZE } from '../../../api/purchases';
 import type { PurchaseStatusFilter } from '../../../api/types';
 
 // The filter of status as it shows in the URL, which the user sees.
-const statusParam = enumParam(['todas', 'por-pagar', 'pagadas'], 'todas');
+const statusParam = enumParam(['todas', 'por-pagar', 'pagadas', 'anuladas'], 'todas');
 type StatusParam = typeof statusParam.fallback;
-const statusOf: Record<StatusParam, PurchaseStatusFilter> = { todas: 'all', 'por-pagar': 'open', pagadas: 'paid' };
-const paramOf: Record<PurchaseStatusFilter, StatusParam> = { all: 'todas', open: 'por-pagar', paid: 'pagadas' };
+const statusOf: Record<StatusParam, PurchaseStatusFilter> = {
+  todas: 'all',
+  'por-pagar': 'open',
+  pagadas: 'paid',
+  anuladas: 'voided',
+};
+const paramOf: Record<PurchaseStatusFilter, StatusParam> = {
+  all: 'todas',
+  open: 'por-pagar',
+  paid: 'pagadas',
+  voided: 'anuladas',
+};
 
 const textParam = stringParam();
 // A new filter starts at the first page.

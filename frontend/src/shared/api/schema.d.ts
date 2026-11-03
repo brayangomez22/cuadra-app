@@ -1316,6 +1316,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/purchases/{purchaseId}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purchaseId: components["parameters"]["PurchaseId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Anular una compra
+         * @description Anula una compra registrada por error: saca del inventario lo que entró con ella, con un movimiento
+         *     `purchase_void` por línea al costo de su entrada, y deja de deber. Se rechaza si una variante ya no tiene ese
+         *     stock en la sede (se vendió o se movió), sin importar si la empresa permite stock negativo, y si es a crédito
+         *     y ya tiene pagos al proveedor. Todo se guarda junto: si algo falla, la compra queda como estaba.
+         */
+        post: operations["voidPurchase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/purchases/{purchaseId}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purchaseId: components["parameters"]["PurchaseId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Pagos de una compra
+         * @description Los pagos al proveedor de una compra, el primero primero.
+         */
+        get: operations["listSupplierPayments"];
+        put?: never;
+        /**
+         * Registrar un pago al proveedor
+         * @description Un pago parcial o total de lo que falta pagar de una compra a crédito. No puede pasar del saldo, ni tener
+         *     fecha posterior a hoy en hora de Colombia ni anterior a la factura; sin `paid_on`, es de hoy. No mueve la caja:
+         *     si el dinero sale del cajón, se registra allá como egreso.
+         */
+        post: operations["recordSupplierPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cuentas por pagar
+         * @description Lo que la empresa debe a cada proveedor por sus compras a crédito abiertas, con lo vencido (antes de hoy en
+         *     hora de Colombia) y lo que vence en los próximos 7 días; primero el que más tiene vencido. `totals` suma todos
+         *     los proveedores, no solo los de la página.
+         */
+        get: operations["listPayables"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales": {
         parameters: {
             query?: never;
@@ -1417,7 +1492,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Historial de cajas
+         * @description Las cajas de la empresa, la abierta más recientemente primero, con su cajero y, si están cerradas, sus ventas,
+         *     el total vendido y la diferencia del arqueo. `from` y `to` son días en hora de Colombia, ambos incluidos, del
+         *     día en que se abrió la caja.
+         */
+        get: operations["listCashSessions"];
         put?: never;
         /**
          * Abrir la caja
@@ -1510,7 +1591,8 @@ export interface paths {
          * Cerrar la caja con arqueo
          * @description Cierra la caja del usuario con el conteo del efectivo por denominación. La API calcula el esperado (base +
          *     efectivo recibido + ingresos − egresos − cambio entregado, de las ventas confirmadas de la caja) y la
-         *     diferencia con lo contado. El cierre no se puede modificar después.
+         *     diferencia con lo contado. El cierre no se puede modificar después. Quien tiene `cash:manage` cierra también la
+         *     caja que otro usuario dejó abierta, y queda como quien la cerró (`closed_by`).
          */
         post: operations["closeCashSession"];
         delete?: never;
@@ -2271,7 +2353,7 @@ export interface components {
             /** Format: uuid */
             location_id: string;
             /** @enum {string} */
-            type: "purchase_in" | "initial_in" | "sale_out" | "sale_void" | "adjustment" | "transfer_out" | "transfer_in";
+            type: "purchase_in" | "initial_in" | "sale_out" | "sale_void" | "purchase_void" | "adjustment" | "transfer_out" | "transfer_in";
             quantity: components["schemas"]["SignedQuantity"];
             unit_cost?: components["schemas"]["Money"];
             balance_after: components["schemas"]["SignedQuantity"];
@@ -2709,10 +2791,10 @@ export interface components {
          */
         PurchasePayment: "cash" | "credit";
         /**
-         * @description Con saldo por pagar (`open`) o pagada (`paid`).
+         * @description Con saldo por pagar (`open`), pagada (`paid`) o anulada (`voided`).
          * @enum {string}
          */
-        PurchaseStatus: "open" | "paid";
+        PurchaseStatus: "open" | "paid" | "voided";
         PurchaseLineInput: {
             /** Format: uuid */
             variant_id: string;
@@ -2812,8 +2894,20 @@ export interface components {
             taxes: components["schemas"]["PurchaseTax"][];
             tax: components["schemas"]["Money"];
             total: components["schemas"]["Money"];
-            /** @description Lo que falta pagar al proveedor. */
+            /** @description Lo que falta pagar al proveedor. Cero si está anulada. */
             balance_due: components["schemas"]["Money"];
+            /**
+             * Format: date-time
+             * @description Cuándo se anuló; solo en una compra anulada.
+             */
+            voided_at?: string;
+            /**
+             * Format: uuid
+             * @description Quién la anuló; solo en una compra anulada.
+             */
+            voided_by?: string;
+            /** @description Por qué se anuló; solo en una compra anulada. */
+            void_reason?: string;
             /** Format: uuid */
             created_by: string;
             /** Format: date-time */
@@ -2840,6 +2934,75 @@ export interface components {
             balance_due: components["schemas"]["Money"];
             /** Format: date-time */
             created_at: string;
+        };
+        VoidPurchaseInput: {
+            /** @example La factura se registró dos veces */
+            reason: string;
+        };
+        /**
+         * @description Medio con que se pagó al proveedor.
+         * @enum {string}
+         */
+        SupplierPaymentMethod: "cash" | "card" | "nequi" | "daviplata" | "transfer";
+        SupplierPaymentInput: {
+            method: components["schemas"]["SupplierPaymentMethod"];
+            amount: components["schemas"]["Money"];
+            /**
+             * Format: date
+             * @description El día del pago; por defecto, hoy en hora de Colombia.
+             */
+            paid_on?: string;
+        };
+        SupplierPayment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            purchase_id: string;
+            /** Format: uuid */
+            supplier_id: string;
+            method: components["schemas"]["SupplierPaymentMethod"];
+            amount: components["schemas"]["Money"];
+            /** @description Lo que quedó por pagar de la compra después de este pago. */
+            balance_after: components["schemas"]["Money"];
+            /** Format: date */
+            paid_on: string;
+            /** Format: uuid */
+            created_by: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        SupplierPaymentList: {
+            items: components["schemas"]["SupplierPayment"][];
+        };
+        SupplierPayable: {
+            /** Format: uuid */
+            supplier_id: string;
+            supplier_name: string;
+            /** @description Todo lo que se le debe. */
+            balance: components["schemas"]["Money"];
+            /** @description Lo vencido antes de hoy. */
+            overdue: components["schemas"]["Money"];
+            /** @description Lo que vence de hoy a 7 días. */
+            due_soon: components["schemas"]["Money"];
+            /** @description Cuántas compras le debe. */
+            purchases: number;
+            /**
+             * Format: date
+             * @description El vencimiento más cercano (o el más antiguo, si hay vencidas).
+             */
+            next_due: string;
+        };
+        PayablesTotals: {
+            balance: components["schemas"]["Money"];
+            overdue: components["schemas"]["Money"];
+            due_soon: components["schemas"]["Money"];
+            suppliers: number;
+        };
+        PayablesPage: {
+            items: components["schemas"]["SupplierPayable"][];
+            /** @description Cuántos proveedores se deben. */
+            total: number;
+            totals: components["schemas"]["PayablesTotals"];
         };
         PurchasePage: {
             items: components["schemas"]["PurchaseSummary"][];
@@ -3132,6 +3295,8 @@ export interface components {
             notes?: string;
             /** @description Ventas confirmadas de la caja. */
             sales_count: number;
+            /** @description Lo que suman sus ventas confirmadas, en todos los medios (el efectivo sin el cambio, y el crédito). */
+            sales_total: components["schemas"]["Money"];
             cash_received: components["schemas"]["Money"];
             change_given: components["schemas"]["Money"];
             cash_in: components["schemas"]["Money"];
@@ -3164,6 +3329,41 @@ export interface components {
             /** @description Ingresos y egresos, del más antiguo al más reciente. */
             movements: components["schemas"]["CashMovement"][];
             closing?: components["schemas"]["CashClosing"];
+        };
+        /** @description Una caja del historial. Los datos del cierre solo vienen cuando está cerrada. */
+        CashSessionSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            location_id: string;
+            /**
+             * Format: uuid
+             * @description El cajero.
+             */
+            user_id: string;
+            /** @description El nombre del cajero; no viene si el usuario ya no existe. */
+            cashier_name?: string;
+            /** @enum {string} */
+            status: "open" | "closed";
+            opening_float: components["schemas"]["Money"];
+            /** Format: date-time */
+            opened_at: string;
+            /** Format: date-time */
+            closed_at?: string;
+            /**
+             * Format: uuid
+             * @description Quién la cerró; puede ser un administrador y no el cajero.
+             */
+            closed_by?: string;
+            sales_count?: number;
+            sales_total?: components["schemas"]["Money"];
+            difference?: components["schemas"]["SignedMoney"];
+            /** @enum {string} */
+            result?: "exact" | "shortage" | "overage";
+        };
+        CashSessionSummaryPage: {
+            items: components["schemas"]["CashSessionSummary"][];
+            total: number;
         };
         CurrentCashSession: {
             /** @description Si la empresa exige caja abierta para vender. */
@@ -6381,8 +6581,8 @@ export interface operations {
             query?: {
                 /** @description Solo las compras de este proveedor. */
                 supplier_id?: string;
-                /** @description Compras con saldo por pagar (`open`), pagadas (`paid`) o todas (por defecto). */
-                status?: "open" | "paid" | "all";
+                /** @description Compras con saldo por pagar (`open`), pagadas (`paid`), anuladas (`voided`) o todas (por defecto). */
+                status?: "open" | "paid" | "voided" | "all";
                 /** @description Facturas desde este día (incluido). */
                 from?: string;
                 /** @description Facturas hasta este día (incluido). */
@@ -6493,6 +6693,171 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    voidPurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purchaseId: components["parameters"]["PurchaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidPurchaseInput"];
+            };
+        };
+        responses: {
+            /** @description La compra anulada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Purchase"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /**
+             * @description La compra ya está anulada (`purchase_already_voided`), tiene pagos al proveedor (`purchase_has_payments`)
+             *     o una variante ya no tiene el stock que entró (`insufficient_stock`, con la posición de su primera línea,
+             *     desde 0, en `details.line`).
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Falta el motivo o tiene más de 500 caracteres (`invalid_void_reason`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listSupplierPayments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purchaseId: components["parameters"]["PurchaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Los pagos de la compra. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierPaymentList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    recordSupplierPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purchaseId: components["parameters"]["PurchaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupplierPaymentInput"];
+            };
+        };
+        responses: {
+            /** @description El pago registrado, con lo que queda por pagar de la compra. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierPayment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /**
+             * @description El pago pasa de lo que falta pagar (`payment_exceeds_balance`; una compra de contado no debe nada) o la
+             *     compra está anulada (`purchase_voided`).
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description El monto no es positivo o tiene más de 2 decimales (`invalid_payment_amount`), el medio de pago
+             *     (`invalid_payment_method`), o la fecha es posterior a hoy (`payment_date_in_future`) o anterior a la factura
+             *     (`payment_before_invoice`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listPayables: {
+        parameters: {
+            query?: {
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de proveedores a los que se debe. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayablesPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -6723,6 +7088,40 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listCashSessions: {
+        parameters: {
+            query?: {
+                location_id?: string;
+                /** @description Abiertas (`open`), cerradas (`closed`) o todas (por defecto). */
+                status?: "open" | "closed" | "all";
+                from?: string;
+                to?: string;
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de cajas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashSessionSummaryPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalError"];
         };
     };

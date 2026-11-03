@@ -4,6 +4,8 @@ export const inventoryKeys = {
   locations: ['inventory', 'locations'] as const,
   stock: (locationId: string, offset: number, variantIds?: string[]) =>
     ['inventory', 'stock', locationId, offset, variantIds ?? 'all'] as const,
+  variantStock: (variantId: string, locationId: string) =>
+    ['inventory', 'stock', locationId, 'variant', variantId] as const,
   reorderAlerts: (locationId: string | undefined, offset: number, limit: number) =>
     ['inventory', 'reorder-alerts', locationId ?? 'all', offset, limit] as const,
   kardex: (variantId: string, locationId: string | undefined, offset: number) =>

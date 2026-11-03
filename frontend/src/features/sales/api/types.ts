@@ -1,4 +1,4 @@
-import type { components } from '@/shared/api/schema';
+import type { components, operations } from '@/shared/api/schema';
 
 export type Sale = components['schemas']['Sale'];
 export type SaleSummary = components['schemas']['SaleSummary'];
@@ -8,3 +8,5 @@ export type CashMovement = components['schemas']['CashMovement'];
 export type CashMovementInput = components['schemas']['CashMovementInput'];
 export type CloseCashSessionInput = components['schemas']['CloseCashSessionInput'];
 export type OpenCashSessionInput = components['schemas']['OpenCashSessionInput'];
+export type CashSessionSummary = components['schemas']['CashSessionSummary'];
+export type CashSessionQuery = NonNullable<operations['listCashSessions']['parameters']['query']>;

@@ -151,3 +151,29 @@ func (f fakeCash) activity(id uuid.UUID) domain.CashActivity {
 	}
 	return a
 }
+
+func (f fakeCash) Search(_ context.Context, flt domain.CashSessionFilter) ([]domain.CashSessionSummary, int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.cashFilter = flt
+	var out []domain.CashSessionSummary
+	for _, s := range f.sessions {
+		if s.TenantID() == flt.TenantID && (flt.Status == "" || flt.Status == s.Status()) {
+			out = append(out, domain.CashSummaryOf(s))
+		}
+	}
+	return out, len(out), nil
+}
+
+// fakeUsers names the users of every tenant.
+type fakeUsers struct{ names map[uuid.UUID]string }
+
+func (f fakeUsers) UserNames(_ context.Context, _ uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	out := map[uuid.UUID]string{}
+	for _, id := range ids {
+		if name, ok := f.names[id]; ok {
+			out[id] = name
+		}
+	}
+	return out, nil
+}
