@@ -5,7 +5,7 @@ import { plain, query } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 import { aDistributor, aTextileSupplier, supplierIds } from '../../testing/fixtures';
 import { purchasesApi } from '../../testing/purchasesApi';
-import { choose } from '../../testing/purchaseSteps';
+import { choose, write } from '../../testing/purchaseSteps';
 
 const cells = (row: HTMLElement) =>
   within(row)
@@ -41,7 +41,7 @@ describe('SupplierListPage', () => {
     const api = purchasesApi({ suppliers: [aDistributor(), aTextileSupplier({ active: false })] });
     renderApp('/compras/proveedores');
 
-    await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar' }), '800765');
+    await write(await screen.findByRole('searchbox', { name: 'Buscar' }), '800765');
     await waitFor(() => {
       expect(query(api.calls('GET /api/v1/suppliers').at(-1)!).get('q')).toBe('800765');
     });

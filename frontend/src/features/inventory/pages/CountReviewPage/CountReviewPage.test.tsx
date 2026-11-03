@@ -108,6 +108,28 @@ describe('CountReviewPage', () => {
     expect(await screen.findByRole('heading', { name: 'Toma física' })).toBeInTheDocument();
     expect(api.calls(`POST /api/v1/stock-counts/${countId}/approve`)).toHaveLength(1);
   });
+
+  it('vuelve a la lista aunque el conteo se lea aprobado antes, como en la API real', async () => {
+    let approved = false;
+    fakeApi({
+      ...countScreenApi(aUser('admin')),
+      [linesKey]: json(200, lines),
+      'GET /api/v1/stock-counts/{stockCountId}': () =>
+        json(200, aStockCount({ status: approved ? 'approved' : 'open' })),
+      [approveKey]: () => {
+        approved = true;
+        return json(200, aStockCount({ status: 'approved' }));
+      },
+      'GET /api/v1/stock-counts': json(200, { items: [], total: 0 }),
+    });
+    renderApp(url);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Aprobar conteo' }));
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Aprobar y ajustar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Toma física' })).toBeInTheDocument();
+    expect(await screen.findByText('Conteo aprobado: el inventario quedó ajustado')).toBeInTheDocument();
+  });
   describe('sin stock para ajustar (P90)', () => {
     const noStock = () =>
       reviewApi(

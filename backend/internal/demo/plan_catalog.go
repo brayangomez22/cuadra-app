@@ -15,11 +15,17 @@ const brandAttribute = "marca"
 // combo is one article of a family: a name, a spec and a brand.
 type combo struct{ name, spec, brand int }
 
+// brandSpread is how far, in percent, the price of an article strays from
+// its name's: the same article of another brand costs about the same.
+const brandSpread = 15
+
 // catalogPlan builds the articles with unique SKUs and barcodes.
 type catalogPlan struct {
 	rng      *rand.Rand
 	profile  Profile
 	variants int
+	// anchors is the price of each name of each family, in pesos.
+	anchors [][]int
 }
 
 // planCatalog returns products whose variants add up to target, taking the
@@ -27,8 +33,12 @@ type catalogPlan struct {
 func planCatalog(rng *rand.Rand, p Profile, target int) ([]Product, error) {
 	c := &catalogPlan{rng: rng, profile: p}
 	combos := make([][]combo, len(p.Families))
+	c.anchors = make([][]int, len(p.Families))
 	for i, f := range p.Families {
 		combos[i] = c.combos(f)
+		for range f.Names {
+			c.anchors[i] = append(c.anchors[i], c.price(f))
+		}
 	}
 	var products []Product
 	for turn := 0; c.variants < target; turn++ {
@@ -71,7 +81,7 @@ func (c *catalogPlan) product(fi int, f Family, k combo, room int) Product {
 	if f.Step != "" {
 		step = decimal.RequireFromString(f.Step)
 	}
-	price := c.price(f)
+	price := c.around(c.anchors[fi][k.name])
 	cost := price.Mul(decimal.NewFromInt(int64(55 + c.rng.IntN(18)))).Div(decimal.NewFromInt(100)).Round(-1)
 	axes := c.axes(f)
 	if len(axes) > room {
@@ -96,9 +106,16 @@ func (c *catalogPlan) product(fi int, f Family, k combo, room int) Product {
 }
 
 // price is a price of f's range, in hundreds of pesos.
-func (c *catalogPlan) price(f Family) decimal.Decimal {
+func (c *catalogPlan) price(f Family) int {
 	hundreds := f.Price[0]/100 + c.rng.IntN(f.Price[1]/100-f.Price[0]/100+1)
-	return decimal.NewFromInt(int64(hundreds * 100))
+	return hundreds * 100
+}
+
+// around is a price within brandSpread of anchor, in steps of 100 pesos so
+// the rounding never widens the spread.
+func (c *catalogPlan) around(anchor int) decimal.Decimal {
+	steps := anchor * brandSpread / 100 / 100
+	return decimal.NewFromInt(int64(anchor + 100*(c.rng.IntN(2*steps+1)-steps)))
 }
 
 // axes chooses the axis values of an article: a run of the first axis

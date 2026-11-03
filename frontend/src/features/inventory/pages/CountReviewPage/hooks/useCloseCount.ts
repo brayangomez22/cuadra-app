@@ -24,18 +24,19 @@ export function useCloseCount(countId: string) {
     setShort(undefined);
   };
 
-  const run = (mutation: typeof approve, title: string) => () => {
+  // mutateAsync and not mutate's callbacks: the count is read again as closed
+  // before they would run, which unmounts these actions and drops them.
+  const run = (mutation: typeof approve, title: string) => async () => {
     clearError();
-    mutation.mutate(undefined, {
-      onSuccess: () => {
-        toast({ tone: 'success', title });
-        void navigate(paths.inventory.counts());
-      },
-      onError: (failure) => {
-        setError(describeError(failure).message);
-        if (failure instanceof ApiError && failure.code === 'insufficient_stock') setShort(failure.details.variant_id);
-      },
-    });
+    try {
+      await mutation.mutateAsync();
+    } catch (failure) {
+      setError(describeError(failure).message);
+      if (failure instanceof ApiError && failure.code === 'insufficient_stock') setShort(failure.details.variant_id);
+      return;
+    }
+    toast({ tone: 'success', title });
+    void navigate(paths.inventory.counts());
   };
 
   return {
