@@ -33,10 +33,13 @@ export function MainNav({ access, onNavigate }: Props) {
   );
 }
 
-// currentItem is the item of the page: the one whose URL is the longest
-// prefix of the path, so a page under another item's URL (Toma física under
-// Inventario) marks only its own. Inicio marks only its exact URL.
+// currentItem is the item of the page: one that owns it, or else the one whose
+// URL is the longest prefix of the path, so a page under another item's URL
+// (Toma física under Inventario) marks only its own. Inicio marks only its
+// exact URL.
 function currentItem(items: NavItem[], pathname: string) {
+  const owner = items.find(({ owns }) => owns?.test(pathname));
+  if (owner) return owner.to;
   const matches = items.filter(({ to }) => pathname === to || (to !== '/' && pathname.startsWith(`${to}/`)));
   return matches.sort((a, b) => b.to.length - a.to.length)[0]?.to;
 }

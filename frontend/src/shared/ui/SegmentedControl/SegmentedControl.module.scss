@@ -1,0 +1,79 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  margin-block-end: var(--space-1);
+  padding: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-default);
+}
+
+// The segments share the width; a long label wraps inside its own.
+.segments {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.segment {
+  @include touch-target;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+  cursor: pointer;
+
+  & + & {
+    border-inline-start: 1px solid var(--color-border-strong);
+  }
+
+  // The chosen one is filled with the action color; color is not the only
+  // cue: it is also the bold one.
+  &:has(:checked) {
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-on-action);
+    background: var(--color-action-primary);
+  }
+
+  // The radio is hidden, so its segment shows the focus.
+  &:has(:focus-visible) {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: -4px;
+  }
+}
+
+.input {
+  @include visually-hidden;
+}
+
+// Icon and text, never color alone.
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-feedback-danger);
+}
+
+.errorIcon {
+  flex-shrink: 0;
+  margin-block-start: 0.15em;
+}

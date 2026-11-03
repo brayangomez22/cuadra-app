@@ -39,13 +39,14 @@ describe('PurchaseDetailPage: pagos al proveedor', () => {
     expect(plain(row.textContent)).toContain('$ 18.480');
   });
 
-  it('registra un pago: propone el saldo y la fecha de hoy, y envía lo escrito', async () => {
+  it('registra un pago: dice lo que se debe, propone el saldo y la fecha de hoy, y envía lo escrito', async () => {
     const api = paymentsApi(aPurchase(), []);
     renderApp(`/compras/${purchaseId}`);
 
     const element = await openPayment();
     const dialog = within(element);
-    expect(dialog.getByLabelText('Valor')).toHaveValue('318480');
+    expect(plain(element.textContent)).toContain('Se deben $ 318.480, vence el 19/11/2026.');
+    expect(dialog.getByLabelText('Valor')).toHaveValue('318.480');
     expect(dialog.getByLabelText('Fecha del pago')).not.toHaveValue('');
     await choose('Medio de pago', 'Transferencia', element);
     await retype(dialog.getByLabelText('Valor'), '300000');

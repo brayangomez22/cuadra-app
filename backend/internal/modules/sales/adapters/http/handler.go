@@ -166,7 +166,9 @@ func (h *Handler) ListSales(ctx context.Context, req salesapi.ListSalesRequestOb
 			ConfirmedAt: s.ConfirmedAt, VoidedAt: s.VoidedAt,
 		})
 	}
-	return salesapi.ListSales200JSONResponse{Items: items, Total: page.Total}, nil
+	return salesapi.ListSales200JSONResponse{
+		Items: items, Total: page.Total, Voided: page.Voided, Sold: httpx.FormatMoney(page.Sold),
+	}, nil
 }
 
 // GetDiscountLimit returns the caller's discount limit, as a fraction of a

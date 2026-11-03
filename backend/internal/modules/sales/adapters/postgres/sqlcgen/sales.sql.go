@@ -13,26 +13,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const countSales = `-- name: CountSales :one
-SELECT count(*)
-FROM sales
-WHERE confirmed_at >= $1 AND confirmed_at < $2
-  AND ($3::uuid IS NULL OR location_id = $3)
-`
-
-type CountSalesParams struct {
-	FromTime   time.Time
-	ToTime     time.Time
-	LocationID *uuid.UUID
-}
-
-func (q *Queries) CountSales(ctx context.Context, arg CountSalesParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countSales, arg.FromTime, arg.ToTime, arg.LocationID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const getSale = `-- name: GetSale :one
 SELECT id, tenant_id, location_id, number, user_id, customer_id, status, subtotal, discounts, tax, total, paid, change, created_at, confirmed_at, voided_at, voided_by, void_reason, cash_session_id FROM sales WHERE id = $1
 `
@@ -375,6 +355,36 @@ func (q *Queries) NextSaleNumber(ctx context.Context, arg NextSaleNumberParams) 
 	var last_number int64
 	err := row.Scan(&last_number)
 	return last_number, err
+}
+
+const summarizeSales = `-- name: SummarizeSales :one
+SELECT count(*) AS total,
+       count(*) FILTER (WHERE status = 'voided') AS voided,
+       COALESCE(sum(total) FILTER (WHERE status = 'confirmed'), 0)::numeric AS sold
+FROM sales
+WHERE confirmed_at >= $1 AND confirmed_at < $2
+  AND ($3::uuid IS NULL OR location_id = $3)
+`
+
+type SummarizeSalesParams struct {
+	FromTime   time.Time
+	ToTime     time.Time
+	LocationID *uuid.UUID
+}
+
+type SummarizeSalesRow struct {
+	Total  int64
+	Voided int64
+	Sold   decimal.Decimal
+}
+
+// SummarizeSales counts the sales confirmed in [from, to), how many of them
+// were voided and what the ones still confirmed add up to.
+func (q *Queries) SummarizeSales(ctx context.Context, arg SummarizeSalesParams) (SummarizeSalesRow, error) {
+	row := q.db.QueryRow(ctx, summarizeSales, arg.FromTime, arg.ToTime, arg.LocationID)
+	var i SummarizeSalesRow
+	err := row.Scan(&i.Total, &i.Voided, &i.Sold)
+	return i, err
 }
 
 const voidSale = `-- name: VoidSale :execrows

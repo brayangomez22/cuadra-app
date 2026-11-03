@@ -11,10 +11,11 @@ export function BusinessContactForm() {
   return (
     <SettingsForm
       title="Datos del negocio"
-      hint="Salen en la tirilla y en el reporte de cierre de caja, debajo del nombre y el NIT."
+      hint="Salen en la tirilla y en el reporte de cierre de caja, debajo del nombre y el NIT con que se registró la empresa."
       submitLabel="Guardar datos del negocio"
       onSubmit={submit}
       saving={saving}
+      changed={form.formState.isDirty}
       error={formError}
     >
       <Field label="Dirección" optional error={error('address')}>

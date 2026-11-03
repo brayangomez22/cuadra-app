@@ -79,10 +79,16 @@ export function useCloseCashSession(sessionId: string) {
 }
 
 /** A page of the tenant's drawers, the latest opened first. While the next page loads, the previous one stays. */
-export function useCashSessions(query: CashSessionQuery) {
+export function useCashSessions(query: CashSessionQuery, { enabled = true } = {}) {
   return useQuery({
+    enabled,
     queryKey: salesKeys.cashHistory(query),
     queryFn: async () => unwrap(await api.GET('/api/v1/cash-sessions', { params: { query } })),
     placeholderData: keepPreviousData,
   });
+}
+
+/** Every drawer open right now, in every location: the history puts them first to close the forgotten ones. */
+export function useOpenCashSessions({ enabled = true } = {}) {
+  return useCashSessions({ status: 'open', limit: 100, offset: 0 }, { enabled });
 }

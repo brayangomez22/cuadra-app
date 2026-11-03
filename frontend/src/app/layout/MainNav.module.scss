@@ -36,6 +36,13 @@
     background: var(--color-bg-subtle);
   }
 
+  // A 1366×768 screen with a mouse: twelve items at full height push
+  // «Cerrar sesión» below the fold. With a fine pointer they can be shorter;
+  // touch keeps its 44px.
+  @media (pointer: fine) and (height <= 50rem) {
+    min-block-size: calc(var(--size-control) - var(--space-2));
+  }
+
   &[aria-current='page'] {
     border-inline-start-color: var(--color-border-accent);
     font-weight: var(--font-weight-bold);

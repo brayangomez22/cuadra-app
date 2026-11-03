@@ -1,5 +1,5 @@
 import { aUser, fakeApi, json, signedIn } from '@/test/fakeApi';
-import { aLocation, ids, page } from '@/test/fixtures';
+import { aLocation, ids } from '@/test/fixtures';
 import { aSale, type Sale } from './fixtures';
 
 /** The sale of aSale, in the routes of its detail. */
@@ -14,6 +14,14 @@ export const customerId = '01920000-0000-7000-8000-000000000301';
 export function aSaleSummary(sale: Sale = aSale()) {
   const { id, number, location_id, user_id, status, confirmed_at } = sale;
   return { id, number, location_id, user_id, status, confirmed_at, total: sale.totals.total };
+}
+
+/** A page of the list with the day's figures, as GET /sales answers. */
+export function aSalePage(
+  items: ReturnType<typeof aSaleSummary>[],
+  { voided = 0, sold = '0.00', total = items.length } = {},
+) {
+  return { items, total, voided, sold };
 }
 
 export function aVoidedSale(overrides: Partial<Sale> = {}): Sale {
@@ -33,7 +41,7 @@ export function salesApi(routes: Parameters<typeof fakeApi>[0] = {}) {
   return fakeApi({
     ...signedIn(aUser('owner')),
     'GET /api/v1/locations': json(200, { items: [aLocation()] }),
-    'GET /api/v1/sales': json(200, page([aSaleSummary()])),
+    'GET /api/v1/sales': json(200, aSalePage([aSaleSummary()], { sold: '11900.00' })),
     [SALE_KEY]: json(200, aSale()),
     ...routes,
   });

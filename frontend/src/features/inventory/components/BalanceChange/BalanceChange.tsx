@@ -8,14 +8,21 @@ type Props = {
   locationId: string;
   locationName: string;
   unit: string;
-  /** The signed change. */
-  delta: string;
+  /** The signed change; without one yet, what there is now. */
+  delta: string | null;
 };
 
 /** What the movement would leave in a location. Only a preview: the API decides, so it says nothing until it can read. */
 export function BalanceChange({ variantId, locationId, locationName, unit, delta }: Props) {
   const { data: current } = useVariantStock(variantId, locationId);
   if (current === undefined) return null;
+  if (delta === null) {
+    return (
+      <p className={styles.root}>
+        {locationName} tiene {formatQuantity(current)} {unit}.
+      </p>
+    );
+  }
   const after = balanceAfter(current, delta);
   const negative = isNegative(after);
   return (

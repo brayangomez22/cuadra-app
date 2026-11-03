@@ -180,7 +180,7 @@ func TestListSales(t *testing.T) {
 	t.Run("pasa el día, la sede y la página y responde los resúmenes", func(t *testing.T) {
 		location := newID()
 		voidedAt := now.Add(time.Hour)
-		uc := &stubUseCases{page: domain.SalePage{Total: 1, Items: []domain.SaleSummary{{
+		uc := &stubUseCases{page: domain.SalePage{Total: 1, Voided: 1, Sold: dec("0"), Items: []domain.SaleSummary{{
 			ID: newID(), Number: 3, LocationID: location, UserID: owner.UserID, Status: domain.SaleVoided,
 			Total: dec("35700.0000"), ConfirmedAt: now, VoidedAt: &voidedAt,
 		}}}}
@@ -193,6 +193,8 @@ func TestListSales(t *testing.T) {
 		require.Equal(t, 10, uc.list.Offset)
 		require.Contains(t, rec.Body.String(), `"total":"35700.00"`)
 		require.Contains(t, rec.Body.String(), `"status":"voided"`)
+		require.Contains(t, rec.Body.String(), `"voided":1`)
+		require.Contains(t, rec.Body.String(), `"sold":"0.00"`)
 	})
 
 	t.Run("sin parámetros pide hoy con la página por defecto", func(t *testing.T) {

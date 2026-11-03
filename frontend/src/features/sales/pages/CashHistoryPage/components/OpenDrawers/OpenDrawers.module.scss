@@ -1,0 +1,53 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// On a phone the button goes under who and where; side by side from md.
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-block: var(--space-3);
+
+  & + & {
+    border-block-start: 1px solid var(--color-border-default);
+  }
+
+  @include respond-to(md) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.where {
+  color: var(--color-text-muted);
+}

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useLocations } from '@/features/inventory';
-import { formatDay } from '@/shared/format';
+import { formatDay, formatMoney } from '@/shared/format';
 import { Badge } from '@/shared/ui';
 import { useSupplier } from '../../../../api/suppliers';
 import type { Purchase } from '../../../../api/types';
@@ -8,17 +8,27 @@ import { paymentLabels, statusLabels } from '../../../../model/purchaseLabels';
 import { statusTone } from '../../../../model/purchaseStatus/purchaseStatus';
 import styles from './InvoiceSummary.module.scss';
 
-/** "Datos de la factura": who sold, where the goods went, the days and how it is paid. */
+/**
+ * "Datos de la factura": who sold, where the goods went, the days, how it is
+ * paid and, on credit, what is left to pay: paying needs it before the lines.
+ */
 export function InvoiceSummary({ purchase }: { purchase: Purchase }) {
   const { supplier, location } = useParties(purchase);
   return (
     <section className={styles.root} aria-label="Datos de la factura">
       <dl className={styles.data}>
-        <Datum term="Proveedor">{supplier}</Datum>
+        <Datum term="Proveedor" wide>
+          {supplier}
+        </Datum>
         <Datum term="Sede">{location}</Datum>
         <Datum term="Fecha de la factura">{formatDay(purchase.issued_on)}</Datum>
         <Datum term="Forma de pago">{paymentLabels[purchase.payment]}</Datum>
         {purchase.due_on && <Datum term="Vence">{formatDay(purchase.due_on)}</Datum>}
+        {purchase.payment === 'credit' && purchase.status !== 'voided' && (
+          <Datum term="Saldo" strong>
+            {formatMoney(purchase.balance_due)}
+          </Datum>
+        )}
         <Datum term="Estado">
           <Badge tone={statusTone(purchase.status)}>{statusLabels[purchase.status]}</Badge>
         </Datum>
@@ -36,9 +46,12 @@ function useParties(purchase: Purchase) {
   return { supplier: supplier.data?.name ?? '…', location: location?.name ?? '…' };
 }
 
-function Datum({ term, children }: { term: string; children: ReactNode }) {
+type DatumProps = { term: string; children: ReactNode; wide?: boolean; strong?: boolean };
+
+// wide: a long name takes two columns instead of wrapping word by word.
+function Datum({ term, children, wide, strong }: DatumProps) {
   return (
-    <div className={styles.datum}>
+    <div className={styles.datum} data-wide={wide ? true : undefined} data-strong={strong ? true : undefined}>
       <dt>{term}</dt>
       <dd>{children}</dd>
     </div>

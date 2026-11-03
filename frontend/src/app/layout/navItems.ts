@@ -5,6 +5,7 @@ import {
   IconCart,
   IconReceipt,
   IconCash,
+  IconCashStack,
   IconClipboardCheck,
   IconHome,
   IconSettings,
@@ -23,6 +24,8 @@ export type NavItem = Gated & {
   to: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
+  /** Pages of the item outside its URL: a drawer's report lives under /caja but belongs to the history. */
+  owns?: RegExp;
 };
 
 // Menu of the app. An item hides when the role lacks its permission or the
@@ -31,7 +34,13 @@ export const navItems: NavItem[] = [
   { to: paths.home(), label: 'Inicio', icon: IconHome },
   { to: paths.sales.pos(), label: 'Vender', icon: IconCart, permission: 'sales:create' },
   { to: paths.sales.cash(), label: 'Caja', icon: IconCash, permission: 'sales:create' },
-  { to: paths.sales.cashHistory(), label: 'Cierres de caja', icon: IconCash, permission: 'cash:manage' },
+  {
+    to: paths.sales.cashHistory(),
+    label: 'Cierres de caja',
+    icon: IconCashStack,
+    permission: 'cash:manage',
+    owns: /^\/caja\/[0-9a-f-]{36}(\/cerrar)?$/,
+  },
   { to: paths.sales.list(), label: 'Ventas', icon: IconReceipt, permission: 'sales:read' },
   { to: paths.products.list(), label: 'Productos', icon: IconTag, permission: 'catalog:read' },
   { to: paths.customers.list(), label: 'Clientes', icon: IconUsers, permission: 'customers:read' },

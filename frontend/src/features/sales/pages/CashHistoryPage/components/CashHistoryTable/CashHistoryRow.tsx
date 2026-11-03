@@ -5,15 +5,17 @@ import type { CashSessionSummary } from '../../../../api/types';
 import { cashResult } from '../../../../model/cash/cashResult';
 import styles from './CashHistoryTable.module.scss';
 
-type Props = { session: CashSessionSummary; location: string; mine: boolean };
+type Props = { session: CashSessionSummary; location: string };
 
 /**
- * A drawer of the history; its opening time opens its report. An open drawer
- * of another user can be closed from here. On a phone the cashier and the
- * location go under the time.
+ * A drawer of the history; its opening time opens its report. On a phone the
+ * cashier and the location go under the time and the count's result under the
+ * total, so nothing is left outside the screen. Open drawers close from the
+ * block above the table.
  */
-export function CashHistoryRow({ session: s, location, mine }: Props) {
+export function CashHistoryRow({ session: s, location }: Props) {
   const cashier = s.cashier_name ?? 'Usuario eliminado';
+  const outcome = <Outcome session={s} />;
   return (
     <TableRow>
       <TableCell>
@@ -25,28 +27,24 @@ export function CashHistoryRow({ session: s, location, mine }: Props) {
       <TableCell numeric wide>
         {s.sales_count ?? '—'}
       </TableCell>
-      <TableCell numeric>{s.sales_total ? formatMoney(s.sales_total) : '—'}</TableCell>
       <TableCell numeric>
-        <span className={styles.result}>
-          <Outcome session={s} />
-          {s.status === 'open' && !mine && (
-            <TextLink to={paths.sales.closeCashOf(s.id)} aria-label={`Cerrar la caja de ${cashier}`}>
-              Cerrar
-            </TextLink>
-          )}
-        </span>
+        {s.sales_total ? formatMoney(s.sales_total) : <Badge tone="info">Abierta</Badge>}
+        {s.sales_total && <TableNarrow>{outcome}</TableNarrow>}
+      </TableCell>
+      <TableCell numeric wide>
+        {outcome}
       </TableCell>
     </TableRow>
   );
 }
 
 function Outcome({ session: s }: { session: CashSessionSummary }) {
-  if (!s.result || !s.difference) return <Badge tone="info">Abierta</Badge>;
+  if (!s.result || !s.difference) return <span className={styles.pending}>Sin cerrar</span>;
   const { label, tone } = cashResult({ result: s.result, difference: s.difference });
   return (
-    <>
+    <span className={styles.result}>
       {s.result !== 'exact' && formatMoney(s.difference)}
       <Badge tone={tone}>{label}</Badge>
-    </>
+    </span>
   );
 }

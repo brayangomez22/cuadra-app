@@ -5,26 +5,42 @@ import { QueryState } from '@/shared/query';
 import { Page, Spinner } from '@/shared/ui';
 import { useCashSession } from '../../api/cashSessions';
 import { CountForm } from '../../components/CashCount/CountForm/CountForm';
+import { useDrawerOwner } from '../../hooks/useDrawerOwner';
+import { whereAndSinceSentence } from '../../model/cash/drawerOwner';
 
-const title = 'Cerrar la caja de otro usuario';
-const description =
-  'Cuente el efectivo del cajón que quedó abierto. El cierre queda a su nombre y Cuadra lo compara con lo esperado.';
+const notesHint = 'Por qué la cierra usted y lo que el cajero deba saber.';
 
-/** /caja/:sessionId/cerrar: who manages cash counts a drawer another user left open. A closed one goes to its report. */
+/**
+ * /caja/:sessionId/cerrar: who manages cash counts a drawer another user left
+ * open, knowing whose it is, where and since when. A closed one goes to its report.
+ */
 export function CloseCashOfPage() {
   const { sessionId = '' } = useParams();
   const session = useCashSession(sessionId);
+  const owner = useDrawerOwner(session.data);
   const [closed, setClosed] = useState(false);
 
   if (closed || session.data?.status === 'closed') return <Navigate to={paths.sales.cashReport(sessionId)} replace />;
   return (
-    <Page title={title} description={description}>
+    <Page
+      title={`Cerrar la caja de ${owner?.cashier ?? 'otro usuario'}`}
+      description={`${whereAndSinceSentence(owner)}Cuente el efectivo del cajón: el cierre queda a su nombre y Cuadra lo compara con lo esperado.`}
+    >
       <QueryState
         queries={[session]}
         errorTitle="No pudimos cargar la caja"
         loading={<Spinner label="Cargando la caja…" />}
       >
-        {() => session.data && <CountForm session={session.data} onClosed={() => setClosed(true)} />}
+        {() =>
+          session.data && (
+            <CountForm
+              session={session.data}
+              cashier={owner?.cashier}
+              notesHint={notesHint}
+              onClosed={() => setClosed(true)}
+            />
+          )
+        }
       </QueryState>
     </Page>
   );

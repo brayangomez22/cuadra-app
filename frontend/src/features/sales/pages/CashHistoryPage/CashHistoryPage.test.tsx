@@ -3,7 +3,7 @@ import { aUser, json, signedIn } from '@/test/fakeApi';
 import { aLocation, ids, page, plain, query } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 import { cashApi } from '../../testing/cashApi';
-import { aClosedSummary, anOpenSummary, otherSessionId } from '../../testing/cashHistory';
+import { aClosedSummary, anOpenSummary, otherCashierId, otherSessionId } from '../../testing/cashHistory';
 
 function historyApi() {
   return cashApi({
@@ -30,17 +30,44 @@ describe('CashHistoryPage', () => {
     );
   });
 
-  it('una caja que otro dejó abierta se puede cerrar desde aquí', async () => {
+  it('las cajas abiertas van arriba con quién, dónde y desde cuándo, y se cierran con un botón', async () => {
     historyApi();
     renderApp('/caja/cierres');
 
-    const table = within(await screen.findByRole('table', { name: 'Cajas' }));
-    const open = await table.findByRole('row', { name: /Pedro Ruiz/ });
-    expect(within(open).getAllByText('Abierta')).not.toHaveLength(0);
-    expect(within(open).getByRole('link', { name: 'Cerrar la caja de Pedro Ruiz' })).toHaveAttribute(
+    const open = within(await screen.findByRole('region', { name: 'Cajas abiertas' }));
+    const item = open.getByRole('listitem');
+    expect(plain(item.textContent)).toContain('Pedro Ruiz');
+    expect(plain(item.textContent)).toContain('Sede norte');
+    expect(plain(item.textContent)).toContain('14/10/2026, 8:00 a. m.');
+    expect(open.getByRole('link', { name: 'Cerrar la caja de Pedro Ruiz' })).toHaveAttribute(
       'href',
       `/caja/${otherSessionId}/cerrar`,
     );
+    const table = within(screen.getByRole('table', { name: 'Cajas' }));
+    expect(within(table.getByRole('row', { name: /Pedro Ruiz/ })).getAllByText('Abierta')).not.toHaveLength(0);
+  });
+
+  it('la caja abierta propia no se cierra desde aquí sino desde la caja', async () => {
+    cashApi({
+      ...signedIn({ ...aUser('admin'), id: otherCashierId }),
+      'GET /api/v1/locations': json(200, { items: [aLocation(), aLocation({ id: ids.north, name: 'Sede norte' })] }),
+      'GET /api/v1/cash-sessions': json(200, page([anOpenSummary()])),
+    });
+    renderApp('/caja/cierres');
+
+    const open = within(await screen.findByRole('region', { name: 'Cajas abiertas' }));
+    expect(open.getByRole('link', { name: 'Cerrar mi caja' })).toHaveAttribute('href', '/caja/cerrar');
+  });
+
+  it('sin cajas abiertas no muestra el bloque', async () => {
+    cashApi({
+      ...signedIn(aUser('admin')),
+      'GET /api/v1/cash-sessions': json(200, page([aClosedSummary()])),
+    });
+    renderApp('/caja/cierres');
+
+    await screen.findByRole('table', { name: 'Cajas' });
+    expect(screen.queryByRole('region', { name: 'Cajas abiertas' })).not.toBeInTheDocument();
   });
 
   it('filtra por estado, sede y días desde la URL', async () => {
@@ -48,7 +75,7 @@ describe('CashHistoryPage', () => {
     renderApp(`/caja/cierres?estado=abiertas&sede=${ids.north}&desde=2026-10-01&hasta=2026-10-31`);
 
     await screen.findByRole('table', { name: 'Cajas' });
-    const sent = query(api.calls('GET /api/v1/cash-sessions')[0]!);
+    const sent = query(api.calls('GET /api/v1/cash-sessions').find((r) => query(r).has('location_id'))!);
     expect(sent.get('status')).toBe('open');
     expect(sent.get('location_id')).toBe(ids.north);
     expect(sent.get('from')).toBe('2026-10-01');

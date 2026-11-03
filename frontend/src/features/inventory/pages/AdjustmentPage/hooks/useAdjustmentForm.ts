@@ -11,8 +11,8 @@ import {
   type AdjustmentFormInput,
   type AdjustmentValues,
 } from '../../../model/stockChange/adjustmentSchema';
-import { signedQuantity, type AdjustmentDirection } from '../../../model/stockChange/stockChange';
 import { adjustedMessage, insufficientStockMessage } from '../../../model/stockChange/stockChangeMessages';
+import { useAdjustmentDelta } from './useAdjustmentDelta';
 
 export type AdjustmentSetup = {
   locations: { value: string; label: string }[];
@@ -28,17 +28,28 @@ export function useAdjustmentForm({ locations, initialItem, initialLocation }: A
     resolver: zodResolver(adjustmentSchema),
     defaultValues: { item: initialItem, location_id: initialLocation, direction: '', quantity: '', reason: '' },
   });
+  const { current, deltaOf } = useAdjustmentDelta(form.control);
   const { formError, handleError, clearFormError } = useApiFormErrors(form.setError, adjustmentErrorFields);
 
-  const submit = form.handleSubmit(({ item, location_id, direction, quantity, reason }) => {
+  const submit = form.handleSubmit((values) => {
+    const { item, location_id, reason } = values;
     clearFormError();
-    const delta = signedQuantity(direction as AdjustmentDirection, quantity);
+    const change = deltaOf(values);
+    if ('error' in change) {
+      form.setError('quantity', { message: change.error }, { shouldFocus: true });
+      return;
+    }
     const locationName = locations.find((l) => l.value === location_id)?.label ?? 'La sede';
     adjust.mutate(
-      { variant_id: item.variant.id, location_id, quantity: delta, reason },
+      { variant_id: item.variant.id, location_id, quantity: change.delta, reason },
       {
         onSuccess: (movement) => {
-          const description = adjustedMessage({ item, delta, balanceAfter: movement.balance_after, locationName });
+          const description = adjustedMessage({
+            item,
+            delta: change.delta,
+            balanceAfter: movement.balance_after,
+            locationName,
+          });
           toast({ tone: 'success', title: 'Ajuste registrado', description });
           form.reset({ item: null, location_id, direction: '', quantity: '', reason: '' });
         },
@@ -52,5 +63,5 @@ export function useAdjustmentForm({ locations, initialItem, initialLocation }: A
     );
   });
 
-  return { form, formError, submit, isPending: adjust.isPending };
+  return { form, formError, submit, current, isPending: adjust.isPending };
 }

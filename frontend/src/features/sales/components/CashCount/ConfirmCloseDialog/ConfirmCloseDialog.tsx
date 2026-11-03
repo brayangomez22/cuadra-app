@@ -7,18 +7,20 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   /** The cash counted, to read once more before closing. */
   total: string;
+  /** Whose drawer it is, when it is another user's. */
+  cashier?: string;
   onConfirm: () => void;
   /** The closing request: its progress and its error. */
   closing: { isPending: boolean; isError: boolean; error: unknown };
 };
 
 /** Asks before closing the drawer: after that it cannot be changed. */
-export function ConfirmCloseDialog({ open, onOpenChange, total, onConfirm, closing }: Props) {
+export function ConfirmCloseDialog({ open, onOpenChange, total, cashier, onConfirm, closing }: Props) {
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="¿Cerrar la caja?"
+      title={cashier ? `¿Cerrar la caja de ${cashier}?` : '¿Cerrar la caja?'}
       description={`Contó ${formatMoney(total)}. Después de cerrarla no se puede modificar.`}
       footer={
         <>

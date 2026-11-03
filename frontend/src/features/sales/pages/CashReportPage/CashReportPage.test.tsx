@@ -35,7 +35,7 @@ describe('CashReportPage', () => {
     renderApp(`/caja/${ids.cashSession}`);
 
     const result = await screen.findByRole('region', { name: 'Resultado del arqueo' });
-    expect(within(result).getByText('Faltante menor')).toHaveAttribute('data-tone', 'warning');
+    expect(within(result).getByText('Faltante menor')).toHaveAttribute('data-tone', 'neutral');
     expect(plain(document.querySelector('[aria-label="Cierre de caja"]')?.textContent)).toContain(
       'Diferencia (Faltante menor)',
     );

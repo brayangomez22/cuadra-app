@@ -15,6 +15,17 @@ describe('PayablesPage', () => {
     expect(plain(summary.getByText('Se debe en total').nextElementSibling?.textContent)).toBe('$ 726.960');
     expect(plain(summary.getByText('Vencido').nextElementSibling?.textContent)).toBe('$ 318.480');
     expect(plain(summary.getByText('Vence en 7 días').nextElementSibling?.textContent)).toBe('$ 318.480');
+    expect(summary.getByText('Vencido').parentElement).toHaveAttribute('data-tone', 'danger');
+  });
+
+  it('no pinta de rojo lo vencido cuando es cero', async () => {
+    const page = aPayablesPage();
+    page.totals.overdue = '0.00';
+    purchasesApi({ routes: { 'GET /api/v1/payables': json(200, page) } });
+    renderApp('/compras/por-pagar');
+
+    const summary = within(await screen.findByRole('region', { name: 'Resumen de lo que se debe' }));
+    expect(summary.getByText('Vencido').parentElement).not.toHaveAttribute('data-tone');
   });
 
   it('muestra cada proveedor y enlaza a sus compras por pagar', async () => {

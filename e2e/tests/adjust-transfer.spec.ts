@@ -17,7 +17,7 @@ test('saca lo roto con un ajuste y traslada a otra sede', async ({ page }) => {
     await page.goto('/inventario/ajuste');
     await pickProduct(page, product);
     await chooseOption(page, 'Sede', /^Principal$/);
-    await chooseOption(page, 'Movimiento', /^Sacar de la existencia$/);
+    await page.getByRole('group', { name: 'Movimiento' }).getByText('Sale', { exact: true }).click();
     await page.getByLabel('Cantidad').fill('2');
     await page.getByRole('button', { name: 'Rotura' }).click();
     await page.getByRole('button', { name: 'Registrar ajuste' }).click();

@@ -56,8 +56,12 @@ WHERE confirmed_at >= sqlc.arg(from_time) AND confirmed_at < sqlc.arg(to_time)
 ORDER BY confirmed_at DESC, id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
--- name: CountSales :one
-SELECT count(*)
+-- SummarizeSales counts the sales confirmed in [from, to), how many of them
+-- were voided and what the ones still confirmed add up to.
+-- name: SummarizeSales :one
+SELECT count(*) AS total,
+       count(*) FILTER (WHERE status = 'voided') AS voided,
+       COALESCE(sum(total) FILTER (WHERE status = 'confirmed'), 0)::numeric AS sold
 FROM sales
 WHERE confirmed_at >= sqlc.arg(from_time) AND confirmed_at < sqlc.arg(to_time)
   AND (sqlc.narg(location_id)::uuid IS NULL OR location_id = sqlc.narg(location_id));

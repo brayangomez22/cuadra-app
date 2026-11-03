@@ -8,6 +8,7 @@ import {
   parseDecimalInput,
   parseMoneyInput,
   toDecimalInput,
+  toMoneyInput,
 } from './format';
 
 describe('formatMoney', () => {
@@ -136,5 +137,17 @@ describe('toDecimalInput', () => {
     ['-3.00', '-3'],
   ])('escribe %s como %s, sin decimales en cero ni ceros de más', (value, expected) => {
     expect(toDecimalInput(value)).toBe(expected);
+  });
+});
+
+describe('toMoneyInput', () => {
+  it.each([
+    ['3388203.70', '3.388.203,70'],
+    ['10000.00', '10.000'],
+    ['950.50', '950,50'],
+    ['1000000.0000', '1.000.000'],
+  ])('escribe %s como %s, con el punto de miles que lee parseMoneyInput', (value, expected) => {
+    expect(toMoneyInput(value)).toBe(expected);
+    expect(parseMoneyInput(expected)).toEqual({ ok: true, value: toDecimalInput(value).replace(',', '.') });
   });
 });

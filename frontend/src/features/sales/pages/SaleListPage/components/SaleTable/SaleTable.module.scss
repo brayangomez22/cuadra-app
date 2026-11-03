@@ -11,3 +11,8 @@
   color: var(--color-text-muted);
   text-decoration: line-through;
 }
+
+.status {
+  display: block;
+  margin-block-start: var(--space-1);
+}

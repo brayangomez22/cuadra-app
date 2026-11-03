@@ -630,8 +630,16 @@ type SaleLineInput struct {
 type SalePage struct {
 	Items []SaleSummary `json:"items"`
 
+	// Sold Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Sold Money `json:"sold"`
+
 	// Total Cantidad total de ventas que cumplen el filtro, sin paginar.
 	Total int `json:"total"`
+
+	// Voided Cuántas de esas ventas están anuladas.
+	Voided int `json:"voided"`
 }
 
 // SalePayment defines model for SalePayment.

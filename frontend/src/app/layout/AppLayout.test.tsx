@@ -89,6 +89,25 @@ describe('AppLayout', () => {
     expect(menu.getByRole('link', { name: 'Inventario' })).not.toHaveAttribute('aria-current');
   });
 
+  it('en el reporte de una caja o al cerrar la de otro marca Cierres de caja, no Caja', async () => {
+    fakeApi(signedIn());
+    renderApp('/caja/01920000-0000-7000-8000-000000000d02/cerrar');
+
+    const menu = await mainMenu();
+
+    expect(menu.getByRole('link', { name: 'Cierres de caja' })).toHaveAttribute('aria-current', 'page');
+    expect(menu.getByRole('link', { name: 'Caja' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('el cajero, sin Cierres de caja, ve marcada Caja en el reporte de su caja', async () => {
+    fakeApi(signedIn(aUser('cashier')));
+    renderApp('/caja/01920000-0000-7000-8000-000000000d02');
+
+    const menu = await mainMenu();
+
+    expect(menu.getByRole('link', { name: 'Caja' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('muestra la empresa, el usuario y su rol', async () => {
     fakeApi(signedIn(aUser('cashier')));
     renderApp('/');

@@ -18,3 +18,10 @@ export function formatDay(day: string): string {
 export function todayInBogota(now = new Date()): string {
   return bogotaDay.format(now);
 }
+
+/** The day before a day of the API: "2026-03-01" → "2026-02-28". Computed in UTC, where a day is always 24 hours. */
+export function previousDay(day: string): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
+}

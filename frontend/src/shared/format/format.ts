@@ -118,6 +118,17 @@ export function toDecimalInput(value: string): string {
   return typed.replace('.', ',');
 }
 
+/**
+ * An amount of money of the API as it is typed in a field, with the thousands
+ * dots that parseMoneyInput reads back: "3388203.70" → "3.388.203,70",
+ * "10000.00" → "10.000". Easier to check against the "$ 3.388.204" on screen.
+ */
+export function toMoneyInput(value: string): string {
+  const [whole = '', decimals] = toDecimalInput(value).split(',');
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return decimals === undefined ? grouped : `${grouped},${decimals}`;
+}
+
 /** Whether a decimal string of the API is zero ("0", "0.00", "-0"). */
 export function isZero(value: string): boolean {
   return /^-?0+(\.0+)?$/.test(value);

@@ -21,8 +21,7 @@ const adjustApi = (extra: Parameters<typeof receiptApi>[0] = {}) =>
   });
 
 async function pickDirection(name: string) {
-  await userEvent.click(screen.getByRole('combobox', { name: 'Movimiento' }));
-  await userEvent.click(await screen.findByRole('option', { name }));
+  await userEvent.click(within(screen.getByRole('group', { name: 'Movimiento' })).getByRole('radio', { name }));
 }
 
 const save = () => userEvent.click(screen.getByRole('button', { name: 'Registrar ajuste' }));
@@ -36,7 +35,7 @@ describe('AdjustmentPage', () => {
 
     await pickProduct('tubo', 'Tubo PVC presión 1/2 pulgada');
     await pickLocation('Bodega principal');
-    await pickDirection('Sacar de la existencia');
+    await pickDirection('Sale');
     await userEvent.type(screen.getByLabelText('Cantidad'), '3');
     expect(await screen.findByText('Bodega principal pasa de 120 a 117 und.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Rotura' }));
@@ -55,7 +54,7 @@ describe('AdjustmentPage', () => {
     expect(screen.getByRole('searchbox', { name: 'Producto' })).toHaveValue('');
     expect(screen.getByLabelText('Motivo')).toHaveValue('');
     // The next adjustment does not inherit the direction of this one.
-    expect(screen.getByRole('combobox', { name: 'Movimiento' })).toHaveTextContent('¿Sale o entra?');
+    expect(screen.getByRole('radio', { name: 'Sale' })).not.toBeChecked();
   });
 
   it('agrega una variante de una prenda encontrada, con cantidad positiva', async () => {
@@ -66,7 +65,7 @@ describe('AdjustmentPage', () => {
 
     await pickProduct('camiseta', 'Camiseta básica \\(Azul · L\\)');
     await pickLocation('Bodega principal');
-    await pickDirection('Agregar a la existencia');
+    await pickDirection('Entra');
     await userEvent.type(screen.getByLabelText('Cantidad'), '2');
     await userEvent.type(screen.getByLabelText('Motivo'), 'Apareció en la vitrina');
     await save();
@@ -91,8 +90,8 @@ describe('AdjustmentPage', () => {
     expect(screen.getByRole('combobox', { name: 'Sede' })).toHaveAccessibleDescription(
       expect.stringContaining('Elija la sede'),
     );
-    expect(screen.getByRole('combobox', { name: 'Movimiento' })).toHaveAccessibleDescription(
-      expect.stringContaining('Elija si saca o agrega'),
+    expect(screen.getByRole('group', { name: 'Movimiento' })).toHaveAccessibleDescription(
+      expect.stringContaining('Elija si sale, entra o cuenta lo que hay'),
     );
     expect(screen.getByLabelText('Cantidad')).toHaveAccessibleDescription(
       expect.stringContaining('Escriba la cantidad'),
@@ -111,7 +110,7 @@ describe('AdjustmentPage', () => {
     renderApp(`/inventario/ajuste?producto=${ids.pipe}&sede=${ids.main}`);
     await screen.findByRole('group', { name: 'Producto elegido' });
 
-    await pickDirection('Sacar de la existencia');
+    await pickDirection('Sale');
     await userEvent.type(screen.getByLabelText('Cantidad'), '500');
     await userEvent.type(screen.getByLabelText('Motivo'), 'Pérdida');
     await save();
@@ -129,7 +128,7 @@ describe('AdjustmentPage', () => {
     const chosen = await screen.findByRole('group', { name: 'Producto elegido' });
     expect(within(chosen).getByText('Tubo PVC presión 1/2 pulgada')).toBeInTheDocument();
 
-    await pickDirection('Sacar de la existencia');
+    await pickDirection('Sale');
     await userEvent.type(screen.getByLabelText('Cantidad'), '125');
 
     expect(await screen.findByText(/pasa de 120 a -5 und.*quedaría negativa/i)).toBeInTheDocument();
