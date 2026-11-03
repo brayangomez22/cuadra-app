@@ -47,3 +47,26 @@ export async function openCash(page: Page) {
 export function escape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+/** Adds another location from the stock screen, once the business has one. */
+export async function addLocation(page: Page, name: string) {
+  await page.goto('/inventario');
+  await page.getByRole('button', { name: 'Nueva sede' }).click();
+  await page.getByLabel('Nombre de la sede').fill(name);
+  await page.getByRole('dialog').getByRole('button', { name: 'Crear sede' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+}
+
+/** The stock of the variant named name at location, as the stock screen shows it ("7 und"). */
+export async function expectStock(page: Page, location: string, name: string, quantity: string) {
+  await page.goto('/inventario');
+  const table = page.getByRole('table', { name: `Existencias en ${location}` });
+  const row = table.getByRole('row', { name: new RegExp(`^${escape(name)}`) });
+  await expect(row.getByRole('cell').nth(1)).toHaveText(quantity);
+}
+
+/** Picks a product in a form's "Producto" search by its SKU, choosing the result named name. */
+export async function pickProduct(page: Page, variant: { name: string; sku: string }, scope = page.getByRole('main')) {
+  await scope.getByRole('searchbox', { name: 'Producto' }).fill(variant.sku);
+  await scope.getByRole('button', { name: new RegExp(escape(variant.name)) }).click();
+}

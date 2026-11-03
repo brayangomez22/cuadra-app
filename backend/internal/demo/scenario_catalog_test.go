@@ -2,9 +2,11 @@ package demo_test
 
 import (
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/demo"
@@ -61,6 +63,36 @@ func TestScenarioCatalog(t *testing.T) {
 				require.True(t, v.Price.GreaterThan(v.Cost), "%s sells above its cost", v.SKU)
 				skus[v.SKU], barcodes[v.Barcode] = true, true
 			}
+		})
+
+		t.Run("el mismo artículo de otra marca cuesta parecido: "+template, func(t *testing.T) {
+			p, err := demo.LoadProfile(template)
+			require.NoError(t, err)
+			s, err := demo.NewScenario(p, demo.Options{Seed: 3, End: end, Days: 1, Products: 1500, SalesPerDay: 1, Customers: 1})
+			require.NoError(t, err)
+
+			lowest, highest := map[string]decimal.Decimal{}, map[string]decimal.Decimal{}
+			for _, p := range s.Products {
+				article := p.Category + "/" + strings.TrimSuffix(p.Name, " "+p.Attributes["marca"])
+				price := p.Variants[0].Price
+				if low, ok := lowest[article]; !ok || price.LessThan(low) {
+					lowest[article] = price
+				}
+				if high, ok := highest[article]; !ok || price.GreaterThan(high) {
+					highest[article] = price
+				}
+			}
+			compared := 0
+			for article, low := range lowest {
+				if highest[article].Equal(low) {
+					continue
+				}
+				compared++
+				// ±15 % around the same price, plus the rounding to hundreds.
+				require.True(t, highest[article].LessThanOrEqual(low.Mul(decimal.RequireFromString("1.36"))),
+					"%s: from %s to %s", article, low, highest[article])
+			}
+			require.Positive(t, compared, "the scenario has the same article in several brands")
 		})
 
 		t.Run("el perfil usa solo unidades, categorías, atributos y ejes de su plantilla: "+template, func(t *testing.T) {
