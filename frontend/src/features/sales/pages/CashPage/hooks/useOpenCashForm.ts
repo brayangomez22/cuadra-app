@@ -25,13 +25,18 @@ export function useOpenCashForm(locations: { value: string }[]) {
   });
   const { formError, handleError, clearFormError } = useApiFormErrors(form.setError, noFields);
 
-  const submit = form.handleSubmit((values) => {
+  // mutateAsync, not mutate's callbacks: the open drawer replaces this form
+  // once the current session reloads, and its callbacks would not run.
+  const submit = form.handleSubmit(async (values) => {
     clearFormError();
-    open.mutate(values, {
-      // Opening the drawer is the step before selling.
-      onSuccess: () => void navigate(paths.sales.pos()),
-      onError: handleError,
-    });
+    try {
+      await open.mutateAsync(values);
+    } catch (error) {
+      handleError(error);
+      return;
+    }
+    // Opening the drawer is the step before selling.
+    void navigate(paths.sales.pos());
   });
 
   return { form, formError, submit, isPending: open.isPending };

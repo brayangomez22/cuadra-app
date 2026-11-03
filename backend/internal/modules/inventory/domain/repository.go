@@ -19,11 +19,13 @@ type LocationRepository interface {
 	List(ctx context.Context, tenantID uuid.UUID) ([]*Location, error)
 }
 
-// PolicyRepository reads the tenant's stock rules.
+// PolicyRepository reads and stores the tenant's stock rules.
 type PolicyRepository interface {
 	// Get returns the tenant's policy, or the zero StockPolicy if it has
 	// not set one.
 	Get(ctx context.Context, tenantID uuid.UUID) (StockPolicy, error)
+	// Save replaces the tenant's policy.
+	Save(ctx context.Context, tenantID uuid.UUID, policy StockPolicy) error
 }
 
 // StockChange is the operation Apply runs on the locked levels: it changes
@@ -94,14 +96,19 @@ type ReorderRuleRepository interface {
 	// every lot, zero without a level) is at or below their minimum, the
 	// furthest below it first, with that stock.
 	Alerts(ctx context.Context, tenantID uuid.UUID, f ReorderFilter) (RuleStockPage, error)
+	// RuleVariants returns the variants with a rule at locationID, or at any
+	// location when it is nil, each once.
+	RuleVariants(ctx context.Context, tenantID uuid.UUID, locationID *uuid.UUID) ([]uuid.UUID, error)
 }
 
 // ReorderFilter selects the alerts of one location, or of every location
-// when LocationID is nil.
+// when LocationID is nil, leaving out those of ExcludedVariants (the ones
+// the business no longer sells) from the page and from the total.
 type ReorderFilter struct {
-	LocationID *uuid.UUID
-	Limit      int
-	Offset     int
+	LocationID       *uuid.UUID
+	ExcludedVariants []uuid.UUID
+	Limit            int
+	Offset           int
 }
 
 // RuleStock is a reorder rule with the stock it watches.

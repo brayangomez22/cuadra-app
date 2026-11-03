@@ -81,3 +81,13 @@ FROM product_variants v
 JOIN products p ON p.id = v.product_id
 WHERE p.category_id IN (SELECT id FROM tree)
 ORDER BY v.id;
+
+-- InactiveVariants returns those of the given variants that are no longer
+-- sold: inactive, or of an archived (inactive) product.
+-- name: InactiveVariants :many
+SELECT v.id
+FROM product_variants v
+JOIN products p ON p.id = v.product_id
+WHERE v.id = ANY(sqlc.arg(variant_ids)::uuid[])
+  AND NOT (v.active AND p.active)
+ORDER BY v.id;

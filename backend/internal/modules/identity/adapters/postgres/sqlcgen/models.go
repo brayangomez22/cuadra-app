@@ -570,6 +570,9 @@ type Tenant struct {
 	BusinessTemplate string
 	DefaultTaxRate   decimal.Decimal
 	Demo             bool
+	Address          string
+	City             string
+	Phone            string
 }
 
 type TenantModule struct {

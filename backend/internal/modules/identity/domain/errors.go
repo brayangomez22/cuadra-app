@@ -18,12 +18,16 @@ var (
 	ErrInvalidTenantID       = errors.New("identity: invalid tenant id")
 	ErrInvalidTenantStatus   = errors.New("identity: invalid tenant status")
 	ErrInvalidDefaultTaxRate = errors.New("identity: invalid default tax rate")
-	ErrInvalidUserID         = errors.New("identity: invalid user id")
-	ErrInvalidUserName       = errors.New("identity: invalid user name")
-	ErrPasswordTooShort      = errors.New("identity: password too short")
-	ErrPasswordTooLong       = errors.New("identity: password too long")
-	ErrEmptyPasswordHash     = errors.New("identity: empty password hash")
-	ErrTenantNotFound        = errors.New("identity: tenant not found")
+	// ErrInvalidTenantAddress reports an address or city longer than its
+	// limit or with line breaks.
+	ErrInvalidTenantAddress = errors.New("identity: invalid tenant address")
+	ErrInvalidTenantPhone   = errors.New("identity: invalid tenant phone")
+	ErrInvalidUserID        = errors.New("identity: invalid user id")
+	ErrInvalidUserName      = errors.New("identity: invalid user name")
+	ErrPasswordTooShort     = errors.New("identity: password too short")
+	ErrPasswordTooLong      = errors.New("identity: password too long")
+	ErrEmptyPasswordHash    = errors.New("identity: empty password hash")
+	ErrTenantNotFound       = errors.New("identity: tenant not found")
 	// ErrNotDemoTenant reports a purge of a tenant that is not a demo one:
 	// only demonstration tenants can be deleted.
 	ErrNotDemoTenant = errors.New("identity: not a demo tenant")

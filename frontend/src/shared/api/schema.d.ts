@@ -740,6 +740,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventory/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reglas de inventario de la empresa
+         * @description Si la empresa deja vender, ajustar o trasladar más de lo que hay (stock negativo). Por defecto, no.
+         */
+        get: operations["getInventorySettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar las reglas de inventario
+         * @description Cambia los campos que se envían y conserva los demás. Rige desde el siguiente movimiento.
+         */
+        patch: operations["updateInventorySettings"];
+        trace?: never;
+    };
     "/api/v1/inventory/reorder-alerts": {
         parameters: {
             query?: never;
@@ -1421,6 +1445,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reglas de venta de la empresa
+         * @description El descuento máximo por línea de quien no tiene `sales:discount` y si se exige una caja abierta para
+         *     vender. Por defecto, 0 % y caja obligatoria.
+         */
+        get: operations["getSalesSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar las reglas de venta
+         * @description Cambia los campos que se envían y conserva los demás. Rige desde la siguiente venta.
+         */
+        patch: operations["updateSalesSettings"];
+        trace?: never;
+    };
     "/api/v1/sales/discount-limit": {
         parameters: {
             query?: never;
@@ -1841,6 +1890,12 @@ export interface components {
              * @example 900123456-8
              */
             tenant_nit: string;
+            /** @description Dirección de la empresa, para la tirilla y el cierre de caja. Vacía si no se ha registrado. */
+            tenant_address: string;
+            /** @description Ciudad o municipio de la empresa. Vacía si no se ha registrado. */
+            tenant_city: string;
+            /** @description Teléfono de la empresa. Vacío si no se ha registrado. */
+            tenant_phone: string;
             /**
              * @description Plantilla de tipo de negocio con la que se registró la empresa.
              * @example generica
@@ -1883,10 +1938,22 @@ export interface components {
             /** @example generica */
             business_template: string;
             default_tax_rate: components["schemas"]["TaxRate"];
+            /** @description Dirección del negocio, para la tirilla y los documentos. Vacía si no se ha registrado. */
+            address: string;
+            /** @description Ciudad o municipio del negocio. Vacía si no se ha registrado. */
+            city: string;
+            /** @description Teléfono del negocio. Vacío si no se ha registrado. */
+            phone: string;
         };
         TenantUpdate: {
             /** @description La tasa de IVA que se propone a un producto nuevo. No cambia la de los productos que ya existen. */
             default_tax_rate?: components["schemas"]["TaxRate"];
+            /** @description Dirección del negocio. Vacía la borra. */
+            address?: string;
+            /** @description Ciudad o municipio. Vacía la borra. */
+            city?: string;
+            /** @description Teléfono, con dígitos, espacios, `+`, `-` y paréntesis. Vacío lo borra. */
+            phone?: string;
         };
         TenantSelectionRequired: {
             error: components["schemas"]["ErrorDetail"];
@@ -3081,6 +3148,30 @@ export interface components {
             /** @example El cliente desistió de la compra */
             reason: string;
         };
+        /** @description Las reglas de inventario de la empresa. */
+        InventorySettings: {
+            /** @description Las ventas, los ajustes y los traslados pueden sacar más de lo que hay. */
+            allow_negative_stock: boolean;
+        };
+        InventorySettingsUpdate: {
+            allow_negative_stock?: boolean;
+        };
+        /** @description Las reglas de venta de la empresa. */
+        SalesSettings: {
+            max_discount: components["schemas"]["DiscountFraction"];
+            /** @description Solo se vende con una caja abierta en la sede. */
+            require_cash_session: boolean;
+        };
+        SalesSettingsUpdate: {
+            max_discount?: components["schemas"]["DiscountFraction"];
+            require_cash_session?: boolean;
+        };
+        /**
+         * @description Descuento máximo por línea de quien no tiene `sales:discount`, como fracción del bruto (`0.10` es 10 %),
+         *     de 0 a 1 y con hasta 4 decimales.
+         * @example 0.10
+         */
+        DiscountFraction: string;
         /**
          * @description Tope de descuento de una línea como fracción de su bruto (`0.10` permite descontar el 10 %). Con
          *     `unlimited`, `max` es `1`.
@@ -3980,7 +4071,10 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description El IVA por defecto no es válido (`invalid_default_tax_rate`). */
+            /**
+             * @description El IVA por defecto no es válido (`invalid_default_tax_rate`), la dirección o la ciudad tienen saltos de línea
+             *     (`invalid_tenant_address`) o el teléfono tiene caracteres que no son de un teléfono (`invalid_tenant_phone`).
+             */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -5380,6 +5474,57 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getInventorySettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las reglas de inventario. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventorySettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateInventorySettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InventorySettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Las reglas de inventario nuevas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventorySettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -6963,6 +7108,66 @@ export interface operations {
             };
             /** @description Demasiados intentos de autorización con el mismo correo (`too_many_requests`). */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getSalesSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las reglas de venta. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateSalesSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Las reglas de venta nuevas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description El descuento máximo no es una fracción de 0 a 1 con hasta 4 decimales (`invalid_discount_limit`). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

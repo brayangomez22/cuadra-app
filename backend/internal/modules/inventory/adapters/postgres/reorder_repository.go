@@ -89,17 +89,23 @@ func (r *ReorderRepository) Alerts(ctx context.Context, tenantID uuid.UUID, f do
 	if err != nil {
 		return domain.RuleStockPage{}, err
 	}
+	// A nil slice would be a NULL array, and "<> ALL(NULL)" leaves every
+	// rule out.
+	excluded := f.ExcludedVariants
+	if excluded == nil {
+		excluded = []uuid.UUID{}
+	}
 	var rows []sqlcgen.ListReorderAlertsRow
 	var total int64
 	err = r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
 		var err error
 		if rows, err = q.ListReorderAlerts(ctx, sqlcgen.ListReorderAlertsParams{
-			LocationID: f.LocationID, RowLimit: limit, RowOffset: offset,
+			LocationID: f.LocationID, ExcludedVariants: excluded, RowLimit: limit, RowOffset: offset,
 		}); err != nil {
 			return err
 		}
-		total, err = q.CountReorderAlerts(ctx, f.LocationID)
+		total, err = q.CountReorderAlerts(ctx, sqlcgen.CountReorderAlertsParams{LocationID: f.LocationID, ExcludedVariants: excluded})
 		return err
 	})
 	if err != nil {
@@ -126,4 +132,16 @@ func rehydrateRule(s domain.ReorderRuleSpec) (*domain.ReorderRule, error) {
 		return nil, fmt.Errorf("inventory: stored reorder rule is invalid: %w", err)
 	}
 	return rule, nil
+}
+
+// RuleVariants returns the variants with a rule at locationID, or at any
+// location when it is nil, each once.
+func (r *ReorderRepository) RuleVariants(ctx context.Context, tenantID uuid.UUID, locationID *uuid.UUID) ([]uuid.UUID, error) {
+	ids, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) ([]uuid.UUID, error) {
+		return sqlcgen.New(tx).ListReorderRuleVariants(ctx, locationID)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("inventory: list reorder rule variants: %w", err)
+	}
+	return ids, nil
 }

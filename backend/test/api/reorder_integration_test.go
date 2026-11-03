@@ -77,6 +77,18 @@ func TestReorderFlow(t *testing.T) {
 		require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	})
 
+	t.Run("un producto archivado no aparece ni cuenta en el total; al reactivarlo vuelve", func(t *testing.T) {
+		rec := f.do(t, http.MethodPost, "/api/v1/products/"+f.productID+"/deactivate", "", f.ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		total, _ := alerts(t, f.ownerToken)
+		require.Equal(t, 0, total)
+
+		rec = f.do(t, http.MethodPost, "/api/v1/products/"+f.productID+"/activate", "", f.ownerToken)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		total, _ = alerts(t, f.ownerToken)
+		require.Equal(t, 1, total)
+	})
+
 	t.Run("al quitar la regla deja de aparecer", func(t *testing.T) {
 		rec := f.do(t, http.MethodDelete, rulePath, "", f.ownerToken)
 		require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())

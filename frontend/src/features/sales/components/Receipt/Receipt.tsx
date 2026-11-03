@@ -1,6 +1,8 @@
 import clsx from 'clsx';
 import { formatDateTime, formatMoney, isZero } from '@/shared/format';
 import type { Sale } from '../../api/types';
+import type { Business } from '../../model/business';
+import { BusinessContact } from '../BusinessContact/BusinessContact';
 import type { Paper } from '../../model/paper';
 import { methodLabels } from '../../model/payments/paymentMethods';
 import { ReceiptLines } from '../ReceiptLines/ReceiptLines';
@@ -9,8 +11,8 @@ import styles from './Receipt.module.scss';
 
 type Props = {
   sale: Sale;
-  /** Who sells: the tenant's name and NIT. */
-  business: { name: string; nit: string };
+  /** Who sells: the tenant's name, NIT, address and phone. */
+  business: Business;
   /** The name of the location the sale came from. */
   location: string;
   /** The name of who charged, when known: users have no endpoint yet. */
@@ -34,6 +36,7 @@ export function Receipt({ sale, business, location, cashier, customer, paper, cl
       <header className={styles.header}>
         <h2 className={styles.business}>{business.name}</h2>
         <p>NIT {business.nit}</p>
+        <BusinessContact business={business} />
         <p>{location}</p>
       </header>
 

@@ -40,3 +40,18 @@ func (r *PolicyRepository) Get(ctx context.Context, tenantID uuid.UUID) (domain.
 	}
 	return policy, nil
 }
+
+// Save replaces the tenant's policy, creating its settings row if it has none.
+func (r *PolicyRepository) Save(ctx context.Context, tenantID uuid.UUID, policy domain.SalesPolicy) error {
+	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
+		return sqlcgen.New(tx).SaveSalesPolicy(ctx, sqlcgen.SaveSalesPolicyParams{
+			TenantID:           tenantID,
+			MaxDiscount:        policy.MaxDiscount.Max(),
+			RequireCashSession: !policy.CashSessionOptional,
+		})
+	})
+	if err != nil {
+		return fmt.Errorf("sales: save sales policy: %w", err)
+	}
+	return nil
+}

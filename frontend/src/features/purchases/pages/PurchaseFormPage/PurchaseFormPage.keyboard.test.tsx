@@ -1,12 +1,12 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderApp } from '@/test/renderApp';
-import { preloadPages } from '@/test/preloadPages';
 import { purchasesApi } from '../../testing/purchasesApi';
 import { lineGroup } from '../../testing/purchaseSteps';
+import { warmUpPurchaseForm } from '../../testing/warmUp';
 
 describe('PurchaseFormPage: teclado', () => {
-  beforeAll(preloadPages('/compras/nueva'));
+  beforeAll(warmUpPurchaseForm());
 
   it('las flechas recorren los resultados del producto y Enter elige uno', async () => {
     purchasesApi();

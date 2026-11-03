@@ -32,3 +32,16 @@ func (r *PolicyRepository) Get(ctx context.Context, tenantID uuid.UUID) (domain.
 	}
 	return domain.StockPolicy{AllowNegative: allowNegative}, nil
 }
+
+// Save replaces the tenant's policy, creating its settings row if it has none.
+func (r *PolicyRepository) Save(ctx context.Context, tenantID uuid.UUID, policy domain.StockPolicy) error {
+	err := r.db.WithTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
+		return sqlcgen.New(tx).SaveStockPolicy(ctx, sqlcgen.SaveStockPolicyParams{
+			TenantID: tenantID, AllowNegativeStock: policy.AllowNegative,
+		})
+	})
+	if err != nil {
+		return fmt.Errorf("inventory: save stock policy: %w", err)
+	}
+	return nil
+}

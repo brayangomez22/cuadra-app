@@ -200,3 +200,10 @@ func (f fakePolicies) Get(_ context.Context, tenantID uuid.UUID) (domain.SalesPo
 	defer f.mu.Unlock()
 	return f.policies[tenantID], nil
 }
+
+func (f fakePolicies) Save(_ context.Context, tenantID uuid.UUID, policy domain.SalesPolicy) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.policies[tenantID] = policy
+	return nil
+}

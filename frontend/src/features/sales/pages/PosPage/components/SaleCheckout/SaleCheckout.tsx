@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Me } from '@/features/auth';
 import type { Location } from '@/features/inventory';
+import { businessOf } from '../../../../model/business';
 import { loadPaper, savePaper } from '../../../../model/storage';
 import { PrintableReceipt } from '../../../../components/PrintableReceipt/PrintableReceipt';
 import type { Checkout } from '../../hooks/checkout/useCheckout';
@@ -35,7 +36,7 @@ export function SaleCheckout({ checkout, total, credit, locations, user }: Props
       {sale && user && (
         <PrintableReceipt
           sale={sale}
-          business={{ name: user.tenant_name, nit: user.tenant_nit }}
+          business={businessOf(user)}
           location={locations.find((l) => l.id === sale.location_id)?.name ?? ''}
           cashier={user.name}
           customer={checkout.soldTo ?? undefined}

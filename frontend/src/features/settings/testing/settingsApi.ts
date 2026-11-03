@@ -30,10 +30,26 @@ export function settingsApi(user: Me) {
     'GET /api/v1/variant-axes': json(200, page(axes)),
     'GET /api/v1/customer-segments': json(200, { items: segments }),
     'GET /api/v1/modules': json(200, { items: [] }),
+    'GET /api/v1/sales/settings': json(200, { max_discount: '0', require_cash_session: true }),
+    'GET /api/v1/inventory/settings': json(200, { allow_negative_stock: false }),
   });
 }
 
 /** The customer segments section: a hardware store's builders and a clothing store's wholesale buyers. */
 export function segmentsApi(routes: Routes = {}) {
   return fakeApi({ ...signedIn(), 'GET /api/v1/customer-segments': json(200, { items: segments }), ...routes });
+}
+
+/**
+ * The general section of an owner: a business without contact data, no
+ * discount for the cashier, cash session required and no negative stock,
+ * plus the routes of the test.
+ */
+export function generalApi(routes: Routes = {}, user: Me = aUser('owner')) {
+  return fakeApi({
+    ...signedIn(user),
+    'GET /api/v1/sales/settings': json(200, { max_discount: '0', require_cash_session: true }),
+    'GET /api/v1/inventory/settings': json(200, { allow_negative_stock: false }),
+    ...routes,
+  });
 }

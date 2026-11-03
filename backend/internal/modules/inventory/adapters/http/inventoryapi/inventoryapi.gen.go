@@ -223,6 +223,17 @@ type ErrorDetail struct {
 	Message string `json:"message"`
 }
 
+// InventorySettings Las reglas de inventario de la empresa.
+type InventorySettings struct {
+	// AllowNegativeStock Las ventas, los ajustes y los traslados pueden sacar más de lo que hay.
+	AllowNegativeStock bool `json:"allow_negative_stock"`
+}
+
+// InventorySettingsUpdate defines model for InventorySettingsUpdate.
+type InventorySettingsUpdate struct {
+	AllowNegativeStock *bool `json:"allow_negative_stock,omitempty"`
+}
+
 // Location defines model for Location.
 type Location struct {
 	Active    bool               `json:"active"`
@@ -786,6 +797,9 @@ type AdjustStockJSONRequestBody = AdjustmentInput
 // ReceiveStockJSONRequestBody defines body for ReceiveStock for application/json ContentType.
 type ReceiveStockJSONRequestBody = ReceiptInput
 
+// UpdateInventorySettingsJSONRequestBody defines body for UpdateInventorySettings for application/json ContentType.
+type UpdateInventorySettingsJSONRequestBody = InventorySettingsUpdate
+
 // TransferStockJSONRequestBody defines body for TransferStock for application/json ContentType.
 type TransferStockJSONRequestBody = TransferInput
 
@@ -815,6 +829,12 @@ type ServerInterface interface {
 	// ListReorderAlerts Variantes por reponer
 	// (GET /api/v1/inventory/reorder-alerts)
 	ListReorderAlerts(w http.ResponseWriter, r *http.Request, params ListReorderAlertsParams)
+	// GetInventorySettings Reglas de inventario de la empresa
+	// (GET /api/v1/inventory/settings)
+	GetInventorySettings(w http.ResponseWriter, r *http.Request)
+	// UpdateInventorySettings Cambiar las reglas de inventario
+	// (PATCH /api/v1/inventory/settings)
+	UpdateInventorySettings(w http.ResponseWriter, r *http.Request)
 	// TransferStock Trasladar mercancía entre sedes
 	// (POST /api/v1/inventory/transfers)
 	TransferStock(w http.ResponseWriter, r *http.Request)
@@ -955,6 +975,34 @@ func (siw *ServerInterfaceWrapper) ListReorderAlerts(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListReorderAlerts(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetInventorySettings operation middleware
+func (siw *ServerInterfaceWrapper) GetInventorySettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetInventorySettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateInventorySettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateInventorySettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateInventorySettings(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1738,6 +1786,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/variants/{variantId}/kardex", wrapper.GetVariantKardex)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/locations/{locationId}/reorder-rules/{variantId}", wrapper.DeleteReorderRule)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/locations/{locationId}/reorder-rules/{variantId}", wrapper.SetReorderRule)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/inventory/settings", wrapper.GetInventorySettings)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/inventory/settings", wrapper.UpdateInventorySettings)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/inventory/reorder-alerts", wrapper.ListReorderAlerts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/inventory/receipts", wrapper.ReceiveStock)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/inventory/adjustments", wrapper.AdjustStock)
@@ -2047,6 +2097,147 @@ func (response ListReorderAlerts422JSONResponse) VisitListReorderAlertsResponse(
 type ListReorderAlerts500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ListReorderAlerts500JSONResponse) VisitListReorderAlertsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInventorySettingsRequestObject struct {
+}
+
+type GetInventorySettingsResponseObject interface {
+	VisitGetInventorySettingsResponse(w http.ResponseWriter) error
+}
+
+type GetInventorySettings200JSONResponse InventorySettings
+
+func (response GetInventorySettings200JSONResponse) VisitGetInventorySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInventorySettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetInventorySettings401JSONResponse) VisitGetInventorySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInventorySettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetInventorySettings403JSONResponse) VisitGetInventorySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInventorySettings500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetInventorySettings500JSONResponse) VisitGetInventorySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInventorySettingsRequestObject struct {
+	Body *UpdateInventorySettingsJSONRequestBody
+}
+
+type UpdateInventorySettingsResponseObject interface {
+	VisitUpdateInventorySettingsResponse(w http.ResponseWriter) error
+}
+
+type UpdateInventorySettings200JSONResponse InventorySettings
+
+func (response UpdateInventorySettings200JSONResponse) VisitUpdateInventorySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInventorySettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateInventorySettings400JSONResponse) VisitUpdateInventorySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInventorySettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateInventorySettings401JSONResponse) VisitUpdateInventorySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInventorySettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateInventorySettings403JSONResponse) VisitUpdateInventorySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInventorySettings500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateInventorySettings500JSONResponse) VisitUpdateInventorySettingsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -3652,6 +3843,12 @@ type StrictServerInterface interface {
 	// ListReorderAlerts Variantes por reponer
 	// (GET /api/v1/inventory/reorder-alerts)
 	ListReorderAlerts(ctx context.Context, request ListReorderAlertsRequestObject) (ListReorderAlertsResponseObject, error)
+	// GetInventorySettings Reglas de inventario de la empresa
+	// (GET /api/v1/inventory/settings)
+	GetInventorySettings(ctx context.Context, request GetInventorySettingsRequestObject) (GetInventorySettingsResponseObject, error)
+	// UpdateInventorySettings Cambiar las reglas de inventario
+	// (PATCH /api/v1/inventory/settings)
+	UpdateInventorySettings(ctx context.Context, request UpdateInventorySettingsRequestObject) (UpdateInventorySettingsResponseObject, error)
 	// TransferStock Trasladar mercancía entre sedes
 	// (POST /api/v1/inventory/transfers)
 	TransferStock(ctx context.Context, request TransferStockRequestObject) (TransferStockResponseObject, error)
@@ -3825,6 +4022,61 @@ func (sh *strictHandler) ListReorderAlerts(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListReorderAlertsResponseObject); ok {
 		if err := validResponse.VisitListReorderAlertsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetInventorySettings operation middleware
+func (sh *strictHandler) GetInventorySettings(w http.ResponseWriter, r *http.Request) {
+	var request GetInventorySettingsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetInventorySettings(ctx, request.(GetInventorySettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetInventorySettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetInventorySettingsResponseObject); ok {
+		if err := validResponse.VisitGetInventorySettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateInventorySettings operation middleware
+func (sh *strictHandler) UpdateInventorySettings(w http.ResponseWriter, r *http.Request) {
+	var request UpdateInventorySettingsRequestObject
+
+	var body UpdateInventorySettingsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateInventorySettings(ctx, request.(UpdateInventorySettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateInventorySettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateInventorySettingsResponseObject); ok {
+		if err := validResponse.VisitUpdateInventorySettingsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

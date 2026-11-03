@@ -18,6 +18,7 @@ var errorRules = []httpx.ErrorRule{
 	},
 	{Err: domain.ErrSaleNotConfirmed, Status: http.StatusConflict, Code: "sale_not_confirmed", Message: "La venta no está confirmada; puede que ya esté anulada."},
 	{Err: domain.ErrSaleNotFound, Status: http.StatusNotFound, Code: "sale_not_found", Message: "La venta no existe."},
+	{Err: domain.ErrInvalidDiscountLimit, Status: http.StatusUnprocessableEntity, Code: "invalid_discount_limit", Message: "El descuento máximo debe ser un porcentaje de 0 a 100, con hasta 2 decimales."},
 	{Err: domain.ErrDiscountExceedsLimit, Status: http.StatusForbidden, Code: "discount_exceeds_limit", Message: "El descuento supera el máximo que puede dar."},
 	{Err: domain.ErrProductNotFound, Status: http.StatusUnprocessableEntity, Code: "product_not_found", Message: "Uno de los productos no existe."},
 	{Err: domain.ErrProductInactive, Status: http.StatusUnprocessableEntity, Code: "product_inactive", Message: "Uno de los productos está inactivo y no se puede vender."},

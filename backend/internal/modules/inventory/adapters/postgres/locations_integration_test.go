@@ -62,6 +62,21 @@ func TestPolicyRepository(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, policy.AllowNegative)
 	})
+
+	t.Run("guarda la política, la cambia y no toca la de otro tenant", func(t *testing.T) {
+		tenantA, tenantB := f.createTenant(t), f.createTenant(t)
+		require.NoError(t, f.policies.Save(t.Context(), tenantA, domain.StockPolicy{AllowNegative: true}))
+		require.NoError(t, f.policies.Save(t.Context(), tenantB, domain.StockPolicy{AllowNegative: true}))
+
+		require.NoError(t, f.policies.Save(t.Context(), tenantA, domain.StockPolicy{AllowNegative: false}))
+
+		policyA, err := f.policies.Get(t.Context(), tenantA)
+		require.NoError(t, err)
+		require.False(t, policyA.AllowNegative)
+		policyB, err := f.policies.Get(t.Context(), tenantB)
+		require.NoError(t, err)
+		require.True(t, policyB.AllowNegative)
+	})
 }
 
 func TestTenantIsolation(t *testing.T) {

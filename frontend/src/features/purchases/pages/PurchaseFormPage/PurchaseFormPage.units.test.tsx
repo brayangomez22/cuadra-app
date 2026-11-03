@@ -2,7 +2,6 @@ import { screen, within } from '@testing-library/react';
 import { aUser, json, type Me } from '@/test/fakeApi';
 import { aProduct, boxOf12, ids, page, unitOf, withUnits } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
-import { preloadPages } from '@/test/preloadPages';
 import { purchasesApi } from '../../testing/purchasesApi';
 import {
   choose,
@@ -12,12 +11,13 @@ import {
   pickProduct,
   registerPurchase,
 } from '../../testing/purchaseSteps';
+import { warmUpPurchaseForm } from '../../testing/warmUp';
 
 const withUnitConversions = (): Me => ({ ...aUser('admin'), modules: ['unit_conversions'] });
 const tubes = { 'GET /api/v1/products': json(200, page([withUnits(aProduct(), [boxOf12])])) };
 
 describe('PurchaseFormPage: unidades de compra', () => {
-  beforeAll(preloadPages('/compras/nueva'));
+  beforeAll(warmUpPurchaseForm());
 
   it('una línea en cajas muestra lo que entra en unidad base y envía unit_id', async () => {
     const api = purchasesApi({ user: withUnitConversions(), routes: tubes });

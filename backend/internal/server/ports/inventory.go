@@ -14,7 +14,7 @@ import (
 
 // InventoryCatalog satisfies inventoryapp.ProductVariants with the catalog
 // module: the product of each variant, for the product_id of the levels and
-// movements.
+// movements, and which variants are no longer sold, for the reorder alerts.
 type InventoryCatalog struct{ Catalog *catalog.Module }
 
 // ProductsOf returns the product of each variant of tenantID among
@@ -54,4 +54,10 @@ func (c InventoryCatalog) VariantsInCategories(ctx context.Context, tenantID uui
 		return nil, inventorydomain.ErrCategoryNotFound
 	}
 	return variants, err
+}
+
+// InactiveVariants returns those of variantIDs that the catalog no longer
+// sells: inactive, or of an archived product.
+func (c InventoryCatalog) InactiveVariants(ctx context.Context, tenantID uuid.UUID, variantIDs []uuid.UUID) ([]uuid.UUID, error) {
+	return c.Catalog.InactiveVariants(ctx, tenantID, variantIDs)
 }

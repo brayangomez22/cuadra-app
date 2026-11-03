@@ -28,9 +28,17 @@ export function useCashCount(session: CashSession, onClosed: (id: string) => voi
     setConfirming(true);
   }
 
-  function confirm() {
+  // mutateAsync, not mutate's callbacks: the closed session can replace the
+  // form before they run (another user's drawer goes to its report). The
+  // error stays in close.error for the dialog.
+  async function confirm() {
     const trimmed = notes.trim();
-    close.mutate({ counts, ...(trimmed && { notes: trimmed }) }, { onSuccess: (closed) => onClosed(closed.id) });
+    try {
+      const closed = await close.mutateAsync({ counts, ...(trimmed && { notes: trimmed }) });
+      onClosed(closed.id);
+    } catch {
+      // close.isError shows it.
+    }
   }
 
   return {

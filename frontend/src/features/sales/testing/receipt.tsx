@@ -1,9 +1,9 @@
 import { render, screen, within } from '@testing-library/react';
 import { plain } from '@/test/fixtures';
 import { Receipt } from '../components/Receipt/Receipt';
+import type { Business } from '../model/business';
+import { hardwareStore } from './business';
 import { aSale, type Sale } from './fixtures';
-
-const business = { name: 'Ferretería El Tornillo', nit: '900123456-8' };
 
 // Two lines at 19 % (one with a discount, one fractional), one at 5 % and one at 0 %.
 const mixedLines: Sale['lines'] = [
@@ -100,7 +100,11 @@ export function aMixedSale(overrides: Partial<Sale> = {}): Sale {
 }
 
 /** customer is who bought, as the POS chose it; without one, the sale is to a final consumer. */
-export function renderReceipt(sale = aMixedSale(), customer?: { name: string; document: string }) {
+export function renderReceipt(
+  sale = aMixedSale(),
+  customer?: { name: string; document: string },
+  business: Business = hardwareStore,
+) {
   render(
     <Receipt
       sale={sale}

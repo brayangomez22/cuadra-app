@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useAuth, type Me } from '@/features/auth';
+import { useAuth } from '@/features/auth';
 import { documentLabel, useCustomer } from '@/features/customers';
 import { useLocations } from '@/features/inventory';
 import { useSale } from '../../../api/sales';
+import { businessOf } from '../../../model/business';
 import type { Paper } from '../../../model/paper';
 import { loadPaper, savePaper } from '../../../model/storage';
 
@@ -38,10 +39,6 @@ export function useSaleReceipt(saleId: string) {
       savePaper(next);
     },
   };
-}
-
-function businessOf(user: Me | undefined) {
-  return { name: user?.tenant_name ?? '', nit: user?.tenant_nit ?? '' };
 }
 
 function locationName(locations: { id: string; name: string }[] | undefined, id: string): string {

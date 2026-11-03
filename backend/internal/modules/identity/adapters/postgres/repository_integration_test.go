@@ -140,6 +140,24 @@ func TestTenantRepository(t *testing.T) {
 		require.Equal(t, "0.05", got.DefaultTaxRate().String())
 	})
 
+	t.Run("guarda y borra los datos de contacto de un tenant", func(t *testing.T) {
+		tenant := f.createTenant(t)
+		contact, err := domain.NewContact("Calle 45 # 12-30, local 2", "Medellín", "+57 604 444 1234")
+		require.NoError(t, err)
+		tenant.SetContact(contact)
+		require.NoError(t, f.tenants.Update(t.Context(), tenant))
+
+		got, err := f.tenants.GetByID(t.Context(), tenant.ID())
+		require.NoError(t, err)
+		require.Equal(t, contact, got.Contact())
+
+		got.SetContact(domain.Contact{})
+		require.NoError(t, f.tenants.Update(t.Context(), got))
+		cleared, err := f.tenants.GetByID(t.Context(), tenant.ID())
+		require.NoError(t, err)
+		require.Equal(t, domain.Contact{}, cleared.Contact())
+	})
+
 	t.Run("un UPDATE desde el tenant B no cambia el IVA por defecto del tenant A", func(t *testing.T) {
 		tenantA := f.createTenant(t)
 		tenantB := f.createTenant(t)

@@ -133,6 +133,42 @@ func TestReorderAlerts(t *testing.T) {
 		require.Equal(t, 4, f.alerts(t, tenant, nil).Total)
 	})
 
+	t.Run("deja fuera de la página y del total las variantes excluidas", func(t *testing.T) {
+		tenant := f.createTenant(t)
+		north, south := f.createLocation(t, tenant, "Norte"), f.createLocation(t, tenant, "Sur")
+		kept, dropped := f.createVariant(t, tenant), f.createVariant(t, tenant)
+		f.saveRule(t, tenant, kept, north.ID(), "1", "3")
+		f.saveRule(t, tenant, dropped, north.ID(), "1", "3")
+		f.saveRule(t, tenant, dropped, south.ID(), "1", "3")
+
+		page, err := f.reorder.Alerts(t.Context(), tenant, domain.ReorderFilter{ExcludedVariants: []uuid.UUID{dropped}, Limit: 10})
+
+		require.NoError(t, err)
+		require.Equal(t, 1, page.Total)
+		require.Len(t, page.Items, 1)
+		require.Equal(t, kept, page.Items[0].Rule.VariantID())
+	})
+
+	t.Run("lista una vez cada variante con regla, por sede o en todas", func(t *testing.T) {
+		tenant := f.createTenant(t)
+		north, south := f.createLocation(t, tenant, "Norte"), f.createLocation(t, tenant, "Sur")
+		both, onlySouth := f.createVariant(t, tenant), f.createVariant(t, tenant)
+		f.createVariant(t, tenant) // sin regla
+		f.saveRule(t, tenant, both, north.ID(), "1", "3")
+		f.saveRule(t, tenant, both, south.ID(), "1", "3")
+		f.saveRule(t, tenant, onlySouth, south.ID(), "1", "3")
+
+		all, err := f.reorder.RuleVariants(t.Context(), tenant, nil)
+		require.NoError(t, err)
+		require.ElementsMatch(t, []uuid.UUID{both, onlySouth}, all)
+		inNorth, err := f.reorder.RuleVariants(t.Context(), tenant, new(north.ID()))
+		require.NoError(t, err)
+		require.Equal(t, []uuid.UUID{both}, inNorth)
+		other, err := f.reorder.RuleVariants(t.Context(), f.createTenant(t), nil)
+		require.NoError(t, err)
+		require.Empty(t, other)
+	})
+
 	t.Run("suma la existencia de todos los lotes", func(t *testing.T) {
 		tenant := f.createTenant(t)
 		variant := f.createVariant(t, tenant)

@@ -2,9 +2,9 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { plain } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
-import { preloadPages } from '@/test/preloadPages';
 import { purchasesApi } from '../../testing/purchasesApi';
 import { confirmDialog, fillAmounts, fillInvoice, pickProduct, submitPurchase } from '../../testing/purchaseSteps';
+import { warmUpPurchaseForm } from '../../testing/warmUp';
 
 async function fillPurchase() {
   await fillInvoice();
@@ -13,7 +13,7 @@ async function fillPurchase() {
 }
 
 describe('PurchaseFormPage: confirmar y descartar', () => {
-  beforeAll(preloadPages('/compras/nueva'));
+  beforeAll(warmUpPurchaseForm());
 
   it('antes de registrar muestra el resumen de la compra y «Revisar» no la envía', async () => {
     const api = purchasesApi();
