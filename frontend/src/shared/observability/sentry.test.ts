@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/react';
-import { recordFailedRequest, setReportingUser } from './sentry';
+import { dataCollection, recordFailedRequest, setReportingUser } from './sentry';
 
 vi.mock('@sentry/react', () => ({ setTag: vi.fn(), setUser: vi.fn() }));
 
@@ -35,5 +35,18 @@ describe('setReportingUser', () => {
 
     expect(Sentry.setTag).toHaveBeenCalledWith('tenant_id', undefined);
     expect(Sentry.setUser).toHaveBeenCalledWith(null);
+  });
+});
+
+describe('dataCollection', () => {
+  it('no envía cookies, cabeceras, cuerpos, parámetros de la URL ni variables locales', () => {
+    expect(dataCollection).toEqual({
+      userInfo: false,
+      cookies: false,
+      httpHeaders: false,
+      httpBodies: [],
+      urlQueryParams: false,
+      stackFrameVariables: false,
+    });
   });
 });

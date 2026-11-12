@@ -7,5 +7,5 @@ import { get, useFormState, type Control, type FieldError, type FieldValues, typ
  */
 export function useFieldError<T extends FieldValues>(control: Control<T>, name?: Path<T>) {
   const { errors } = useFormState({ control, ...(name && { name }) });
-  return (path: Path<T>) => (get(errors, path) as FieldError | undefined)?.message;
+  return (path: Path<T>) => get<typeof errors, FieldError | undefined>(errors, path)?.message;
 }

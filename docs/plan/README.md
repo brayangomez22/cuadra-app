@@ -6,7 +6,7 @@ Este directorio es lo único que cambia de fase en fase. `CLAUDE.md` contiene la
 
 ## Fase activa
 
-> **Fase 3 — Inventario, clientes y compras** → [`fase-3-inventario-clientes.md`](fase-3-inventario-clientes.md)
+> **Fase 4 — Facturación, control y reportes** → [`fase-4-facturacion-control.md`](fase-4-facturacion-control.md)
 
 ## Fases en orden
 
@@ -14,8 +14,8 @@ Este directorio es lo único que cambia de fase en fase. `CLAUDE.md` contiene la
 |---|---|---|---|---|---|
 | 1 | Núcleo | T01–T17 | `fase-1-nucleo.md` | ✅ completa | Cimientos técnicos (CI, observabilidad, BD multi-tenant, OpenAPI), identidad, catálogo, inventario, UI base y dominio de ventas |
 | 2 | Vender | T18–T25 (+ T24a–T24k) | `fase-2-vender.md` | ✅ completa | River, Sentry, API y pantalla del POS, tirilla, caja, dashboards y E2E |
-| 3 | Inventario, clientes y compras | T26–T34 (+ T26a–T26r, T29a, T30a, T31a, T32a, T33a, T34a) | `fase-3-inventario-clientes.md` | 🟡 activa | Fraccionamiento, escáner con cámara, stock mínimo, importación de Excel, toma física, clientes, fiados, compras y demo |
-| 4 | Facturación, control y reportes | T35–T44 | `fase-4-facturacion-control.md` | ⚪ | DIAN, seguridad, feature flags, analítica, usuarios y auditoría, reportes, tablero y primeros pasos |
+| 3 | Inventario, clientes y compras | T26–T34 (+ T26a–T26r, T29a, T30a, T31a, T32a, T33a, T34a) | `fase-3-inventario-clientes.md` | ✅ completa | Fraccionamiento, escáner con cámara, stock mínimo, importación de Excel, toma física, clientes, fiados, compras y demo |
+| 4 | Facturación, control y reportes | T35–T44 | `fase-4-facturacion-control.md` | 🟡 activa | DIAN, seguridad, feature flags, analítica, usuarios y auditoría, reportes, tablero y primeros pasos |
 | 5 | Producción y piloto | T45–T50 | `fase-5-produccion-piloto.md` | ⚪ | Terraform, CD, monitoreo en producción, backups, exportación de datos y legal → **arranca el piloto** |
 | 6 | Portafolio | T51–T53 | `fase-6-portafolio.md` | ⚪ | Pruebas de carga, README final y laboratorio de Kubernetes (opcional) |
 | 7 | V2 | épicas | `fase-7-v2.md` | ⚪ | Cotizaciones, órdenes de compra, listas de precios, multi-sede, modo sin internet, WhatsApp, diferenciadores, suscripciones, pagos con QR |
@@ -73,17 +73,18 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
 
 ## Alcance de la fase activa
 
-**Sí se construye:** lo listado en `fase-3-inventario-clientes.md`.
+**Sí se construye:** lo listado en `fase-4-facturacion-control.md`.
 
 **No se implementa todavía**, pero el modelo no debe bloquearlo:
-- Facturación DIAN (T35–T37) → los clientes guardan tipo y número de documento (NIT con DV) y sus responsabilidades fiscales; las compras y conversiones no pierden precisión en los totales ni en el IVA discriminado por tasa.
-- Auditoría y métricas de control (T38, T42, T43) → los ajustes de la toma física, las ventas que exceden el cupo con autorización y los cambios de precio guardan quién y cuándo, para que T38 los registre en `audit_events`.
-- Tablero del dueño (T43) → las alertas de reposición (T28) se consultan por sede y sin lógica en la UI.
-- Órdenes de compra y cuentas por pagar (V2-2) → una compra puede quedar con saldo por pagar y referenciar un documento de origen opcional.
-- Listas de precios y precio por cantidad (V2-3, V2-13) → el `PriceQuery` lleva la unidad de la línea (`UnitID`, `UnitFactor`) y el precio que da una regla es por esa unidad, como el de la unidad alternativa (T26).
-- Lotes y vencimientos (V2-12) → compras, conteos y ajustes llevan `lot_id` opcional.
-- Multi-sede (V2-4) → stock mínimo, conteos y compras siempre referencian una `Location`.
-- Modo sin internet (V2-5) → los IDs son UUID v7 y las operaciones de escritura deben poder hacerse idempotentes.
+- Infraestructura y despliegue en Azure (T45–T46) → la configuración sale de variables de entorno y los archivos que se generen (XML y PDF de los documentos electrónicos, exportaciones) se guardan detrás de un puerto de almacenamiento, nunca en el disco del contenedor.
+- Observabilidad en producción (T47) → los documentos electrónicos, la auditoría y los reportes tienen sus métricas `cuadra.<modulo>.<cosa>` desde el principio, para que T47 solo arme paneles y alertas.
+- Exportación de datos y cierre de cuenta (T49) → toda tabla nueva (documentos electrónicos, `audit_events`, feature flags por tenant, comentarios) lleva `tenant_id`, para que la exportación y el borrado la recorran; lo que la ley obliga a conservar (documentos electrónicos) se distingue de lo que se puede borrar.
+- Cumplimiento legal (T50) → la analítica (T40) respeta el consentimiento del tenant y no envía datos personales; los usuarios (T41) pueden guardar después la versión de los documentos que aceptaron.
+- Multi-sede (V2-4) → reportes, tablero y auditoría filtran por `Location`.
+- Modo sin internet (V2-5) → la emisión de documentos electrónicos es idempotente: reintentar una venta o una nota crédito nunca emite dos documentos.
+- Cotizaciones y órdenes de compra (V2-1, V2-2) → la numeración de documentos (resoluciones y prefijos de T36) no queda atada solo a la factura de venta.
+- Suscripciones del SaaS (V2-9) → los feature flags (T39) y los módulos activables siguen separados (`CLAUDE.md`, regla 10): el plan contratado activará módulos, no flags.
+- Pagos con QR (V2-10) → los medios de pago de la factura electrónica salen de los pagos de la venta, sin una lista fija en el emisor.
 
 ## Cómo se trabaja
 

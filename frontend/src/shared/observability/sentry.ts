@@ -1,6 +1,18 @@
 import * as Sentry from '@sentry/react';
 import { scrubBreadcrumb, scrubEvent } from './scrub';
 
+// Sentry 11 collects cookies, headers, request and response bodies, query params
+// and stack-frame variables by default (it replaced sendDefaultPii): none of that
+// is sent, because it would carry customers' data and tokens.
+export const dataCollection: Sentry.BrowserOptions['dataCollection'] = {
+  userInfo: false,
+  cookies: false,
+  httpHeaders: false,
+  httpBodies: [],
+  urlQueryParams: false,
+  stackFrameVariables: false,
+};
+
 // initSentry starts error reporting. Without VITE_SENTRY_DSN (tests, local runs
 // without a project) it does nothing. Sentry is for errors only: no tracing and
 // no session replay, which would record customers' data on the POS screen.
@@ -11,7 +23,7 @@ export function initSentry() {
     dsn,
     environment: import.meta.env.VITE_APP_ENV ?? import.meta.env.MODE,
     release: import.meta.env.VITE_RELEASE,
-    sendDefaultPii: false,
+    dataCollection,
     beforeSend: scrubEvent,
     beforeBreadcrumb: scrubBreadcrumb,
   });
