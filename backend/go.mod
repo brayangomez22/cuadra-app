@@ -1,6 +1,6 @@
 module github.com/brayangomez22/cuadra-app/backend
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/exaring/otelpgx v0.13.0
