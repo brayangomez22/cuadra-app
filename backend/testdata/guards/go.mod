@@ -4,6 +4,6 @@
 // reports its forbidden case.
 module github.com/brayangomez22/cuadra-app/backend
 
-go 1.27.3
+go 1.27.4
 
 require github.com/google/uuid v1.6.0
