@@ -23,6 +23,8 @@ const (
 	PermInventoryAdjust      Permission = "inventory:adjust"
 	PermInventoryCount       Permission = "inventory:count"        // record what is counted in a stock count
 	PermInventoryCountManage Permission = "inventory:count_manage" // start, review, approve or cancel stock counts
+	PermInvoicingRead        Permission = "invoicing:read"         // electronic documents and their state
+	PermInvoicingManage      Permission = "invoicing:manage"       // emission settings, numbering resolutions, manual retry
 	PermPurchasesRead        Permission = "purchases:read"         // suppliers and purchases, with their costs
 	PermPurchasesWrite       Permission = "purchases:write"        // create suppliers and register purchases
 	PermReceivablesRead      Permission = "receivables:read"       // customers' credit, statements and aging
@@ -71,6 +73,7 @@ var coreRoles = []struct {
 		PermCatalogRead, PermCatalogWrite, PermImportsRun,
 		PermCustomersRead, PermCustomersWrite, PermCustomersManage,
 		PermInventoryRead, PermInventoryAdjust, PermInventoryCount, PermInventoryCountManage,
+		PermInvoicingRead, PermInvoicingManage,
 		PermPurchasesRead, PermPurchasesWrite,
 		PermReceivablesRead, PermReceivablesManage, PermReceivablesCollect, PermReceivablesOverride,
 		PermSalesCreate, PermSalesDiscount, PermSalesRead, PermSalesVoid, PermCashManage,
@@ -80,6 +83,7 @@ var coreRoles = []struct {
 		PermCatalogRead,
 		PermCustomersRead, PermCustomersWrite,
 		PermInventoryRead, PermInventoryCount,
+		PermInvoicingRead,
 		PermReceivablesRead, PermReceivablesCollect,
 		PermSalesCreate, PermSalesRead,
 	}},
@@ -103,6 +107,8 @@ var corePermissions = []Permission{
 	PermInventoryAdjust,
 	PermInventoryCount,
 	PermInventoryCountManage,
+	PermInvoicingRead,
+	PermInvoicingManage,
 	PermPurchasesRead,
 	PermPurchasesWrite,
 	PermReceivablesRead,

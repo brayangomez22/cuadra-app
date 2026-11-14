@@ -9,8 +9,6 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/imports"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/purchases"
-	"github.com/brayangomez22/cuadra-app/backend/internal/modules/receivables"
-	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
 	"github.com/brayangomez22/cuadra-app/backend/internal/server/ports"
 )
@@ -69,18 +67,10 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 		return nil, err
 	}
 	history.Inventory = inventoryModule
-	// Sales charge credit sales to the receivables, whose cash payments go
-	// into the sales module's drawers: the credit is joined once both exist.
-	credit := &ports.SalesCredit{}
-	salesModule, err := w.sales(catalogModule, inventoryModule, customersModule, salesCredit{credit, identityModule})
+	sell, err := w.selling(catalogModule, inventoryModule, customersModule, identityModule)
 	if err != nil {
 		return nil, err
 	}
-	receivablesModule, err := w.receivables(customersModule, salesModule)
-	if err != nil {
-		return nil, err
-	}
-	credit.Receivables = receivablesModule
 	importsModule, err := w.imports(catalogModule, identityModule, inventoryModule)
 	if err != nil {
 		return nil, err
@@ -91,8 +81,8 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 	}
 	return []func(*http.ServeMux){
 		identityModule.RegisterRoutes, catalogModule.RegisterRoutes, customersModule.RegisterRoutes,
-		inventoryModule.RegisterRoutes, salesModule.RegisterRoutes, receivablesModule.RegisterRoutes,
-		importsModule.RegisterRoutes, purchasesModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
+		inventoryModule.RegisterRoutes, sell.sales.RegisterRoutes, sell.receivables.RegisterRoutes,
+		sell.invoicing.RegisterRoutes, importsModule.RegisterRoutes, purchasesModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
 	}, nil
 }
 
@@ -144,46 +134,6 @@ func (w *wiring) inventory(c *catalog.Module) (*inventory.Module, error) {
 		DB:             w.DB,
 		Authorize:      w.permissions.Authorize,
 		Variants:       ports.InventoryCatalog{Catalog: c},
-		Logger:         w.Log,
-		TracerProvider: w.TracerProvider,
-		MeterProvider:  w.MeterProvider,
-		Now:            w.Now,
-	})
-}
-
-// salesCredit is how sales on credit reach the receivables (set once they
-// exist) and who authorizes one over the customer's credit.
-type salesCredit struct {
-	ledger   *ports.SalesCredit
-	identity *identity.Module
-}
-
-// sales sells the catalog's variants from the inventory's stock, to the
-// customers module's customers, on credit through the receivables.
-func (w *wiring) sales(c *catalog.Module, i *inventory.Module, cu *customers.Module, cr salesCredit) (*sales.Module, error) {
-	return sales.New(sales.Config{
-		DB:             w.DB,
-		Authorize:      w.permissions.Authorize,
-		Catalog:        ports.SalesCatalog{Catalog: c},
-		Stock:          ports.SalesStock{Inventory: i},
-		Customers:      ports.SalesCustomers{Customers: cu},
-		Credit:         cr.ledger,
-		Authorizer:     ports.SalesAuthorizer{Identity: cr.identity},
-		Users:          cr.identity,
-		Logger:         w.Log,
-		TracerProvider: w.TracerProvider,
-		MeterProvider:  w.MeterProvider,
-		Now:            w.Now,
-	})
-}
-
-// receivables gives credit to the customers module's customers and takes
-// their cash payments into the sales module's drawers.
-func (w *wiring) receivables(cu *customers.Module, s *sales.Module) (*receivables.Module, error) {
-	return receivables.New(receivables.Config{
-		DB:             w.DB,
-		Customers:      ports.ReceivablesCustomers{Customers: cu},
-		Cash:           ports.ReceivablesCash{Sales: s},
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,

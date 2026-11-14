@@ -112,6 +112,7 @@ type Deps struct {
 	Credit         CreditLedger
 	Authorizer     CreditAuthorizer
 	Users          UserDirectory
+	Documents      ElectronicDocuments
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -152,7 +153,7 @@ var cashDifferenceBuckets = []float64{0, 50, 500, 1_000, 5_000, 10_000, 20_000, 
 // NewService builds a Service. It fails if a port is missing or a metric
 // instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Catalog, d.Stock, d.Sales, d.Policies, d.CashSessions, d.Customers, d.Credit, d.Authorizer, d.Users) {
+	if usecase.AnyNil(d.Catalog, d.Stock, d.Sales, d.Policies, d.CashSessions, d.Customers, d.Credit, d.Authorizer, d.Users, d.Documents) {
 		return nil, errors.New("sales: missing service dependency")
 	}
 	if d.Prices == nil {

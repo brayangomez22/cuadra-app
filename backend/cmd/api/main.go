@@ -150,11 +150,12 @@ func newAPIHandler(cfg config.Config, database *db.DB, log *slog.Logger, jobClie
 		Workers:  workers,
 		Schedule: true,
 		// The API docs are for developers only; other environments do not serve them.
-		Docs:           cfg.Env == "development",
-		Log:            log,
-		TracerProvider: otel.GetTracerProvider(),
-		MeterProvider:  otel.GetMeterProvider(),
-		DemoEnabled:    cfg.DemoEnabled,
+		Docs:              cfg.Env == "development",
+		Log:               log,
+		TracerProvider:    otel.GetTracerProvider(),
+		MeterProvider:     otel.GetMeterProvider(),
+		DemoEnabled:       cfg.DemoEnabled,
+		InvoicingProvider: cfg.InvoicingProvider,
 	})
 }
 

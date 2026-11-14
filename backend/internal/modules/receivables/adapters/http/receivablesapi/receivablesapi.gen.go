@@ -328,6 +328,9 @@ type CountEntryId = openapi_types.UUID
 // CustomerId defines model for CustomerId.
 type CustomerId = openapi_types.UUID
 
+// DocumentId defines model for DocumentId.
+type DocumentId = openapi_types.UUID
+
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID
 
@@ -348,6 +351,9 @@ type ProductId = openapi_types.UUID
 
 // PurchaseId defines model for PurchaseId.
 type PurchaseId = openapi_types.UUID
+
+// ResolutionId defines model for ResolutionId.
+type ResolutionId = openapi_types.UUID
 
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID

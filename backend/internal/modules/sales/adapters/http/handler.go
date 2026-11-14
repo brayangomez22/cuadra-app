@@ -95,6 +95,9 @@ func (h *Handler) ConfirmSale(ctx context.Context, req salesapi.ConfirmSaleReque
 	if c := req.Body.CreditAuthorization; c != nil {
 		in.CreditAuthorization = &app.Credentials{Email: c.Email, Password: c.Password}
 	}
+	if k := req.Body.DocumentKind; k != nil {
+		in.DocumentKind = string(*k)
+	}
 	for _, l := range req.Body.Lines {
 		qty, err := httpx.ParseDecimal(l.Quantity, domain.ErrInvalidQuantity)
 		if err != nil {

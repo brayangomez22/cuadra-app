@@ -7,6 +7,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/app"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/domain"
 )
 
 // ReceiveCash records cash userID received outside a sale as a cash in of
@@ -15,4 +16,10 @@ import (
 // it joins the payment's transaction.
 func (m *Module) ReceiveCash(ctx context.Context, tenantID, userID uuid.UUID, amount decimal.Decimal, reason string) (uuid.UUID, error) {
 	return m.service.ReceiveCash(ctx, app.Actor{TenantID: tenantID, UserID: userID}, amount, reason)
+}
+
+// Sale returns a sale of tenantID (domain.ErrSaleNotFound otherwise). It is
+// for the invoicing module, which issues the sale's electronic document.
+func (m *Module) Sale(ctx context.Context, tenantID, userID, saleID uuid.UUID) (*domain.Sale, error) {
+	return m.service.GetSale(ctx, app.Actor{TenantID: tenantID, UserID: userID}, saleID)
 }

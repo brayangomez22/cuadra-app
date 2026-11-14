@@ -40,6 +40,9 @@ type Config struct {
 	Now func() time.Time
 	// DemoEnabled lets anyone enter the demo tenants (DEMO_ENABLED).
 	DemoEnabled bool
+	// InvoicingProvider names the technology provider of the electronic
+	// documents (INVOICING_PROVIDER); empty is the simulated one.
+	InvoicingProvider string
 }
 
 // New builds every module and the handler that serves them. It fails, so

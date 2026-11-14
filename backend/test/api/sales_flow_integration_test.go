@@ -33,7 +33,13 @@ func newSalesFlow(t *testing.T) *salesFlow {
 	t.Helper()
 	f := &salesFlow{}
 	f.handler, f.tokens = newAPI(t)
+	return f.setUp(t)
+}
 
+// setUp signs up a hardware store with a product of 10 units in stock at a
+// location, and tokens of its cashier and its warehouse keeper.
+func (f *salesFlow) setUp(t *testing.T) *salesFlow {
+	t.Helper()
 	var err error
 	f.ownerToken, f.tenantID = f.signup(t, "ana@ventas.co")
 	f.cashierToken, _, err = f.tokens.Issue(f.tenantID, uuid.Must(uuid.NewV7()), "cashier")

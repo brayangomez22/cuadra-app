@@ -114,6 +114,24 @@ func (e CashSessionSummaryStatus) Valid() bool {
 	}
 }
 
+// Defines values for ElectronicDocumentKind.
+const (
+	Invoice ElectronicDocumentKind = "invoice"
+	Pos     ElectronicDocumentKind = "pos"
+)
+
+// Valid indicates whether the value is a known member of the ElectronicDocumentKind enum.
+func (e ElectronicDocumentKind) Valid() bool {
+	switch e {
+	case Invoice:
+		return true
+	case Pos:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PaymentMethod.
 const (
 	Card      PaymentMethod = "card"
@@ -374,7 +392,11 @@ type ConfirmSaleInput struct {
 
 	// CustomerId El cliente activo a quien se vende (`/customers`). Sin él, la venta es a consumidor final.
 	CustomerId *openapi_types.UUID `json:"customer_id,omitempty"`
-	Lines      []SaleLineInput     `json:"lines"`
+
+	// DocumentKind `pos`: documento equivalente electrónico POS (la venta de mostrador). `invoice`: factura electrónica de venta
+	// (una venta a crédito siempre lo es).
+	DocumentKind *ElectronicDocumentKind `json:"document_kind,omitempty"`
+	Lines        []SaleLineInput         `json:"lines"`
 
 	// LocationId Sede donde se vende y de donde sale el stock.
 	LocationId openapi_types.UUID `json:"location_id"`
@@ -421,6 +443,10 @@ type DiscountLimit struct {
 	Max       string `json:"max"`
 	Unlimited bool   `json:"unlimited"`
 }
+
+// ElectronicDocumentKind `pos`: documento equivalente electrónico POS (la venta de mostrador). `invoice`: factura electrónica de venta
+// (una venta a crédito siempre lo es).
+type ElectronicDocumentKind string
 
 // Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Error struct {
@@ -790,6 +816,9 @@ type CountEntryId = openapi_types.UUID
 // CustomerId defines model for CustomerId.
 type CustomerId = openapi_types.UUID
 
+// DocumentId defines model for DocumentId.
+type DocumentId = openapi_types.UUID
+
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID
 
@@ -810,6 +839,9 @@ type ProductId = openapi_types.UUID
 
 // PurchaseId defines model for PurchaseId.
 type PurchaseId = openapi_types.UUID
+
+// ResolutionId defines model for ResolutionId.
+type ResolutionId = openapi_types.UUID
 
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
