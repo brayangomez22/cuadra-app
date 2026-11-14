@@ -24,7 +24,7 @@ export function CloseCashOfPage() {
   return (
     <Page
       title={`Cerrar la caja de ${owner?.cashier ?? 'otro usuario'}`}
-      description={`${whereAndSinceSentence(owner)}Cuente el efectivo del cajón: el cierre queda a su nombre y Cuadra lo compara con lo esperado.`}
+      description={`${whereAndSinceSentence(owner)}El cierre queda a su nombre y Cuadra compara lo contado con lo esperado.`}
     >
       <QueryState
         queries={[session]}

@@ -58,3 +58,15 @@
 .label {
   @include truncate;
 }
+
+// Folded side menu: centered icons, labels only for screen readers.
+.root[data-compact] {
+  .link {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .label {
+    @include visually-hidden;
+  }
+}

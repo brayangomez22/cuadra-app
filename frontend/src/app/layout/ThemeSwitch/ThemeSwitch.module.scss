@@ -1,0 +1,69 @@
+@use '@/styles/abstracts' as *;
+
+// One row: the word on the left, in line with the account texts; the sun and
+// the moon on the right.
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0 var(--space-2) 0 var(--space-4);
+  border: 0;
+}
+
+// A legend does not sit in a flex row; floated, it does.
+.legend {
+  float: inline-start;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+// A sunken track; the chosen one is a raised chip, quiet next to the orange
+// of the actions.
+.track {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-subtle);
+}
+
+.option {
+  @include touch-target;
+
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+
+  @include reduced-motion-safe {
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      background var(--duration-fast) var(--ease-standard);
+  }
+
+  @include hover {
+    color: var(--color-text-default);
+  }
+
+  // Color is not the only cue: the chosen one is also raised.
+  &:has(:checked) {
+    color: var(--color-text-default);
+    background: var(--color-bg-surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  // The radio is hidden, so its chip shows the focus.
+  &:has(:focus-visible) {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+.input {
+  @include visually-hidden;
+}

@@ -1,0 +1,48 @@
+@use '@/styles/abstracts' as *;
+
+// Hidden below lg, where the top bar opens the menu in a side panel. It
+// scrolls on its own, so the account panel stays reachable on a short screen.
+.root {
+  display: none;
+
+  @include respond-to(lg) {
+    position: sticky;
+    inset-block-start: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    inline-size: var(--size-sidebar);
+    block-size: 100dvh;
+    overflow: hidden auto;
+    padding-block-start: var(--space-4);
+    border-inline-end: 1px solid var(--color-border-default);
+    background: var(--color-bg-surface);
+
+    @include reduced-motion-safe {
+      transition: inline-size var(--duration-fast) var(--ease-standard);
+    }
+  }
+
+  &[data-collapsed] {
+    inline-size: var(--size-sidebar-collapsed);
+  }
+}
+
+// The wordmark and the button that folds the menu; folded, only the button.
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-inline: var(--space-6) var(--space-2);
+
+  .root[data-collapsed] & {
+    justify-content: center;
+    padding-inline: var(--space-2);
+  }
+}
+
+// Pushed to the bottom of the column.
+.account {
+  margin-block-start: auto;
+}

@@ -3,7 +3,7 @@ import type { components } from '@/shared/api/schema';
 
 export type DenominationCount = components['schemas']['DenominationCount'];
 
-type Denomination = { value: string; kind: 'bill' | 'coin' | 'both' };
+export type Denomination = { value: string; kind: 'bill' | 'coin' | 'both' };
 
 /**
  * The bills and coins of the Colombian peso the API accepts, from the largest.
@@ -31,8 +31,23 @@ const kindLabels: Record<Denomination['kind'], string> = {
 
 /** "Billetes de $ 50.000", the label of a denomination's field. */
 export function denominationLabel({ value, kind }: Denomination): string {
-  return `${kindLabels[kind]} de ${formatMoney(value)}`;
+  return `${denominationPrefix({ value, kind })}${formatMoney(value)}`;
 }
+
+/** "Billetes de ", what a field's label says before the amount; its group shows it on screen. */
+export function denominationPrefix({ kind }: Denomination): string {
+  return `${kindLabels[kind]} de `;
+}
+
+/** The bills, then the coins with the 1.000 that is a bill or a coin: how a drawer is counted. */
+export const denominationGroups: { title: string; note?: string; denominations: Denomination[] }[] = [
+  { title: 'Billetes', denominations: denominations.filter((d) => d.kind === 'bill') },
+  {
+    title: 'Monedas',
+    note: 'Los billetes de $ 1.000 se cuentan con las monedas de $ 1.000.',
+    denominations: denominations.filter((d) => d.kind !== 'bill'),
+  },
+];
 
 // The API's limit of bills or coins of one denomination.
 const MAX_QUANTITY = 10_000_000;

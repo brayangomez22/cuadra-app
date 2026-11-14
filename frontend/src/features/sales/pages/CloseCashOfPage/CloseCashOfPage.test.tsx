@@ -33,6 +33,7 @@ describe('CloseCashOfPage', () => {
     expect(await screen.findByRole('heading', { name: 'Cerrar la caja de Pedro Ruiz' })).toBeInTheDocument();
     expect(screen.getByText(/Bodega principal · abierta el 13\/10\/2026, 8:00 a\. m\./)).toBeInTheDocument();
     expect(screen.getByText('Por qué la cierra usted y lo que el cajero deba saber.')).toBeInTheDocument();
+    expect(screen.getByText(/incluida la base de \$\s100\.000 con la que abrió Pedro Ruiz\./)).toBeInTheDocument();
     await userEvent.type(await screen.findByLabelText('Billetes de $ 100.000'), '1');
     await userEvent.click(screen.getByRole('button', { name: 'Cerrar caja' }));
     const confirm = await screen.findByRole('dialog', { name: '¿Cerrar la caja de Pedro Ruiz?' });

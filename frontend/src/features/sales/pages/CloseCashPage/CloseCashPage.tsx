@@ -8,8 +8,7 @@ import styles from './CloseCashPage.module.scss';
 import { CountForm } from '../../components/CashCount/CountForm/CountForm';
 
 const title = 'Cerrar caja';
-const description =
-  'Cuente el efectivo del cajón por billetes y monedas. Al cerrar, Cuadra lo compara con lo que debería haber.';
+const description = 'Al cerrar, Cuadra compara lo contado con lo que debería haber en el cajón.';
 
 /**
  * /caja/cerrar: the count of the drawer (arqueo). It is blind: the screen

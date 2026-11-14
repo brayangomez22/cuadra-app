@@ -13,11 +13,19 @@
   }
 }
 
-// The count and the notes.
+// What to count, the count and the notes.
 .count {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
   min-inline-size: 0;
-  max-inline-size: var(--size-form);
+}
+
+.instructions {
+  max-inline-size: 65ch;
+  color: var(--color-text-muted);
+
+  strong {
+    color: var(--color-text-default);
+  }
 }

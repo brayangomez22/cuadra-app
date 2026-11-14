@@ -1,6 +1,5 @@
-import { formatMoney } from '@/shared/format';
-import { Field, Input } from '@/shared/ui';
-import { denominationLabel, denominations, denominationSubtotal, parseCount } from '../../../model/cash/denominations';
+import { denominationGroups } from '../../../model/cash/denominations';
+import { DenominationField } from '../DenominationField/DenominationField';
 import styles from './DenominationCounts.module.scss';
 
 type Props = {
@@ -11,36 +10,28 @@ type Props = {
   onChange: (denomination: string, text: string) => void;
 };
 
-/** A field per bill and coin, with what it adds up to beside it. */
+/** The bills, then the coins: a field per denomination, up to three per line. */
 export function DenominationCounts({ texts, invalid, onChange }: Props) {
   return (
     <fieldset className={styles.root}>
       <legend className="srOnly">Conteo por denominación</legend>
-      {denominations.map((d) => {
-        const parsed = parseCount(texts[d.value] ?? '');
-        const subtotal = parsed.ok
-          ? denominationSubtotal({ denomination: d.value, quantity: parsed.quantity })
-          : undefined;
-        return (
-          <div key={d.value} className={styles.denomination}>
-            <Field
-              label={denominationLabel(d)}
-              error={invalid?.has(d.value) ? 'Escriba cuántos hay, sin decimales' : undefined}
-            >
-              <Input
-                inputMode="numeric"
-                align="end"
-                autoComplete="off"
-                value={texts[d.value] ?? ''}
-                onChange={(event) => onChange(d.value, event.target.value)}
+      {denominationGroups.map((group) => (
+        <fieldset key={group.title} className={styles.group}>
+          <legend className={styles.title}>{group.title}</legend>
+          {group.note && <p className={styles.note}>{group.note}</p>}
+          <div className={styles.fields}>
+            {group.denominations.map((d) => (
+              <DenominationField
+                key={d.value}
+                denomination={d}
+                text={texts[d.value] ?? ''}
+                invalid={invalid?.has(d.value) ?? false}
+                onChange={(text) => onChange(d.value, text)}
               />
-            </Field>
-            <span className={styles.subtotal} aria-hidden="true">
-              {subtotal && subtotal !== '0' ? formatMoney(subtotal) : ''}
-            </span>
+            ))}
           </div>
-        );
-      })}
+        </fieldset>
+      ))}
     </fieldset>
   );
 }

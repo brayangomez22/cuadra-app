@@ -1,5 +1,13 @@
 import { plain } from '@/test/fixtures';
-import { amountText, nextMethod, readRows, settlementMessage, validPayments, type PaymentRow } from './payments';
+import {
+  amountText,
+  methodsFor,
+  nextMethod,
+  readRows,
+  settlementMessage,
+  validPayments,
+  type PaymentRow,
+} from './payments';
 
 const row = (key: number, method: PaymentRow['method'], text: string): PaymentRow => ({ key, method, text });
 
@@ -45,15 +53,29 @@ describe('nextMethod', () => {
     expect(nextMethod([row(0, 'cash', ''), row(1, 'card', '')])).toBe('nequi');
   });
 
-  it('con todos los medios en uso vuelve al efectivo', () => {
+  it('con todos los medios de pago inmediato en uso no propone ninguno', () => {
     const all = (['cash', 'card', 'nequi', 'daviplata', 'transfer'] as const).map((m, i) => row(i, m, ''));
-    expect(nextMethod(all)).toBe('cash');
+    expect(nextMethod(all)).toBeUndefined();
   });
 
   it('nunca propone crédito: la venta a crédito la elige el cajero', () => {
     const all = (['cash', 'card', 'nequi', 'daviplata', 'transfer'] as const).map((m, i) => row(i, m, ''));
-    expect(nextMethod([...all, row(5, 'credit', '')])).toBe('cash');
-    expect(nextMethod(all.slice(0, 4))).toBe('transfer');
+    expect(nextMethod([...all.slice(0, 4), row(5, 'credit', '')])).toBe('transfer');
+  });
+});
+
+describe('methodsFor', () => {
+  it('ofrece a cada pago su medio y los que no usa otro pago', () => {
+    const rows = [row(0, 'cash', ''), row(1, 'nequi', '')];
+    expect(methodsFor(rows, 1, false)).toEqual(['card', 'nequi', 'daviplata', 'transfer']);
+    expect(methodsFor(rows, 0, false)).toEqual(['cash', 'card', 'daviplata', 'transfer']);
+  });
+
+  it('ofrece crédito solo si el cliente tiene cupo y ningún otro pago es a crédito', () => {
+    const rows = [row(0, 'credit', ''), row(1, 'cash', '')];
+    expect(methodsFor(rows, 0, true)).toContain('credit');
+    expect(methodsFor(rows, 1, true)).not.toContain('credit');
+    expect(methodsFor([row(0, 'cash', '')], 0, false)).not.toContain('credit');
   });
 });
 

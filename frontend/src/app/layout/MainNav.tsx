@@ -7,13 +7,15 @@ type Props = {
   access: Access;
   /** Called when an item is chosen, e.g. to close the menu panel on a phone. */
   onNavigate?: () => void;
+  /** Icons only: the labels stay for screen readers and show on hover. */
+  compact?: boolean;
 };
 
-export function MainNav({ access, onNavigate }: Props) {
+export function MainNav({ access, onNavigate, compact = false }: Props) {
   const items = visibleItems(navItems, access);
   const current = currentItem(items, useLocation().pathname);
   return (
-    <nav aria-label="Menú principal" className={styles.root}>
+    <nav aria-label="Menú principal" className={styles.root} data-compact={compact || undefined}>
       <ul className={styles.list}>
         {items.map(({ to, label, icon: Icon }) => (
           <li key={to}>
@@ -21,6 +23,7 @@ export function MainNav({ access, onNavigate }: Props) {
               to={to}
               className={styles.link}
               aria-current={to === current ? 'page' : undefined}
+              title={compact ? label : undefined}
               onClick={onNavigate}
             >
               <Icon className={styles.icon} />

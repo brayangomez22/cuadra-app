@@ -41,3 +41,8 @@
   inline-size: 100%;
   margin-block-start: var(--space-2);
 }
+
+// The folded side menu: the buttons alone, centered.
+.compact {
+  align-items: center;
+}

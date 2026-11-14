@@ -1,8 +1,9 @@
-import { Alert, Button, DialogClose, IconPlus } from '@/shared/ui';
-import { amountText } from '../../../../model/payments/payments';
+import { Alert, Button, IconPlus } from '@/shared/ui';
+import { amountText, methodsFor } from '../../../../model/payments/payments';
 import type { PaymentInput } from '../../../../model/payments/paymentMethods';
-import { MAX_PAYMENTS, usePayments } from '../../hooks/checkout/usePayments';
+import { usePayments } from '../../hooks/checkout/usePayments';
 import type { SaleCredit } from '../../hooks/checkout/useSaleCredit';
+import { CheckoutFooter } from '../CheckoutFooter/CheckoutFooter';
 import { PaymentFigures } from '../PaymentFigures/PaymentFigures';
 import { PaymentRow } from '../PaymentRow/PaymentRow';
 import styles from './PaymentsForm.module.scss';
@@ -19,7 +20,7 @@ type Props = {
   error?: string;
 };
 
-/** The payments of the sale, checked against the total before they are sent. */
+/** The payments of the sale, each method at most once, checked against the total before they are sent. */
 export function PaymentsForm({ total, credit, onConfirm, pending, error }: Props) {
   const payments = usePayments({ total, onConfirm, pending });
   const { rows, problem } = payments;
@@ -32,7 +33,7 @@ export function PaymentsForm({ total, credit, onConfirm, pending, error }: Props
       }}
       noValidate
     >
-      <PaymentFigures total={total} settlement={payments.settlement} credit={credit} />
+      <PaymentFigures total={total} credit={credit} />
       <fieldset className={styles.payments}>
         <legend className="srOnly">Pagos</legend>
         {rows.map((row, index) => (
@@ -40,13 +41,13 @@ export function PaymentsForm({ total, credit, onConfirm, pending, error }: Props
             key={row.key}
             row={row}
             index={index}
-            withCredit={Boolean(credit)}
+            methods={methodsFor(rows, index, Boolean(credit))}
             field={{ placeholder: rows.length === 1 ? amountText(total) : undefined, error: payments.errorOf(index) }}
             onChange={(changes) => payments.change(row.key, changes)}
             onRemove={() => payments.remove(row.key)}
           />
         ))}
-        {rows.length < MAX_PAYMENTS && (
+        {payments.canAdd && (
           <Button variant="ghost" icon={<IconPlus />} className={styles.add} onClick={payments.add}>
             Agregar medio de pago
           </Button>
@@ -54,14 +55,7 @@ export function PaymentsForm({ total, credit, onConfirm, pending, error }: Props
       </fieldset>
       {problem && <Alert tone="danger">{problem}</Alert>}
       {error && !problem && <Alert tone="danger">{error}</Alert>}
-      <div className={styles.footer}>
-        <DialogClose asChild>
-          <Button variant="secondary">Volver</Button>
-        </DialogClose>
-        <Button type="submit" size="lg" loading={pending}>
-          Confirmar venta
-        </Button>
-      </div>
+      <CheckoutFooter settlement={payments.settlement} pending={pending} />
     </form>
   );
 }

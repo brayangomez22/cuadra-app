@@ -1,29 +1,41 @@
 @use '@/styles/abstracts' as *;
 
-// One field per denomination, from the largest down, like a counting sheet.
-.root {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+// The bills, then the coins, like a counting sheet.
+.root,
+.group {
   min-inline-size: 0;
-  max-inline-size: var(--size-form);
   margin: 0;
   padding: 0;
   border: 0;
 }
 
-// The field and, to its right, what those bills or coins add up to.
-.denomination {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 8rem);
-  align-items: end;
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
 }
 
-.subtotal {
-  padding-block-end: var(--space-3);
-  text-align: end;
-  color: var(--color-text-muted);
+.title {
+  padding: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
 
-  @include numeric;
+.note {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+// Up to three per line, and two on a phone: each column at least 8rem wide
+// and a third of the line once there is room for three.
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(8rem, calc((100% - 2 * var(--space-4)) / 3)), 1fr));
+  gap: var(--space-2) var(--space-4);
 }
