@@ -1,0 +1,74 @@
+@use '@/styles/abstracts' as *;
+
+// Stuck to the bottom of the dialog's scrolling body, edge to edge: it takes
+// over the room the body leaves on its sides (--space-5) and at its end when
+// it closes the dialog (--space-5 and the phone's gesture bar). A sticky box
+// stops at the scroller's padding, so the inset goes past that end room to
+// reach the edge; the negative margin lays it over the same room when the
+// payments fit without scrolling. Its own padding keeps the room under the
+// buttons.
+.root {
+  --body-end: calc(var(--space-5) + env(safe-area-inset-bottom));
+
+  position: sticky;
+  inset-block-end: calc(-1 * var(--body-end));
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-inline: calc(-1 * var(--space-5));
+  margin-block-end: calc(-1 * var(--body-end));
+  padding-block: var(--space-3) var(--body-end);
+  padding-inline: var(--space-5);
+  border-block-start: 1px solid var(--color-border-default);
+  background: var(--color-bg-surface);
+
+  @include respond-to(sm) {
+    flex-flow: row wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.figures {
+  display: flex;
+  gap: var(--space-6);
+  margin: 0;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  color: var(--color-text-muted);
+
+  dd {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    white-space: nowrap;
+    color: var(--color-text-default);
+
+    @include numeric;
+  }
+
+  // Not enough yet: warning text on the surface, and the word says it.
+  &[data-tone='missing'] dd {
+    color: var(--color-feedback-warning);
+  }
+
+  // Change to hand over, and the word says it.
+  &[data-tone='change'] dd {
+    color: var(--color-feedback-success);
+  }
+}
+
+.figure dd.due {
+  font-size: var(--font-size-2xl);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

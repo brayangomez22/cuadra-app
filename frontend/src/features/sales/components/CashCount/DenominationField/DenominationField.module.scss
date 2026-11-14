@@ -1,0 +1,19 @@
+@use '@/styles/abstracts' as *;
+
+// The field and, under it, what those bills or coins add up to.
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+// Always one line tall, empty or not, so the fields of a row stay aligned.
+.subtotal {
+  min-block-size: 1lh;
+  font-size: var(--font-size-sm);
+  text-align: end;
+  color: var(--color-text-muted);
+
+  @include numeric;
+}

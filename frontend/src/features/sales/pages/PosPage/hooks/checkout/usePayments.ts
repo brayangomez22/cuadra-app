@@ -11,9 +11,6 @@ import {
   type PaymentRow,
 } from '../../../../model/payments/payments';
 
-// Up to this many payments in one sale.
-export const MAX_PAYMENTS = 10;
-
 type Options = {
   total: string;
   /** Sends the sale; the payments are already checked against the total. */
@@ -24,11 +21,15 @@ type Options = {
 /**
  * The payments typed in the checkout and how they settle the total. Every
  * charge starts with one empty cash payment; a new one proposes what is
- * missing. The errors of the amounts show once the cashier submits.
+ * missing, with a method no other payment uses. The errors of the amounts
+ * show once the cashier submits, and a payment's error hides while it is
+ * being corrected, until the next submit.
  */
 export function usePayments({ total, onConfirm, pending }: Options) {
   const [rows, setRows] = useState<PaymentRow[]>([{ key: 0, method: 'cash', text: '' }]);
   const [submitted, setSubmitted] = useState(false);
+  // The payments edited since the last submit: their errors wait for the next one.
+  const [edited, setEdited] = useState<ReadonlySet<number>>(new Set());
   const [problem, setProblem] = useState<string>();
   const read = readRows(rows, total);
   const settlement = settle(total, validPayments(rows, read));
@@ -36,11 +37,15 @@ export function usePayments({ total, onConfirm, pending }: Options) {
   // Any edit of the payments clears the problem of the last submit.
   function change(key: number, changes: Partial<PaymentRow>) {
     setRows((current) => current.map((r) => (r.key === key ? { ...r, ...changes } : r)));
+    setEdited((current) => new Set(current).add(key));
     setProblem(undefined);
   }
 
+  const canAdd = nextMethod(rows) !== undefined;
+
   function add() {
     const method = nextMethod(rows);
+    if (!method) return;
     const text = isZero(settlement.missing) ? '' : amountText(settlement.missing);
     setRows((current) => [...current, { key: Math.max(...current.map((r) => r.key)) + 1, method, text }]);
     setProblem(undefined);
@@ -52,12 +57,17 @@ export function usePayments({ total, onConfirm, pending }: Options) {
 
   function submit() {
     setSubmitted(true);
+    setEdited(new Set());
     if (pending || read.some((r) => r.error)) return;
     const message = settlementMessage(settlement);
     setProblem(message);
     if (!message) onConfirm(validPayments(rows, read));
   }
 
-  const errorOf = (index: number) => (submitted ? read[index]?.error : undefined);
-  return { rows, settlement, problem, errorOf, change, add, remove, submit };
+  function errorOf(index: number) {
+    const row = rows[index];
+    return submitted && row && !edited.has(row.key) ? read[index]?.error : undefined;
+  }
+
+  return { rows, settlement, problem, errorOf, canAdd, change, add, remove, submit };
 }

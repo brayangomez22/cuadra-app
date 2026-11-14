@@ -2,7 +2,7 @@
 // settle (the same rules as the API).
 import { formatMoney, isNegative, isZero, parseMoneyInput, toDecimalInput } from '@/shared/format';
 import type { Settlement } from '../cart/settlement';
-import type { PaymentInput, PaymentMethod } from './paymentMethods';
+import { posMethods, type PaymentInput, type PaymentMethod } from './paymentMethods';
 
 /** A payment as typed: its method and the text of its amount. key tells rows apart. */
 export type PaymentRow = { key: number; method: PaymentMethod; text: string };
@@ -37,12 +37,19 @@ export function validPayments(rows: PaymentRow[], read: ReadRow[]): PaymentInput
 }
 
 // The order in which a new payment proposes a method it does not have yet.
+// Never credit: selling on credit is the cashier's choice.
 const nextMethods: PaymentMethod[] = ['card', 'nequi', 'daviplata', 'transfer', 'cash'];
 
-/** The method a new payment proposes: the first one not in use yet. */
-export function nextMethod(rows: PaymentRow[]): PaymentMethod {
+/** The method a new payment proposes: the first one not in use yet; undefined when all are. */
+export function nextMethod(rows: PaymentRow[]): PaymentMethod | undefined {
   const used = new Set(rows.map((r) => r.method));
-  return nextMethods.find((m) => !used.has(m)) ?? 'cash';
+  return nextMethods.find((m) => !used.has(m));
+}
+
+/** The methods the payment at index can take: its own and those no other payment uses. */
+export function methodsFor(rows: PaymentRow[], index: number, withCredit: boolean): PaymentMethod[] {
+  const others = new Set(rows.filter((_, i) => i !== index).map((r) => r.method));
+  return posMethods(withCredit).filter((m) => !others.has(m));
 }
 
 /** An amount of the API as the cashier types it: "1900.00" → "1900". */

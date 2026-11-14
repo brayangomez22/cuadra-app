@@ -25,7 +25,6 @@ describe('DemoPage', () => {
       business_template: 'ropa_calzado',
       role: 'cashier',
     });
-    expect(await screen.findByRole('complementary', { name: 'Modo demostración' })).toBeInTheDocument();
   });
 
   it('propone el primer tipo de negocio y el rol de dueño', async () => {

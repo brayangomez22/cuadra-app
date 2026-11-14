@@ -1,11 +1,14 @@
 @use '@/styles/abstracts' as *;
 
-// The total across, then received and change: the figures the cashier reads aloud.
+// The total, and beside it from sm up what the customer has left on credit.
 .root {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
   margin: 0;
+
+  @include respond-to(sm) {
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  }
 }
 
 .figure {
@@ -17,10 +20,6 @@
   border-radius: var(--radius-md);
   color: var(--color-text-muted);
 
-  &:first-child {
-    grid-column: 1 / -1;
-  }
-
   dd {
     margin: 0;
     font-size: var(--font-size-xl);
@@ -30,27 +29,8 @@
 
     @include numeric;
   }
-
-  // Not enough yet: warning text on the surface (6.3:1), and the word says it.
-  &[data-tone='missing'] dd {
-    color: var(--color-feedback-warning);
-  }
-
-  // What the customer has left on credit, under the figures of the payment.
-  &[data-tone='credit'] {
-    grid-column: 1 / -1;
-  }
-
-  &[data-tone='change'] {
-    border-color: var(--color-border-accent);
-    background: var(--color-bg-subtle);
-  }
 }
 
 .figure dd.total {
   font-size: var(--font-size-3xl);
-}
-
-.figure dd.change {
-  font-size: var(--font-size-2xl);
 }

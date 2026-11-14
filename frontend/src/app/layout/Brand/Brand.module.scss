@@ -1,0 +1,12 @@
+@use '@/styles/abstracts' as *;
+
+// The wordmark with the orange accent bar under it.
+.root {
+  align-self: center;
+  padding-block-end: var(--space-1);
+  border-block-end: 0.25rem solid var(--color-border-accent);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-heavy);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.02em;
+}

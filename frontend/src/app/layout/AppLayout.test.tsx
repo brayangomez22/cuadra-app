@@ -169,19 +169,4 @@ describe('AppLayout', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/demo'));
   });
-
-  it('avisa del modo demostración solo en una empresa de demostración', async () => {
-    fakeApi(signedIn({ ...aUser('cashier'), demo: true }));
-    renderApp('/');
-    const banner = await screen.findByRole('complementary', { name: 'Modo demostración' });
-    // Outside the main content: skipping to it lands on the screen's title, not on the notice.
-    expect(screen.getByRole('main')).not.toContainElement(banner);
-    expect(banner).toHaveTextContent('Los datos se reinician cada noche');
-    cleanup();
-
-    fakeApi(signedIn(aUser('cashier')));
-    renderApp('/');
-    await mainMenu();
-    expect(screen.queryByRole('complementary', { name: 'Modo demostración' })).not.toBeInTheDocument();
-  });
 });

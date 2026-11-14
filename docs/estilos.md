@@ -96,7 +96,7 @@ Nombres de tokens: `--{categoría}-{rol}-{variante}-{estado}`. Por ejemplo, `--c
 **Escalas** (también como custom properties, en `base/_tokens.scss`):
 - Espacio: `--space-1` (4px) `--space-2` (8) `--space-3` (12) `--space-4` (16) `--space-5` (20) `--space-6` (24) `--space-8` (32) `--space-10` (40) `--space-12` (48) `--space-16` (64).
 - Tipografía: `--font-size-xs` (13px) `sm` (14) `md` (16, el texto base) `lg` (18) `xl` (20) `2xl` (24) `3xl` (32) `display` (56, el total de la venta). `--line-height-tight|normal`, `--font-weight-regular|medium|semibold|bold|heavy`, `--font-family-sans|mono` (fuentes del sistema). Usa `@include numeric` (`tabular-nums`) para cifras, precios y cantidades.
-- Tamaños: `--size-control` (alto de botones e inputs: 44px con mouse, 56px táctil), `--size-row` (fila de tabla: 48px con mouse, 56px táctil), `--size-touch-min` (44px). El cambio a táctil lo hace `@media (pointer: coarse)`, sin código en los componentes. Anchos máximos: `--size-dialog-sm` (440px), `--size-dialog-md` (640px), `--size-toast` (400px) y `--size-page` (1200px, el contenido de una página en pantallas anchas), `--size-sidebar` (256px, el menú lateral y su panel en celular), `--size-form` (480px, formularios sueltos de una columna, como el login) y `--size-form-wide` (720px, los de dos columnas, como el registro); en un celular se reducen para caber.
+- Tamaños: `--size-control` (alto de botones e inputs: 44px con mouse, 56px táctil), `--size-row` (fila de tabla: 48px con mouse, 56px táctil), `--size-touch-min` (44px). El cambio a táctil lo hace `@media (pointer: coarse)`, sin código en los componentes. Anchos máximos: `--size-dialog-sm` (440px), `--size-dialog-md` (640px), `--size-toast` (400px) y `--size-page` (1200px, el contenido de una página en pantallas anchas), `--size-sidebar` (256px, el menú lateral y su panel en celular), `--size-sidebar-collapsed` (72px, el menú lateral plegado a sus íconos), `--size-form` (480px, formularios sueltos de una columna, como el login) y `--size-form-wide` (720px, los de dos columnas, como el registro); en un celular se reducen para caber.
 - Radios: `--radius-sm|md|lg|full`. Sombras: `--shadow-sm|md|lg` (cambian con el tema). Movimiento: `--duration-fast|normal`, `--duration-mark` (1,5 s: cuánto queda marcada una fila recién cambiada, como la línea agregada al POS), `--ease-standard`. Capas: `--z-sticky|modal|popover|toast` (`popover` es la lista de un `Select`, que se abre encima del diálogo que la contiene).
 
 ### Verificación de contraste
@@ -278,7 +278,7 @@ Toda pantalla es **usable**, no solo visible, en cualquier dispositivo en que se
 - Las animaciones se envuelven en `@include reduced-motion-safe`.
 
 **Temas**
-- Claro por defecto; oscuro con `[data-theme='dark']` sobre `<html>` y fallback con `prefers-color-scheme` cuando no hay `data-theme='light'`. Los dos temas tienen exactamente los mismos tokens (lo comprueba el test).
+- Claro por defecto; oscuro con `[data-theme='dark']` sobre `<html>` y fallback con `prefers-color-scheme` cuando no hay `data-theme='light'`. Los dos temas tienen exactamente los mismos tokens (lo comprueba el test). Cada persona elige claro (sol) u oscuro (luna) en el panel de la cuenta (`app/layout/ThemeSwitch`); hasta que elige, se sigue al sistema. Se guarda en el equipo (`localStorage`, clave `cuadra.theme`) y un script en `index.html` lo aplica antes de pintar.
 - Como los componentes solo usan tokens semánticos, un tema nuevo no exige tocar ningún componente.
 
 ## 6. Componentes base (`shared/ui`)

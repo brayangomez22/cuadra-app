@@ -81,6 +81,12 @@
   overflow-y: auto;
   padding-block: var(--space-2);
   padding-inline: var(--space-5);
+
+  // Without a footer the body ends the dialog, often with its own actions:
+  // the same room as on the sides, above the phone's gesture bar.
+  &:last-child {
+    padding-block-end: calc(var(--space-5) + env(safe-area-inset-bottom));
+  }
 }
 
 // Stacked full-width on a phone, main action first (column-reverse, since it

@@ -1,28 +1,45 @@
 @use '@/styles/abstracts' as *;
 
+// Each Field spans three rows of the payment (label, control, message) and
+// shares them through subgrid: the controls and the remove button stay on
+// one line whatever the messages under them. The last column is always
+// there, empty in the first payment, so every row has the same widths.
+// Phone: the method and the button, the amount under them.
 .root {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'method remove'
-    'amount amount';
-  align-items: end;
-  gap: var(--space-2) var(--space-3);
+  grid-template-columns: minmax(0, 1fr) var(--size-control);
+  grid-template-rows: repeat(6, auto);
+  gap: 0 var(--space-3);
 
   @include respond-to(sm) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-    grid-template-areas: 'method amount remove';
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--size-control);
+    grid-template-rows: repeat(3, auto);
   }
 }
 
+// Through .root, so it wins over the Field's own flex layout whatever the
+// order the stylesheets load in.
+.root > .method,
+.root > .amount {
+  display: grid;
+  grid-template-rows: subgrid;
+  row-gap: var(--space-1);
+}
+
 .method {
-  grid-area: method;
+  grid-area: 1 / 1 / span 3;
 }
 
 .amount {
-  grid-area: amount;
+  grid-area: 4 / 1 / span 3 / -1;
+  margin-block-start: var(--space-3);
+
+  @include respond-to(sm) {
+    grid-area: 1 / 2 / span 3;
+    margin-block-start: 0;
+  }
 }
 
 .remove {
-  grid-area: remove;
+  grid-area: 2 / -2;
 }

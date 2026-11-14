@@ -25,6 +25,8 @@ $layout: (
   'page': f.rem(1200px),
   // Side menu of the app layout from lg up.
   'sidebar': f.rem(256px),
+  // The side menu with its icons only.
+  'sidebar-collapsed': f.rem(72px),
   // Single-column forms that stand alone, like login and sign-up.
   'form': f.rem(480px),
   // Two-column forms that stand alone, like sign-up.

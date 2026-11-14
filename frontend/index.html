@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <title>Cuadra</title>
+    <script>
+      // The theme chosen on this device, before the first paint so the page
+      // does not flash in the other one. Same key as app/layout/ThemeSwitch/theme.ts.
+      try {
+        var theme = localStorage.getItem('cuadra.theme');
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

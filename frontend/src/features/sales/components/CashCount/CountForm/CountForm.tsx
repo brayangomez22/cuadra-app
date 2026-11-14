@@ -1,3 +1,4 @@
+import { formatMoney } from '@/shared/format';
 import { Field, Textarea } from '@/shared/ui';
 import type { CashSession } from '../../../api/types';
 import { useCashCount } from '../../../hooks/useCashCount';
@@ -14,7 +15,11 @@ type Props = {
   onClosed: (id: string) => void;
 };
 
-/** The count by denomination with its notes, the total counted and the confirmation to close. */
+/**
+ * The count by denomination with its notes, the total counted and the
+ * confirmation to close. It says to count the whole drawer, opening float
+ * included: a cashier who sets the float aside would show it as a shortage.
+ */
 export function CountForm({
   session,
   cashier,
@@ -33,6 +38,14 @@ export function CountForm({
       }}
     >
       <div className={styles.count}>
+        <p className={styles.instructions}>
+          <strong>
+            Cuente todo el efectivo del cajón, incluida la base de {formatMoney(session.opening_float)} con la que abrió
+            {cashier ? ` ${cashier}` : ''}.
+          </strong>{' '}
+          No reste nada: Cuadra hace las cuentas al cerrar. Los váuchers de tarjeta y los comprobantes de transferencias
+          no se cuentan.
+        </p>
         <DenominationCounts
           texts={count.texts}
           invalid={count.submitted ? count.invalid : undefined}

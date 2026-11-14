@@ -1,7 +1,7 @@
 @use '@/styles/abstracts' as *;
 
 // Phone and tablet: a sticky top bar and the content under it.
-// From lg up: a side column with the menu, and the content beside it.
+// From lg up: the side menu (its own width, folded or not) and the content beside it.
 .root {
   display: flex;
   flex-direction: column;
@@ -9,7 +9,7 @@
 
   @include respond-to(lg) {
     display: grid;
-    grid-template-columns: var(--size-sidebar) minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
   }
 }
 
@@ -48,53 +48,6 @@
   @include respond-to(lg) {
     display: none;
   }
-}
-
-// The wordmark with the orange accent bar under it.
-.brand {
-  align-self: center;
-  padding-block-end: var(--space-1);
-  border-block-end: 0.25rem solid var(--color-border-accent);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-heavy);
-  line-height: var(--line-height-tight);
-  letter-spacing: -0.02em;
-}
-
-// It scrolls on its own, so the account panel stays reachable on a short screen.
-.sidebar {
-  display: none;
-
-  @include respond-to(lg) {
-    position: sticky;
-    inset-block-start: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-    block-size: 100dvh;
-    overflow-y: auto;
-    padding-block-start: var(--space-6);
-    border-inline-end: 1px solid var(--color-border-default);
-    background: var(--color-bg-surface);
-  }
-}
-
-.sidebarBrand {
-  align-self: flex-start;
-  margin-inline: var(--space-6);
-}
-
-// Pushed to the bottom of the side column.
-.sidebarAccount {
-  margin-block-start: auto;
-}
-
-// The demo notice, when there is one, and the screen under it.
-.content {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-inline-size: 0;
 }
 
 .main {

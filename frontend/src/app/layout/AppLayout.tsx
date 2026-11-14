@@ -1,16 +1,16 @@
-import clsx from 'clsx';
 import { useState } from 'react';
 import { Outlet } from 'react-router';
 import { useAuth } from '@/features/auth';
 import { Drawer, IconButton, IconMenu } from '@/shared/ui';
 import { AccountPanel } from './AccountPanel';
-import { DemoBanner } from './DemoBanner';
+import { Brand } from './Brand/Brand';
 import { MainNav } from './MainNav';
+import { Sidebar } from './Sidebar/Sidebar';
 import styles from './AppLayout.module.scss';
 
 // AppLayout is the frame of every screen behind the login. From lg up the menu
-// is a fixed side column; below, a top bar opens it in a side panel. It renders
-// inside RequireAuth, so there is always a user.
+// is a side column that folds to its icons; below, a top bar opens it in a
+// side panel. It renders inside RequireAuth, so there is always a user.
 export function AppLayout() {
   const auth = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -33,21 +33,14 @@ export function AppLayout() {
           <MainNav access={user} onNavigate={() => setMenuOpen(false)} />
           <AccountPanel user={user} onLogout={logout} />
         </Drawer>
-        <span className={styles.brand}>Cuadra</span>
+        <Brand />
       </header>
 
-      <aside className={styles.sidebar}>
-        <span className={clsx(styles.brand, styles.sidebarBrand)}>Cuadra</span>
-        <MainNav access={user} />
-        <AccountPanel user={user} onLogout={logout} className={styles.sidebarAccount} />
-      </aside>
+      <Sidebar user={user} onLogout={logout} />
 
-      <div className={styles.content}>
-        {user.demo && <DemoBanner />}
-        <main id="contenido" tabIndex={-1} className={styles.main}>
-          <Outlet />
-        </main>
-      </div>
+      <main id="contenido" tabIndex={-1} className={styles.main}>
+        <Outlet />
+      </main>
     </div>
   );
 }
