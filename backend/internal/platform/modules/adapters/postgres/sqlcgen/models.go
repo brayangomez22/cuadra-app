@@ -181,6 +181,27 @@ type CustomerSegment struct {
 	CreatedAt time.Time
 }
 
+type ElectronicDocument struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	SaleID       uuid.UUID
+	CreatedBy    uuid.UUID
+	Kind         string
+	ResolutionID uuid.UUID
+	Prefix       string
+	Number       int64
+	IssuedAt     time.Time
+	Status       string
+	Attempts     int32
+	ProviderID   string
+	Code         string
+	Qr           string
+	Reasons      []string
+	LastError    string
+	AcceptedAt   pgtype.Timestamptz
+	UpdatedAt    time.Time
+}
+
 type Import struct {
 	ID            uuid.UUID
 	TenantID      uuid.UUID
@@ -219,6 +240,13 @@ type InventorySetting struct {
 	AllowNegativeStock bool
 }
 
+type InvoicingSetting struct {
+	TenantID    uuid.UUID
+	Enabled     bool
+	DefaultKind string
+	UpdatedAt   time.Time
+}
+
 type Location struct {
 	ID        uuid.UUID
 	TenantID  uuid.UUID
@@ -232,6 +260,21 @@ type MovementsBefore struct {
 	ProductID uuid.UUID
 	Quantity  int64
 	Movements int64
+}
+
+type NumberingResolution struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	Kind         string
+	Prefix       string
+	Number       string
+	TechnicalKey string
+	RangeFrom    int64
+	RangeTo      int64
+	ValidFrom    pgtype.Date
+	ValidTo      pgtype.Date
+	NextNumber   int64
+	CreatedAt    time.Time
 }
 
 type Product struct {

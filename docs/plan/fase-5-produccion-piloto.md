@@ -28,7 +28,7 @@ Estado remoto de Terraform en un Storage Account con bloqueo. Paso en el CI de `
 ### [ ] T47 · Observabilidad en producción
 **Depende de:** T24, T45.
 **Alcance:** el OpenTelemetry Collector envía trazas, métricas y logs a **Grafana Cloud** (o al stack autohospedado si el costo lo justifica). Los mismos dashboards y alertas de T24, más alertas enviadas al celular (correo o Telegram). Muestreo de trazas configurado para controlar el volumen. Métricas del runtime de Go (goroutines, memoria, GC) con `go.opentelemetry.io/contrib/instrumentation/runtime` (dependencia nueva: confirmar antes de agregarla).
-**Pendientes que entran a esta tarea:** P21, P22 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P21, P22 y P156 (`docs/plan/pendientes.md`).
 
 ### [ ] T48 · Backups y recuperación
 **Alcance:** política de retención documentada; **simulacro de restauración** a un punto en el tiempo en un servidor temporal, cronometrado y documentado en `docs/runbooks/restaurar-bd.md`. Runbooks para los incidentes probables: BD caída, proveedor DIAN caído y despliegue fallido.
@@ -37,6 +37,7 @@ Estado remoto de Terraform en un Storage Account con bloqueo. Paso en el CI de `
 ### [ ] T49 · Exportación de datos y cierre de cuenta
 **Depende de:** T18.
 **Alcance:** el dueño solicita una **exportación completa** de sus datos (ZIP con CSV por entidad, más los XML y PDF de sus documentos electrónicos), generada en segundo plano y descargable con un enlace que expira. Flujo de cierre de cuenta: suspensión → periodo de gracia → borrado definitivo de los datos del tenant en todas las tablas, con registro del borrado. Documentar qué pasa con los backups (expiran según la retención) y la obligación del comerciante de conservar sus facturas (por eso se le entregan antes del cierre).
+**Pendientes que entran a esta tarea:** P161 (`docs/plan/pendientes.md`).
 **Tests primero:** la exportación solo incluye datos del tenant solicitante; el borrado no deja filas del tenant en ninguna tabla con `tenant_id` (test que recorre el esquema); solo el owner puede solicitar el cierre.
 
 ### [ ] T50 · Cumplimiento legal y protección de datos

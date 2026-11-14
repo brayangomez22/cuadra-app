@@ -207,3 +207,28 @@ func (f fakePolicies) Save(_ context.Context, tenantID uuid.UUID, policy domain.
 	f.policies[tenantID] = policy
 	return nil
 }
+
+// fakeDocuments is the invoicing module: it records the documents requested
+// and fails them with err.
+type fakeDocuments struct {
+	mu        sync.Mutex
+	requested []app.DocumentRequest
+	err       error
+	invoiced  map[uuid.UUID]bool
+}
+
+func (f *fakeDocuments) RegisterSale(_ context.Context, req app.DocumentRequest) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.err != nil {
+		return f.err
+	}
+	f.requested = append(f.requested, req)
+	return nil
+}
+
+func (f *fakeDocuments) HasDocument(_ context.Context, _, _, saleID uuid.UUID) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.invoiced[saleID], nil
+}

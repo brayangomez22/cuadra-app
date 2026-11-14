@@ -273,6 +273,48 @@ func (e DocumentType) Valid() bool {
 	}
 }
 
+// Defines values for ElectronicDocumentKind.
+const (
+	Invoice ElectronicDocumentKind = "invoice"
+	Pos     ElectronicDocumentKind = "pos"
+)
+
+// Valid indicates whether the value is a known member of the ElectronicDocumentKind enum.
+func (e ElectronicDocumentKind) Valid() bool {
+	switch e {
+	case Invoice:
+		return true
+	case Pos:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ElectronicDocumentStatus.
+const (
+	ElectronicDocumentStatusAccepted ElectronicDocumentStatus = "accepted"
+	ElectronicDocumentStatusPending  ElectronicDocumentStatus = "pending"
+	ElectronicDocumentStatusRejected ElectronicDocumentStatus = "rejected"
+	ElectronicDocumentStatusSent     ElectronicDocumentStatus = "sent"
+)
+
+// Valid indicates whether the value is a known member of the ElectronicDocumentStatus enum.
+func (e ElectronicDocumentStatus) Valid() bool {
+	switch e {
+	case ElectronicDocumentStatusAccepted:
+		return true
+	case ElectronicDocumentStatusPending:
+		return true
+	case ElectronicDocumentStatusRejected:
+		return true
+	case ElectronicDocumentStatusSent:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ExistingSkuPolicy.
 const (
 	ExistingSkuPolicySkip   ExistingSkuPolicy = "skip"
@@ -326,28 +368,28 @@ func (e ImportFormat) Valid() bool {
 
 // Defines values for ImportStatus.
 const (
-	Completed ImportStatus = "completed"
-	Failed    ImportStatus = "failed"
-	Queued    ImportStatus = "queued"
-	Rejected  ImportStatus = "rejected"
-	Running   ImportStatus = "running"
-	Validated ImportStatus = "validated"
+	ImportStatusCompleted ImportStatus = "completed"
+	ImportStatusFailed    ImportStatus = "failed"
+	ImportStatusQueued    ImportStatus = "queued"
+	ImportStatusRejected  ImportStatus = "rejected"
+	ImportStatusRunning   ImportStatus = "running"
+	ImportStatusValidated ImportStatus = "validated"
 )
 
 // Valid indicates whether the value is a known member of the ImportStatus enum.
 func (e ImportStatus) Valid() bool {
 	switch e {
-	case Completed:
+	case ImportStatusCompleted:
 		return true
-	case Failed:
+	case ImportStatusFailed:
 		return true
-	case Queued:
+	case ImportStatusQueued:
 		return true
-	case Rejected:
+	case ImportStatusRejected:
 		return true
-	case Running:
+	case ImportStatusRunning:
 		return true
-	case Validated:
+	case ImportStatusValidated:
 		return true
 	default:
 		return false
@@ -1178,7 +1220,11 @@ type ConfirmSaleInput struct {
 
 	// CustomerId El cliente activo a quien se vende (`/customers`). Sin él, la venta es a consumidor final.
 	CustomerId *openapi_types.UUID `json:"customer_id,omitempty"`
-	Lines      []SaleLineInput     `json:"lines"`
+
+	// DocumentKind `pos`: documento equivalente electrónico POS (la venta de mostrador). `invoice`: factura electrónica de venta
+	// (una venta a crédito siempre lo es).
+	DocumentKind *ElectronicDocumentKind `json:"document_kind,omitempty"`
+	Lines        []SaleLineInput         `json:"lines"`
 
 	// LocationId Sede donde se vende y de donde sale el stock.
 	LocationId openapi_types.UUID `json:"location_id"`
@@ -1497,6 +1543,51 @@ type DocumentRefKind string
 // DocumentType Cédula de ciudadanía (`cc`), NIT (`nit`), cédula de extranjería (`ce`) o pasaporte (`passport`).
 type DocumentType string
 
+// ElectronicDocument defines model for ElectronicDocument.
+type ElectronicDocument struct {
+	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
+
+	// Attempts Cuántas veces se envió al proveedor.
+	Attempts int `json:"attempts"`
+
+	// Code CUDE (documento POS) o CUFE (factura) de un documento aceptado.
+	Code     *string            `json:"code,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
+	IssuedAt time.Time          `json:"issued_at"`
+
+	// Kind `pos`: documento equivalente electrónico POS (la venta de mostrador). `invoice`: factura electrónica de venta
+	// (una venta a crédito siempre lo es).
+	Kind ElectronicDocumentKind `json:"kind"`
+
+	// LastError Error de los datos que el proveedor no aceptó; el documento espera un reenvío manual.
+	LastError  *string `json:"last_error,omitempty"`
+	Number     int64   `json:"number"`
+	Prefix     string  `json:"prefix"`
+	ProviderId *string `json:"provider_id,omitempty"`
+
+	// Qr Contenido del código QR de un documento aceptado.
+	Qr *string `json:"qr,omitempty"`
+
+	// Reasons Motivos de la DIAN de un documento rechazado.
+	Reasons   []string                 `json:"reasons"`
+	SaleId    openapi_types.UUID       `json:"sale_id"`
+	Status    ElectronicDocumentStatus `json:"status"`
+	UpdatedAt time.Time                `json:"updated_at"`
+}
+
+// ElectronicDocumentKind `pos`: documento equivalente electrónico POS (la venta de mostrador). `invoice`: factura electrónica de venta
+// (una venta a crédito siempre lo es).
+type ElectronicDocumentKind string
+
+// ElectronicDocumentPage defines model for ElectronicDocumentPage.
+type ElectronicDocumentPage struct {
+	Items []ElectronicDocument `json:"items"`
+	Total int                  `json:"total"`
+}
+
+// ElectronicDocumentStatus defines model for ElectronicDocumentStatus.
+type ElectronicDocumentStatus string
+
 // Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Error struct {
 	Error ErrorDetail `json:"error"`
@@ -1646,6 +1737,16 @@ type InventorySettingsUpdate struct {
 	AllowNegativeStock *bool `json:"allow_negative_stock,omitempty"`
 }
 
+// InvoicingSettings defines model for InvoicingSettings.
+type InvoicingSettings struct {
+	// DefaultKind `pos`: documento equivalente electrónico POS (la venta de mostrador). `invoice`: factura electrónica de venta
+	// (una venta a crédito siempre lo es).
+	DefaultKind ElectronicDocumentKind `json:"default_kind"`
+
+	// Enabled Si las ventas confirmadas reciben un documento electrónico.
+	Enabled bool `json:"enabled"`
+}
+
 // Location defines model for Location.
 type Location struct {
 	Active    bool               `json:"active"`
@@ -1751,6 +1852,57 @@ type ModuleUpdate struct {
 //
 // Example: 12500.00
 type Money = string
+
+// NumberingResolution defines model for NumberingResolution.
+type NumberingResolution struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Kind `pos`: documento equivalente electrónico POS (la venta de mostrador). `invoice`: factura electrónica de venta
+	// (una venta a crédito siempre lo es).
+	Kind ElectronicDocumentKind `json:"kind"`
+
+	// NearEnd Queda el 10 % del rango o menos, o vence en 30 días o menos.
+	NearEnd bool `json:"near_end"`
+
+	// NextNumber El consecutivo que toma el siguiente documento.
+	NextNumber int64 `json:"next_number"`
+
+	// Number Número de la resolución, solo dígitos.
+	Number string `json:"number"`
+
+	// Prefix Hasta 4 letras o dígitos; puede ir vacío. Se guarda en mayúsculas.
+	Prefix    string `json:"prefix"`
+	RangeFrom int64  `json:"range_from"`
+	RangeTo   int64  `json:"range_to"`
+
+	// Remaining Cuántos consecutivos quedan.
+	Remaining int64 `json:"remaining"`
+
+	// TechnicalKey Clave técnica de la resolución, que pide la factura electrónica.
+	TechnicalKey string             `json:"technical_key"`
+	ValidFrom    openapi_types.Date `json:"valid_from"`
+	ValidTo      openapi_types.Date `json:"valid_to"`
+}
+
+// NumberingResolutionInput defines model for NumberingResolutionInput.
+type NumberingResolutionInput struct {
+	// Kind `pos`: documento equivalente electrónico POS (la venta de mostrador). `invoice`: factura electrónica de venta
+	// (una venta a crédito siempre lo es).
+	Kind ElectronicDocumentKind `json:"kind"`
+
+	// Number Número de la resolución, solo dígitos.
+	Number string `json:"number"`
+
+	// Prefix Hasta 4 letras o dígitos; puede ir vacío. Se guarda en mayúsculas.
+	Prefix    string `json:"prefix"`
+	RangeFrom int64  `json:"range_from"`
+	RangeTo   int64  `json:"range_to"`
+
+	// TechnicalKey Clave técnica de la resolución, que pide la factura electrónica.
+	TechnicalKey *string            `json:"technical_key,omitempty"`
+	ValidFrom    openapi_types.Date `json:"valid_from"`
+	ValidTo      openapi_types.Date `json:"valid_to"`
+}
 
 // OpenCashSessionInput defines model for OpenCashSessionInput.
 type OpenCashSessionInput struct {
@@ -3325,6 +3477,9 @@ type CountEntryId = openapi_types.UUID
 // CustomerId defines model for CustomerId.
 type CustomerId = openapi_types.UUID
 
+// DocumentId defines model for DocumentId.
+type DocumentId = openapi_types.UUID
+
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID
 
@@ -3348,6 +3503,9 @@ type PurchaseId = openapi_types.UUID
 
 // RefreshCookie defines model for RefreshCookie.
 type RefreshCookie = string
+
+// ResolutionId defines model for ResolutionId.
+type ResolutionId = openapi_types.UUID
 
 // SaleId defines model for SaleId.
 type SaleId = openapi_types.UUID
@@ -3470,6 +3628,21 @@ type ListImportErrorsParams struct {
 type ListReorderAlertsParams struct {
 	// LocationId Solo las alertas de esta sede.
 	LocationId *openapi_types.UUID `form:"location_id,omitempty" json:"location_id,omitempty"`
+
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// ListElectronicDocumentsParams defines parameters for ListElectronicDocuments.
+type ListElectronicDocumentsParams struct {
+	// Status Solo los documentos en este estado.
+	Status *ElectronicDocumentStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// SaleId Solo el documento de esta venta.
+	SaleId *openapi_types.UUID `form:"sale_id,omitempty" json:"sale_id,omitempty"`
 
 	// Limit Cantidad máxima de resultados.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
@@ -3701,6 +3874,12 @@ type UpdateInventorySettingsJSONRequestBody = InventorySettingsUpdate
 
 // TransferStockJSONRequestBody defines body for TransferStock for application/json ContentType.
 type TransferStockJSONRequestBody = TransferInput
+
+// CreateNumberingResolutionJSONRequestBody defines body for CreateNumberingResolution for application/json ContentType.
+type CreateNumberingResolutionJSONRequestBody = NumberingResolutionInput
+
+// UpdateInvoicingSettingsJSONRequestBody defines body for UpdateInvoicingSettings for application/json ContentType.
+type UpdateInvoicingSettingsJSONRequestBody = InvoicingSettings
 
 // CreateLocationJSONRequestBody defines body for CreateLocation for application/json ContentType.
 type CreateLocationJSONRequestBody = LocationInput
@@ -4373,6 +4552,89 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /api/v1/inventory/transfers (the `TransferStock` operationId).
 	TransferStock(ctx context.Context, body TransferStockJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListElectronicDocuments Documentos electrónicos
+	//
+	// Los documentos electrónicos de la empresa, del más reciente al más antiguo.
+	//
+	// Corresponds with GET /api/v1/invoicing/documents (the `ListElectronicDocuments` operationId).
+	ListElectronicDocuments(ctx context.Context, params *ListElectronicDocumentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetElectronicDocument Un documento electrónico
+	//
+	// Corresponds with GET /api/v1/invoicing/documents/{documentId} (the `GetElectronicDocument` operationId).
+	GetElectronicDocument(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RetryElectronicDocument Reenviar un documento electrónico
+	//
+	// Vuelve a enviar al proveedor un documento `pending` o `rejected`, con el mismo número, después de corregir el
+	// dato que falló (por ejemplo, el documento del cliente). Queda `pending` sin motivos ni error.
+	//
+	// Corresponds with POST /api/v1/invoicing/documents/{documentId}/retry (the `RetryElectronicDocument` operationId).
+	RetryElectronicDocument(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListNumberingResolutions Resoluciones de numeración
+	//
+	// Las resoluciones de numeración que la DIAN autorizó a la empresa, de la más reciente a la más antigua, con el
+	// siguiente consecutivo, cuántos quedan y si está por terminar (queda el 10 % del rango o menos, o 30 días o
+	// menos de vigencia).
+	//
+	// Corresponds with GET /api/v1/invoicing/resolutions (the `ListNumberingResolutions` operationId).
+	ListNumberingResolutions(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateNumberingResolutionWithBody Registrar una resolución de numeración
+	//
+	// Registra una resolución que la DIAN autorizó. Numera desde el inicio de su rango. De varias vigentes del mismo
+	// tipo, se usa primero la que empezó antes.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /api/v1/invoicing/resolutions (the `CreateNumberingResolution` operationId).
+	CreateNumberingResolutionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateNumberingResolution Registrar una resolución de numeración
+	//
+	// Registra una resolución que la DIAN autorizó. Numera desde el inicio de su rango. De varias vigentes del mismo
+	// tipo, se usa primero la que empezó antes.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /api/v1/invoicing/resolutions (the `CreateNumberingResolution` operationId).
+	CreateNumberingResolution(ctx context.Context, body CreateNumberingResolutionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteNumberingResolution Borrar una resolución de numeración
+	//
+	// Borra una resolución registrada por error. Una que ya numeró documentos no se puede borrar.
+	//
+	// Corresponds with DELETE /api/v1/invoicing/resolutions/{resolutionId} (the `DeleteNumberingResolution` operationId).
+	DeleteNumberingResolution(ctx context.Context, resolutionId ResolutionId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetInvoicingSettings Emisión de documentos electrónicos
+	//
+	// Si la empresa emite documentos electrónicos y de qué tipo por defecto. Una empresa nueva no emite.
+	//
+	// Corresponds with GET /api/v1/invoicing/settings (the `GetInvoicingSettings` operationId).
+	GetInvoicingSettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateInvoicingSettingsWithBody Cambiar la emisión de documentos electrónicos
+	//
+	// Activa o apaga la emisión y fija el tipo de las ventas que no piden uno. Rige desde la siguiente venta. Con la
+	// emisión activa, una venta sin resolución vigente de su tipo no se confirma.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /api/v1/invoicing/settings (the `UpdateInvoicingSettings` operationId).
+	UpdateInvoicingSettingsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateInvoicingSettings Cambiar la emisión de documentos electrónicos
+	//
+	// Activa o apaga la emisión y fija el tipo de las ventas que no piden uno. Rige desde la siguiente venta. Con la
+	// emisión activa, una venta sin resolución vigente de su tipo no se confirma.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /api/v1/invoicing/settings (the `UpdateInvoicingSettings` operationId).
+	UpdateInvoicingSettings(ctx context.Context, body UpdateInvoicingSettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListLocations Listar sedes
 	//
@@ -6280,6 +6542,189 @@ func (c *Client) TransferStockWithBody(ctx context.Context, contentType string, 
 // Corresponds with POST /api/v1/inventory/transfers (the `TransferStock` operationId).
 func (c *Client) TransferStock(ctx context.Context, body TransferStockJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewTransferStockRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListElectronicDocuments Documentos electrónicos
+//
+// Los documentos electrónicos de la empresa, del más reciente al más antiguo.
+//
+// Corresponds with GET /api/v1/invoicing/documents (the `ListElectronicDocuments` operationId).
+func (c *Client) ListElectronicDocuments(ctx context.Context, params *ListElectronicDocumentsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListElectronicDocumentsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetElectronicDocument Un documento electrónico
+//
+// Corresponds with GET /api/v1/invoicing/documents/{documentId} (the `GetElectronicDocument` operationId).
+func (c *Client) GetElectronicDocument(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetElectronicDocumentRequest(c.Server, documentId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RetryElectronicDocument Reenviar un documento electrónico
+//
+// Vuelve a enviar al proveedor un documento `pending` o `rejected`, con el mismo número, después de corregir el
+// dato que falló (por ejemplo, el documento del cliente). Queda `pending` sin motivos ni error.
+//
+// Corresponds with POST /api/v1/invoicing/documents/{documentId}/retry (the `RetryElectronicDocument` operationId).
+func (c *Client) RetryElectronicDocument(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRetryElectronicDocumentRequest(c.Server, documentId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListNumberingResolutions Resoluciones de numeración
+//
+// Las resoluciones de numeración que la DIAN autorizó a la empresa, de la más reciente a la más antigua, con el
+// siguiente consecutivo, cuántos quedan y si está por terminar (queda el 10 % del rango o menos, o 30 días o
+// menos de vigencia).
+//
+// Corresponds with GET /api/v1/invoicing/resolutions (the `ListNumberingResolutions` operationId).
+func (c *Client) ListNumberingResolutions(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListNumberingResolutionsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateNumberingResolutionWithBody Registrar una resolución de numeración
+//
+// Registra una resolución que la DIAN autorizó. Numera desde el inicio de su rango. De varias vigentes del mismo
+// tipo, se usa primero la que empezó antes.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /api/v1/invoicing/resolutions (the `CreateNumberingResolution` operationId).
+func (c *Client) CreateNumberingResolutionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateNumberingResolutionRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateNumberingResolution Registrar una resolución de numeración
+//
+// Registra una resolución que la DIAN autorizó. Numera desde el inicio de su rango. De varias vigentes del mismo
+// tipo, se usa primero la que empezó antes.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /api/v1/invoicing/resolutions (the `CreateNumberingResolution` operationId).
+func (c *Client) CreateNumberingResolution(ctx context.Context, body CreateNumberingResolutionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateNumberingResolutionRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteNumberingResolution Borrar una resolución de numeración
+//
+// Borra una resolución registrada por error. Una que ya numeró documentos no se puede borrar.
+//
+// Corresponds with DELETE /api/v1/invoicing/resolutions/{resolutionId} (the `DeleteNumberingResolution` operationId).
+func (c *Client) DeleteNumberingResolution(ctx context.Context, resolutionId ResolutionId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteNumberingResolutionRequest(c.Server, resolutionId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetInvoicingSettings Emisión de documentos electrónicos
+//
+// Si la empresa emite documentos electrónicos y de qué tipo por defecto. Una empresa nueva no emite.
+//
+// Corresponds with GET /api/v1/invoicing/settings (the `GetInvoicingSettings` operationId).
+func (c *Client) GetInvoicingSettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetInvoicingSettingsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateInvoicingSettingsWithBody Cambiar la emisión de documentos electrónicos
+//
+// Activa o apaga la emisión y fija el tipo de las ventas que no piden uno. Rige desde la siguiente venta. Con la
+// emisión activa, una venta sin resolución vigente de su tipo no se confirma.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /api/v1/invoicing/settings (the `UpdateInvoicingSettings` operationId).
+func (c *Client) UpdateInvoicingSettingsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateInvoicingSettingsRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateInvoicingSettings Cambiar la emisión de documentos electrónicos
+//
+// Activa o apaga la emisión y fija el tipo de las ventas que no piden uno. Rige desde la siguiente venta. Con la
+// emisión activa, una venta sin resolución vigente de su tipo no se confirma.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /api/v1/invoicing/settings (the `UpdateInvoicingSettings` operationId).
+func (c *Client) UpdateInvoicingSettings(ctx context.Context, body UpdateInvoicingSettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateInvoicingSettingsRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -9789,6 +10234,332 @@ func NewTransferStockRequestWithBody(server string, contentType string, body io.
 	}
 
 	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListElectronicDocumentsRequest constructs an http.Request for the ListElectronicDocuments method
+func NewListElectronicDocumentsRequest(server string, params *ListElectronicDocumentsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invoicing/documents")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Status != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "status", *params.Status, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.SaleId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sale_id", *params.SaleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetElectronicDocumentRequest constructs an http.Request for the GetElectronicDocument method
+func NewGetElectronicDocumentRequest(server string, documentId DocumentId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "documentId", documentId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invoicing/documents/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRetryElectronicDocumentRequest constructs an http.Request for the RetryElectronicDocument method
+func NewRetryElectronicDocumentRequest(server string, documentId DocumentId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "documentId", documentId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invoicing/documents/%s/retry", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListNumberingResolutionsRequest constructs an http.Request for the ListNumberingResolutions method
+func NewListNumberingResolutionsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invoicing/resolutions")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateNumberingResolutionRequest calls the generic CreateNumberingResolution builder with application/json body
+func NewCreateNumberingResolutionRequest(server string, body CreateNumberingResolutionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateNumberingResolutionRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateNumberingResolutionRequestWithBody constructs an http.Request for the CreateNumberingResolution method, with any body, and a specified content type
+func NewCreateNumberingResolutionRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invoicing/resolutions")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteNumberingResolutionRequest constructs an http.Request for the DeleteNumberingResolution method
+func NewDeleteNumberingResolutionRequest(server string, resolutionId ResolutionId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "resolutionId", resolutionId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invoicing/resolutions/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetInvoicingSettingsRequest constructs an http.Request for the GetInvoicingSettings method
+func NewGetInvoicingSettingsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invoicing/settings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateInvoicingSettingsRequest calls the generic UpdateInvoicingSettings builder with application/json body
+func NewUpdateInvoicingSettingsRequest(server string, body UpdateInvoicingSettingsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateInvoicingSettingsRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewUpdateInvoicingSettingsRequestWithBody constructs an http.Request for the UpdateInvoicingSettings method, with any body, and a specified content type
+func NewUpdateInvoicingSettingsRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invoicing/settings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -13437,6 +14208,101 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /api/v1/inventory/transfers (the `TransferStock` operationId).
 	TransferStockWithResponse(ctx context.Context, body TransferStockJSONRequestBody, reqEditors ...RequestEditorFn) (*TransferStockResponse, error)
+
+	// ListElectronicDocumentsWithResponse Documentos electrónicos
+	//
+	// Los documentos electrónicos de la empresa, del más reciente al más antiguo.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/invoicing/documents (the `ListElectronicDocuments` operationId).
+	ListElectronicDocumentsWithResponse(ctx context.Context, params *ListElectronicDocumentsParams, reqEditors ...RequestEditorFn) (*ListElectronicDocumentsResponse, error)
+
+	// GetElectronicDocumentWithResponse Un documento electrónico
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/invoicing/documents/{documentId} (the `GetElectronicDocument` operationId).
+	GetElectronicDocumentWithResponse(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*GetElectronicDocumentResponse, error)
+
+	// RetryElectronicDocumentWithResponse Reenviar un documento electrónico
+	//
+	// Vuelve a enviar al proveedor un documento `pending` o `rejected`, con el mismo número, después de corregir el
+	// dato que falló (por ejemplo, el documento del cliente). Queda `pending` sin motivos ni error.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/invoicing/documents/{documentId}/retry (the `RetryElectronicDocument` operationId).
+	RetryElectronicDocumentWithResponse(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*RetryElectronicDocumentResponse, error)
+
+	// ListNumberingResolutionsWithResponse Resoluciones de numeración
+	//
+	// Las resoluciones de numeración que la DIAN autorizó a la empresa, de la más reciente a la más antigua, con el
+	// siguiente consecutivo, cuántos quedan y si está por terminar (queda el 10 % del rango o menos, o 30 días o
+	// menos de vigencia).
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/invoicing/resolutions (the `ListNumberingResolutions` operationId).
+	ListNumberingResolutionsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListNumberingResolutionsResponse, error)
+
+	// CreateNumberingResolutionWithBodyWithResponse Registrar una resolución de numeración
+	//
+	// Registra una resolución que la DIAN autorizó. Numera desde el inicio de su rango. De varias vigentes del mismo
+	// tipo, se usa primero la que empezó antes.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/invoicing/resolutions (the `CreateNumberingResolution` operationId).
+	CreateNumberingResolutionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateNumberingResolutionResponse, error)
+
+	// CreateNumberingResolutionWithResponse Registrar una resolución de numeración
+	//
+	// Registra una resolución que la DIAN autorizó. Numera desde el inicio de su rango. De varias vigentes del mismo
+	// tipo, se usa primero la que empezó antes.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/invoicing/resolutions (the `CreateNumberingResolution` operationId).
+	CreateNumberingResolutionWithResponse(ctx context.Context, body CreateNumberingResolutionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateNumberingResolutionResponse, error)
+
+	// DeleteNumberingResolutionWithResponse Borrar una resolución de numeración
+	//
+	// Borra una resolución registrada por error. Una que ya numeró documentos no se puede borrar.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /api/v1/invoicing/resolutions/{resolutionId} (the `DeleteNumberingResolution` operationId).
+	DeleteNumberingResolutionWithResponse(ctx context.Context, resolutionId ResolutionId, reqEditors ...RequestEditorFn) (*DeleteNumberingResolutionResponse, error)
+
+	// GetInvoicingSettingsWithResponse Emisión de documentos electrónicos
+	//
+	// Si la empresa emite documentos electrónicos y de qué tipo por defecto. Una empresa nueva no emite.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/invoicing/settings (the `GetInvoicingSettings` operationId).
+	GetInvoicingSettingsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetInvoicingSettingsResponse, error)
+
+	// UpdateInvoicingSettingsWithBodyWithResponse Cambiar la emisión de documentos electrónicos
+	//
+	// Activa o apaga la emisión y fija el tipo de las ventas que no piden uno. Rige desde la siguiente venta. Con la
+	// emisión activa, una venta sin resolución vigente de su tipo no se confirma.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /api/v1/invoicing/settings (the `UpdateInvoicingSettings` operationId).
+	UpdateInvoicingSettingsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateInvoicingSettingsResponse, error)
+
+	// UpdateInvoicingSettingsWithResponse Cambiar la emisión de documentos electrónicos
+	//
+	// Activa o apaga la emisión y fija el tipo de las ventas que no piden uno. Rige desde la siguiente venta. Con la
+	// emisión activa, una venta sin resolución vigente de su tipo no se confirma.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /api/v1/invoicing/settings (the `UpdateInvoicingSettings` operationId).
+	UpdateInvoicingSettingsWithResponse(ctx context.Context, body UpdateInvoicingSettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateInvoicingSettingsResponse, error)
 
 	// ListLocationsWithResponse Listar sedes
 	//
@@ -17344,6 +18210,572 @@ func (r TransferStockResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r TransferStockResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListElectronicDocumentsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ElectronicDocumentPage
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListElectronicDocumentsResponse) GetJSON200() *ElectronicDocumentPage {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListElectronicDocumentsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListElectronicDocumentsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListElectronicDocumentsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListElectronicDocumentsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListElectronicDocumentsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListElectronicDocumentsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListElectronicDocumentsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListElectronicDocumentsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetElectronicDocumentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ElectronicDocument
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetElectronicDocumentResponse) GetJSON200() *ElectronicDocument {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetElectronicDocumentResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetElectronicDocumentResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetElectronicDocumentResponse) GetJSON404() *Error {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetElectronicDocumentResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetElectronicDocumentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetElectronicDocumentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetElectronicDocumentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetElectronicDocumentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RetryElectronicDocumentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ElectronicDocument
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Error
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r RetryElectronicDocumentResponse) GetJSON200() *ElectronicDocument {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RetryElectronicDocumentResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RetryElectronicDocumentResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r RetryElectronicDocumentResponse) GetJSON404() *Error {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r RetryElectronicDocumentResponse) GetJSON409() *Error {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r RetryElectronicDocumentResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r RetryElectronicDocumentResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RetryElectronicDocumentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RetryElectronicDocumentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RetryElectronicDocumentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListNumberingResolutionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]NumberingResolution
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListNumberingResolutionsResponse) GetJSON200() *[]NumberingResolution {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListNumberingResolutionsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListNumberingResolutionsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListNumberingResolutionsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListNumberingResolutionsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListNumberingResolutionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListNumberingResolutionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListNumberingResolutionsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateNumberingResolutionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *NumberingResolution
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Error
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateNumberingResolutionResponse) GetJSON201() *NumberingResolution {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreateNumberingResolutionResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreateNumberingResolutionResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r CreateNumberingResolutionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r CreateNumberingResolutionResponse) GetJSON409() *Error {
+	return r.JSON409
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r CreateNumberingResolutionResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreateNumberingResolutionResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateNumberingResolutionResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateNumberingResolutionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateNumberingResolutionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateNumberingResolutionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteNumberingResolutionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Error
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeleteNumberingResolutionResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeleteNumberingResolutionResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeleteNumberingResolutionResponse) GetJSON404() *Error {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeleteNumberingResolutionResponse) GetJSON409() *Error {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeleteNumberingResolutionResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteNumberingResolutionResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteNumberingResolutionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteNumberingResolutionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteNumberingResolutionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetInvoicingSettingsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InvoicingSettings
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetInvoicingSettingsResponse) GetJSON200() *InvoicingSettings {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetInvoicingSettingsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetInvoicingSettingsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetInvoicingSettingsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetInvoicingSettingsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetInvoicingSettingsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetInvoicingSettingsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetInvoicingSettingsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateInvoicingSettingsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InvoicingSettings
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateInvoicingSettingsResponse) GetJSON200() *InvoicingSettings {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateInvoicingSettingsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateInvoicingSettingsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateInvoicingSettingsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r UpdateInvoicingSettingsResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateInvoicingSettingsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateInvoicingSettingsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateInvoicingSettingsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateInvoicingSettingsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateInvoicingSettingsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -23121,6 +24553,161 @@ func (c *ClientWithResponses) TransferStockWithResponse(ctx context.Context, bod
 	return ParseTransferStockResponse(rsp)
 }
 
+// ListElectronicDocumentsWithResponse Documentos electrónicos
+//
+// Los documentos electrónicos de la empresa, del más reciente al más antiguo.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/invoicing/documents (the `ListElectronicDocuments` operationId).
+func (c *ClientWithResponses) ListElectronicDocumentsWithResponse(ctx context.Context, params *ListElectronicDocumentsParams, reqEditors ...RequestEditorFn) (*ListElectronicDocumentsResponse, error) {
+	rsp, err := c.ListElectronicDocuments(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListElectronicDocumentsResponse(rsp)
+}
+
+// GetElectronicDocumentWithResponse Un documento electrónico
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/invoicing/documents/{documentId} (the `GetElectronicDocument` operationId).
+func (c *ClientWithResponses) GetElectronicDocumentWithResponse(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*GetElectronicDocumentResponse, error) {
+	rsp, err := c.GetElectronicDocument(ctx, documentId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetElectronicDocumentResponse(rsp)
+}
+
+// RetryElectronicDocumentWithResponse Reenviar un documento electrónico
+//
+// Vuelve a enviar al proveedor un documento `pending` o `rejected`, con el mismo número, después de corregir el
+// dato que falló (por ejemplo, el documento del cliente). Queda `pending` sin motivos ni error.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/invoicing/documents/{documentId}/retry (the `RetryElectronicDocument` operationId).
+func (c *ClientWithResponses) RetryElectronicDocumentWithResponse(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*RetryElectronicDocumentResponse, error) {
+	rsp, err := c.RetryElectronicDocument(ctx, documentId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRetryElectronicDocumentResponse(rsp)
+}
+
+// ListNumberingResolutionsWithResponse Resoluciones de numeración
+//
+// Las resoluciones de numeración que la DIAN autorizó a la empresa, de la más reciente a la más antigua, con el
+// siguiente consecutivo, cuántos quedan y si está por terminar (queda el 10 % del rango o menos, o 30 días o
+// menos de vigencia).
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/invoicing/resolutions (the `ListNumberingResolutions` operationId).
+func (c *ClientWithResponses) ListNumberingResolutionsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListNumberingResolutionsResponse, error) {
+	rsp, err := c.ListNumberingResolutions(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListNumberingResolutionsResponse(rsp)
+}
+
+// CreateNumberingResolutionWithBodyWithResponse Registrar una resolución de numeración
+//
+// Registra una resolución que la DIAN autorizó. Numera desde el inicio de su rango. De varias vigentes del mismo
+// tipo, se usa primero la que empezó antes.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/invoicing/resolutions (the `CreateNumberingResolution` operationId).
+func (c *ClientWithResponses) CreateNumberingResolutionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateNumberingResolutionResponse, error) {
+	rsp, err := c.CreateNumberingResolutionWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateNumberingResolutionResponse(rsp)
+}
+
+// CreateNumberingResolutionWithResponse Registrar una resolución de numeración
+//
+// Registra una resolución que la DIAN autorizó. Numera desde el inicio de su rango. De varias vigentes del mismo
+// tipo, se usa primero la que empezó antes.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/invoicing/resolutions (the `CreateNumberingResolution` operationId).
+func (c *ClientWithResponses) CreateNumberingResolutionWithResponse(ctx context.Context, body CreateNumberingResolutionJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateNumberingResolutionResponse, error) {
+	rsp, err := c.CreateNumberingResolution(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateNumberingResolutionResponse(rsp)
+}
+
+// DeleteNumberingResolutionWithResponse Borrar una resolución de numeración
+//
+// Borra una resolución registrada por error. Una que ya numeró documentos no se puede borrar.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /api/v1/invoicing/resolutions/{resolutionId} (the `DeleteNumberingResolution` operationId).
+func (c *ClientWithResponses) DeleteNumberingResolutionWithResponse(ctx context.Context, resolutionId ResolutionId, reqEditors ...RequestEditorFn) (*DeleteNumberingResolutionResponse, error) {
+	rsp, err := c.DeleteNumberingResolution(ctx, resolutionId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteNumberingResolutionResponse(rsp)
+}
+
+// GetInvoicingSettingsWithResponse Emisión de documentos electrónicos
+//
+// Si la empresa emite documentos electrónicos y de qué tipo por defecto. Una empresa nueva no emite.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/invoicing/settings (the `GetInvoicingSettings` operationId).
+func (c *ClientWithResponses) GetInvoicingSettingsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetInvoicingSettingsResponse, error) {
+	rsp, err := c.GetInvoicingSettings(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetInvoicingSettingsResponse(rsp)
+}
+
+// UpdateInvoicingSettingsWithBodyWithResponse Cambiar la emisión de documentos electrónicos
+//
+// Activa o apaga la emisión y fija el tipo de las ventas que no piden uno. Rige desde la siguiente venta. Con la
+// emisión activa, una venta sin resolución vigente de su tipo no se confirma.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /api/v1/invoicing/settings (the `UpdateInvoicingSettings` operationId).
+func (c *ClientWithResponses) UpdateInvoicingSettingsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateInvoicingSettingsResponse, error) {
+	rsp, err := c.UpdateInvoicingSettingsWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateInvoicingSettingsResponse(rsp)
+}
+
+// UpdateInvoicingSettingsWithResponse Cambiar la emisión de documentos electrónicos
+//
+// Activa o apaga la emisión y fija el tipo de las ventas que no piden uno. Rige desde la siguiente venta. Con la
+// emisión activa, una venta sin resolución vigente de su tipo no se confirma.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /api/v1/invoicing/settings (the `UpdateInvoicingSettings` operationId).
+func (c *ClientWithResponses) UpdateInvoicingSettingsWithResponse(ctx context.Context, body UpdateInvoicingSettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateInvoicingSettingsResponse, error) {
+	rsp, err := c.UpdateInvoicingSettings(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateInvoicingSettingsResponse(rsp)
+}
+
 // ListLocationsWithResponse Listar sedes
 //
 // Todas las sedes y bodegas de la empresa, activas o no, ordenadas por nombre.
@@ -27006,6 +28593,455 @@ func ParseTransferStockResponse(rsp *http.Response) (*TransferStockResponse, err
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListElectronicDocumentsResponse parses an HTTP response from a ListElectronicDocumentsWithResponse call
+func ParseListElectronicDocumentsResponse(rsp *http.Response) (*ListElectronicDocumentsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListElectronicDocumentsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ElectronicDocumentPage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetElectronicDocumentResponse parses an HTTP response from a GetElectronicDocumentWithResponse call
+func ParseGetElectronicDocumentResponse(rsp *http.Response) (*GetElectronicDocumentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetElectronicDocumentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ElectronicDocument
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRetryElectronicDocumentResponse parses an HTTP response from a RetryElectronicDocumentWithResponse call
+func ParseRetryElectronicDocumentResponse(rsp *http.Response) (*RetryElectronicDocumentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RetryElectronicDocumentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ElectronicDocument
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListNumberingResolutionsResponse parses an HTTP response from a ListNumberingResolutionsWithResponse call
+func ParseListNumberingResolutionsResponse(rsp *http.Response) (*ListNumberingResolutionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListNumberingResolutionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []NumberingResolution
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateNumberingResolutionResponse parses an HTTP response from a CreateNumberingResolutionWithResponse call
+func ParseCreateNumberingResolutionResponse(rsp *http.Response) (*CreateNumberingResolutionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateNumberingResolutionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest NumberingResolution
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteNumberingResolutionResponse parses an HTTP response from a DeleteNumberingResolutionWithResponse call
+func ParseDeleteNumberingResolutionResponse(rsp *http.Response) (*DeleteNumberingResolutionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteNumberingResolutionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetInvoicingSettingsResponse parses an HTTP response from a GetInvoicingSettingsWithResponse call
+func ParseGetInvoicingSettingsResponse(rsp *http.Response) (*GetInvoicingSettingsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetInvoicingSettingsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InvoicingSettings
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateInvoicingSettingsResponse parses an HTTP response from a UpdateInvoicingSettingsWithResponse call
+func ParseUpdateInvoicingSettingsResponse(rsp *http.Response) (*UpdateInvoicingSettingsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateInvoicingSettingsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InvoicingSettings
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest Error

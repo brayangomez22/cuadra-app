@@ -51,7 +51,7 @@ Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5 → PILOTO → Fase 6 (durant
 | Estructura y tamaño del backend (reglas hexagonales en `depguard`, umbrales de complejidad y tamaño, kit de `platform/`) | T26k–T26r |
 | Clientes y cartera | T31 (clientes), T31a (pantallas de clientes y POS), T32 (crédito, abonos, cartera por edades) |
 | Compras y proveedores | T33 · órdenes de compra y cuentas por pagar: V2-2 |
-| Facturación electrónica DIAN | T35 (selección del proveedor), T36 (emisión), T37 (notas crédito) |
+| Facturación electrónica DIAN | T35 (selección del proveedor), T36 (emisión), T36a (datos del documento), T36b (proveedor real, archivos y correo), T36c (pantallas), T37 (notas crédito) |
 | Reportes y tablero | T42 (reportes del negocio), T43 (tablero del dueño) |
 | Métricas de control del equipo para el cliente (anulaciones, descuentos, ajustes y diferencias de caja por usuario) | T38 (registro de auditoría agregable), T42 (reportes), T43 (alertas en el tablero) |
 | Primeros pasos para un cliente nuevo | T44 |

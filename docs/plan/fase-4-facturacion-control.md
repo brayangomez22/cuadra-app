@@ -12,16 +12,35 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Alcance:** investigación con entregable escrito, sin código de producción. Comparar 2 o 3 proveedores tecnológicos autorizados por la DIAN que tengan API: documentos soportados (factura electrónica de venta, documento equivalente electrónico POS, notas crédito y débito), ambiente de pruebas, precio por documento o por plan, webhooks, límites, SLA y soporte. Prueba en su sandbox con una factura real de ejemplo. Resultado: ADR en `docs/decisiones.md` y un documento `docs/dian.md` con el flujo, los estados y los campos obligatorios.
 **Revisa tú:** costo por documento contra el precio que planeas cobrar.
 
-### [ ] T36 · Emisión de documentos electrónicos
+### [x] T36 · Emisión de documentos electrónicos
 **Depende de:** T18 (outbox + River), T20, T31, T35.
 **Alcance:** puerto `ElectronicInvoicer` en el módulo de ventas y adaptador del proveedor elegido. Al confirmar la venta se encola su emisión (outbox) como factura electrónica o como documento equivalente POS según el caso. Máquina de estados (`pending` → `sent` → `accepted` / `rejected`), reintentos con backoff ante caídas del proveedor, almacenamiento del CUFE/CUDE, del XML y de la representación gráfica (PDF con QR), y envío al correo del cliente. Configuración por tenant de resoluciones de numeración y prefijos. Panel de documentos con su estado y reintento manual. Métricas: documentos por estado y latencia de aceptación; alerta si la tasa de rechazo supera un umbral.
 **Pendientes que entran a esta tarea:** P03, P61, P91, P92, P93, P108, P152, P153 y P154 (`docs/plan/pendientes.md`).
+**División** (decisión del 2026-11-14): T36 hizo el núcleo de la emisión en el backend (módulo `invoicing`: configuración, resoluciones y numeración en la transacción de la venta, documentos con su máquina de estados, outbox y trabajos de River con backoff, consulta periódica de los `sent`, reintento manual, puerto `ElectronicInvoicer` con un proveedor **simulado**, ventas que no se anulan con documento) y P93. Los datos que pide el documento pasaron a **T36a**; el proveedor real, los archivos y el correo, a **T36b**; las pantallas, a **T36c**.
 **Tests primero:** con el proveedor caído la venta se confirma igual y el documento queda pendiente para reintento; un rechazo guarda el motivo y no se reintenta automáticamente; la numeración respeta la resolución vigente y alerta cuando se acerca al final del rango.
 **Diseño de partida:** `docs/dian.md` (proveedor Muisca/Aliaddo Nitro, flujo, estados, idempotencia por prefijo y consecutivo, campos y métricas).
 **Revisa tú:** todo. Es el componente con más riesgo legal del producto.
 
-### [ ] T37 · Notas crédito y anulaciones
+### [ ] T36a · Datos del documento electrónico
 **Depende de:** T36.
+**Alcance:** lo que el documento le pide a la venta, al cliente y al catálogo, en backend y formularios: IVA **exento** y **excluido** (P03); el código de unidad DIAN de cada unidad del tenant, sembrado desde las plantillas (P154), y la unidad y el código (SKU) de cada línea congelados en la venta (P61, P160); el municipio y el departamento con código DANE del cliente (P91) y los demás tipos de documento con su código DIAN (P92). Sin enums de nicho: catálogos de la DIAN como datos.
+**Pendientes que entran a esta tarea:** P03, P61, P91, P92, P154 y P160 (`docs/plan/pendientes.md`).
+**Tests primero:** un producto excluido no lleva IVA en el documento y uno exento lleva tasa 0; una unidad sin código DIAN usa el de unidad (`94`); un cliente con ciudad en texto libre sigue funcionando; los casos cubren al menos dos tipos de negocio.
+
+### [ ] T36b · Proveedor tecnológico real (Muisca)
+**Depende de:** T36, T36a.
+**Alcance:** adaptador de Muisca del puerto `ElectronicInvoicer` (cliente generado de su OpenAPI, errores clasificados como en `docs/dian.md` §6), token de la organización **por tenant cifrado** en la base de datos con una llave de variable de entorno, `mode` y `testSetId` por tenant para la habilitación, puerto de almacenamiento para el XML y el PDF (nunca el disco del contenedor) y el envío al correo del cliente (según lo que responda el PT, P153). El tenant demo usa siempre el simulado (P108). `INVOICING_PROVIDER=muisca` en producción (P157). Empieza por la prueba en el sandbox (P152).
+**Pendientes que entran a esta tarea:** P108, P152, P153, P157 y P159 (`docs/plan/pendientes.md`).
+**Tests primero:** un documento del demo no llega al proveedor; un 429 o un 5xx de Muisca es un error temporal y un 400 o 422 no se reintenta; el token nunca aparece en logs ni spans; el XML y el PDF de un documento aceptado quedan en el almacenamiento.
+
+### [ ] T36c · Pantallas de la facturación electrónica
+**Depende de:** T36, T36b.
+**Alcance:** en el frontend, sobre el contrato de T36 (`/invoicing/*`): activar la emisión y el tipo por defecto, registrar y borrar resoluciones con el aviso de fin de rango, el **panel de documentos** por estado con sus motivos y el reintento manual, el estado, el CUDE y el QR del documento en `/ventas/:id` y en la tirilla (`docs/dian.md` §5, regla 6: esperar unos segundos o imprimir "pendiente de validación"), y pedir factura en el POS (`document_kind`). Después, `/impeccable critique`.
+**Pendientes que entran a esta tarea:** P158 (`docs/plan/pendientes.md`).
+**Tests primero:** el cajero ve el documento de la venta pero no reenvía; un documento rechazado muestra sus motivos y el botón de reenviar; pedir factura sin cliente muestra el error junto al cliente; responsive de 360 a 1920 px.
+
+### [ ] T37 · Notas crédito y anulaciones
+**Depende de:** T36, T36b.
 **Alcance:** anular una venta facturada genera una nota crédito electrónica total; devoluciones parciales generan una nota crédito parcial y devuelven el stock de lo devuelto.
 **Tests primero:** una nota crédito nunca supera el valor pendiente del documento original; una devolución parcial devuelve exactamente las cantidades indicadas al inventario.
 

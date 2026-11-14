@@ -44,6 +44,9 @@ type ConfirmSaleInput struct {
 	Lines               []LineRequest
 	Payments            []PaymentRequest
 	CreditAuthorization *Credentials
+	// DocumentKind is the electronic document the sale asks for ("pos" or
+	// "invoice"), or "" to let the tenant's rules decide.
+	DocumentKind string
 }
 
 // ConfirmSale builds the sale from the cart with the prices of the
@@ -146,7 +149,13 @@ func (s *Service) saveSale(ctx context.Context, span trace.Span, a Actor, sale *
 		if err := s.Stock.ReserveSale(ctx, a.TenantID, a.UserID, sale.LocationID(), sale.ID(), stockLines(sale)); err != nil {
 			return err
 		}
-		return s.chargeCredit(ctx, a, sale, c.authorizedBy)
+		if err := s.chargeCredit(ctx, a, sale, c.authorizedBy); err != nil {
+			return err
+		}
+		return s.Documents.RegisterSale(ctx, DocumentRequest{
+			TenantID: a.TenantID, UserID: a.UserID, SaleID: sale.ID(), Kind: c.documentKind,
+			Credit: sale.CreditAmount().IsPositive(), HasCustomer: sale.CustomerID() != nil,
+		})
 	})
 	var stockErr *domain.InsufficientStockError
 	if errors.As(err, &stockErr) {

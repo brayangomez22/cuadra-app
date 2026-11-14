@@ -17,6 +17,7 @@ import (
 	httpadapter "github.com/brayangomez22/cuadra-app/backend/internal/modules/customers/adapters/http"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers/adapters/postgres"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers/app"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers/domain"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
 )
 
@@ -81,6 +82,13 @@ func (m *Module) CheckCustomer(ctx context.Context, tenantID, userID, customerID
 func (m *Module) CustomerExists(ctx context.Context, tenantID, userID, customerID uuid.UUID) error {
 	_, err := m.service.GetCustomer(ctx, app.Actor{TenantID: tenantID, UserID: userID}, customerID)
 	return err
+}
+
+// Customer returns a customer of tenantID, active or not
+// (domain.ErrCustomerNotFound otherwise). It is for the invoicing module,
+// which issues the documents to the customer.
+func (m *Module) Customer(ctx context.Context, tenantID, userID, customerID uuid.UUID) (*domain.Customer, error) {
+	return m.service.GetCustomer(ctx, app.Actor{TenantID: tenantID, UserID: userID}, customerID)
 }
 
 // CustomerNames returns the names of the customers of tenantID among ids

@@ -30,6 +30,9 @@ type Config struct {
 	// the password of their users, public on purpose. Never logged.
 	DemoEnabled  bool
 	DemoPassword string
+	// InvoicingProvider is the technology provider that issues the
+	// electronic documents (INVOICING_PROVIDER; see loadInvoicing).
+	InvoicingProvider string
 }
 
 // minDemoPassword is the shortest demo password accepted.
@@ -72,6 +75,10 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 
 	if err := cfg.loadDemo(getenv); err != nil {
+		errs = append(errs, err)
+	}
+
+	if err := cfg.loadInvoicing(getenv); err != nil {
 		errs = append(errs, err)
 	}
 

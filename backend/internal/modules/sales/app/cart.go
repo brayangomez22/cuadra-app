@@ -26,6 +26,8 @@ type cart struct {
 	prices   []ResolvedPrice
 	// authorizedBy is who let the credit part exceed the customer's credit.
 	authorizedBy uuid.UUID
+	// documentKind is the electronic document the sale asks for, or "".
+	documentKind string
 }
 
 // checkCustomer checks that the sale's customer, if any, can buy: it is the
@@ -43,7 +45,7 @@ func (s *Service) buildCart(ctx context.Context, a Actor, in ConfirmSaleInput) (
 	if len(in.Lines) == 0 {
 		return cart{}, domain.ErrSaleWithoutLines
 	}
-	var c cart
+	c := cart{documentKind: in.DocumentKind}
 	var err error
 	if c.policy, err = s.Policies.Get(ctx, a.TenantID); err != nil {
 		return cart{}, err

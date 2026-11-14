@@ -50,12 +50,14 @@ func TestLoad(t *testing.T) {
 			JWTSecret:       []byte(jwtSecret),
 			LogLevel:        slog.LevelInfo,
 			ShutdownTimeout: 15 * time.Second,
+			// Producción exige un proveedor real (config_invoicing_test.go).
+			InvoicingProvider: config.ProviderSimulated,
 		}, cfg)
 	})
 
 	t.Run("lee los valores definidos", func(t *testing.T) {
 		cfg, err := config.Load(env(map[string]string{
-			"APP_ENV":          "production",
+			"APP_ENV":          "staging",
 			"HTTP_ADDR":        ":9090",
 			"DATABASE_URL":     "postgres://db/cuadra",
 			"JWT_SECRET":       jwtSecret,
@@ -64,7 +66,7 @@ func TestLoad(t *testing.T) {
 		}))
 
 		require.NoError(t, err)
-		require.Equal(t, "production", cfg.Env)
+		require.Equal(t, "staging", cfg.Env)
 		require.Equal(t, ":9090", cfg.HTTPAddr)
 		require.Equal(t, slog.LevelDebug, cfg.LogLevel)
 		require.Equal(t, 30*time.Second, cfg.ShutdownTimeout)

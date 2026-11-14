@@ -127,6 +127,8 @@ Reglas del flujo:
 
 ## 6. Diseño para T36 (propuesta)
 
+> **Implementado en T36** como el módulo `invoicing` (no dentro de `sales`): el puerto `ElectronicInvoicer` vive en `invoicing/app`, el span es `invoicing.IssueDocument` y la regla 6 (tirilla) pasa a T36c. Lo que cambió respecto de esta propuesta está en `docs/decisiones.md` (2026-11-14).
+
 - **Puerto `ElectronicInvoicer`** en `sales/app` (lo pide T36), con dos métodos: `Issue(ctx, doc) (Result, error)` y `Lookup(ctx, kind, prefix, number) (Result, found bool, error)`. `Result` trae el estado, el CUDE o CUFE, el QR, el ID del PT y los motivos. El adaptador de Muisca vive en `adapters/` y traduce el modelo de Cuadra al JSON del PT. El cliente HTTP se puede generar del OpenAPI público de Muisca (`oapi-codegen` en modo cliente, como `internal/demo/apiclient`).
 - **Errores del adaptador clasificados:** un rechazo de la DIAN es un resultado (`rejected`), no un error. `429`, `5xx` y timeouts son errores temporales (River reintenta con backoff). `400` y `422` del PT son errores de datos de Cuadra: no se reintentan y se alertan, porque son un bug.
 - **Credenciales por tenant:** Muisca da un token por organización (subcuenta). Se guarda cifrado en la base de datos con una llave que sale de una variable de entorno (Key Vault en Azure, T45), nunca en logs ni spans. El `mode` (`Test`, `Habilitation` o `Production`) también es por tenant, para que la habilitación (`testSetId`) se haga desde Cuadra.

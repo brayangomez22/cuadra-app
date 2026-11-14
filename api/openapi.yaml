@@ -79,6 +79,14 @@ tags:
       `variants`, una por eje, con una fila por variante y las filas de un producto seguidas. Subir el archivo lo
       valida fila por fila sin escribir nada; si no tiene errores se confirma, y un trabajo en segundo plano lo
       escribe por lotes. El stock inicial solo entra a las variantes que la importación crea.
+  - name: invoicing
+    description: |
+      Documentos electrónicos de la DIAN: el documento equivalente electrónico POS (`pos`) y la factura electrónica de
+      venta (`invoice`). Con la emisión activa, cada venta confirmada toma en su misma transacción el siguiente número
+      de la resolución vigente de su tipo (prefijo y consecutivo, sin huecos) y queda `pending`; un trabajo en segundo
+      plano la envía al proveedor tecnológico. La venta se confirma aunque el proveedor esté caído. Estados: `pending`
+      (con número, sin respuesta), `sent` (el proveedor espera a la DIAN), `accepted` (con CUDE o CUFE y QR) y
+      `rejected` (con los motivos; no se reintenta solo). Un reintento nunca toma un número nuevo.
 
 # Authorization is declared here and enforced by the API before the request
 # is validated: every operation requires a bearer token unless it says
@@ -3299,7 +3307,9 @@ paths:
             `credit_without_customer`, `duplicate_credit_payment`, `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
             `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`). Una
             línea en una unidad que la variante no tiene (`unit_not_available`) o cuya cantidad en unidad base necesita
-            más de 4 decimales (`quantity_precision`).
+            más de 4 decimales (`quantity_precision`). Con la emisión de documentos electrónicos activa: no hay
+            resolución de numeración vigente para el tipo de la venta (`no_active_resolution`) o pidió factura sin
+            cliente (`invoice_requires_customer`).
           content:
             application/json:
               schema:
@@ -3456,7 +3466,8 @@ paths:
         "409":
           description: |
             La venta no está confirmada; por ejemplo, ya fue anulada (`sale_not_confirmed`). Una venta a crédito que
-            el cliente ya abonó no se puede anular (`credit_sale_has_payments`).
+            el cliente ya abonó no se puede anular (`credit_sale_has_payments`). Una venta con documento electrónico
+            no se anula: se le hace una nota crédito (`sale_invoiced`).
           content:
             application/json:
               schema:
@@ -3911,6 +3922,263 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/invoicing/settings:
+    get:
+      tags: [invoicing]
+      operationId: getInvoicingSettings
+      summary: Emisión de documentos electrónicos
+      description: Si la empresa emite documentos electrónicos y de qué tipo por defecto. Una empresa nueva no emite.
+      x-permission: invoicing:manage
+      responses:
+        "200":
+          description: La configuración de la emisión.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoicingSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags: [invoicing]
+      operationId: updateInvoicingSettings
+      summary: Cambiar la emisión de documentos electrónicos
+      description: |
+        Activa o apaga la emisión y fija el tipo de las ventas que no piden uno. Rige desde la siguiente venta. Con la
+        emisión activa, una venta sin resolución vigente de su tipo no se confirma.
+      x-permission: invoicing:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoicingSettings"
+      responses:
+        "200":
+          description: La configuración nueva.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoicingSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: El tipo por defecto no es `pos` ni `invoice` (`invalid_document_kind`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/invoicing/resolutions:
+    get:
+      tags: [invoicing]
+      operationId: listNumberingResolutions
+      summary: Resoluciones de numeración
+      description: |
+        Las resoluciones de numeración que la DIAN autorizó a la empresa, de la más reciente a la más antigua, con el
+        siguiente consecutivo, cuántos quedan y si está por terminar (queda el 10 % del rango o menos, o 30 días o
+        menos de vigencia).
+      x-permission: invoicing:manage
+      responses:
+        "200":
+          description: Las resoluciones.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NumberingResolution"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [invoicing]
+      operationId: createNumberingResolution
+      summary: Registrar una resolución de numeración
+      description: |
+        Registra una resolución que la DIAN autorizó. Numera desde el inicio de su rango. De varias vigentes del mismo
+        tipo, se usa primero la que empezó antes.
+      x-permission: invoicing:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NumberingResolutionInput"
+      responses:
+        "201":
+          description: La resolución registrada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NumberingResolution"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: |
+            El rango se cruza con el de otra resolución del mismo tipo y prefijo (`resolution_overlaps`): se emitirían
+            dos documentos con el mismo número.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Algún dato no cumple las reglas (`invalid_document_kind`, `invalid_prefix`, `invalid_resolution_number`,
+            `invalid_technical_key`, `invalid_range`, `invalid_validity`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/invoicing/resolutions/{resolutionId}:
+    parameters:
+      - $ref: "#/components/parameters/ResolutionId"
+    delete:
+      tags: [invoicing]
+      operationId: deleteNumberingResolution
+      summary: Borrar una resolución de numeración
+      description: Borra una resolución registrada por error. Una que ya numeró documentos no se puede borrar.
+      x-permission: invoicing:manage
+      responses:
+        "204":
+          description: Resolución borrada.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: La resolución no existe (`resolution_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: La resolución ya numeró documentos (`resolution_in_use`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/invoicing/documents:
+    get:
+      tags: [invoicing]
+      operationId: listElectronicDocuments
+      summary: Documentos electrónicos
+      description: Los documentos electrónicos de la empresa, del más reciente al más antiguo.
+      x-permission: invoicing:read
+      parameters:
+        - name: status
+          in: query
+          description: Solo los documentos en este estado.
+          required: false
+          schema:
+            $ref: "#/components/schemas/ElectronicDocumentStatus"
+        - name: sale_id
+          in: query
+          description: Solo el documento de esta venta.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de documentos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ElectronicDocumentPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/invoicing/documents/{documentId}:
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+    get:
+      tags: [invoicing]
+      operationId: getElectronicDocument
+      summary: Un documento electrónico
+      x-permission: invoicing:read
+      responses:
+        "200":
+          description: El documento.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ElectronicDocument"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: El documento no existe (`document_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/invoicing/documents/{documentId}/retry:
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+    post:
+      tags: [invoicing]
+      operationId: retryElectronicDocument
+      summary: Reenviar un documento electrónico
+      description: |
+        Vuelve a enviar al proveedor un documento `pending` o `rejected`, con el mismo número, después de corregir el
+        dato que falló (por ejemplo, el documento del cliente). Queda `pending` sin motivos ni error.
+      x-permission: invoicing:manage
+      responses:
+        "200":
+          description: El documento, pendiente otra vez.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ElectronicDocument"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: El documento no existe (`document_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: El documento está `sent` o `accepted` (`document_not_retryable`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   headers:
     SetRefreshCookie:
@@ -4047,6 +4315,20 @@ components:
         format: uuid
     LocationId:
       name: locationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ResolutionId:
+      name: resolutionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DocumentId:
+      name: documentId
       in: path
       required: true
       schema:
@@ -6277,6 +6559,11 @@ components:
             $ref: "#/components/schemas/PaymentInput"
         credit_authorization:
           $ref: "#/components/schemas/CreditAuthorizationInput"
+        document_kind:
+          $ref: "#/components/schemas/ElectronicDocumentKind"
+          description: |
+            El documento electrónico que pide la venta, si la empresa los emite. Sin él, el tipo por defecto de la
+            empresa. Una venta a crédito siempre es factura; una factura pedida necesita `customer_id`.
     CreditAuthorizationInput:
       type: object
       description: |
@@ -6991,5 +7278,134 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ImportRowError"
+        total:
+          type: integer
+    ElectronicDocumentKind:
+      type: string
+      enum: [pos, invoice]
+      description: |
+        `pos`: documento equivalente electrónico POS (la venta de mostrador). `invoice`: factura electrónica de venta
+        (una venta a crédito siempre lo es).
+    ElectronicDocumentStatus:
+      type: string
+      enum: [pending, sent, accepted, rejected]
+    InvoicingSettings:
+      type: object
+      required: [enabled, default_kind]
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+          description: Si las ventas confirmadas reciben un documento electrónico.
+        default_kind:
+          $ref: "#/components/schemas/ElectronicDocumentKind"
+    NumberingResolutionInput:
+      type: object
+      required: [kind, prefix, number, range_from, range_to, valid_from, valid_to]
+      additionalProperties: false
+      properties:
+        kind:
+          $ref: "#/components/schemas/ElectronicDocumentKind"
+        prefix:
+          type: string
+          maxLength: 4
+          description: Hasta 4 letras o dígitos; puede ir vacío. Se guarda en mayúsculas.
+        number:
+          type: string
+          maxLength: 30
+          description: Número de la resolución, solo dígitos.
+        technical_key:
+          type: string
+          maxLength: 100
+          description: Clave técnica de la resolución, que pide la factura electrónica.
+        range_from:
+          type: integer
+          format: int64
+          minimum: 1
+        range_to:
+          type: integer
+          format: int64
+          minimum: 1
+        valid_from:
+          type: string
+          format: date
+        valid_to:
+          type: string
+          format: date
+    NumberingResolution:
+      allOf:
+        - $ref: "#/components/schemas/NumberingResolutionInput"
+        - type: object
+          required: [id, next_number, remaining, near_end, technical_key]
+          properties:
+            id:
+              type: string
+              format: uuid
+            next_number:
+              type: integer
+              format: int64
+              description: El consecutivo que toma el siguiente documento.
+            remaining:
+              type: integer
+              format: int64
+              description: Cuántos consecutivos quedan.
+            near_end:
+              type: boolean
+              description: Queda el 10 % del rango o menos, o vence en 30 días o menos.
+    ElectronicDocument:
+      type: object
+      required: [id, sale_id, kind, prefix, number, status, issued_at, attempts, reasons, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sale_id:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/ElectronicDocumentKind"
+        prefix:
+          type: string
+        number:
+          type: integer
+          format: int64
+        status:
+          $ref: "#/components/schemas/ElectronicDocumentStatus"
+        issued_at:
+          type: string
+          format: date-time
+        attempts:
+          type: integer
+          description: Cuántas veces se envió al proveedor.
+        provider_id:
+          type: string
+        code:
+          type: string
+          description: CUDE (documento POS) o CUFE (factura) de un documento aceptado.
+        qr:
+          type: string
+          description: Contenido del código QR de un documento aceptado.
+        reasons:
+          type: array
+          items:
+            type: string
+          description: Motivos de la DIAN de un documento rechazado.
+        last_error:
+          type: string
+          description: Error de los datos que el proveedor no aceptó; el documento espera un reenvío manual.
+        accepted_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ElectronicDocumentPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ElectronicDocument"
         total:
           type: integer

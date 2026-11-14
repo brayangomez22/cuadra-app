@@ -1763,6 +1763,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoicing/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Emisión de documentos electrónicos
+         * @description Si la empresa emite documentos electrónicos y de qué tipo por defecto. Una empresa nueva no emite.
+         */
+        get: operations["getInvoicingSettings"];
+        /**
+         * Cambiar la emisión de documentos electrónicos
+         * @description Activa o apaga la emisión y fija el tipo de las ventas que no piden uno. Rige desde la siguiente venta. Con la
+         *     emisión activa, una venta sin resolución vigente de su tipo no se confirma.
+         */
+        put: operations["updateInvoicingSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoicing/resolutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resoluciones de numeración
+         * @description Las resoluciones de numeración que la DIAN autorizó a la empresa, de la más reciente a la más antigua, con el
+         *     siguiente consecutivo, cuántos quedan y si está por terminar (queda el 10 % del rango o menos, o 30 días o
+         *     menos de vigencia).
+         */
+        get: operations["listNumberingResolutions"];
+        put?: never;
+        /**
+         * Registrar una resolución de numeración
+         * @description Registra una resolución que la DIAN autorizó. Numera desde el inicio de su rango. De varias vigentes del mismo
+         *     tipo, se usa primero la que empezó antes.
+         */
+        post: operations["createNumberingResolution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoicing/resolutions/{resolutionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resolutionId: components["parameters"]["ResolutionId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar una resolución de numeración
+         * @description Borra una resolución registrada por error. Una que ya numeró documentos no se puede borrar.
+         */
+        delete: operations["deleteNumberingResolution"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoicing/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Documentos electrónicos
+         * @description Los documentos electrónicos de la empresa, del más reciente al más antiguo.
+         */
+        get: operations["listElectronicDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoicing/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        /** Un documento electrónico */
+        get: operations["getElectronicDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoicing/documents/{documentId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reenviar un documento electrónico
+         * @description Vuelve a enviar al proveedor un documento `pending` o `rejected`, con el mismo número, después de corregir el
+         *     dato que falló (por ejemplo, el documento del cliente). Queda `pending` sin motivos ni error.
+         */
+        post: operations["retryElectronicDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3106,6 +3242,11 @@ export interface components {
             lines: components["schemas"]["SaleLineInput"][];
             payments: components["schemas"]["PaymentInput"][];
             credit_authorization?: components["schemas"]["CreditAuthorizationInput"];
+            /**
+             * @description El documento electrónico que pide la venta, si la empresa los emite. Sin él, el tipo por defecto de la
+             *     empresa. Una venta a crédito siempre es factura; una factura pedida necesita `customer_id`.
+             */
+            document_kind?: components["schemas"]["ElectronicDocumentKind"];
         };
         /**
          * @description Correo y contraseña de un usuario de la empresa con `receivables:override` (dueño o administrador) que autoriza
@@ -3570,6 +3711,84 @@ export interface components {
             items: components["schemas"]["ImportRowError"][];
             total: number;
         };
+        /**
+         * @description `pos`: documento equivalente electrónico POS (la venta de mostrador). `invoice`: factura electrónica de venta
+         *     (una venta a crédito siempre lo es).
+         * @enum {string}
+         */
+        ElectronicDocumentKind: "pos" | "invoice";
+        /** @enum {string} */
+        ElectronicDocumentStatus: "pending" | "sent" | "accepted" | "rejected";
+        InvoicingSettings: {
+            /** @description Si las ventas confirmadas reciben un documento electrónico. */
+            enabled: boolean;
+            default_kind: components["schemas"]["ElectronicDocumentKind"];
+        };
+        NumberingResolutionInput: {
+            kind: components["schemas"]["ElectronicDocumentKind"];
+            /** @description Hasta 4 letras o dígitos; puede ir vacío. Se guarda en mayúsculas. */
+            prefix: string;
+            /** @description Número de la resolución, solo dígitos. */
+            number: string;
+            /** @description Clave técnica de la resolución, que pide la factura electrónica. */
+            technical_key?: string;
+            /** Format: int64 */
+            range_from: number;
+            /** Format: int64 */
+            range_to: number;
+            /** Format: date */
+            valid_from: string;
+            /** Format: date */
+            valid_to: string;
+        };
+        NumberingResolution: components["schemas"]["NumberingResolutionInput"] & {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int64
+             * @description El consecutivo que toma el siguiente documento.
+             */
+            next_number: number;
+            /**
+             * Format: int64
+             * @description Cuántos consecutivos quedan.
+             */
+            remaining: number;
+            /** @description Queda el 10 % del rango o menos, o vence en 30 días o menos. */
+            near_end: boolean;
+        };
+        ElectronicDocument: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            sale_id: string;
+            kind: components["schemas"]["ElectronicDocumentKind"];
+            prefix: string;
+            /** Format: int64 */
+            number: number;
+            status: components["schemas"]["ElectronicDocumentStatus"];
+            /** Format: date-time */
+            issued_at: string;
+            /** @description Cuántas veces se envió al proveedor. */
+            attempts: number;
+            provider_id?: string;
+            /** @description CUDE (documento POS) o CUFE (factura) de un documento aceptado. */
+            code?: string;
+            /** @description Contenido del código QR de un documento aceptado. */
+            qr?: string;
+            /** @description Motivos de la DIAN de un documento rechazado. */
+            reasons: string[];
+            /** @description Error de los datos que el proveedor no aceptó; el documento espera un reenvío manual. */
+            last_error?: string;
+            /** Format: date-time */
+            accepted_at?: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ElectronicDocumentPage: {
+            items: components["schemas"]["ElectronicDocument"][];
+            total: number;
+        };
     };
     responses: {
         /** @description La request no cumple el contrato (`code` = `invalid_request`). */
@@ -3698,6 +3917,8 @@ export interface components {
         SegmentId: string;
         AxisId: string;
         LocationId: string;
+        ResolutionId: string;
+        DocumentId: string;
         SaleId: string;
         CashSessionId: string;
         /** @description Refresh token. Lo pone la API; el navegador lo envía solo a `/api/v1/auth`. */
@@ -7100,7 +7321,9 @@ export interface operations {
              *     `credit_without_customer`, `duplicate_credit_payment`, `location_not_found`, `location_inactive`, `insufficient_payment`, `non_cash_overpayment`, `invalid_quantity`,
              *     `invalid_discount`, `invalid_payment_amount`, `sale_without_lines`, `cash_session_location_mismatch`). Una
              *     línea en una unidad que la variante no tiene (`unit_not_available`) o cuya cantidad en unidad base necesita
-             *     más de 4 decimales (`quantity_precision`).
+             *     más de 4 decimales (`quantity_precision`). Con la emisión de documentos electrónicos activa: no hay
+             *     resolución de numeración vigente para el tipo de la venta (`no_active_resolution`) o pidió factura sin
+             *     cliente (`invoice_requires_customer`).
              */
             422: {
                 headers: {
@@ -7278,7 +7501,8 @@ export interface operations {
             };
             /**
              * @description La venta no está confirmada; por ejemplo, ya fue anulada (`sale_not_confirmed`). Una venta a crédito que
-             *     el cliente ya abonó no se puede anular (`credit_sale_has_payments`).
+             *     el cliente ya abonó no se puede anular (`credit_sale_has_payments`). Una venta con documento electrónico
+             *     no se anula: se le hace una nota crédito (`sale_invoiced`).
              */
             409: {
                 headers: {
@@ -7739,6 +7963,292 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getInvoicingSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La configuración de la emisión. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoicingSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateInvoicingSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoicingSettings"];
+            };
+        };
+        responses: {
+            /** @description La configuración nueva. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoicingSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description El tipo por defecto no es `pos` ni `invoice` (`invalid_document_kind`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listNumberingResolutions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las resoluciones. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NumberingResolution"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createNumberingResolution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NumberingResolutionInput"];
+            };
+        };
+        responses: {
+            /** @description La resolución registrada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NumberingResolution"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /**
+             * @description El rango se cruza con el de otra resolución del mismo tipo y prefijo (`resolution_overlaps`): se emitirían
+             *     dos documentos con el mismo número.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /**
+             * @description Algún dato no cumple las reglas (`invalid_document_kind`, `invalid_prefix`, `invalid_resolution_number`,
+             *     `invalid_technical_key`, `invalid_range`, `invalid_validity`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteNumberingResolution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resolutionId: components["parameters"]["ResolutionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resolución borrada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description La resolución no existe (`resolution_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description La resolución ya numeró documentos (`resolution_in_use`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listElectronicDocuments: {
+        parameters: {
+            query?: {
+                /** @description Solo los documentos en este estado. */
+                status?: components["schemas"]["ElectronicDocumentStatus"];
+                /** @description Solo el documento de esta venta. */
+                sale_id?: string;
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de documentos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ElectronicDocumentPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getElectronicDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El documento. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ElectronicDocument"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description El documento no existe (`document_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    retryElectronicDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El documento, pendiente otra vez. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ElectronicDocument"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description El documento no existe (`document_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El documento está `sent` o `accepted` (`document_not_retryable`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             500: components["responses"]["InternalError"];
         };
     };
