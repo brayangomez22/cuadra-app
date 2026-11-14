@@ -111,6 +111,9 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P143 | La tirilla reimpresa y el detalle de una venta omiten el cajero si no es el usuario actual, porque no hay endpoint de usuarios. Mostrarlo cuando exista (también en el motivo de anulación: quién anuló) | P137 | T41 |
 | [ ] | P149 | El egreso de la caja al anular una venta o pagar en efectivo a un proveedor (P148) es una segunda llamada: si falla, la operación ya quedó y el usuario lo registra a mano. Hacerlo en la misma transacción (por ejemplo, `cash_session_id` opcional en `POST /sales/{id}/void` y en el pago, que la caja de `sales` registre por un puerto) cuando se decida P102 | P148 | V2-2 |
 | [ ] | P150 | `/ventas/:id` a 1920 deja la tirilla sola en mucho espacio vacío: mostrar al lado los datos de la venta (cajero, caja con enlace a su cierre, medio de pago) cuando exista el cajero de otros usuarios | P148 | T41 |
+| [ ] | P152 | **Prueba en el sandbox de Muisca** (la parte de T35 que necesita cuenta): crear la cuenta y el token de la organización, emitir con `mode: Test` un tiquete POS y una factura electrónica de ejemplo con los pasos de `docs/dian.md` (§8) y anotar lo que no coincida con el diseño. Es el primer paso de T36 | T35 | T36 |
+| [ ] | P153 | **Preguntas comerciales al PT antes de firmar** (`docs/dian.md`, §3 y §4): precio para integradores o revendedores (el público da $ 30 a $ 80 por documento sin IVA), en qué plan entran los webhooks y las subcuentas (la página se contradice), si las organizaciones de cada tenant se crean por API, si el PT envía el correo al comprador, cuánto conserva el XML y el PDF, SLA y límite de peticiones. Cotizar también a Dataico con el mismo volumen | T35 | T36 |
+| [ ] | P154 | Las unidades de medida del tenant no tienen el **código de unidad DIAN** (UN/ECE Rec 20: `94` unidad, `MTR` metro, `KGM` kilogramo…) que pide cada línea del documento. Agregarlo a `UnitOfMeasure`, sembrarlo desde las plantillas de tipo de negocio y dar a las unidades existentes un valor por defecto, sin enum fijo (complementa P61) | T35 | T36 |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 
@@ -164,6 +167,7 @@ P15–P19 se resolvieron en la rama `chore/pending-backlog` (#31), P20 en `chore
 
 | | ID | Pendiente | Origen |
 |---|---|---|---|
+| [ ] | P155 | Confirmar con cada piloto si está **obligado a facturar** electrónicamente, si hoy expide DE POS o factura electrónica y con qué proveedor, y si ya tiene resolución de numeración. Cambiar de proveedor obliga a asociar el nuevo PT en la DIAN y pasar otra vez la habilitación (`docs/dian.md`, §2) | T35 |
 | [ ] | P151 | Los campos de fecha (`<input type="date">`) se ven en el formato del navegador («11/03/2026» o «mm/dd/yyyy» en un Chrome en inglés) junto a textos en «03/11/2026». Confirmar cómo se ven en los equipos de los pilotos (Chrome en español de Colombia); si confunden, mostrar la fecha elegida en texto o un selector propio | P148 |
 | [ ] | P144 | Ventas pasadas: confirmar si basta buscar por día y sede o si hace falta buscar por número o cliente y ver el cliente y el medio de pago en la lista. La API solo filtra por día y `SaleSummary` no trae esos datos | P137 |
 | [ ] | P27 | Redondeo del efectivo a múltiplos de 50 (no hay monedas menores): hoy queda dentro de la diferencia del arqueo | Decisión 113 (T17), T23 |

@@ -13,7 +13,7 @@ Decisiones de negocio que el código no resuelve pero de las que depende. **Toda
 | Empresa | Todo + IA, API, soporte prioritario | [POR DEFINIR] |
 
 - ¿Se cobra la **implementación** (carga del inventario y capacitación) por aparte? ¿Cuánto?
-- ¿Cuántos documentos DIAN incluye cada plan? ¿Cuánto cuesta el excedente?
+- ¿Cuántos documentos DIAN incluye cada plan? ¿Cuánto cuesta el excedente? Referencia de T35: el proveedor cobra de $ 30 a $ 80 por documento sin IVA según el paquete (`docs/dian.md`, §4).
 - Referencia del mercado: precios actuales de los planes POS de la competencia (verificar en sus páginas antes de decidir).
 - Condiciones del piloto: ¿gratis cuántos meses? ¿precio especial después ("cliente fundador")?
 
@@ -73,7 +73,7 @@ Se definen **antes** de empezar. Al final del piloto se comparan con lo medido (
 
 | Riesgo | Mitigación |
 |---|---|
-| Costo DIAN por documento hace inviable el precio | Calcular en T35 antes de comprometer precios |
+| Costo DIAN por documento hace inviable el precio | Calculado en T35 (`docs/dian.md`, §4): con precios públicos, entre $ 70.000 y $ 135.000 al mes (con IVA) por un negocio de ~2.400 ventas al mes. Cada plan incluye una cuota de documentos y el excedente se cobra; pedir precio de revendedor al PT (P153) |
 | La ferretería no confía en el inventario del sistema | Toma física inicial (T30) e importación asistida |
 | Caída del sistema en horario de venta | Alertas (T24/T47), runbooks (T48), modo sin internet (V2-5) |
 | Un solo desarrollador (bus factor) | Documentación, ADRs, runbooks e infraestructura como código |
