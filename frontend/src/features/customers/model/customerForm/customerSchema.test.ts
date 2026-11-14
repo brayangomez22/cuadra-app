@@ -28,7 +28,12 @@ describe('customerSchema', () => {
 
   it('rechaza una persona jurídica que no se identifica con NIT', () => {
     const values = { ...valid, person_type: 'legal', document_type: 'cc', name: 'Confecciones Sol SAS' };
-    expect(issueOn(values, 'document_type')).toBe('Una persona jurídica se identifica con NIT');
+    expect(issueOn(values, 'document_type')).toBe('Una persona jurídica se identifica con NIT o NIT de otro país');
+  });
+
+  it('acepta una persona jurídica de otro país con su NIT', () => {
+    const values = { ...valid, person_type: 'legal', document_type: 'foreign_nit', name: 'Textiles Ibéricos S.L.' };
+    expect(customerSchema.safeParse(values).success).toBe(true);
   });
 
   it('rechaza R-99-PN junto a otra responsabilidad', () => {

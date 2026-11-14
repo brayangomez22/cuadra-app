@@ -251,10 +251,14 @@ func (e DocumentRefKind) Valid() bool {
 
 // Defines values for DocumentType.
 const (
-	Cc       DocumentType = "cc"
-	Ce       DocumentType = "ce"
-	Nit      DocumentType = "nit"
-	Passport DocumentType = "passport"
+	Cc         DocumentType = "cc"
+	Ce         DocumentType = "ce"
+	ForeignId  DocumentType = "foreign_id"
+	ForeignNit DocumentType = "foreign_nit"
+	Nit        DocumentType = "nit"
+	Passport   DocumentType = "passport"
+	Ppt        DocumentType = "ppt"
+	Ti         DocumentType = "ti"
 )
 
 // Valid indicates whether the value is a known member of the DocumentType enum.
@@ -264,9 +268,17 @@ func (e DocumentType) Valid() bool {
 		return true
 	case Ce:
 		return true
+	case ForeignId:
+		return true
+	case ForeignNit:
+		return true
 	case Nit:
 		return true
 	case Passport:
+		return true
+	case Ppt:
+		return true
+	case Ti:
 		return true
 	default:
 		return false
@@ -726,6 +738,27 @@ func (e TaxResponsibility) Valid() bool {
 	case O47:
 		return true
 	case R99PN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TaxTreatment.
+const (
+	Excluded TaxTreatment = "excluded"
+	Exempt   TaxTreatment = "exempt"
+	Taxed    TaxTreatment = "taxed"
+)
+
+// Valid indicates whether the value is a known member of the TaxTreatment enum.
+func (e TaxTreatment) Valid() bool {
+	switch e {
+	case Excluded:
+		return true
+	case Exempt:
+		return true
+	case Taxed:
 		return true
 	default:
 		return false
@@ -1347,10 +1380,18 @@ type Customer struct {
 	// DocumentNumber Example: 900123456-8
 	DocumentNumber string `json:"document_number"`
 
-	// DocumentType Cédula de ciudadanía (`cc`), NIT (`nit`), cédula de extranjería (`ce`) o pasaporte (`passport`).
+	// DocumentType Los tipos de documento de identificación de la DIAN: cédula de ciudadanía (`cc`), NIT (`nit`), cédula de
+	// extranjería (`ce`), pasaporte (`passport`), tarjeta de identidad (`ti`), permiso por protección temporal (`ppt`),
+	// NIT de otro país (`foreign_nit`) o documento de identificación extranjero (`foreign_id`). Una persona jurídica
+	// se identifica con `nit` o `foreign_nit`.
 	DocumentType DocumentType       `json:"document_type"`
 	Email        *string            `json:"email,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
+
+	// MunicipalityCode El código DANE del municipio del cliente (`/municipalities`). No viene si no tiene.
+	//
+	// Example: 05001
+	MunicipalityCode *string `json:"municipality_code,omitempty"`
 
 	// Name Nombre completo o razón social.
 	Name string `json:"name"`
@@ -1399,10 +1440,20 @@ type CustomerInput struct {
 	// DocumentNumber Example: 900.123.456-8
 	DocumentNumber string `json:"document_number"`
 
-	// DocumentType Cédula de ciudadanía (`cc`), NIT (`nit`), cédula de extranjería (`ce`) o pasaporte (`passport`).
+	// DocumentType Los tipos de documento de identificación de la DIAN: cédula de ciudadanía (`cc`), NIT (`nit`), cédula de
+	// extranjería (`ce`), pasaporte (`passport`), tarjeta de identidad (`ti`), permiso por protección temporal (`ppt`),
+	// NIT de otro país (`foreign_nit`) o documento de identificación extranjero (`foreign_id`). Una persona jurídica
+	// se identifica con `nit` o `foreign_nit`.
 	DocumentType DocumentType `json:"document_type"`
 	Email        *string      `json:"email,omitempty"`
-	Name         string       `json:"name"`
+
+	// MunicipalityCode El código DANE del municipio (`/municipalities`), que pide la factura electrónica junto con la dirección.
+	// Vacío u omitido, el cliente queda sin municipio (`invalid_municipality` si no existe).
+	//
+	//
+	// Example: 05001
+	MunicipalityCode *string `json:"municipality_code,omitempty"`
+	Name             string  `json:"name"`
 
 	// PersonType Persona natural (`natural`) o jurídica (`legal`). Una persona jurídica se identifica con NIT.
 	PersonType PersonType `json:"person_type"`
@@ -1540,7 +1591,10 @@ type DocumentRef struct {
 // DocumentRefKind defines model for DocumentRef.Kind.
 type DocumentRefKind string
 
-// DocumentType Cédula de ciudadanía (`cc`), NIT (`nit`), cédula de extranjería (`ce`) o pasaporte (`passport`).
+// DocumentType Los tipos de documento de identificación de la DIAN: cédula de ciudadanía (`cc`), NIT (`nit`), cédula de
+// extranjería (`ce`), pasaporte (`passport`), tarjeta de identidad (`ti`), permiso por protección temporal (`ppt`),
+// NIT de otro país (`foreign_nit`) o documento de identificación extranjero (`foreign_id`). Una persona jurídica
+// se identifica con `nit` o `foreign_nit`.
 type DocumentType string
 
 // ElectronicDocument defines model for ElectronicDocument.
@@ -1853,6 +1907,26 @@ type ModuleUpdate struct {
 // Example: 12500.00
 type Money = string
 
+// Municipality Un municipio del catálogo DIVIPOLA del DANE.
+type Municipality struct {
+	// Code Example: 05001
+	Code string `json:"code"`
+
+	// DepartmentCode Example: 05
+	DepartmentCode string `json:"department_code"`
+
+	// DepartmentName Example: Antioquia
+	DepartmentName string `json:"department_name"`
+
+	// Name Example: Medellín
+	Name string `json:"name"`
+}
+
+// MunicipalityList defines model for MunicipalityList.
+type MunicipalityList struct {
+	Items []Municipality `json:"items"`
+}
+
 // NumberingResolution defines model for NumberingResolution.
 type NumberingResolution struct {
 	Id openapi_types.UUID `json:"id"`
@@ -1999,6 +2073,11 @@ type Product struct {
 	// Example: 0.19
 	TaxRate TaxRate `json:"tax_rate"`
 
+	// TaxTreatment Cómo trata el IVA al producto, como lo distingue la DIAN: gravado (`taxed`, con tasa mayor que 0), exento
+	// (`exempt`, tasa 0: el documento electrónico lleva el IVA en 0) o excluido (`excluded`, tasa 0: el documento no
+	// lleva IVA).
+	TaxTreatment TaxTreatment `json:"tax_treatment"`
+
 	// Unit Una unidad de medida de la empresa, en la que se cuentan y se venden sus productos.
 	Unit UnitOfMeasure `json:"unit"`
 
@@ -2052,6 +2131,10 @@ type ProductInput struct {
 	//
 	// Example: 0.19
 	TaxRate TaxRate `json:"tax_rate"`
+
+	// TaxTreatment Con tasa mayor que 0 solo puede ser `taxed`; con tasa 0, `exempt` o `excluded`. Si se omite, se deduce de la
+	// tasa: `taxed` si es mayor que 0 y `excluded` si es 0 (`invalid_tax_treatment` si no corresponde).
+	TaxTreatment *TaxTreatment `json:"tax_treatment,omitempty"`
 }
 
 // ProductPage defines model for ProductPage.
@@ -2192,8 +2275,12 @@ type ProductWithVariantsInput struct {
 	// TaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
 	//
 	// Example: 0.19
-	TaxRate  TaxRate               `json:"tax_rate"`
-	Variants []ProductVariantInput `json:"variants"`
+	TaxRate TaxRate `json:"tax_rate"`
+
+	// TaxTreatment Con tasa mayor que 0 solo puede ser `taxed`; con tasa 0, `exempt` o `excluded`. Si se omite, se deduce de la
+	// tasa: `taxed` si es mayor que 0 y `excluded` si es 0 (`invalid_tax_treatment` si no corresponde).
+	TaxTreatment *TaxTreatment         `json:"tax_treatment,omitempty"`
+	Variants     []ProductVariantInput `json:"variants"`
 }
 
 // Purchase defines model for Purchase.
@@ -2637,6 +2724,13 @@ type SaleLine struct {
 	// Example: 2.5
 	BaseQuantity Quantity `json:"base_quantity"`
 
+	// BaseUnitCode El código de la unidad base del producto, congelado en la venta: con él se muestra una cantidad vendida
+	// en la unidad base ("2 m"). No viene en las ventas guardadas antes de que se congelara.
+	//
+	//
+	// Example: m
+	BaseUnitCode *string `json:"base_unit_code,omitempty"`
+
 	// Discount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
@@ -2667,6 +2761,11 @@ type SaleLine struct {
 	// Example: 2.5
 	Quantity Quantity `json:"quantity"`
 
+	// Sku El SKU de la variante en el momento de la venta. No viene si la variante ya no existía cuando se congeló.
+	//
+	// Example: CAB-12
+	Sku *string `json:"sku,omitempty"`
+
 	// Tax Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
@@ -2676,6 +2775,11 @@ type SaleLine struct {
 	//
 	// Example: 0.19
 	TaxRate TaxRate `json:"tax_rate"`
+
+	// TaxTreatment Cómo trata el IVA al producto, como lo distingue la DIAN: gravado (`taxed`, con tasa mayor que 0), exento
+	// (`exempt`, tasa 0: el documento electrónico lleva el IVA en 0) o excluido (`excluded`, tasa 0: el documento no
+	// lleva IVA).
+	TaxTreatment TaxTreatment `json:"tax_treatment"`
 
 	// Total Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
@@ -3256,6 +3360,11 @@ type TaxResponsibilities = []TaxResponsibility
 // (`O-15`), agente de retención de IVA (`O-23`), régimen simple (`O-47`) o ninguna de ellas (`R-99-PN`).
 type TaxResponsibility string
 
+// TaxTreatment Cómo trata el IVA al producto, como lo distingue la DIAN: gravado (`taxed`, con tasa mayor que 0), exento
+// (`exempt`, tasa 0: el documento electrónico lleva el IVA en 0) o excluido (`excluded`, tasa 0: el documento no
+// lleva IVA).
+type TaxTreatment string
+
 // Tenant La empresa (tenant) y su configuración.
 type Tenant struct {
 	// Address Dirección del negocio, para la tirilla y los documentos. Vacía si no se ha registrado.
@@ -3345,6 +3454,13 @@ type UnitInput struct {
 	// Example: par
 	Code string `json:"code"`
 
+	// DianCode Código de la unidad en la lista UN/ECE Rec 20 que pide la factura electrónica (`94` unidad, `MTR` metro,
+	// `KGM` kilogramo). Se guarda en mayúsculas. Vacío u omitido, la unidad queda sin código y, el documento lleva `94` (unidad).
+	//
+	//
+	// Example: MTR
+	DianCode *string `json:"dian_code,omitempty"`
+
 	// Name Example: Par
 	Name string `json:"name"`
 }
@@ -3359,8 +3475,15 @@ type UnitOfMeasure struct {
 	// Code Lo que se muestra junto a una cantidad ("2,5 m"). Único en la empresa, en minúsculas.
 	//
 	// Example: m
-	Code string             `json:"code"`
-	Id   openapi_types.UUID `json:"id"`
+	Code string `json:"code"`
+
+	// DianCode Código de la unidad en la lista UN/ECE Rec 20 que pide la factura electrónica (`94` unidad, `MTR` metro,
+	// `KGM` kilogramo). Se guarda en mayúsculas. Sin él, el documento lleva `94` (unidad).
+	//
+	//
+	// Example: MTR
+	DianCode *string            `json:"dian_code,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
 
 	// Name Example: Metro
 	Name string `json:"name"`
@@ -4729,6 +4852,14 @@ type ClientInterface interface {
 	//
 	// Corresponds with PUT /api/v1/modules/{moduleId} (the `SetModuleActive` operationId).
 	SetModuleActive(ctx context.Context, moduleId ModuleId, body SetModuleActiveJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListMunicipalities Listar los municipios del DANE
+	//
+	// Los 1.122 municipios del catálogo DIVIPOLA del DANE, ordenados por departamento y nombre, para elegir el
+	// municipio de un cliente. Es el mismo para todas las empresas y no cambia entre versiones de Cuadra.
+	//
+	// Corresponds with GET /api/v1/municipalities (the `ListMunicipalities` operationId).
+	ListMunicipalities(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListPayables Cuentas por pagar
 	//
@@ -6929,6 +7060,24 @@ func (c *Client) SetModuleActiveWithBody(ctx context.Context, moduleId ModuleId,
 // Corresponds with PUT /api/v1/modules/{moduleId} (the `SetModuleActive` operationId).
 func (c *Client) SetModuleActive(ctx context.Context, moduleId ModuleId, body SetModuleActiveJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSetModuleActiveRequest(c.Server, moduleId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListMunicipalities Listar los municipios del DANE
+//
+// Los 1.122 municipios del catálogo DIVIPOLA del DANE, ordenados por departamento y nombre, para elegir el
+// municipio de un cliente. Es el mismo para todas las empresas y no cambia entre versiones de Cuadra.
+//
+// Corresponds with GET /api/v1/municipalities (the `ListMunicipalities` operationId).
+func (c *Client) ListMunicipalities(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListMunicipalitiesRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -10929,6 +11078,33 @@ func NewSetModuleActiveRequestWithBody(server string, moduleId ModuleId, content
 	return req, nil
 }
 
+// NewListMunicipalitiesRequest constructs an http.Request for the ListMunicipalities method
+func NewListMunicipalitiesRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/municipalities")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListPayablesRequest constructs an http.Request for the ListPayables method
 func NewListPayablesRequest(server string, params *ListPayablesParams) (*http.Request, error) {
 	var err error
@@ -14407,6 +14583,16 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with PUT /api/v1/modules/{moduleId} (the `SetModuleActive` operationId).
 	SetModuleActiveWithResponse(ctx context.Context, moduleId ModuleId, body SetModuleActiveJSONRequestBody, reqEditors ...RequestEditorFn) (*SetModuleActiveResponse, error)
+
+	// ListMunicipalitiesWithResponse Listar los municipios del DANE
+	//
+	// Los 1.122 municipios del catálogo DIVIPOLA del DANE, ordenados por departamento y nombre, para elegir el
+	// municipio de un cliente. Es el mismo para todas las empresas y no cambia entre versiones de Cuadra.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/municipalities (the `ListMunicipalities` operationId).
+	ListMunicipalitiesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListMunicipalitiesResponse, error)
 
 	// ListPayablesWithResponse Cuentas por pagar
 	//
@@ -19342,6 +19528,68 @@ func (r SetModuleActiveResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r SetModuleActiveResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListMunicipalitiesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MunicipalityList
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListMunicipalitiesResponse) GetJSON200() *MunicipalityList {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListMunicipalitiesResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListMunicipalitiesResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListMunicipalitiesResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListMunicipalitiesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListMunicipalitiesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListMunicipalitiesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListMunicipalitiesResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -24878,6 +25126,22 @@ func (c *ClientWithResponses) SetModuleActiveWithResponse(ctx context.Context, m
 	return ParseSetModuleActiveResponse(rsp)
 }
 
+// ListMunicipalitiesWithResponse Listar los municipios del DANE
+//
+// Los 1.122 municipios del catálogo DIVIPOLA del DANE, ordenados por departamento y nombre, para elegir el
+// municipio de un cliente. Es el mismo para todas las empresas y no cambia entre versiones de Cuadra.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/municipalities (the `ListMunicipalities` operationId).
+func (c *ClientWithResponses) ListMunicipalitiesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListMunicipalitiesResponse, error) {
+	rsp, err := c.ListMunicipalities(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListMunicipalitiesResponse(rsp)
+}
+
 // ListPayablesWithResponse Cuentas por pagar
 //
 // Lo que la empresa debe a cada proveedor por sus compras a crédito abiertas, con lo vencido (antes de hoy en
@@ -29498,6 +29762,53 @@ func ParseSetModuleActiveResponse(rsp *http.Response) (*SetModuleActiveResponse,
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListMunicipalitiesResponse parses an HTTP response from a ListMunicipalitiesWithResponse call
+func ParseListMunicipalitiesResponse(rsp *http.Response) (*ListMunicipalitiesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListMunicipalitiesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MunicipalityList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalError

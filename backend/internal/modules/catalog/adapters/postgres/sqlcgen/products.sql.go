@@ -72,21 +72,23 @@ func (q *Queries) CountSearchProducts(ctx context.Context, arg CountSearchProduc
 }
 
 const createProduct = `-- name: CreateProduct :exec
-INSERT INTO products (id, tenant_id, name, description, category_id, base_unit_id, tax_rate, attributes, active, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO products (id, tenant_id, name, description, category_id, base_unit_id, tax_rate, tax_treatment, attributes, active,
+                      created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 `
 
 type CreateProductParams struct {
-	ID          uuid.UUID
-	TenantID    uuid.UUID
-	Name        string
-	Description string
-	CategoryID  *uuid.UUID
-	BaseUnitID  uuid.UUID
-	TaxRate     decimal.Decimal
-	Attributes  []byte
-	Active      bool
-	CreatedAt   time.Time
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	Name         string
+	Description  string
+	CategoryID   *uuid.UUID
+	BaseUnitID   uuid.UUID
+	TaxRate      decimal.Decimal
+	TaxTreatment string
+	Attributes   []byte
+	Active       bool
+	CreatedAt    time.Time
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) error {
@@ -98,6 +100,7 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) er
 		arg.CategoryID,
 		arg.BaseUnitID,
 		arg.TaxRate,
+		arg.TaxTreatment,
 		arg.Attributes,
 		arg.Active,
 		arg.CreatedAt,
@@ -108,28 +111,30 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) er
 const getProduct = `-- name: GetProduct :one
 
 SELECT p.id, p.tenant_id, p.name, p.description, p.category_id, p.base_unit_id, u.code AS unit_code, u.name AS unit_name,
-       p.tax_rate, p.attributes, p.active, p.created_at
+       u.dian_code AS unit_dian_code, p.tax_rate, p.tax_treatment, p.attributes, p.active, p.created_at
 FROM products p
 JOIN units_of_measure u ON u.tenant_id = p.tenant_id AND u.id = p.base_unit_id
 WHERE p.id = $1
 `
 
 type GetProductRow struct {
-	ID          uuid.UUID
-	TenantID    uuid.UUID
-	Name        string
-	Description string
-	CategoryID  *uuid.UUID
-	BaseUnitID  uuid.UUID
-	UnitCode    string
-	UnitName    string
-	TaxRate     decimal.Decimal
-	Attributes  []byte
-	Active      bool
-	CreatedAt   time.Time
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	Name         string
+	Description  string
+	CategoryID   *uuid.UUID
+	BaseUnitID   uuid.UUID
+	UnitCode     string
+	UnitName     string
+	UnitDianCode *string
+	TaxRate      decimal.Decimal
+	TaxTreatment string
+	Attributes   []byte
+	Active       bool
+	CreatedAt    time.Time
 }
 
-// The reads join the product's base unit, so its code and name come with it.
+// The reads join the product's base unit, so its code, name and DIAN code come with it.
 func (q *Queries) GetProduct(ctx context.Context, id uuid.UUID) (GetProductRow, error) {
 	row := q.db.QueryRow(ctx, getProduct, id)
 	var i GetProductRow
@@ -142,7 +147,9 @@ func (q *Queries) GetProduct(ctx context.Context, id uuid.UUID) (GetProductRow, 
 		&i.BaseUnitID,
 		&i.UnitCode,
 		&i.UnitName,
+		&i.UnitDianCode,
 		&i.TaxRate,
+		&i.TaxTreatment,
 		&i.Attributes,
 		&i.Active,
 		&i.CreatedAt,
@@ -152,7 +159,7 @@ func (q *Queries) GetProduct(ctx context.Context, id uuid.UUID) (GetProductRow, 
 
 const listProducts = `-- name: ListProducts :many
 SELECT p.id, p.tenant_id, p.name, p.description, p.category_id, p.base_unit_id, u.code AS unit_code, u.name AS unit_name,
-       p.tax_rate, p.attributes, p.active, p.created_at
+       u.dian_code AS unit_dian_code, p.tax_rate, p.tax_treatment, p.attributes, p.active, p.created_at
 FROM products p
 JOIN units_of_measure u ON u.tenant_id = p.tenant_id AND u.id = p.base_unit_id
 WHERE ($1::boolean IS NULL OR p.active = $1)
@@ -171,18 +178,20 @@ type ListProductsParams struct {
 }
 
 type ListProductsRow struct {
-	ID          uuid.UUID
-	TenantID    uuid.UUID
-	Name        string
-	Description string
-	CategoryID  *uuid.UUID
-	BaseUnitID  uuid.UUID
-	UnitCode    string
-	UnitName    string
-	TaxRate     decimal.Decimal
-	Attributes  []byte
-	Active      bool
-	CreatedAt   time.Time
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	Name         string
+	Description  string
+	CategoryID   *uuid.UUID
+	BaseUnitID   uuid.UUID
+	UnitCode     string
+	UnitName     string
+	UnitDianCode *string
+	TaxRate      decimal.Decimal
+	TaxTreatment string
+	Attributes   []byte
+	Active       bool
+	CreatedAt    time.Time
 }
 
 // ListProducts pages the products without a search text, by name.
@@ -210,7 +219,9 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 			&i.BaseUnitID,
 			&i.UnitCode,
 			&i.UnitName,
+			&i.UnitDianCode,
 			&i.TaxRate,
+			&i.TaxTreatment,
 			&i.Attributes,
 			&i.Active,
 			&i.CreatedAt,
@@ -227,7 +238,7 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 
 const searchProducts = `-- name: SearchProducts :many
 SELECT p.id, p.tenant_id, p.name, p.description, p.category_id, p.base_unit_id, u.code AS unit_code, u.name AS unit_name,
-       p.tax_rate, p.attributes, p.active, p.created_at
+       u.dian_code AS unit_dian_code, p.tax_rate, p.tax_treatment, p.attributes, p.active, p.created_at
 FROM products p
 JOIN units_of_measure u ON u.tenant_id = p.tenant_id AND u.id = p.base_unit_id
 CROSS JOIN LATERAL (
@@ -262,18 +273,20 @@ type SearchProductsParams struct {
 }
 
 type SearchProductsRow struct {
-	ID          uuid.UUID
-	TenantID    uuid.UUID
-	Name        string
-	Description string
-	CategoryID  *uuid.UUID
-	BaseUnitID  uuid.UUID
-	UnitCode    string
-	UnitName    string
-	TaxRate     decimal.Decimal
-	Attributes  []byte
-	Active      bool
-	CreatedAt   time.Time
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	Name         string
+	Description  string
+	CategoryID   *uuid.UUID
+	BaseUnitID   uuid.UUID
+	UnitCode     string
+	UnitName     string
+	UnitDianCode *string
+	TaxRate      decimal.Decimal
+	TaxTreatment string
+	Attributes   []byte
+	Active       bool
+	CreatedAt    time.Time
 }
 
 // SearchProducts matches the exact SKU or barcode of any of a product's
@@ -308,7 +321,9 @@ func (q *Queries) SearchProducts(ctx context.Context, arg SearchProductsParams) 
 			&i.BaseUnitID,
 			&i.UnitCode,
 			&i.UnitName,
+			&i.UnitDianCode,
 			&i.TaxRate,
+			&i.TaxTreatment,
 			&i.Attributes,
 			&i.Active,
 			&i.CreatedAt,
@@ -325,19 +340,21 @@ func (q *Queries) SearchProducts(ctx context.Context, arg SearchProductsParams) 
 
 const updateProduct = `-- name: UpdateProduct :execrows
 UPDATE products
-SET name = $2, description = $3, category_id = $4, base_unit_id = $5, tax_rate = $6, attributes = $7, active = $8
+SET name = $2, description = $3, category_id = $4, base_unit_id = $5, tax_rate = $6, tax_treatment = $7, attributes = $8,
+    active = $9
 WHERE id = $1
 `
 
 type UpdateProductParams struct {
-	ID          uuid.UUID
-	Name        string
-	Description string
-	CategoryID  *uuid.UUID
-	BaseUnitID  uuid.UUID
-	TaxRate     decimal.Decimal
-	Attributes  []byte
-	Active      bool
+	ID           uuid.UUID
+	Name         string
+	Description  string
+	CategoryID   *uuid.UUID
+	BaseUnitID   uuid.UUID
+	TaxRate      decimal.Decimal
+	TaxTreatment string
+	Attributes   []byte
+	Active       bool
 }
 
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (int64, error) {
@@ -348,6 +365,7 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (i
 		arg.CategoryID,
 		arg.BaseUnitID,
 		arg.TaxRate,
+		arg.TaxTreatment,
 		arg.Attributes,
 		arg.Active,
 	)

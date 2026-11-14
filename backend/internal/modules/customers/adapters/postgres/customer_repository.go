@@ -29,7 +29,8 @@ func (r *CustomerRepository) Create(ctx context.Context, c *domain.Customer) err
 			ID: s.ID, TenantID: s.TenantID, PersonType: string(s.PersonType), DocumentType: string(s.DocumentType),
 			DocumentNumber: s.DocumentNumber, Name: s.Name, TradeName: nullable(s.TradeName),
 			Email: nullable(s.Contact.Email), Phone: nullable(s.Contact.Phone), Address: nullable(s.Contact.Address),
-			City: nullable(s.Contact.City), SegmentID: s.SegmentID, TaxResponsibilities: s.TaxResponsibilities,
+			City: nullable(s.Contact.City), MunicipalityCode: nullable(s.Contact.MunicipalityCode),
+			SegmentID: s.SegmentID, TaxResponsibilities: s.TaxResponsibilities,
 			Active: s.Active, CreatedAt: s.CreatedAt,
 		})
 	})
@@ -44,7 +45,8 @@ func (r *CustomerRepository) Update(ctx context.Context, c *domain.Customer) err
 			ID: s.ID, PersonType: string(s.PersonType), DocumentType: string(s.DocumentType),
 			DocumentNumber: s.DocumentNumber, Name: s.Name, TradeName: nullable(s.TradeName),
 			Email: nullable(s.Contact.Email), Phone: nullable(s.Contact.Phone), Address: nullable(s.Contact.Address),
-			City: nullable(s.Contact.City), SegmentID: s.SegmentID, TaxResponsibilities: s.TaxResponsibilities,
+			City: nullable(s.Contact.City), MunicipalityCode: nullable(s.Contact.MunicipalityCode),
+			SegmentID: s.SegmentID, TaxResponsibilities: s.TaxResponsibilities,
 			Active: s.Active,
 		})
 	})
@@ -55,13 +57,16 @@ func (r *CustomerRepository) Update(ctx context.Context, c *domain.Customer) err
 }
 
 // customerWriteError translates the constraints a write can violate: the
-// unique document and the segment of another tenant (or none).
+// unique document, the segment of another tenant (or none) and a
+// municipality the DANE catalog does not have.
 func customerWriteError(op string, c *domain.Customer, err error) error {
 	switch {
 	case db.Violates(err, db.UniqueViolation, customerDocKey):
 		return &domain.DocumentTakenError{Document: c.Document()}
 	case db.Violates(err, db.ForeignKeyViolation, customerSegmentKey):
 		return domain.ErrSegmentNotFound
+	case db.Violates(err, db.ForeignKeyViolation, customerMunicipalityKey):
+		return domain.ErrInvalidMunicipality
 	case err != nil:
 		return fmt.Errorf("customers: %s customer: %w", op, err)
 	}
@@ -93,6 +98,7 @@ func customerFromRow(row customerRow) (*domain.Customer, error) {
 		Name: row.Name, TradeName: value(row.TradeName),
 		Contact: domain.Contact{
 			Email: value(row.Email), Phone: value(row.Phone), Address: value(row.Address), City: value(row.City),
+			MunicipalityCode: value(row.MunicipalityCode),
 		},
 		SegmentID: row.SegmentID, TaxResponsibilities: row.TaxResponsibilities, Active: row.Active,
 		CreatedAt: row.CreatedAt,

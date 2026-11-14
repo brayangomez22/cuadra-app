@@ -153,6 +153,7 @@ type Customer struct {
 	SearchName          string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+	MunicipalityCode    *string
 }
 
 type CustomerPayment struct {
@@ -262,6 +263,13 @@ type MovementsBefore struct {
 	Movements int64
 }
 
+type Municipality struct {
+	Code           string
+	Name           string
+	DepartmentCode string
+	DepartmentName string
+}
+
 type NumberingResolution struct {
 	ID           uuid.UUID
 	TenantID     uuid.UUID
@@ -278,17 +286,18 @@ type NumberingResolution struct {
 }
 
 type Product struct {
-	ID          uuid.UUID
-	TenantID    uuid.UUID
-	Name        string
-	SearchName  string
-	Description string
-	CategoryID  *uuid.UUID
-	TaxRate     pgtype.Numeric
-	Active      bool
-	CreatedAt   time.Time
-	BaseUnitID  uuid.UUID
-	Attributes  []byte
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	Name         string
+	SearchName   string
+	Description  string
+	CategoryID   *uuid.UUID
+	TaxRate      pgtype.Numeric
+	Active       bool
+	CreatedAt    time.Time
+	BaseUnitID   uuid.UUID
+	Attributes   []byte
+	TaxTreatment string
 }
 
 type ProductVariant struct {
@@ -470,6 +479,10 @@ type SaleLine struct {
 	PriceRule    string
 	UnitCode     *string
 	UnitFactor   pgtype.Numeric
+	Sku          *string
+	BaseUnitCode *string
+	UnitDianCode *string
+	TaxTreatment string
 }
 
 type SaleLinesBefore struct {
@@ -630,6 +643,7 @@ type UnitsOfMeasure struct {
 	Code      string
 	Name      string
 	CreatedAt time.Time
+	DianCode  *string
 }
 
 type User struct {

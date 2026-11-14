@@ -116,14 +116,15 @@ func (s *Service) newSale(ctx context.Context, span trace.Span, a Actor, in Conf
 func (s *Service) addLines(ctx context.Context, sale *domain.Sale, in ConfirmSaleInput, c cart) error {
 	for i, l := range in.Lines {
 		v := c.variants[l.VariantID]
-		unit := domain.BaseUnit
+		unit, unitDIAN := domain.BaseUnit, v.BaseUnitDIANCode
 		if u := c.units[i]; u != nil {
-			unit = domain.LineUnit{Code: u.Code, Factor: u.Factor}
+			unit, unitDIAN = domain.LineUnit{Code: u.Code, Factor: u.Factor}, u.DIANCode
 		}
 		err := sale.AddLine(domain.LineInput{
 			VariantID: v.ID, ProductID: v.ProductID, ProductName: v.ProductName, VariantLabel: v.Label,
 			Quantity: l.Quantity, Unit: unit, UnitPrice: c.prices[i].UnitPrice, PriceRule: c.prices[i].Rule,
-			TaxRate: v.TaxRate, Discount: l.Discount,
+			TaxRate: v.TaxRate, Discount: l.Discount, SKU: v.SKU, BaseUnitCode: v.BaseUnitCode,
+			UnitDIANCode: unitDIAN, TaxTreatment: v.TaxTreatment,
 		}, c.limit)
 		if errors.Is(err, domain.ErrDiscountExceedsLimit) {
 			s.discountRejected.Add(ctx, 1)

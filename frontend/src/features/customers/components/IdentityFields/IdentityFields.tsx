@@ -2,13 +2,14 @@ import { Controller, useFormContext, useWatch } from 'react-hook-form';
 import { SelectController } from '@/shared/forms/SelectController/SelectController';
 import { useFieldError } from '@/shared/forms/useFieldError';
 import { Field, Input, Select } from '@/shared/ui';
-import { documentTypeOptions, personTypeOptions } from '../../model/customerForm/documentTypes';
+import { documentTypeOptions, identifiesCompanies, personTypeOptions } from '../../model/customerForm/documentTypes';
 import type { CustomerValues } from '../../model/customerForm/customerSchema';
 
 /**
  * Who the customer is: the kind of person, the document and the name, which
  * the full form and the POS's quick creation share. A legal person only
- * offers NIT, and its name is the company's. autoFocus is the field to
+ * offers a NIT (of Colombia or another country), and its name is the
+ * company's. autoFocus is the field to
  * start typing in, in a dialog.
  */
 export function IdentityFields({ autoFocus }: { autoFocus?: 'document_number' | 'name' }) {
@@ -29,7 +30,7 @@ export function IdentityFields({ autoFocus }: { autoFocus?: 'document_number' | 
               value={field.value}
               onValueChange={(value) => {
                 field.onChange(value);
-                if (value === 'legal') setValue('document_type', 'nit');
+                if (value === 'legal' && !identifiesCompanies(documentType)) setValue('document_type', 'nit');
               }}
             />
           )}

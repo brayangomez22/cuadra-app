@@ -1,15 +1,16 @@
 # customers
 
-Los clientes de la empresa (`/customers`, `/customer-segments` en `api/openapi.yaml`): personas naturales o jurídicas
+Los clientes de la empresa (`/customers`, `/customer-segments` y `/municipalities` en `api/openapi.yaml`): personas naturales o jurídicas
 con su documento, contacto, segmento y responsabilidades fiscales para la factura electrónica. Decisión de T31 y T31a
-en `docs/decisiones.md`.
+en `docs/decisiones.md`; los datos de la factura electrónica (tipos de documento y municipio), de T36a.
 
 ## Páginas
 
 - `CustomerListPage` (`/clientes`, `customers:read`): búsqueda por nombre o documento, filtro por segmento y estado,
   paginada; la búsqueda y los filtros viven en la URL. Con `receivables:read`, cada cliente enlaza a su cuenta.
 - `CustomerFormPage` (`/clientes/nuevo`, `/clientes/:id/editar`, `customers:write`): el formulario completo, con los
-  errores de la API en su campo (`invalid_nit_check_digit`, `customer_document_taken`...).
+  errores de la API en su campo (`invalid_nit_check_digit`, `customer_document_taken`...). El municipio se elige
+  del catálogo del DANE por departamento, y su nombre queda como ciudad.
 
 ## API pública (`index.ts`)
 
@@ -20,5 +21,5 @@ en `docs/decisiones.md`.
 
 ## Reglas
 
-- Una persona jurídica solo se identifica con NIT; el dígito de verificación lo revisa la API.
+- Una persona jurídica se identifica con NIT o NIT de otro país; el dígito de verificación lo revisa la API.
 - Un cliente no se borra: se desactiva. Un segmento con clientes no se borra.

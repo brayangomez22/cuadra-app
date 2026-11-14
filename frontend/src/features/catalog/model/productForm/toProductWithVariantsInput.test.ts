@@ -12,6 +12,7 @@ function formValues(overrides: Partial<ProductFormValues>): ProductFormValues {
     category_id: NO_CATEGORY,
     base_unit_id: unitOf('und').id,
     tax_rate: '0.19',
+    zero_rate: 'excluded',
     cost: '',
     price: '',
     attributes: {},

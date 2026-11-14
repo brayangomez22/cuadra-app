@@ -32,6 +32,7 @@ type Actor struct {
 type Deps struct {
 	Customers      domain.CustomerRepository
 	Segments       domain.SegmentRepository
+	Municipalities domain.MunicipalityCatalog
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -49,7 +50,7 @@ type Service struct {
 // NewService builds a Service. It fails if a repository is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Customers, d.Segments) {
+	if usecase.AnyNil(d.Customers, d.Segments, d.Municipalities) {
 		return nil, errors.New("customers: missing service dependency")
 	}
 	if d.Now == nil {

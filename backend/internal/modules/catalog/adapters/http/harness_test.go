@@ -44,6 +44,7 @@ type stubUseCases struct {
 	unit     *domain.UnitOfMeasure
 	units    []*domain.UnitOfMeasure
 	code     string
+	dianCode string
 	err      error
 
 	attrInput  app.AttributeInput
@@ -130,13 +131,13 @@ func (s *stubUseCases) DeleteCategory(_ context.Context, a app.Actor, id uuid.UU
 	return s.err
 }
 
-func (s *stubUseCases) CreateUnit(_ context.Context, a app.Actor, code, name string) (*domain.UnitOfMeasure, error) {
-	s.actor, s.code, s.name = a, code, name
+func (s *stubUseCases) CreateUnit(_ context.Context, a app.Actor, in app.UnitInput) (*domain.UnitOfMeasure, error) {
+	s.actor, s.code, s.name, s.dianCode = a, in.Code, in.Name, in.DIANCode
 	return s.unit, s.err
 }
 
-func (s *stubUseCases) UpdateUnit(_ context.Context, a app.Actor, id uuid.UUID, code, name string) (*domain.UnitOfMeasure, error) {
-	s.actor, s.id, s.code, s.name = a, id, code, name
+func (s *stubUseCases) UpdateUnit(_ context.Context, a app.Actor, id uuid.UUID, in app.UnitInput) (*domain.UnitOfMeasure, error) {
+	s.actor, s.id, s.code, s.name, s.dianCode = a, id, in.Code, in.Name, in.DIANCode
 	return s.unit, s.err
 }
 

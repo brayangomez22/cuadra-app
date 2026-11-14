@@ -62,8 +62,8 @@ func (f fixture) createTenant(t *testing.T) tenant {
 	f.exec(t, tn.id, "INSERT INTO locations (id, tenant_id, name, active, created_at) VALUES ($1, $2, 'Bodega', true, $3)", tn.location, tn.id, now)
 	f.exec(t, tn.id, `INSERT INTO units_of_measure (id, tenant_id, code, name, created_at)
 		VALUES ($1, $2, 'und', 'Unidad', $4), ($3, $2, 'caja', 'Caja', $4)`, newID(), tn.id, tn.box, now)
-	f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit_id, tax_rate, active, created_at)
-		VALUES ($1, $2, 'Producto', '', (SELECT id FROM units_of_measure WHERE code = 'und'), 0.19, true, $3)`, product, tn.id, now)
+	f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit_id, tax_rate, tax_treatment, active, created_at)
+		VALUES ($1, $2, 'Producto', '', (SELECT id FROM units_of_measure WHERE code = 'und'), 0.19, 'taxed', true, $3)`, product, tn.id, now)
 	f.exec(t, tn.id, `INSERT INTO product_variants (id, tenant_id, product_id, sku, cost, price, axis_values, is_default, active, created_at)
 		VALUES ($1, $2, $3, $4, 0, 1000, '{}', true, true, $5)`, tn.variant, tn.id, product, "SKU-"+strings.ToUpper(tn.variant.String()), now)
 	return tn

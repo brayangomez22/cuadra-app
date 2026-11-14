@@ -35,14 +35,14 @@ describe('CustomerFormPage: crear', () => {
     expect(await screen.findByRole('heading', { name: 'Clientes' })).toBeInTheDocument();
   });
 
-  it('una persona jurídica solo ofrece NIT', async () => {
+  it('una persona jurídica ofrece NIT y NIT de otro país', async () => {
     const api = customersApi({ routes: { 'POST /api/v1/customers': json(201, aBoutique()) } });
     renderApp('/clientes/nuevo');
 
     await choose('Tipo de persona', 'Persona jurídica');
     expect(screen.getByRole('combobox', { name: 'Tipo de documento' })).toHaveTextContent('NIT');
     await userEvent.click(screen.getByRole('combobox', { name: 'Tipo de documento' }));
-    expect(await screen.findAllByRole('option')).toHaveLength(1);
+    expect(await screen.findAllByRole('option')).toHaveLength(2);
     await userEvent.keyboard('{Escape}');
 
     await userEvent.type(screen.getByLabelText('Número de documento'), '901234567-7');

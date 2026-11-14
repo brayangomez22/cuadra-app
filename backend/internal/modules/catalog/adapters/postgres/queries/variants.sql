@@ -26,7 +26,7 @@ WHERE id = ANY(sqlc.arg(variant_ids)::uuid[]);
 -- ListVariantUnits returns the alternate units of the given variants with
 -- the code and name of each unit.
 -- name: ListVariantUnits :many
-SELECT vu.variant_id, vu.unit_id, u.code AS unit_code, u.name AS unit_name, vu.factor, vu.price, vu.barcode
+SELECT vu.variant_id, vu.unit_id, u.code AS unit_code, u.name AS unit_name, u.dian_code AS unit_dian_code, vu.factor, vu.price, vu.barcode
 FROM variant_units vu
 JOIN units_of_measure u ON u.tenant_id = vu.tenant_id AND u.id = vu.unit_id
 WHERE vu.variant_id = ANY(sqlc.arg(variant_ids)::uuid[])

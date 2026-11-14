@@ -49,6 +49,7 @@ func newEnv(t *testing.T) *env {
 	svc, err := app.NewService(app.Deps{
 		Customers:      fakeCustomers{e.store},
 		Segments:       fakeSegments{e.store},
+		Municipalities: fakeMunicipalities{},
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,

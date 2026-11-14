@@ -6,6 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+
+	"github.com/brayangomez22/cuadra-app/backend/internal/kernel/vat"
 )
 
 const (
@@ -39,6 +41,15 @@ type LineInput struct {
 	TaxRate decimal.Decimal
 	// Discount is an amount of COP off the line, before IVA.
 	Discount decimal.Decimal
+	// SKU is the variant's; BaseUnitCode, the code of the product's base
+	// unit; UnitDIANCode, the DIAN code of Unit ("" if it has none). The
+	// electronic document needs them.
+	SKU          string
+	BaseUnitCode string
+	UnitDIANCode string
+	// TaxTreatment is how the IVA treats the product: it must match
+	// TaxRate. Empty, it is deduced from it.
+	TaxTreatment vat.Treatment
 }
 
 // SaleLine is a variant of a product sold and its amounts:
@@ -63,6 +74,8 @@ type SaleLine struct {
 	discount     decimal.Decimal
 	gross        decimal.Decimal
 	tax          decimal.Decimal
+	codes        lineCodes
+	taxTreatment vat.Treatment
 }
 
 // newLine validates in and computes the line's amounts. The discount must be
@@ -77,6 +90,10 @@ func newLine(in LineInput, limit DiscountLimit) (SaleLine, error) {
 		return SaleLine{}, err
 	}
 	unit, unitPrice, err := linePricing(in)
+	if err != nil {
+		return SaleLine{}, err
+	}
+	codes, treatment, err := lineTax(in)
 	if err != nil {
 		return SaleLine{}, err
 	}
@@ -104,6 +121,8 @@ func newLine(in LineInput, limit DiscountLimit) (SaleLine, error) {
 		discount:     in.Discount,
 		gross:        gross,
 		tax:          roundMoney(base.Mul(in.TaxRate)),
+		codes:        codes,
+		taxTreatment: treatment,
 	}, nil
 }
 

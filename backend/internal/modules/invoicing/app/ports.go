@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/kernel/vat"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/invoicing/domain"
 )
 
@@ -98,15 +99,21 @@ type SaleData struct {
 }
 
 // SaleLine is a line of the sale: price before IVA and discount in COP.
+// Code is the variant's SKU (domain.LineCode) and UnitCode the UN/ECE Rec 20
+// code of the unit sold (domain.UnitCode); TaxTreatment says whether its IVA
+// goes in the document (domain.LineTaxes).
 type SaleLine struct {
-	VariantID uuid.UUID
-	Name      string
-	Quantity  decimal.Decimal
-	UnitPrice decimal.Decimal
-	Discount  decimal.Decimal
-	TaxRate   decimal.Decimal
-	Tax       decimal.Decimal
-	Total     decimal.Decimal
+	VariantID    uuid.UUID
+	Code         string
+	UnitCode     string
+	TaxTreatment vat.Treatment
+	Name         string
+	Quantity     decimal.Decimal
+	UnitPrice    decimal.Decimal
+	Discount     decimal.Decimal
+	TaxRate      decimal.Decimal
+	Tax          decimal.Decimal
+	Total        decimal.Decimal
 }
 
 // SalePayment is a payment of the sale, by its method's code.

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { FieldsByErrorCode } from '@/shared/forms/useApiFormErrors';
+import { identifiesCompanies } from './documentTypes';
 import { NONE } from './taxResponsibilities';
 
 // Same limits as api/openapi.yaml. The NIT's check digit and the canonical
@@ -13,7 +14,7 @@ const optional = (max: number, label: string) =>
 export const customerSchema = z
   .object({
     person_type: z.enum(['natural', 'legal']),
-    document_type: z.enum(['cc', 'nit', 'ce', 'passport']),
+    document_type: z.enum(['cc', 'nit', 'ce', 'passport', 'ti', 'ppt', 'foreign_nit', 'foreign_id']),
     document_number: z
       .string()
       .trim()
@@ -27,13 +28,18 @@ export const customerSchema = z
     phone: optional(30, 'El teléfono'),
     address: optional(200, 'La dirección'),
     city: optional(100, 'La ciudad'),
+    municipality_code: z.string(),
     segment_id: z.string(),
     tax_responsibilities: z.array(z.enum(['O-13', 'O-15', 'O-23', 'O-47', 'R-99-PN'])),
     active: z.boolean(),
   })
   .superRefine((values, ctx) => {
-    if (values.person_type === 'legal' && values.document_type !== 'nit') {
-      ctx.addIssue({ code: 'custom', path: ['document_type'], message: 'Una persona jurídica se identifica con NIT' });
+    if (values.person_type === 'legal' && !identifiesCompanies(values.document_type)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['document_type'],
+        message: 'Una persona jurídica se identifica con NIT o NIT de otro país',
+      });
     }
     if (values.tax_responsibilities.includes(NONE) && values.tax_responsibilities.length > 1) {
       ctx.addIssue({
@@ -47,7 +53,15 @@ export const customerSchema = z
 export type CustomerValues = z.infer<typeof customerSchema>;
 
 /** The text fields a customer may leave empty: the API stores them as absent. */
-export const optionalCustomerFields = ['trade_name', 'email', 'phone', 'address', 'city', 'segment_id'] as const;
+export const optionalCustomerFields = [
+  'trade_name',
+  'email',
+  'phone',
+  'address',
+  'city',
+  'municipality_code',
+  'segment_id',
+] as const;
 
 // The field each 4xx code of /customers belongs to (api/openapi.yaml).
 export const customerErrorFields: FieldsByErrorCode<CustomerValues> = {
@@ -59,4 +73,5 @@ export const customerErrorFields: FieldsByErrorCode<CustomerValues> = {
   invalid_customer_name: 'name',
   invalid_tax_responsibilities: 'tax_responsibilities',
   customer_segment_not_found: 'segment_id',
+  invalid_municipality: 'municipality_code',
 };

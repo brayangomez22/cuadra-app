@@ -17,23 +17,44 @@ var (
 	// emailFormat is a loose check: one @, no spaces and a dot in the domain.
 	// Whether the mailbox exists is the invoice delivery's to find out.
 	emailFormat = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+	// municipalityFormat is the DANE's code of a municipality: two digits of
+	// its department and three of its own. Whether it exists is the DANE
+	// catalog's to say.
+	municipalityFormat = regexp.MustCompile(`^[0-9]{5}$`)
 	// phoneFormat accepts digits and the usual separators: "+57 (604) 444-5566".
 	phoneFormat = regexp.MustCompile(`^[0-9+()\- ]+$`)
 )
 
 // Contact is how to reach a customer. Every field is optional; empty means
-// unknown. The city is free text for now: the electronic invoice (T35) adds
-// its DANE code.
+// unknown.
 type Contact struct {
 	Email   string
 	Phone   string
 	Address string
 	City    string
+	// MunicipalityCode is the DANE code of the customer's municipality
+	// ("05001"), which the electronic invoice sends with the address. A
+	// customer with only a City of free text still works.
+	MunicipalityCode string
 }
 
 // normalize trims every field, lowercases the email and checks the formats
-// and lengths.
+// and lengths, and the shape of the municipality's code.
 func (c Contact) normalize() (Contact, error) {
+	out, err := c.normalizeReach()
+	if err != nil {
+		return Contact{}, err
+	}
+	out.MunicipalityCode = strings.TrimSpace(c.MunicipalityCode)
+	if out.MunicipalityCode != "" && !municipalityFormat.MatchString(out.MunicipalityCode) {
+		return Contact{}, ErrInvalidMunicipality
+	}
+	return out, nil
+}
+
+// normalizeReach checks how to reach the customer: email, phone, address
+// and city.
+func (c Contact) normalizeReach() (Contact, error) {
 	var err error
 	out := Contact{}
 	if out.Email, err = optionalText(strings.ToLower(c.Email), maxEmailLength, ErrInvalidContact); err != nil {

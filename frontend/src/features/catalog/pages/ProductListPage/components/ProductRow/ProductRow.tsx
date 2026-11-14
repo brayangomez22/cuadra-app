@@ -4,6 +4,7 @@ import { Badge, TableCell, TableRow, TextLink } from '@/shared/ui';
 import type { Product } from '../../../../api/types';
 import { variantAmount } from '../../../../model/variants/variantAmount';
 import { defaultVariant, hasAxes } from '../../../../model/variants/variants';
+import { taxLabel } from '../../../../model/productForm/taxRates';
 import styles from './ProductRow.module.scss';
 
 type Props = { product: Product; canWrite: boolean; canSeeStock: boolean };
@@ -31,7 +32,7 @@ export function ProductRow({ product, canWrite, canSeeStock }: Props) {
       </TableCell>
       <TableCell numeric>
         {variantAmount(product, (v) => v.price_with_tax, formatMoney)}
-        <span className={styles.meta}>IVA {formatPercent(product.tax_rate, 'rate')}</span>
+        <span className={styles.meta}>{taxLabel(product)}</span>
       </TableCell>
       {canWrite && <TableCell numeric>{variantAmount(product, (v) => v.cost, formatMoney)}</TableCell>}
       {canWrite && <TableCell numeric>{variantAmount(product, (v) => v.margin_percent, asPercent)}</TableCell>}

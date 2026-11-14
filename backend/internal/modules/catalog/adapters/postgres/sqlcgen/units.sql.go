@@ -13,8 +13,8 @@ import (
 )
 
 const createUnit = `-- name: CreateUnit :exec
-INSERT INTO units_of_measure (id, tenant_id, code, name, created_at)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO units_of_measure (id, tenant_id, code, name, dian_code, created_at)
+VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type CreateUnitParams struct {
@@ -22,6 +22,7 @@ type CreateUnitParams struct {
 	TenantID  uuid.UUID
 	Code      string
 	Name      string
+	DianCode  *string
 	CreatedAt time.Time
 }
 
@@ -31,6 +32,7 @@ func (q *Queries) CreateUnit(ctx context.Context, arg CreateUnitParams) error {
 		arg.TenantID,
 		arg.Code,
 		arg.Name,
+		arg.DianCode,
 		arg.CreatedAt,
 	)
 	return err
@@ -50,7 +52,7 @@ func (q *Queries) DeleteUnit(ctx context.Context, id uuid.UUID) (int64, error) {
 }
 
 const getUnit = `-- name: GetUnit :one
-SELECT id, tenant_id, code, name, created_at
+SELECT id, tenant_id, code, name, created_at, dian_code
 FROM units_of_measure
 WHERE id = $1
 `
@@ -64,12 +66,13 @@ func (q *Queries) GetUnit(ctx context.Context, id uuid.UUID) (UnitsOfMeasure, er
 		&i.Code,
 		&i.Name,
 		&i.CreatedAt,
+		&i.DianCode,
 	)
 	return i, err
 }
 
 const listUnits = `-- name: ListUnits :many
-SELECT id, tenant_id, code, name, created_at
+SELECT id, tenant_id, code, name, created_at, dian_code
 FROM units_of_measure
 ORDER BY name, id
 `
@@ -89,6 +92,7 @@ func (q *Queries) ListUnits(ctx context.Context) ([]UnitsOfMeasure, error) {
 			&i.Code,
 			&i.Name,
 			&i.CreatedAt,
+			&i.DianCode,
 		); err != nil {
 			return nil, err
 		}
@@ -102,18 +106,24 @@ func (q *Queries) ListUnits(ctx context.Context) ([]UnitsOfMeasure, error) {
 
 const updateUnit = `-- name: UpdateUnit :execrows
 UPDATE units_of_measure
-SET code = $2, name = $3
+SET code = $2, name = $3, dian_code = $4
 WHERE id = $1
 `
 
 type UpdateUnitParams struct {
-	ID   uuid.UUID
-	Code string
-	Name string
+	ID       uuid.UUID
+	Code     string
+	Name     string
+	DianCode *string
 }
 
 func (q *Queries) UpdateUnit(ctx context.Context, arg UpdateUnitParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updateUnit, arg.ID, arg.Code, arg.Name)
+	result, err := q.db.Exec(ctx, updateUnit,
+		arg.ID,
+		arg.Code,
+		arg.Name,
+		arg.DianCode,
+	)
 	if err != nil {
 		return 0, err
 	}

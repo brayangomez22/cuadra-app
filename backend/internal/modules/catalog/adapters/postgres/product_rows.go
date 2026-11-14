@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/kernel/vat"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/adapters/postgres/sqlcgen"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
 )
@@ -28,7 +29,7 @@ func unitsByVariant(rows []sqlcgen.ListVariantUnitsRow) map[uuid.UUID][]domain.V
 			barcode = *u.Barcode
 		}
 		out[u.VariantID] = append(out[u.VariantID], domain.VariantUnitParams{
-			Unit:   domain.UnitRef{ID: u.UnitID, Code: u.UnitCode, Name: u.UnitName},
+			Unit:   domain.UnitRef{ID: u.UnitID, Code: u.UnitCode, Name: u.UnitName, DIANCode: valueOf(u.UnitDianCode)},
 			Factor: u.Factor, Price: u.Price, Barcode: barcode,
 		})
 	}
@@ -38,8 +39,8 @@ func unitsByVariant(rows []sqlcgen.ListVariantUnitsRow) map[uuid.UUID][]domain.V
 // productFromRows rebuilds a product from its row, its variants' rows and
 // the alternate units of its variants.
 func productFromRows(row sqlcgen.GetProductRow, variantRows []sqlcgen.ListVariantsRow, units map[uuid.UUID][]domain.VariantUnitParams) (*domain.Product, error) {
-	unit := domain.UnitRef{ID: row.BaseUnitID, Code: row.UnitCode, Name: row.UnitName}
-	rate, err := domain.ParseTaxRate(row.TaxRate)
+	unit := domain.UnitRef{ID: row.BaseUnitID, Code: row.UnitCode, Name: row.UnitName, DIANCode: valueOf(row.UnitDianCode)}
+	rate, err := domain.NewTaxRate(row.TaxRate, vat.Treatment(row.TaxTreatment))
 	if err != nil {
 		return nil, fmt.Errorf("catalog: product %s: stored tax rate: %w", row.ID, err)
 	}
@@ -131,4 +132,12 @@ func attributesFromJSON(raw []byte) (domain.Attributes, error) {
 		}
 	}
 	return domain.RehydrateAttributes(values)
+}
+
+// valueOf is the string of a nullable column: empty for NULL.
+func valueOf(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

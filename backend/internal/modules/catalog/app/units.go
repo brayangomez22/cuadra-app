@@ -9,13 +9,19 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
+// UnitInput is a unit's code, name and DIAN code (empty: none).
+type UnitInput struct{ Code, Name, DIANCode string }
+
 // CreateUnit stores a new unit of measure.
-func (s *Service) CreateUnit(ctx context.Context, a Actor, code, name string) (_ *domain.UnitOfMeasure, err error) {
+func (s *Service) CreateUnit(ctx context.Context, a Actor, in UnitInput) (_ *domain.UnitOfMeasure, err error) {
 	ctx, span := s.startSpan(ctx, "CreateUnit", a)
 	defer func() { usecase.End(span, err) }()
 
-	u, err := domain.NewUnit(a.TenantID, code, name, s.Now())
+	u, err := domain.NewUnit(a.TenantID, in.Code, in.Name, s.Now())
 	if err != nil {
+		return nil, err
+	}
+	if err := u.SetDIANCode(in.DIANCode); err != nil {
 		return nil, err
 	}
 	span.SetAttributes(unitAttr(u.ID()))
@@ -25,9 +31,10 @@ func (s *Service) CreateUnit(ctx context.Context, a Actor, code, name string) (_
 	return u, nil
 }
 
-// UpdateUnit changes a unit's code and name. The products that use it keep
-// using it: they reference its id.
-func (s *Service) UpdateUnit(ctx context.Context, a Actor, id uuid.UUID, code, name string) (_ *domain.UnitOfMeasure, err error) {
+// UpdateUnit changes a unit's code, name and DIAN code. The products that
+// use it keep using it: they reference its id. The lines already sold keep
+// the codes they froze.
+func (s *Service) UpdateUnit(ctx context.Context, a Actor, id uuid.UUID, in UnitInput) (_ *domain.UnitOfMeasure, err error) {
 	ctx, span := s.startSpan(ctx, "UpdateUnit", a, unitAttr(id))
 	defer func() { usecase.End(span, err) }()
 
@@ -35,7 +42,10 @@ func (s *Service) UpdateUnit(ctx context.Context, a Actor, id uuid.UUID, code, n
 	if err != nil {
 		return nil, err
 	}
-	if err := u.Update(code, name); err != nil {
+	if err := u.Update(in.Code, in.Name); err != nil {
+		return nil, err
+	}
+	if err := u.SetDIANCode(in.DIANCode); err != nil {
 		return nil, err
 	}
 	if err := s.Units.Update(ctx, u); err != nil {

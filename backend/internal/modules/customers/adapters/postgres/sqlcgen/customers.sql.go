@@ -43,10 +43,10 @@ func (q *Queries) CountCustomers(ctx context.Context, arg CountCustomersParams) 
 
 const createCustomer = `-- name: CreateCustomer :exec
 INSERT INTO customers (id, tenant_id, person_type, document_type, document_number, name, trade_name, email, phone,
-                       address, city, segment_id, tax_responsibilities, active, created_at, updated_at)
+                       address, city, municipality_code, segment_id, tax_responsibilities, active, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5,
         $6, $7, $8, $9, $10, $11,
-        $12, $13, $14, $15, $15)
+        $12, $13, $14, $15, $16, $16)
 `
 
 type CreateCustomerParams struct {
@@ -61,6 +61,7 @@ type CreateCustomerParams struct {
 	Phone               *string
 	Address             *string
 	City                *string
+	MunicipalityCode    *string
 	SegmentID           *uuid.UUID
 	TaxResponsibilities []string
 	Active              bool
@@ -80,6 +81,7 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		arg.Phone,
 		arg.Address,
 		arg.City,
+		arg.MunicipalityCode,
 		arg.SegmentID,
 		arg.TaxResponsibilities,
 		arg.Active,
@@ -119,7 +121,7 @@ func (q *Queries) CustomerNames(ctx context.Context, ids []uuid.UUID) ([]Custome
 
 const getCustomer = `-- name: GetCustomer :one
 SELECT id, tenant_id, person_type, document_type, document_number, name, trade_name, email, phone, address, city,
-       segment_id, tax_responsibilities, active, created_at
+       municipality_code, segment_id, tax_responsibilities, active, created_at
 FROM customers WHERE id = $1
 `
 
@@ -135,6 +137,7 @@ type GetCustomerRow struct {
 	Phone               *string
 	Address             *string
 	City                *string
+	MunicipalityCode    *string
 	SegmentID           *uuid.UUID
 	TaxResponsibilities []string
 	Active              bool
@@ -156,6 +159,7 @@ func (q *Queries) GetCustomer(ctx context.Context, id uuid.UUID) (GetCustomerRow
 		&i.Phone,
 		&i.Address,
 		&i.City,
+		&i.MunicipalityCode,
 		&i.SegmentID,
 		&i.TaxResponsibilities,
 		&i.Active,
@@ -166,7 +170,7 @@ func (q *Queries) GetCustomer(ctx context.Context, id uuid.UUID) (GetCustomerRow
 
 const searchCustomers = `-- name: SearchCustomers :many
 SELECT id, tenant_id, person_type, document_type, document_number, name, trade_name, email, phone, address, city,
-       segment_id, tax_responsibilities, active, created_at
+       municipality_code, segment_id, tax_responsibilities, active, created_at
 FROM customers c
 WHERE ($1::boolean IS NULL OR c.active = $1)
   AND ($2::uuid IS NULL OR c.segment_id = $2)
@@ -201,6 +205,7 @@ type SearchCustomersRow struct {
 	Phone               *string
 	Address             *string
 	City                *string
+	MunicipalityCode    *string
 	SegmentID           *uuid.UUID
 	TaxResponsibilities []string
 	Active              bool
@@ -240,6 +245,7 @@ func (q *Queries) SearchCustomers(ctx context.Context, arg SearchCustomersParams
 			&i.Phone,
 			&i.Address,
 			&i.City,
+			&i.MunicipalityCode,
 			&i.SegmentID,
 			&i.TaxResponsibilities,
 			&i.Active,
@@ -260,9 +266,9 @@ UPDATE customers
 SET person_type = $1, document_type = $2,
     document_number = $3, name = $4, trade_name = $5,
     email = $6, phone = $7, address = $8, city = $9,
-    segment_id = $10, tax_responsibilities = $11,
-    active = $12, updated_at = now()
-WHERE id = $13
+    municipality_code = $10, segment_id = $11, tax_responsibilities = $12,
+    active = $13, updated_at = now()
+WHERE id = $14
 `
 
 type UpdateCustomerParams struct {
@@ -275,6 +281,7 @@ type UpdateCustomerParams struct {
 	Phone               *string
 	Address             *string
 	City                *string
+	MunicipalityCode    *string
 	SegmentID           *uuid.UUID
 	TaxResponsibilities []string
 	Active              bool
@@ -292,6 +299,7 @@ func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) 
 		arg.Phone,
 		arg.Address,
 		arg.City,
+		arg.MunicipalityCode,
 		arg.SegmentID,
 		arg.TaxResponsibilities,
 		arg.Active,

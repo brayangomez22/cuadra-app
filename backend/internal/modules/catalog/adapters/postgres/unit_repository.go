@@ -35,7 +35,8 @@ func (r *UnitRepository) Create(ctx context.Context, u *domain.UnitOfMeasure) er
 
 func createUnit(ctx context.Context, q *sqlcgen.Queries, u *domain.UnitOfMeasure) error {
 	return q.CreateUnit(ctx, sqlcgen.CreateUnitParams{
-		ID: u.ID(), TenantID: u.TenantID(), Code: u.Code(), Name: u.Name(), CreatedAt: u.CreatedAt(),
+		ID: u.ID(), TenantID: u.TenantID(), Code: u.Code(), Name: u.Name(), DianCode: nullable(u.DIANCode()),
+		CreatedAt: u.CreatedAt(),
 	})
 }
 
@@ -54,12 +55,14 @@ func (r *UnitRepository) List(ctx context.Context, tenantID uuid.UUID) ([]*domai
 	return unitRows.all(ctx, r.db, tenantID, func(q *sqlcgen.Queries) ([]sqlcgen.UnitsOfMeasure, error) { return q.ListUnits(ctx) })
 }
 
-// Update stores the code and the name.
+// Update stores the code, the name and the DIAN code.
 func (r *UnitRepository) Update(ctx context.Context, u *domain.UnitOfMeasure) error {
 	return unitRows.writeOne(ctx, r.db, u.TenantID(), "update",
 		onViolation(db.UniqueViolation, unitsCodeKey, domain.ErrUnitCodeTaken),
 		func(q *sqlcgen.Queries) (int64, error) {
-			return q.UpdateUnit(ctx, sqlcgen.UpdateUnitParams{ID: u.ID(), Code: u.Code(), Name: u.Name()})
+			return q.UpdateUnit(ctx, sqlcgen.UpdateUnitParams{
+				ID: u.ID(), Code: u.Code(), Name: u.Name(), DianCode: nullable(u.DIANCode()),
+			})
 		})
 }
 
@@ -73,7 +76,8 @@ func (r *UnitRepository) Delete(ctx context.Context, tenantID, id uuid.UUID) err
 
 func unitFromRow(row sqlcgen.UnitsOfMeasure) (*domain.UnitOfMeasure, error) {
 	u, err := domain.RehydrateUnit(domain.UnitSnapshot{
-		ID: row.ID, TenantID: row.TenantID, Code: row.Code, Name: row.Name, CreatedAt: row.CreatedAt,
+		ID: row.ID, TenantID: row.TenantID, Code: row.Code, Name: row.Name, DIANCode: valueOf(row.DianCode),
+		CreatedAt: row.CreatedAt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("catalog: unit %s: %w", row.ID, err)

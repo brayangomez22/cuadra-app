@@ -92,7 +92,7 @@ func (c *Customer) Update(p CustomerParams) error {
 }
 
 // parseCustomerData checks p: a known person type, a valid document (a
-// company is identified by NIT), the segment and then the details.
+// company is identified by a NIT, of Colombia or another country), the segment and then the details.
 func parseCustomerData(p CustomerParams) (customerData, error) {
 	if p.PersonType != PersonNatural && p.PersonType != PersonLegal {
 		return customerData{}, ErrInvalidPersonType
@@ -101,7 +101,7 @@ func parseCustomerData(p CustomerParams) (customerData, error) {
 	if err != nil {
 		return customerData{}, err
 	}
-	if p.PersonType == PersonLegal && doc.Type() != DocumentNIT {
+	if p.PersonType == PersonLegal && !doc.Type().identifiesCompanies() {
 		return customerData{}, ErrLegalPersonRequiresNIT
 	}
 	if p.SegmentID != nil && *p.SegmentID == uuid.Nil {

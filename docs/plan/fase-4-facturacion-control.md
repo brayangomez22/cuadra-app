@@ -21,7 +21,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Diseño de partida:** `docs/dian.md` (proveedor Muisca/Aliaddo Nitro, flujo, estados, idempotencia por prefijo y consecutivo, campos y métricas).
 **Revisa tú:** todo. Es el componente con más riesgo legal del producto.
 
-### [ ] T36a · Datos del documento electrónico
+### [x] T36a · Datos del documento electrónico
 **Depende de:** T36.
 **Alcance:** lo que el documento le pide a la venta, al cliente y al catálogo, en backend y formularios: IVA **exento** y **excluido** (P03); el código de unidad DIAN de cada unidad del tenant, sembrado desde las plantillas (P154), y la unidad y el código (SKU) de cada línea congelados en la venta (P61, P160); el municipio y el departamento con código DANE del cliente (P91) y los demás tipos de documento con su código DIAN (P92). Sin enums de nicho: catálogos de la DIAN como datos.
 **Pendientes que entran a esta tarea:** P03, P61, P91, P92, P154 y P160 (`docs/plan/pendientes.md`).
@@ -30,13 +30,13 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T36b · Proveedor tecnológico real (Muisca)
 **Depende de:** T36, T36a.
 **Alcance:** adaptador de Muisca del puerto `ElectronicInvoicer` (cliente generado de su OpenAPI, errores clasificados como en `docs/dian.md` §6), token de la organización **por tenant cifrado** en la base de datos con una llave de variable de entorno, `mode` y `testSetId` por tenant para la habilitación, puerto de almacenamiento para el XML y el PDF (nunca el disco del contenedor) y el envío al correo del cliente (según lo que responda el PT, P153). El tenant demo usa siempre el simulado (P108). `INVOICING_PROVIDER=muisca` en producción (P157). Empieza por la prueba en el sandbox (P152).
-**Pendientes que entran a esta tarea:** P108, P152, P153, P157 y P159 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P108, P152, P153, P157, P159 y P162 (`docs/plan/pendientes.md`).
 **Tests primero:** un documento del demo no llega al proveedor; un 429 o un 5xx de Muisca es un error temporal y un 400 o 422 no se reintenta; el token nunca aparece en logs ni spans; el XML y el PDF de un documento aceptado quedan en el almacenamiento.
 
 ### [ ] T36c · Pantallas de la facturación electrónica
 **Depende de:** T36, T36b.
 **Alcance:** en el frontend, sobre el contrato de T36 (`/invoicing/*`): activar la emisión y el tipo por defecto, registrar y borrar resoluciones con el aviso de fin de rango, el **panel de documentos** por estado con sus motivos y el reintento manual, el estado, el CUDE y el QR del documento en `/ventas/:id` y en la tirilla (`docs/dian.md` §5, regla 6: esperar unos segundos o imprimir "pendiente de validación"), y pedir factura en el POS (`document_kind`). Después, `/impeccable critique`.
-**Pendientes que entran a esta tarea:** P158 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P158 y P163 (`docs/plan/pendientes.md`).
 **Tests primero:** el cajero ve el documento de la venta pero no reenvía; un documento rechazado muestra sus motivos y el botón de reenviar; pedir factura sin cliente muestra el error junto al cliente; responsive de 360 a 1920 px.
 
 ### [ ] T37 · Notas crédito y anulaciones

@@ -4,15 +4,16 @@ description: Víveres, bebidas, lácteos, aseo y productos de consumo diario.
 modules: [unit_conversions]
 # Tasa de IVA que se propone a un producto nuevo.
 default_tax_rate: "0.19"
+# dian_code: código UN/ECE Rec 20 de la unidad en la factura electrónica; sin él, la factura usa "94" (unidad).
 units:
-  - {code: und, name: Unidad}
-  - {code: kg, name: Kilogramo}
-  - {code: lb, name: Libra}
-  - {code: g, name: Gramo}
-  - {code: l, name: Litro}
+  - {code: und, name: Unidad, dian_code: "94"}
+  - {code: kg, name: Kilogramo, dian_code: KGM}
+  - {code: lb, name: Libra, dian_code: LBR}
+  - {code: g, name: Gramo, dian_code: GRM}
+  - {code: l, name: Litro, dian_code: LTR}
   - {code: paquete, name: Paquete}
   - {code: caja, name: Caja}
-  - {code: docena, name: Docena}
+  - {code: docena, name: Docena, dian_code: DZN}
 categories:
   - Víveres
   - Bebidas

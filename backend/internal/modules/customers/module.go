@@ -46,6 +46,7 @@ func New(cfg Config) (*Module, error) {
 	svc, err := app.NewService(app.Deps{
 		Customers:      postgres.NewCustomerRepository(cfg.DB),
 		Segments:       postgres.NewSegmentRepository(cfg.DB),
+		Municipalities: postgres.NewMunicipalityCatalog(cfg.DB),
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Now:            cfg.Now,

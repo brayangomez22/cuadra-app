@@ -40,6 +40,24 @@ func TestBusinessTemplates(t *testing.T) {
 		require.ElementsMatch(t, []string{"generica", "ferreteria", "tienda", "drogueria", "papeleria", "ropa_calzado"}, ids)
 	})
 
+	t.Run("las unidades conocidas traen su código DIAN (ferretería y ropa y calzado)", func(t *testing.T) {
+		want := map[string]map[string]string{
+			"ferreteria":   {"und": "94", "m": "MTR", "kg": "KGM", "l": "LTR", "galon": "GLL", "caja": ""},
+			"ropa_calzado": {"und": "94", "par": "PR"},
+		}
+		for id, codes := range want {
+			tpl, ok := catalog.Get(id)
+			require.True(t, ok)
+			got := map[string]string{}
+			for _, u := range tpl.Units {
+				if _, asked := codes[u.Code]; asked {
+					got[u.Code] = u.DIANCode
+				}
+			}
+			require.Equal(t, codes, got, id)
+		}
+	})
+
 	t.Run("ferretería: conserva las unidades de antes y no trae variantes", func(t *testing.T) {
 		tpl, ok := catalog.Get("ferreteria")
 		require.True(t, ok)

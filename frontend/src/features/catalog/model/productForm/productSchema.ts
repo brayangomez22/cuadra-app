@@ -80,6 +80,8 @@ export function productSchema(definitions: AttributeDefinition[]) {
     category_id: z.string(),
     base_unit_id: z.string().min(1, 'Elija la unidad'),
     tax_rate: z.string(),
+    // With a 0 % rate: whether it is excluded or exempt (ignored otherwise).
+    zero_rate: z.enum(['excluded', 'exempt']),
     cost: decimalField('nonnegative', {
       empty: 'Escriba el costo (0 si aún no lo sabe)',
       belowMin: 'El costo no puede ser negativo',

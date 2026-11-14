@@ -204,20 +204,7 @@ func saleBody(s *domain.Sale) salesapi.Sale {
 		body.ConfirmedAt = *at
 	}
 	for _, l := range s.Lines() {
-		line := salesapi.SaleLine{
-			VariantId: l.VariantID(), ProductId: l.ProductID(), ProductName: l.ProductName(), Quantity: httpx.FormatDecimal(l.Quantity()),
-			UnitFactor: httpx.FormatDecimal(l.Unit().Factor), BaseQuantity: httpx.FormatDecimal(l.BaseQuantity()),
-			UnitPrice: httpx.FormatMoney(l.UnitPrice()), PriceRule: string(l.PriceRule()), TaxRate: httpx.FormatDecimal(l.TaxRate()),
-			Discount: httpx.FormatMoney(l.Discount()), Gross: httpx.FormatMoney(l.Gross()), Base: httpx.FormatMoney(l.Base()),
-			Tax: httpx.FormatMoney(l.Tax()), Total: httpx.FormatMoney(l.Total()),
-		}
-		if label := l.VariantLabel(); label != "" {
-			line.VariantLabel = &label
-		}
-		if u := l.Unit(); !u.IsBase() {
-			line.UnitCode = &u.Code
-		}
-		body.Lines = append(body.Lines, line)
+		body.Lines = append(body.Lines, lineBody(l))
 	}
 	for _, p := range s.Payments() {
 		body.Payments = append(body.Payments, salesapi.SalePayment{Method: salesapi.PaymentMethod(p.Method()), Amount: httpx.FormatMoney(p.Amount())})
@@ -231,4 +218,33 @@ func saleBody(s *domain.Sale) salesapi.Sale {
 		body.Void = &salesapi.SaleVoid{UserId: v.UserID, Reason: v.Reason, VoidedAt: v.At}
 	}
 	return body
+}
+
+// lineBody is a sold line as the contract shows it: the unit's code only if
+// it was an alternate one, and the codes frozen for the electronic document
+// if the line has them.
+func lineBody(l domain.SaleLine) salesapi.SaleLine {
+	line := salesapi.SaleLine{
+		VariantId: l.VariantID(), ProductId: l.ProductID(), ProductName: l.ProductName(), Quantity: httpx.FormatDecimal(l.Quantity()),
+		UnitFactor: httpx.FormatDecimal(l.Unit().Factor), BaseQuantity: httpx.FormatDecimal(l.BaseQuantity()),
+		UnitPrice: httpx.FormatMoney(l.UnitPrice()), PriceRule: string(l.PriceRule()), TaxRate: httpx.FormatDecimal(l.TaxRate()),
+		TaxTreatment: salesapi.TaxTreatment(l.TaxTreatment()),
+		Discount:     httpx.FormatMoney(l.Discount()), Gross: httpx.FormatMoney(l.Gross()), Base: httpx.FormatMoney(l.Base()),
+		Tax: httpx.FormatMoney(l.Tax()), Total: httpx.FormatMoney(l.Total()),
+	}
+	line.VariantLabel = optional(l.VariantLabel())
+	line.Sku = optional(l.SKU())
+	line.BaseUnitCode = optional(l.BaseUnitCode())
+	if u := l.Unit(); !u.IsBase() {
+		line.UnitCode = &u.Code
+	}
+	return line
+}
+
+// optional is a field the contract leaves out when empty.
+func optional(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

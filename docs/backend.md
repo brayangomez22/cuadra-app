@@ -65,7 +65,7 @@ test/api/                # tests de integración de la API completa, sobre serve
 
 ### Núcleo compartido: `internal/kernel`
 
-Un value object puro que validan los `domain/` de más de un módulo vive en `internal/kernel/<tema>` (`taxid`: el NIT y su dígito de verificación, que usan `identity`, `customers` y `purchases` y después la facturación; `calendar`: el día de calendario en `America/Bogota` de los vencimientos de `receivables` y `purchases`). Solo importa la librería estándar y no tiene estado ni I/O; no es un lugar para helpers ni para entidades. Un tipo entra aquí solo cuando lo necesita un segundo módulo.
+Un value object puro que validan los `domain/` de más de un módulo vive en `internal/kernel/<tema>` (`taxid`: el NIT y su dígito de verificación, que usan `identity`, `customers` y `purchases` y después la facturación; `calendar`: el día de calendario en `America/Bogota` de los vencimientos de `receivables` y `purchases`; `vat`: el tratamiento del IVA —gravado, exento o excluido— que validan el catálogo, las ventas y la facturación). Solo importa la librería estándar y no tiene estado ni I/O; no es un lugar para helpers ni para entidades. Un tipo entra aquí solo cuando lo necesita un segundo módulo.
 
 ### Fronteras (`depguard`, en error)
 

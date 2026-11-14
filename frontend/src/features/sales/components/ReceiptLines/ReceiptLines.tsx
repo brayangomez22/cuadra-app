@@ -11,7 +11,7 @@ export function ReceiptLines({ lines }: { lines: Sale['lines'] }) {
           <span className={styles.name}>{lineName(line)}</span>
           <span>
             {formatQuantity(line.quantity)}
-            {line.unit_code && ` ${line.unit_code}`} × {formatMoney(line.unit_price)}
+            {unitOf(line) && ` ${unitOf(line)}`} × {formatMoney(line.unit_price)}
           </span>
           <span className={styles.amount}>{formatMoney(line.gross)}</span>
           {!isZero(line.discount) && (
@@ -30,4 +30,10 @@ export function ReceiptLines({ lines }: { lines: Sale['lines'] }) {
 // at the time of the sale: "Producto A (Rojo · M)".
 function lineName(line: Sale['lines'][number]) {
   return line.variant_label ? `${line.product_name} (${line.variant_label})` : line.product_name;
+}
+
+// unitOf is the unit a line was sold in: the alternate one, or the product's
+// base unit frozen with the sale (absent in sales stored before it was).
+function unitOf(line: Sale['lines'][number]) {
+  return line.unit_code ?? line.base_unit_code;
 }

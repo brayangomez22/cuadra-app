@@ -32,7 +32,12 @@
         "required": ["code", "name"],
         "properties": {
           "code": { "type": "string", "minLength": 1, "maxLength": 16, "pattern": "^\\S+$" },
-          "name": { "$ref": "#/$defs/text" }
+          "name": { "$ref": "#/$defs/text" },
+          "dian_code": {
+            "description": "Código UN/ECE Rec 20 de la unidad que lleva la factura electrónica (\"94\" unidad, \"MTR\" metro). Sin él, la factura usa \"94\".",
+            "type": "string",
+            "pattern": "^[A-Z0-9]{1,3}$"
+          }
         }
       }
     },

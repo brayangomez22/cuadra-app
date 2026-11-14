@@ -10,6 +10,8 @@ const (
 	// FinalConsumerDocumentType is the type of document the final consumer
 	// is sent with: a cédula, like the DIAN's generic buyer.
 	FinalConsumerDocumentType = "cc"
+	// finalConsumerIdentificationCode is the DIAN's code of the cédula.
+	finalConsumerIdentificationCode = "13"
 )
 
 // Buyer is who the document is issued to: a customer of the tenant, or the
@@ -22,13 +24,31 @@ type Buyer struct {
 	DocumentNumber string
 	Name           string
 	Email          string
+	// IdentificationCode is the DIAN's code of DocumentType ("13", "31").
+	IdentificationCode string
+	Address            string
+	// City is free text; MunicipalityCode, the DANE code ("05001"), empty
+	// for a customer who has only the City.
+	City             string
+	MunicipalityCode string
+}
+
+// DepartmentCode is the DANE code of the buyer's department: the first two
+// digits of its municipality's. Empty without a municipality.
+func (b Buyer) DepartmentCode() string {
+	const municipalityLength, departmentLength = 5, 2
+	if len(b.MunicipalityCode) != municipalityLength {
+		return ""
+	}
+	return b.MunicipalityCode[:departmentLength]
 }
 
 // FinalConsumer is the buyer of a sale without a customer.
 func FinalConsumer() Buyer {
 	return Buyer{
 		PersonType: "natural", DocumentType: FinalConsumerDocumentType,
-		DocumentNumber: FinalConsumerDocument, Name: FinalConsumerName,
+		IdentificationCode: finalConsumerIdentificationCode,
+		DocumentNumber:     FinalConsumerDocument, Name: FinalConsumerName,
 	}
 }
 

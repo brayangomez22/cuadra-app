@@ -26,6 +26,7 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrLegalPersonRequiresNIT, Status: http.StatusUnprocessableEntity, Code: "legal_person_requires_nit", Message: "Una persona jurídica se identifica con NIT."},
 	{Err: domain.ErrInvalidCustomerName, Status: http.StatusUnprocessableEntity, Code: "invalid_customer_name", Message: "Escriba el nombre del cliente (máximo 200 caracteres)."},
 	{Err: domain.ErrInvalidContact, Status: http.StatusUnprocessableEntity, Code: "invalid_customer_contact", Message: "Revise el correo y el teléfono del cliente."},
+	{Err: domain.ErrInvalidMunicipality, Status: http.StatusUnprocessableEntity, Code: "invalid_municipality", Message: "Elija un municipio de la lista del DANE."},
 	{Err: domain.ErrInvalidTaxResponsibilities, Status: http.StatusUnprocessableEntity, Code: "invalid_tax_responsibilities", Message: "Las responsabilidades fiscales no son válidas: sin repetir, y «No responsable» (R-99-PN) va sola."},
 	{Err: domain.ErrInvalidSegmentName, Status: http.StatusUnprocessableEntity, Code: "invalid_customer_segment_name", Message: "Escriba el nombre del segmento (máximo 60 caracteres)."},
 	{Err: app.ErrInvalidStatus, Status: http.StatusBadRequest, Code: "invalid_request", Message: "El estado del filtro no es válido."},

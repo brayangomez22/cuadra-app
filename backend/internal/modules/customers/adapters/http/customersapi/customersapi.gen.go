@@ -20,10 +20,14 @@ import (
 
 // Defines values for DocumentType.
 const (
-	Cc       DocumentType = "cc"
-	Ce       DocumentType = "ce"
-	Nit      DocumentType = "nit"
-	Passport DocumentType = "passport"
+	Cc         DocumentType = "cc"
+	Ce         DocumentType = "ce"
+	ForeignId  DocumentType = "foreign_id"
+	ForeignNit DocumentType = "foreign_nit"
+	Nit        DocumentType = "nit"
+	Passport   DocumentType = "passport"
+	Ppt        DocumentType = "ppt"
+	Ti         DocumentType = "ti"
 )
 
 // Valid indicates whether the value is a known member of the DocumentType enum.
@@ -33,9 +37,17 @@ func (e DocumentType) Valid() bool {
 		return true
 	case Ce:
 		return true
+	case ForeignId:
+		return true
+	case ForeignNit:
+		return true
 	case Nit:
 		return true
 	case Passport:
+		return true
+	case Ppt:
+		return true
+	case Ti:
 		return true
 	default:
 		return false
@@ -119,10 +131,18 @@ type Customer struct {
 	// DocumentNumber Example: 900123456-8
 	DocumentNumber string `json:"document_number"`
 
-	// DocumentType Cédula de ciudadanía (`cc`), NIT (`nit`), cédula de extranjería (`ce`) o pasaporte (`passport`).
+	// DocumentType Los tipos de documento de identificación de la DIAN: cédula de ciudadanía (`cc`), NIT (`nit`), cédula de
+	// extranjería (`ce`), pasaporte (`passport`), tarjeta de identidad (`ti`), permiso por protección temporal (`ppt`),
+	// NIT de otro país (`foreign_nit`) o documento de identificación extranjero (`foreign_id`). Una persona jurídica
+	// se identifica con `nit` o `foreign_nit`.
 	DocumentType DocumentType       `json:"document_type"`
 	Email        *string            `json:"email,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
+
+	// MunicipalityCode El código DANE del municipio del cliente (`/municipalities`). No viene si no tiene.
+	//
+	// Example: 05001
+	MunicipalityCode *string `json:"municipality_code,omitempty"`
 
 	// Name Nombre completo o razón social.
 	Name string `json:"name"`
@@ -148,10 +168,20 @@ type CustomerInput struct {
 	// DocumentNumber Example: 900.123.456-8
 	DocumentNumber string `json:"document_number"`
 
-	// DocumentType Cédula de ciudadanía (`cc`), NIT (`nit`), cédula de extranjería (`ce`) o pasaporte (`passport`).
+	// DocumentType Los tipos de documento de identificación de la DIAN: cédula de ciudadanía (`cc`), NIT (`nit`), cédula de
+	// extranjería (`ce`), pasaporte (`passport`), tarjeta de identidad (`ti`), permiso por protección temporal (`ppt`),
+	// NIT de otro país (`foreign_nit`) o documento de identificación extranjero (`foreign_id`). Una persona jurídica
+	// se identifica con `nit` o `foreign_nit`.
 	DocumentType DocumentType `json:"document_type"`
 	Email        *string      `json:"email,omitempty"`
-	Name         string       `json:"name"`
+
+	// MunicipalityCode El código DANE del municipio (`/municipalities`), que pide la factura electrónica junto con la dirección.
+	// Vacío u omitido, el cliente queda sin municipio (`invalid_municipality` si no existe).
+	//
+	//
+	// Example: 05001
+	MunicipalityCode *string `json:"municipality_code,omitempty"`
+	Name             string  `json:"name"`
 
 	// PersonType Persona natural (`natural`) o jurídica (`legal`). Una persona jurídica se identifica con NIT.
 	PersonType PersonType `json:"person_type"`
@@ -194,7 +224,10 @@ type CustomerSegmentList struct {
 	Items []CustomerSegment `json:"items"`
 }
 
-// DocumentType Cédula de ciudadanía (`cc`), NIT (`nit`), cédula de extranjería (`ce`) o pasaporte (`passport`).
+// DocumentType Los tipos de documento de identificación de la DIAN: cédula de ciudadanía (`cc`), NIT (`nit`), cédula de
+// extranjería (`ce`), pasaporte (`passport`), tarjeta de identidad (`ti`), permiso por protección temporal (`ppt`),
+// NIT de otro país (`foreign_nit`) o documento de identificación extranjero (`foreign_id`). Una persona jurídica
+// se identifica con `nit` o `foreign_nit`.
 type DocumentType string
 
 // Error Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
@@ -214,6 +247,26 @@ type ErrorDetail struct {
 
 	// Message Mensaje en español que se puede mostrar al usuario.
 	Message string `json:"message"`
+}
+
+// Municipality Un municipio del catálogo DIVIPOLA del DANE.
+type Municipality struct {
+	// Code Example: 05001
+	Code string `json:"code"`
+
+	// DepartmentCode Example: 05
+	DepartmentCode string `json:"department_code"`
+
+	// DepartmentName Example: Antioquia
+	DepartmentName string `json:"department_name"`
+
+	// Name Example: Medellín
+	Name string `json:"name"`
+}
+
+// MunicipalityList defines model for MunicipalityList.
+type MunicipalityList struct {
+	Items []Municipality `json:"items"`
 }
 
 // PersonType Persona natural (`natural`) o jurídica (`legal`). Una persona jurídica se identifica con NIT.
@@ -366,6 +419,9 @@ type ServerInterface interface {
 	// UpdateCustomer Editar un cliente
 	// (PUT /api/v1/customers/{customerId})
 	UpdateCustomer(w http.ResponseWriter, r *http.Request, customerId CustomerId)
+	// ListMunicipalities Listar los municipios del DANE
+	// (GET /api/v1/municipalities)
+	ListMunicipalities(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -608,6 +664,20 @@ func (siw *ServerInterfaceWrapper) UpdateCustomer(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListMunicipalities operation middleware
+func (siw *ServerInterfaceWrapper) ListMunicipalities(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMunicipalities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -732,6 +802,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/customers", wrapper.CreateCustomer)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/customers/{customerId}", wrapper.GetCustomer)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/customers/{customerId}", wrapper.UpdateCustomer)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/municipalities", wrapper.ListMunicipalities)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/customer-segments", wrapper.ListCustomerSegments)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/customer-segments", wrapper.CreateCustomerSegment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/customer-segments/{segmentId}", wrapper.DeleteCustomerSegment)
@@ -1539,6 +1610,69 @@ func (response UpdateCustomer500JSONResponse) VisitUpdateCustomerResponse(w http
 	return err
 }
 
+type ListMunicipalitiesRequestObject struct {
+}
+
+type ListMunicipalitiesResponseObject interface {
+	VisitListMunicipalitiesResponse(w http.ResponseWriter) error
+}
+
+type ListMunicipalities200JSONResponse MunicipalityList
+
+func (response ListMunicipalities200JSONResponse) VisitListMunicipalitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMunicipalities401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListMunicipalities401JSONResponse) VisitListMunicipalitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMunicipalities403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListMunicipalities403JSONResponse) VisitListMunicipalitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMunicipalities500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListMunicipalities500JSONResponse) VisitListMunicipalitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// ListCustomerSegments Listar los segmentos de cliente
@@ -1565,6 +1699,9 @@ type StrictServerInterface interface {
 	// UpdateCustomer Editar un cliente
 	// (PUT /api/v1/customers/{customerId})
 	UpdateCustomer(ctx context.Context, request UpdateCustomerRequestObject) (UpdateCustomerResponseObject, error)
+	// ListMunicipalities Listar los municipios del DANE
+	// (GET /api/v1/municipalities)
+	ListMunicipalities(ctx context.Context, request ListMunicipalitiesRequestObject) (ListMunicipalitiesResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -1829,6 +1966,30 @@ func (sh *strictHandler) UpdateCustomer(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateCustomerResponseObject); ok {
 		if err := validResponse.VisitUpdateCustomerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMunicipalities operation middleware
+func (sh *strictHandler) ListMunicipalities(w http.ResponseWriter, r *http.Request) {
+	var request ListMunicipalitiesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMunicipalities(ctx, request.(ListMunicipalitiesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMunicipalities")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMunicipalitiesResponseObject); ok {
+		if err := validResponse.VisitListMunicipalitiesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -23,6 +23,8 @@ var (
 	ErrInvalidQuantity        = errors.New("sales: invalid quantity")
 	ErrInvalidUnitPrice       = errors.New("sales: invalid unit price")
 	ErrInvalidTaxRate         = errors.New("sales: invalid tax rate")
+	ErrInvalidTaxTreatment    = errors.New("sales: invalid tax treatment")
+	ErrInvalidLineCode        = errors.New("sales: invalid line code")
 	ErrInvalidDiscount        = errors.New("sales: invalid discount")
 	ErrInvalidDiscountLimit   = errors.New("sales: invalid discount limit")
 	ErrInvalidPaymentMethod   = errors.New("sales: invalid payment method")

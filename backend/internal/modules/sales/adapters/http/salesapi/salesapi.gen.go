@@ -180,6 +180,27 @@ func (e SaleStatus) Valid() bool {
 	}
 }
 
+// Defines values for TaxTreatment.
+const (
+	Excluded TaxTreatment = "excluded"
+	Exempt   TaxTreatment = "exempt"
+	Taxed    TaxTreatment = "taxed"
+)
+
+// Valid indicates whether the value is a known member of the TaxTreatment enum.
+func (e TaxTreatment) Valid() bool {
+	switch e {
+	case Excluded:
+		return true
+	case Exempt:
+		return true
+	case Taxed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListCashSessionsParamsStatus.
 const (
 	ListCashSessionsParamsStatusAll    ListCashSessionsParamsStatus = "all"
@@ -559,6 +580,13 @@ type SaleLine struct {
 	// Example: 2.5
 	BaseQuantity Quantity `json:"base_quantity"`
 
+	// BaseUnitCode El código de la unidad base del producto, congelado en la venta: con él se muestra una cantidad vendida
+	// en la unidad base ("2 m"). No viene en las ventas guardadas antes de que se congelara.
+	//
+	//
+	// Example: m
+	BaseUnitCode *string `json:"base_unit_code,omitempty"`
+
 	// Discount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
@@ -589,6 +617,11 @@ type SaleLine struct {
 	// Example: 2.5
 	Quantity Quantity `json:"quantity"`
 
+	// Sku El SKU de la variante en el momento de la venta. No viene si la variante ya no existía cuando se congeló.
+	//
+	// Example: CAB-12
+	Sku *string `json:"sku,omitempty"`
+
 	// Tax Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
 	// Example: 12500.00
@@ -598,6 +631,11 @@ type SaleLine struct {
 	//
 	// Example: 0.19
 	TaxRate TaxRate `json:"tax_rate"`
+
+	// TaxTreatment Cómo trata el IVA al producto, como lo distingue la DIAN: gravado (`taxed`, con tasa mayor que 0), exento
+	// (`exempt`, tasa 0: el documento electrónico lleva el IVA en 0) o excluido (`excluded`, tasa 0: el documento no
+	// lleva IVA).
+	TaxTreatment TaxTreatment `json:"tax_treatment"`
 
 	// Total Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
 	//
@@ -786,6 +824,11 @@ type TaxBreakdown struct {
 //
 // Example: 0.19
 type TaxRate = string
+
+// TaxTreatment Cómo trata el IVA al producto, como lo distingue la DIAN: gravado (`taxed`, con tasa mayor que 0), exento
+// (`exempt`, tasa 0: el documento electrónico lleva el IVA en 0) o excluido (`excluded`, tasa 0: el documento no
+// lleva IVA).
+type TaxTreatment string
 
 // UnitFactor Cuántas unidades base trae una unidad alternativa, como decimal en string (hasta 4 decimales).
 //

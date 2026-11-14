@@ -28,7 +28,7 @@ func productWithVariantsInput(body catalogapi.ProductWithVariantsInput) (app.Pro
 	if err != nil {
 		return app.ProductWithVariantsInput{}, err
 	}
-	rate, err := domain.ParseTaxRate(rateValue)
+	rate, err := domain.NewTaxRate(rateValue, treatment(body.TaxTreatment))
 	if err != nil {
 		return app.ProductWithVariantsInput{}, err
 	}

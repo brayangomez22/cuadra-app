@@ -5,6 +5,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+
+	"github.com/brayangomez22/cuadra-app/backend/internal/kernel/vat"
 )
 
 // LineSnapshot holds a stored line's fields. Gross and Tax are the amounts
@@ -23,6 +25,12 @@ type LineSnapshot struct {
 	Tax          decimal.Decimal
 	// Unit is the unit sold: its frozen code and factor.
 	Unit LineUnit
+	// SKU, BaseUnitCode, UnitDIANCode and TaxTreatment are frozen for the
+	// electronic document (empty in lines stored before they were).
+	SKU          string
+	BaseUnitCode string
+	UnitDIANCode string
+	TaxTreatment vat.Treatment
 }
 
 // PaymentSnapshot holds a stored payment's fields.
@@ -76,6 +84,8 @@ func (s *Sale) Snapshot() SaleSnapshot {
 			VariantID: l.variantID, ProductID: l.productID, ProductName: l.productName, VariantLabel: l.variantLabel,
 			Quantity: l.quantity, UnitPrice: l.unitPrice, PriceRule: l.priceRule, TaxRate: l.taxRate,
 			Discount: l.discount, Gross: l.gross, Tax: l.tax, Unit: l.unit,
+			SKU: l.codes.sku, BaseUnitCode: l.codes.baseUnitCode, UnitDIANCode: l.codes.unitDIANCode,
+			TaxTreatment: l.taxTreatment,
 		})
 	}
 	for _, p := range s.payments {
@@ -139,7 +149,8 @@ func rehydrateLines(snaps []LineSnapshot) ([]SaleLine, error) {
 		l, err := newLine(LineInput{
 			VariantID: ls.VariantID, ProductID: ls.ProductID, ProductName: ls.ProductName, VariantLabel: ls.VariantLabel,
 			Quantity: ls.Quantity, UnitPrice: ls.UnitPrice, PriceRule: ls.PriceRule, TaxRate: ls.TaxRate, Discount: ls.Discount,
-			Unit: ls.Unit,
+			Unit: ls.Unit, SKU: ls.SKU, BaseUnitCode: ls.BaseUnitCode, UnitDIANCode: ls.UnitDIANCode,
+			TaxTreatment: ls.TaxTreatment,
 		}, NoDiscountLimit)
 		if err != nil {
 			return nil, err

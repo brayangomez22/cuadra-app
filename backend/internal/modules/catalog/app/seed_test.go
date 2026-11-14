@@ -14,12 +14,14 @@ import (
 func TestSeedTenant(t *testing.T) {
 	// Seeds of two kinds of business, as their templates declare them.
 	hardware := app.Seed{
-		Units:      []app.UnitSeed{{Code: "und", Name: "Unidad"}, {Code: "m", Name: "Metro"}, {Code: "bulto", Name: "Bulto"}},
+		Units: []app.UnitSeed{
+			{Code: "und", Name: "Unidad", DIANCode: "94"}, {Code: "m", Name: "Metro", DIANCode: "MTR"}, {Code: "bulto", Name: "Bulto"},
+		},
 		Categories: []string{"Herramientas", "Eléctricos"},
 		Attributes: []domain.AttributeParams{{Key: "marca", Label: "Marca", Type: domain.AttributeText}},
 	}
 	clothing := app.Seed{
-		Units:      []app.UnitSeed{{Code: "und", Name: "Unidad"}, {Code: "par", Name: "Par"}},
+		Units:      []app.UnitSeed{{Code: "und", Name: "Unidad", DIANCode: "94"}, {Code: "par", Name: "Par", DIANCode: "PR"}},
 		Categories: []string{"Mujer", "Hombre", "Calzado"},
 		Attributes: []domain.AttributeParams{
 			{Key: "marca", Label: "Marca", Type: domain.AttributeText},
@@ -35,6 +37,7 @@ func TestSeedTenant(t *testing.T) {
 		name       string
 		seed       app.Seed
 		units      map[string]string
+		dianCodes  map[string]string
 		categories []string
 		attributes []string
 		axes       map[string][]string
@@ -43,6 +46,7 @@ func TestSeedTenant(t *testing.T) {
 			name:       "ferretería",
 			seed:       hardware,
 			units:      map[string]string{"und": "Unidad", "m": "Metro", "bulto": "Bulto"},
+			dianCodes:  map[string]string{"und": "94", "m": "MTR", "bulto": ""},
 			categories: []string{"Eléctricos", "Herramientas"},
 			attributes: []string{"marca"},
 			axes:       map[string][]string{},
@@ -51,6 +55,7 @@ func TestSeedTenant(t *testing.T) {
 			name:       "ropa y calzado",
 			seed:       clothing,
 			units:      map[string]string{"und": "Unidad", "par": "Par"},
+			dianCodes:  map[string]string{"und": "94", "par": "PR"},
 			categories: []string{"Calzado", "Hombre", "Mujer"},
 			attributes: []string{"genero", "marca"},
 			axes:       map[string][]string{"talla": {"S", "M", "L"}, "color": {"Negro", "Blanco"}},
@@ -65,11 +70,13 @@ func TestSeedTenant(t *testing.T) {
 
 			units, err := e.svc.ListUnits(t.Context(), tenant)
 			require.NoError(t, err)
-			gotUnits := map[string]string{}
+			gotUnits, gotDIAN := map[string]string{}, map[string]string{}
 			for _, u := range units {
 				gotUnits[u.Code()] = u.Name()
+				gotDIAN[u.Code()] = u.DIANCode()
 			}
 			require.Equal(t, tt.units, gotUnits)
+			require.Equal(t, tt.dianCodes, gotDIAN, "cada unidad trae el código DIAN de su plantilla")
 
 			categories, err := e.svc.ListCategories(t.Context(), tenant)
 			require.NoError(t, err)

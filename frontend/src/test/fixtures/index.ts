@@ -6,7 +6,16 @@
 export { attributes } from './attributes';
 export { axes } from './axes';
 export { aCredit, buckets, noCredit, statement } from './credit';
-export { aBoutique, aBuilder, customerIds, customerInput, searchCustomers, segmentIds, segments } from './customers';
+export {
+  aBoutique,
+  aBuilder,
+  customerIds,
+  customerInput,
+  municipalities,
+  searchCustomers,
+  segmentIds,
+  segments,
+} from './customers';
 export { aGarment, variantBarcode, variantId } from './garment';
 export { ids } from './ids';
 export { aLocation } from './locations';

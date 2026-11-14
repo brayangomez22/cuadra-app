@@ -85,6 +85,7 @@ func customerParams(in customersapi.CustomerInput) domain.CustomerParams {
 		DocumentNumber: in.DocumentNumber, Name: in.Name, TradeName: value(in.TradeName),
 		Contact: domain.Contact{
 			Email: value(in.Email), Phone: value(in.Phone), Address: value(in.Address), City: value(in.City),
+			MunicipalityCode: value(in.MunicipalityCode),
 		},
 		SegmentID: in.SegmentId, Active: in.Active == nil || *in.Active,
 	}
@@ -102,7 +103,8 @@ func customerBody(c *domain.Customer) customersapi.Customer {
 		Id: c.ID(), PersonType: customersapi.PersonType(c.PersonType()),
 		DocumentType: customersapi.DocumentType(c.Document().Type()), DocumentNumber: c.Document().Number(),
 		Name: c.Name(), TradeName: optional(c.TradeName()), Email: optional(contact.Email), Phone: optional(contact.Phone),
-		Address: optional(contact.Address), City: optional(contact.City), SegmentId: c.SegmentID(),
+		Address: optional(contact.Address), City: optional(contact.City),
+		MunicipalityCode: optional(contact.MunicipalityCode), SegmentId: c.SegmentID(),
 		Active: c.Active(), CreatedAt: c.CreatedAt(),
 	}
 	for _, r := range c.TaxResponsibilities() {
