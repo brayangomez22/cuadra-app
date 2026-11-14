@@ -8,15 +8,16 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 
 ---
 
-### [ ] T35 · Selección del proveedor tecnológico (spike)
+### [x] T35 · Selección del proveedor tecnológico (spike)
 **Alcance:** investigación con entregable escrito, sin código de producción. Comparar 2 o 3 proveedores tecnológicos autorizados por la DIAN que tengan API: documentos soportados (factura electrónica de venta, documento equivalente electrónico POS, notas crédito y débito), ambiente de pruebas, precio por documento o por plan, webhooks, límites, SLA y soporte. Prueba en su sandbox con una factura real de ejemplo. Resultado: ADR en `docs/decisiones.md` y un documento `docs/dian.md` con el flujo, los estados y los campos obligatorios.
 **Revisa tú:** costo por documento contra el precio que planeas cobrar.
 
 ### [ ] T36 · Emisión de documentos electrónicos
 **Depende de:** T18 (outbox + River), T20, T31, T35.
 **Alcance:** puerto `ElectronicInvoicer` en el módulo de ventas y adaptador del proveedor elegido. Al confirmar la venta se encola su emisión (outbox) como factura electrónica o como documento equivalente POS según el caso. Máquina de estados (`pending` → `sent` → `accepted` / `rejected`), reintentos con backoff ante caídas del proveedor, almacenamiento del CUFE/CUDE, del XML y de la representación gráfica (PDF con QR), y envío al correo del cliente. Configuración por tenant de resoluciones de numeración y prefijos. Panel de documentos con su estado y reintento manual. Métricas: documentos por estado y latencia de aceptación; alerta si la tasa de rechazo supera un umbral.
-**Pendientes que entran a esta tarea:** P03, P61, P91, P92, P93 y P108 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P03, P61, P91, P92, P93, P108, P152, P153 y P154 (`docs/plan/pendientes.md`).
 **Tests primero:** con el proveedor caído la venta se confirma igual y el documento queda pendiente para reintento; un rechazo guarda el motivo y no se reintenta automáticamente; la numeración respeta la resolución vigente y alerta cuando se acerca al final del rango.
+**Diseño de partida:** `docs/dian.md` (proveedor Muisca/Aliaddo Nitro, flujo, estados, idempotencia por prefijo y consecutivo, campos y métricas).
 **Revisa tú:** todo. Es el componente con más riesgo legal del producto.
 
 ### [ ] T37 · Notas crédito y anulaciones
