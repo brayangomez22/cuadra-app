@@ -3,6 +3,7 @@ import type { components, operations } from '@/shared/api/schema';
 export type Customer = components['schemas']['Customer'];
 export type CustomerInput = components['schemas']['CustomerInput'];
 export type CustomerSegment = components['schemas']['CustomerSegment'];
+export type Municipality = components['schemas']['Municipality'];
 export type PersonType = components['schemas']['PersonType'];
 export type DocumentType = components['schemas']['DocumentType'];
 export type TaxResponsibility = components['schemas']['TaxResponsibility'];

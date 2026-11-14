@@ -39,10 +39,13 @@ func (c SalesCatalog) Variants(ctx context.Context, tenantID uuid.UUID, ids []uu
 			info := salesapp.VariantInfo{
 				ID: v.ID(), ProductID: p.ID(), ProductName: p.Name(), Label: v.Label(),
 				Price: v.Price(), TaxRate: p.TaxRate().Rate(), Active: p.IsActive() && v.IsActive(),
+				SKU: v.SKU(), BaseUnitCode: p.BaseUnit().Code, BaseUnitDIANCode: p.BaseUnit().DIANCode,
+				TaxTreatment: p.TaxRate().Treatment(),
 			}
 			for _, u := range v.Units() {
 				info.Units = append(info.Units, salesapp.UnitInfo{
 					UnitID: u.Unit().ID, Code: u.Unit().Code, Factor: u.Factor(), Price: u.Price(),
+					DIANCode: u.Unit().DIANCode,
 				})
 			}
 			out = append(out, info)

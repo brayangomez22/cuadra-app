@@ -149,15 +149,15 @@ Los nombres son los del JSON de Muisca (`POST /v2/documents/equivalent-documents
 | | `paymentMeanCode` | pagos de la venta → códigos de medio de pago DIAN (sin lista fija en el emisor, V2-10) | 🟡 falta el mapeo |
 | | `sellerName`, `branch` (nombre, dirección, código de ciudad) | cajero de la venta y `Location` | 🟡 la sede no tiene dirección propia (V2-4): se usa la del tenant |
 | Emisor | NIT y DV, razón social, dirección, ciudad, responsabilidades | `tenants` (NIT canónico: decisión del 2026-10-09; dirección: decisión del 2026-11-03) | 🟡 la ciudad es texto: falta el código DANE |
-| Comprador | `personType`, `identificationTypeCode`, `identification`, `digitCheck`, nombres o razón social | `Customer` (decisión de T31) | 🟡 faltan tipos de documento (P92) |
+| Comprador | `personType`, `identificationTypeCode`, `identification`, `digitCheck`, nombres o razón social | `Customer` (decisión de T31); el código DIAN de cada tipo de documento, en `customers/domain` (T36a) | ✅ |
 | | `responsibilities` (`R-99-PN`, `O-13`…) | `Customer` | ✅ |
-| | `BillingAddress` (código de departamento y ciudad DANE) | `Customer` | ❌ P91 |
+| | `BillingAddress` (código de departamento y ciudad DANE) | `Customer.municipality_code`, del catálogo `municipalities` (DIVIPOLA); el departamento son sus dos primeros dígitos (T36a). Un cliente sin municipio va sin él | ✅ |
 | | `email` (para enviar el documento) | `Customer` | ✅ |
 | | consumidor final (`222222222222`) | venta sin `customer_id` | ❌ P93 |
-| Líneas | `code`, `name` | SKU de la variante y nombre del producto | ✅ |
-| | `unitMeasurementCode` (código UN/ECE Rec 20: `94` unidad, `MTR`, `KGM`…) | unidad de la línea | ❌ P61 y P154 |
+| Líneas | `code`, `name` | SKU de la variante congelado en la línea (`sale_lines.sku`, T36a) y nombre del producto | ✅ |
+| | `unitMeasurementCode` (código UN/ECE Rec 20: `94` unidad, `MTR`, `KGM`…) | `dian_code` de la unidad del tenant, congelado en la línea (`sale_lines.unit_dian_code`); sin él, `94` (T36a) | ✅ |
 | | `price` (sin IVA), `quantity`, `discountAmount` | línea de la venta (precio sin IVA y descuento en pesos: decisiones del 2026-10-10) | ✅ |
-| | `taxes` (`code` `01` IVA, `rate`, `base`, `amount`) | tasa de IVA de la línea | 🟡 falta exento/excluido (P03) |
+| | `taxes` (`code` `01` IVA, `rate`, `base`, `amount`) | tasa y tratamiento del IVA de la línea (`invoicing/domain.LineTaxes`): excluido sin impuesto, exento al 0 % (T36a) | ✅ |
 | Totales | `totals` (`amount`, `taxesAmount`, `discountsAmount`…) | totales de la venta (2 decimales, half-up) | ✅ |
 | Respuesta | `Id`, `Cufe` (CUDE o CUFE), `Sequence`, `Qr`, `Status`, `StatusReasons` | `electronic_documents` | ❌ T36 |
 

@@ -48,6 +48,7 @@ export function aGarment(overrides: Partial<Product> = {}): Product {
     base_unit_id: unit.id,
     unit,
     tax_rate: '0.19',
+    tax_treatment: 'taxed',
     attributes: { marca: 'Acme', material: 'Algodón' },
     active: true,
     created_at: '2026-10-16T15:00:00Z',

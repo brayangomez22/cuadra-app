@@ -5,9 +5,10 @@ description: Prendas, calzado y accesorios que se venden por talla y color.
 modules: [variants]
 # Tasa de IVA que se propone a un producto nuevo.
 default_tax_rate: "0.19"
+# dian_code: código UN/ECE Rec 20 de la unidad en la factura electrónica; sin él, la factura usa "94" (unidad).
 units:
-  - {code: und, name: Unidad}
-  - {code: par, name: Par}
+  - {code: und, name: Unidad, dian_code: "94"}
+  - {code: par, name: Par, dian_code: PR}
 categories:
   - Mujer
   - Hombre

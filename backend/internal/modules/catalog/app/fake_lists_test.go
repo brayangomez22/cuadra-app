@@ -22,7 +22,7 @@ func cloneCategory(c *domain.Category) *domain.Category {
 
 func cloneUnit(u *domain.UnitOfMeasure) *domain.UnitOfMeasure {
 	out, err := domain.RehydrateUnit(domain.UnitSnapshot{
-		ID: u.ID(), TenantID: u.TenantID(), Code: u.Code(), Name: u.Name(), CreatedAt: u.CreatedAt(),
+		ID: u.ID(), TenantID: u.TenantID(), Code: u.Code(), Name: u.Name(), DIANCode: u.DIANCode(), CreatedAt: u.CreatedAt(),
 	})
 	if err != nil {
 		panic(err)

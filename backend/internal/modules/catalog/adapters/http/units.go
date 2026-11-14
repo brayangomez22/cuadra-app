@@ -14,9 +14,9 @@ import (
 
 // UnitUseCases are the use cases of the units of measure.
 type UnitUseCases interface {
-	CreateUnit(ctx context.Context, a app.Actor, code, name string) (*domain.UnitOfMeasure, error)
-	UpdateUnit(ctx context.Context, a app.Actor, id uuid.UUID, code, name string) (*domain.UnitOfMeasure, error)
 	ListUnits(ctx context.Context, a app.Actor) ([]*domain.UnitOfMeasure, error)
+	CreateUnit(ctx context.Context, a app.Actor, in app.UnitInput) (*domain.UnitOfMeasure, error)
+	UpdateUnit(ctx context.Context, a app.Actor, id uuid.UUID, in app.UnitInput) (*domain.UnitOfMeasure, error)
 	DeleteUnit(ctx context.Context, a app.Actor, id uuid.UUID) error
 }
 
@@ -51,16 +51,16 @@ func (h *unitHandlers) ListUnits(ctx context.Context, _ catalogapi.ListUnitsRequ
 
 // CreateUnit adds a unit of measure.
 func (h *unitHandlers) CreateUnit(ctx context.Context, req catalogapi.CreateUnitRequestObject) (catalogapi.CreateUnitResponseObject, error) {
-	u, err := h.uc.CreateUnit(ctx, actor(ctx), req.Body.Code, req.Body.Name)
+	u, err := h.uc.CreateUnit(ctx, actor(ctx), unitInput(*req.Body))
 	if err != nil {
 		return nil, err
 	}
 	return catalogapi.CreateUnit201JSONResponse(unitBody(u.Ref())), nil
 }
 
-// UpdateUnit changes a unit's code and name.
+// UpdateUnit changes a unit's code, name and DIAN code.
 func (h *unitHandlers) UpdateUnit(ctx context.Context, req catalogapi.UpdateUnitRequestObject) (catalogapi.UpdateUnitResponseObject, error) {
-	u, err := h.uc.UpdateUnit(ctx, actor(ctx), req.UnitId, req.Body.Code, req.Body.Name)
+	u, err := h.uc.UpdateUnit(ctx, actor(ctx), req.UnitId, unitInput(*req.Body))
 	if err != nil {
 		return nil, unitPathError(err)
 	}
@@ -76,5 +76,17 @@ func (h *unitHandlers) DeleteUnit(ctx context.Context, req catalogapi.DeleteUnit
 }
 
 func unitBody(u domain.UnitRef) catalogapi.UnitOfMeasure {
-	return catalogapi.UnitOfMeasure{Id: u.ID, Code: u.Code, Name: u.Name}
+	body := catalogapi.UnitOfMeasure{Id: u.ID, Code: u.Code, Name: u.Name}
+	if u.DIANCode != "" {
+		body.DianCode = &u.DIANCode
+	}
+	return body
+}
+
+func unitInput(b catalogapi.UnitInput) app.UnitInput {
+	in := app.UnitInput{Code: b.Code, Name: b.Name}
+	if b.DianCode != nil {
+		in.DIANCode = *b.DianCode
+	}
+	return in
 }

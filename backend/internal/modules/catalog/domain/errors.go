@@ -22,6 +22,8 @@ var (
 	ErrInvalidPrice          = errors.New("catalog: invalid price")
 	ErrInvalidCost           = errors.New("catalog: invalid cost")
 	ErrInvalidTaxRate        = errors.New("catalog: invalid tax rate")
+	ErrInvalidTaxTreatment   = errors.New("catalog: invalid tax treatment")
+	ErrInvalidUnitDIANCode   = errors.New("catalog: invalid unit DIAN code")
 	ErrInvalidCategoryName   = errors.New("catalog: invalid category name")
 	ErrInvalidCategoryParent = errors.New("catalog: invalid category parent")
 	ErrProductInactive       = errors.New("catalog: product is inactive")

@@ -137,7 +137,7 @@ func (q *Queries) InactiveVariants(ctx context.Context, variantIds []uuid.UUID) 
 }
 
 const listVariantUnits = `-- name: ListVariantUnits :many
-SELECT vu.variant_id, vu.unit_id, u.code AS unit_code, u.name AS unit_name, vu.factor, vu.price, vu.barcode
+SELECT vu.variant_id, vu.unit_id, u.code AS unit_code, u.name AS unit_name, u.dian_code AS unit_dian_code, vu.factor, vu.price, vu.barcode
 FROM variant_units vu
 JOIN units_of_measure u ON u.tenant_id = vu.tenant_id AND u.id = vu.unit_id
 WHERE vu.variant_id = ANY($1::uuid[])
@@ -145,13 +145,14 @@ ORDER BY vu.variant_id, vu.factor, u.code
 `
 
 type ListVariantUnitsRow struct {
-	VariantID uuid.UUID
-	UnitID    uuid.UUID
-	UnitCode  string
-	UnitName  string
-	Factor    decimal.Decimal
-	Price     decimal.Decimal
-	Barcode   *string
+	VariantID    uuid.UUID
+	UnitID       uuid.UUID
+	UnitCode     string
+	UnitName     string
+	UnitDianCode *string
+	Factor       decimal.Decimal
+	Price        decimal.Decimal
+	Barcode      *string
 }
 
 // ListVariantUnits returns the alternate units of the given variants with
@@ -170,6 +171,7 @@ func (q *Queries) ListVariantUnits(ctx context.Context, variantIds []uuid.UUID) 
 			&i.UnitID,
 			&i.UnitCode,
 			&i.UnitName,
+			&i.UnitDianCode,
 			&i.Factor,
 			&i.Price,
 			&i.Barcode,

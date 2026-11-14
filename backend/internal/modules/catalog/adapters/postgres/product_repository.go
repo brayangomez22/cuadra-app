@@ -31,16 +31,17 @@ func (r *ProductRepository) Create(ctx context.Context, p *domain.Product) error
 	err = r.db.WithTenantTx(ctx, p.TenantID(), func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
 		if err := q.CreateProduct(ctx, sqlcgen.CreateProductParams{
-			ID:          p.ID(),
-			TenantID:    p.TenantID(),
-			Name:        p.Name(),
-			Description: p.Description(),
-			CategoryID:  p.CategoryID(),
-			BaseUnitID:  p.BaseUnit().ID,
-			TaxRate:     p.TaxRate().Rate(),
-			Attributes:  attrs,
-			Active:      p.IsActive(),
-			CreatedAt:   p.CreatedAt(),
+			ID:           p.ID(),
+			TenantID:     p.TenantID(),
+			Name:         p.Name(),
+			Description:  p.Description(),
+			CategoryID:   p.CategoryID(),
+			BaseUnitID:   p.BaseUnit().ID,
+			TaxRate:      p.TaxRate().Rate(),
+			TaxTreatment: string(p.TaxRate().Treatment()),
+			Attributes:   attrs,
+			Active:       p.IsActive(),
+			CreatedAt:    p.CreatedAt(),
 		}); err != nil {
 			return err
 		}
@@ -90,14 +91,15 @@ func (r *ProductRepository) Update(ctx context.Context, p *domain.Product) error
 	err = r.db.WithTenantTx(ctx, p.TenantID(), func(tx pgx.Tx) error {
 		q := sqlcgen.New(tx)
 		affected, err := q.UpdateProduct(ctx, sqlcgen.UpdateProductParams{
-			ID:          p.ID(),
-			Name:        p.Name(),
-			Description: p.Description(),
-			CategoryID:  p.CategoryID(),
-			BaseUnitID:  p.BaseUnit().ID,
-			TaxRate:     p.TaxRate().Rate(),
-			Attributes:  attrs,
-			Active:      p.IsActive(),
+			ID:           p.ID(),
+			Name:         p.Name(),
+			Description:  p.Description(),
+			CategoryID:   p.CategoryID(),
+			BaseUnitID:   p.BaseUnit().ID,
+			TaxRate:      p.TaxRate().Rate(),
+			TaxTreatment: string(p.TaxRate().Treatment()),
+			Attributes:   attrs,
+			Active:       p.IsActive(),
 		})
 		if err != nil {
 			return err

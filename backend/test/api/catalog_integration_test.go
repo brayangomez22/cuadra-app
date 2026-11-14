@@ -125,7 +125,7 @@ func TestCatalogFlow(t *testing.T) {
 		var p map[string]any
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &p))
 		require.Equal(t, unitID("m"), p["base_unit_id"])
-		require.Equal(t, map[string]any{"id": unitID("m"), "code": "m", "name": "Metro"}, p["unit"])
+		require.Equal(t, map[string]any{"id": unitID("m"), "code": "m", "name": "Metro", "dian_code": "MTR"}, p["unit"])
 	})
 
 	t.Run("crea un producto con base_unit_id y lo devuelve con su unidad", func(t *testing.T) {

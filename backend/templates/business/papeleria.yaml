@@ -4,14 +4,15 @@ description: Útiles escolares, artículos de oficina, arte, impresiones y fotoc
 modules: []
 # Tasa de IVA que se propone a un producto nuevo.
 default_tax_rate: "0.19"
+# dian_code: código UN/ECE Rec 20 de la unidad en la factura electrónica; sin él, la factura usa "94" (unidad).
 units:
-  - {code: und, name: Unidad}
+  - {code: und, name: Unidad, dian_code: "94"}
   - {code: paquete, name: Paquete}
   - {code: caja, name: Caja}
   - {code: resma, name: Resma}
-  - {code: docena, name: Docena}
+  - {code: docena, name: Docena, dian_code: DZN}
   - {code: pliego, name: Pliego}
-  - {code: m, name: Metro}
+  - {code: m, name: Metro, dian_code: MTR}
 categories:
   - Útiles escolares
   - Oficina

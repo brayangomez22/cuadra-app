@@ -42,6 +42,27 @@ func (e AttributeType) Valid() bool {
 	}
 }
 
+// Defines values for TaxTreatment.
+const (
+	Excluded TaxTreatment = "excluded"
+	Exempt   TaxTreatment = "exempt"
+	Taxed    TaxTreatment = "taxed"
+)
+
+// Valid indicates whether the value is a known member of the TaxTreatment enum.
+func (e TaxTreatment) Valid() bool {
+	switch e {
+	case Excluded:
+		return true
+	case Exempt:
+		return true
+	case Taxed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListProductsParamsStatus.
 const (
 	Active   ListProductsParamsStatus = "active"
@@ -213,6 +234,11 @@ type Product struct {
 	// Example: 0.19
 	TaxRate TaxRate `json:"tax_rate"`
 
+	// TaxTreatment Cómo trata el IVA al producto, como lo distingue la DIAN: gravado (`taxed`, con tasa mayor que 0), exento
+	// (`exempt`, tasa 0: el documento electrónico lleva el IVA en 0) o excluido (`excluded`, tasa 0: el documento no
+	// lleva IVA).
+	TaxTreatment TaxTreatment `json:"tax_treatment"`
+
 	// Unit Una unidad de medida de la empresa, en la que se cuentan y se venden sus productos.
 	Unit UnitOfMeasure `json:"unit"`
 
@@ -266,6 +292,10 @@ type ProductInput struct {
 	//
 	// Example: 0.19
 	TaxRate TaxRate `json:"tax_rate"`
+
+	// TaxTreatment Con tasa mayor que 0 solo puede ser `taxed`; con tasa 0, `exempt` o `excluded`. Si se omite, se deduce de la
+	// tasa: `taxed` si es mayor que 0 y `excluded` si es 0 (`invalid_tax_treatment` si no corresponde).
+	TaxTreatment *TaxTreatment `json:"tax_treatment,omitempty"`
 }
 
 // ProductPage defines model for ProductPage.
@@ -406,14 +436,23 @@ type ProductWithVariantsInput struct {
 	// TaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
 	//
 	// Example: 0.19
-	TaxRate  TaxRate               `json:"tax_rate"`
-	Variants []ProductVariantInput `json:"variants"`
+	TaxRate TaxRate `json:"tax_rate"`
+
+	// TaxTreatment Con tasa mayor que 0 solo puede ser `taxed`; con tasa 0, `exempt` o `excluded`. Si se omite, se deduce de la
+	// tasa: `taxed` si es mayor que 0 y `excluded` si es 0 (`invalid_tax_treatment` si no corresponde).
+	TaxTreatment *TaxTreatment         `json:"tax_treatment,omitempty"`
+	Variants     []ProductVariantInput `json:"variants"`
 }
 
 // TaxRate Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
 //
 // Example: 0.19
 type TaxRate = string
+
+// TaxTreatment Cómo trata el IVA al producto, como lo distingue la DIAN: gravado (`taxed`, con tasa mayor que 0), exento
+// (`exempt`, tasa 0: el documento electrónico lleva el IVA en 0) o excluido (`excluded`, tasa 0: el documento no
+// lleva IVA).
+type TaxTreatment string
 
 // UnitFactor Cuántas unidades base trae una unidad alternativa, como decimal en string (hasta 4 decimales).
 //
@@ -426,6 +465,13 @@ type UnitInput struct {
 	//
 	// Example: par
 	Code string `json:"code"`
+
+	// DianCode Código de la unidad en la lista UN/ECE Rec 20 que pide la factura electrónica (`94` unidad, `MTR` metro,
+	// `KGM` kilogramo). Se guarda en mayúsculas. Vacío u omitido, la unidad queda sin código y, el documento lleva `94` (unidad).
+	//
+	//
+	// Example: MTR
+	DianCode *string `json:"dian_code,omitempty"`
 
 	// Name Example: Par
 	Name string `json:"name"`
@@ -441,8 +487,15 @@ type UnitOfMeasure struct {
 	// Code Lo que se muestra junto a una cantidad ("2,5 m"). Único en la empresa, en minúsculas.
 	//
 	// Example: m
-	Code string             `json:"code"`
-	Id   openapi_types.UUID `json:"id"`
+	Code string `json:"code"`
+
+	// DianCode Código de la unidad en la lista UN/ECE Rec 20 que pide la factura electrónica (`94` unidad, `MTR` metro,
+	// `KGM` kilogramo). Se guarda en mayúsculas. Sin él, el documento lleva `94` (unidad).
+	//
+	//
+	// Example: MTR
+	DianCode *string            `json:"dian_code,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
 
 	// Name Example: Metro
 	Name string `json:"name"`

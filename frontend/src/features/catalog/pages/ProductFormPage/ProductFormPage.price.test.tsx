@@ -1,9 +1,10 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { plain } from '@/test/fixtures';
+import { json } from '@/test/fakeApi';
+import { aProduct, plain } from '@/test/fixtures';
 import { renderApp } from '@/test/renderApp';
 import { preloadPages } from '@/test/preloadPages';
-import { productFormApi } from '../../testing/productForm';
+import { fillProduct, productFormApi, saveProduct } from '../../testing/productForm';
 
 const preview = () => plain(screen.getByRole('status', { name: 'Con IVA y margen' }).textContent);
 
@@ -48,5 +49,31 @@ describe('ProductFormPage: precio con IVA y margen', () => {
 
     await screen.findByLabelText('Precio de venta (sin IVA)');
     expect(screen.queryByRole('status', { name: 'Con IVA y margen' })).not.toBeInTheDocument();
+  });
+});
+
+describe('ProductFormPage: IVA exento o excluido', () => {
+  beforeAll(preloadPages('/productos/nuevo'));
+
+  it('con IVA 0 % pregunta si es excluido o exento y lo envía (papelería)', async () => {
+    const api = productFormApi({
+      'POST /api/v1/products': json(201, aProduct({ tax_rate: '0', tax_treatment: 'exempt' })),
+    });
+    renderApp('/productos/nuevo');
+
+    await fillProduct();
+    expect(screen.queryByRole('combobox', { name: 'IVA 0 %' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('combobox', { name: 'IVA' }));
+    await userEvent.click(await screen.findByRole('option', { name: /^0\s%$/ }));
+    expect(screen.getByRole('combobox', { name: 'IVA 0 %' })).toHaveTextContent('Excluido');
+    await userEvent.click(screen.getByRole('combobox', { name: 'IVA 0 %' }));
+    await userEvent.click(await screen.findByRole('option', { name: /^Exento/ }));
+    await saveProduct();
+
+    await waitFor(() => expect(api.calls('POST /api/v1/products')).toHaveLength(1));
+    expect(await api.calls('POST /api/v1/products')[0]!.json()).toMatchObject({
+      tax_rate: '0',
+      tax_treatment: 'exempt',
+    });
   });
 });

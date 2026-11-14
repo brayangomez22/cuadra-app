@@ -6,4 +6,5 @@ export const customersKeys = {
   list: (query: CustomerQuery) => ['customers', 'list', query] as const,
   customer: (id: string) => ['customers', 'customer', id] as const,
   segments: ['customers', 'segments'] as const,
+  municipalities: ['customers', 'municipalities'] as const,
 };

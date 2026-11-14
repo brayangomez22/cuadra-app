@@ -14,6 +14,7 @@ var (
 	ErrInvalidCustomerID   = errors.New("customers: invalid customer id")
 	ErrInvalidPersonType   = errors.New("customers: invalid person type")
 	ErrInvalidDocumentType = errors.New("customers: invalid document type")
+	ErrInvalidMunicipality = errors.New("customers: invalid municipality")
 	ErrInvalidDocument     = errors.New("customers: invalid document number for its type")
 	// ErrInvalidNITCheckDigit is the shared kernel's: the NIT's DV does not
 	// match.

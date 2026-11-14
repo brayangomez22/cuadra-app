@@ -1192,6 +1192,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/municipalities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar los municipios del DANE
+         * @description Los 1.122 municipios del catálogo DIVIPOLA del DANE, ordenados por departamento y nombre, para elegir el
+         *     municipio de un cliente. Es el mismo para todas las empresas y no cambia entre versiones de Cuadra.
+         */
+        get: operations["listMunicipalities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/customer-segments": {
         parameters: {
             query?: never;
@@ -2110,6 +2131,13 @@ export interface components {
          * @example 0.19
          */
         TaxRate: string;
+        /**
+         * @description Cómo trata el IVA al producto, como lo distingue la DIAN: gravado (`taxed`, con tasa mayor que 0), exento
+         *     (`exempt`, tasa 0: el documento electrónico lleva el IVA en 0) o excluido (`excluded`, tasa 0: el documento no
+         *     lleva IVA).
+         * @enum {string}
+         */
+        TaxTreatment: "taxed" | "exempt" | "excluded";
         /** @description Una unidad de medida de la empresa, en la que se cuentan y se venden sus productos. */
         UnitOfMeasure: {
             /** Format: uuid */
@@ -2121,6 +2149,12 @@ export interface components {
             code: string;
             /** @example Metro */
             name: string;
+            /**
+             * @description Código de la unidad en la lista UN/ECE Rec 20 que pide la factura electrónica (`94` unidad, `MTR` metro,
+             *     `KGM` kilogramo). Se guarda en mayúsculas. Sin él, el documento lleva `94` (unidad).
+             * @example MTR
+             */
+            dian_code?: string;
         };
         UnitInput: {
             /**
@@ -2130,6 +2164,12 @@ export interface components {
             code: string;
             /** @example Par */
             name: string;
+            /**
+             * @description Código de la unidad en la lista UN/ECE Rec 20 que pide la factura electrónica (`94` unidad, `MTR` metro,
+             *     `KGM` kilogramo). Se guarda en mayúsculas. Vacío u omitido, la unidad queda sin código y, el documento lleva `94` (unidad).
+             * @example MTR
+             */
+            dian_code?: string;
         };
         Module: {
             /** @example variants */
@@ -2274,6 +2314,11 @@ export interface components {
             price: components["schemas"]["Money"];
             tax_rate: components["schemas"]["TaxRate"];
             /**
+             * @description Con tasa mayor que 0 solo puede ser `taxed`; con tasa 0, `exempt` o `excluded`. Si se omite, se deduce de la
+             *     tasa: `taxed` si es mayor que 0 y `excluded` si es 0 (`invalid_tax_treatment` si no corresponde).
+             */
+            tax_treatment?: components["schemas"]["TaxTreatment"];
+            /**
              * @description Los valores de los atributos de la empresa (`{}` si no tiene). Al editar reemplazan los que tiene el
              *     producto: un atributo que no se envía queda sin valor.
              */
@@ -2312,6 +2357,11 @@ export interface components {
             /** Format: uuid */
             base_unit_id: string;
             tax_rate: components["schemas"]["TaxRate"];
+            /**
+             * @description Con tasa mayor que 0 solo puede ser `taxed`; con tasa 0, `exempt` o `excluded`. Si se omite, se deduce de la
+             *     tasa: `taxed` si es mayor que 0 y `excluded` si es 0 (`invalid_tax_treatment` si no corresponde).
+             */
+            tax_treatment?: components["schemas"]["TaxTreatment"];
             attributes: components["schemas"]["ProductAttributes"];
             variants: components["schemas"]["ProductVariantInput"][];
         };
@@ -2402,6 +2452,7 @@ export interface components {
             base_unit_id: string;
             unit: components["schemas"]["UnitOfMeasure"];
             tax_rate: components["schemas"]["TaxRate"];
+            tax_treatment: components["schemas"]["TaxTreatment"];
             attributes: components["schemas"]["ProductAttributes"];
             /** @description Un producto inactivo no se vende, con ninguna de sus variantes. */
             active: boolean;
@@ -2752,10 +2803,13 @@ export interface components {
          */
         PersonType: "natural" | "legal";
         /**
-         * @description Cédula de ciudadanía (`cc`), NIT (`nit`), cédula de extranjería (`ce`) o pasaporte (`passport`).
+         * @description Los tipos de documento de identificación de la DIAN: cédula de ciudadanía (`cc`), NIT (`nit`), cédula de
+         *     extranjería (`ce`), pasaporte (`passport`), tarjeta de identidad (`ti`), permiso por protección temporal (`ppt`),
+         *     NIT de otro país (`foreign_nit`) o documento de identificación extranjero (`foreign_id`). Una persona jurídica
+         *     se identifica con `nit` o `foreign_nit`.
          * @enum {string}
          */
-        DocumentType: "cc" | "nit" | "ce" | "passport";
+        DocumentType: "cc" | "nit" | "ce" | "passport" | "ti" | "ppt" | "foreign_nit" | "foreign_id";
         /**
          * @description Responsabilidad fiscal del RUT que pide la factura electrónica: gran contribuyente (`O-13`), autorretenedor
          *     (`O-15`), agente de retención de IVA (`O-23`), régimen simple (`O-47`) o ninguna de ellas (`R-99-PN`).
@@ -2783,6 +2837,11 @@ export interface components {
             phone?: string;
             address?: string;
             city?: string;
+            /**
+             * @description El código DANE del municipio del cliente (`/municipalities`). No viene si no tiene.
+             * @example 05001
+             */
+            municipality_code?: string;
             /** Format: uuid */
             segment_id?: string;
             tax_responsibilities: components["schemas"]["TaxResponsibility"][];
@@ -2806,6 +2865,12 @@ export interface components {
             address?: string;
             city?: string;
             /**
+             * @description El código DANE del municipio (`/municipalities`), que pide la factura electrónica junto con la dirección.
+             *     Vacío u omitido, el cliente queda sin municipio (`invalid_municipality` si no existe).
+             * @example 05001
+             */
+            municipality_code?: string;
+            /**
              * Format: uuid
              * @description Un segmento de la empresa (`/customer-segments`). Sin él, el cliente no tiene segmento.
              */
@@ -2816,6 +2881,20 @@ export interface components {
              * @default true
              */
             active: boolean;
+        };
+        /** @description Un municipio del catálogo DIVIPOLA del DANE. */
+        Municipality: {
+            /** @example 05001 */
+            code: string;
+            /** @example Medellín */
+            name: string;
+            /** @example 05 */
+            department_code: string;
+            /** @example Antioquia */
+            department_name: string;
+        };
+        MunicipalityList: {
+            items: components["schemas"]["Municipality"][];
         };
         CustomerPage: {
             items: components["schemas"]["Customer"][];
@@ -3354,6 +3433,17 @@ export interface components {
              */
             unit_code?: string;
             unit_factor: components["schemas"]["UnitFactor"];
+            /**
+             * @description El código de la unidad base del producto, congelado en la venta: con él se muestra una cantidad vendida
+             *     en la unidad base ("2 m"). No viene en las ventas guardadas antes de que se congelara.
+             * @example m
+             */
+            base_unit_code?: string;
+            /**
+             * @description El SKU de la variante en el momento de la venta. No viene si la variante ya no existía cuando se congeló.
+             * @example CAB-12
+             */
+            sku?: string;
             base_quantity: components["schemas"]["Quantity"];
             unit_price: components["schemas"]["Money"];
             /**
@@ -3363,6 +3453,7 @@ export interface components {
              */
             price_rule: string;
             tax_rate: components["schemas"]["TaxRate"];
+            tax_treatment: components["schemas"]["TaxTreatment"];
             discount: components["schemas"]["Money"];
             gross: components["schemas"]["Money"];
             base: components["schemas"]["Money"];
@@ -3832,6 +3923,7 @@ export interface components {
          *     válido para su tipo (`invalid_document`), el
          *     dígito de verificación del NIT no coincide (`invalid_nit_check_digit`), una persona jurídica sin NIT
          *     (`legal_person_requires_nit`), el nombre (`invalid_customer_name`), un dato de contacto (`invalid_customer_contact`),
+         *     el municipio (`invalid_municipality`),
          *     las responsabilidades fiscales (`invalid_tax_responsibilities`) o un segmento que no existe
          *     (`customer_segment_not_found`).
          */
@@ -4465,7 +4557,7 @@ export interface operations {
             };
             /**
              * @description Algún dato no cumple las reglas (`invalid_sku`, `invalid_barcode`, `invalid_product_name`,
-             *     `invalid_description`, `invalid_price`, `invalid_cost`, `invalid_tax_rate`, `category_not_found`), falta
+             *     `invalid_description`, `invalid_price`, `invalid_cost`, `invalid_tax_rate`, `invalid_tax_treatment`, `category_not_found`), falta
              *     la unidad o vienen las dos formas de indicarla (`unit_required`), la unidad no existe en la empresa
              *     (`unit_not_found`), o un atributo no está definido (`unknown_attribute`), no tiene un valor válido
              *     (`invalid_attribute_value`) o es obligatorio y falta (`attribute_required`). Los errores de un atributo
@@ -5080,7 +5172,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description El código o el nombre no son válidos (`invalid_unit_code`, `invalid_unit_name`). */
+            /** @description El código, el nombre o el código DIAN no son válidos (`invalid_unit_code`, `invalid_unit_name`, `invalid_unit_dian_code`). */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -5129,7 +5221,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description El código o el nombre no son válidos (`invalid_unit_code`, `invalid_unit_name`). */
+            /** @description El código, el nombre o el código DIAN no son válidos (`invalid_unit_code`, `invalid_unit_name`, `invalid_unit_dian_code`). */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -6650,6 +6742,29 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listMunicipalities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Los municipios. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MunicipalityList"];
+                };
+            };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalError"];

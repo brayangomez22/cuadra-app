@@ -21,8 +21,9 @@ var now = time.Date(2026, 10, 28, 20, 30, 15, 123456000, time.UTC)
 
 // Compile-time checks: the adapters satisfy the domain ports.
 var (
-	_ domain.CustomerRepository = (*postgres.CustomerRepository)(nil)
-	_ domain.SegmentRepository  = (*postgres.SegmentRepository)(nil)
+	_ domain.CustomerRepository  = (*postgres.CustomerRepository)(nil)
+	_ domain.SegmentRepository   = (*postgres.SegmentRepository)(nil)
+	_ domain.MunicipalityCatalog = (*postgres.MunicipalityCatalog)(nil)
 )
 
 type fixture struct {

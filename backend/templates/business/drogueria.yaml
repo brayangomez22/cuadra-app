@@ -6,15 +6,16 @@ modules: []
 # Tasa de IVA que se propone a un producto nuevo: 0 porque los medicamentos
 # están excluidos de IVA (los demás productos se ajustan uno por uno).
 default_tax_rate: "0"
+# dian_code: código UN/ECE Rec 20 de la unidad en la factura electrónica; sin él, la factura usa "94" (unidad).
 units:
-  - {code: und, name: Unidad}
+  - {code: und, name: Unidad, dian_code: "94"}
   - {code: caja, name: Caja}
   - {code: blíster, name: Blíster}
   - {code: tableta, name: Tableta}
   - {code: frasco, name: Frasco}
   - {code: sobre, name: Sobre}
-  - {code: ml, name: Mililitro}
-  - {code: g, name: Gramo}
+  - {code: ml, name: Mililitro, dian_code: MLT}
+  - {code: g, name: Gramo, dian_code: GRM}
 categories:
   - Medicamentos
   - Cuidado personal

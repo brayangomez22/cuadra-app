@@ -89,15 +89,15 @@ func TestUnits(t *testing.T) {
 	t.Run("crea, edita y lista unidades", func(t *testing.T) {
 		e := newEnv(t)
 
-		dozen, err := e.svc.CreateUnit(t.Context(), e.actor, "Docena", "Docena")
+		dozen, err := e.svc.CreateUnit(t.Context(), e.actor, app.UnitInput{Code: "Docena", Name: "Docena"})
 		require.NoError(t, err)
 		require.Equal(t, "docena", dozen.Code())
 		require.Equal(t, e.actor.TenantID, dozen.TenantID())
 		require.Equal(t, testNow, dozen.CreatedAt())
 
-		pair, err := e.svc.CreateUnit(t.Context(), e.actor, "par", "Par")
+		pair, err := e.svc.CreateUnit(t.Context(), e.actor, app.UnitInput{Code: "par", Name: "Par"})
 		require.NoError(t, err)
-		pair, err = e.svc.UpdateUnit(t.Context(), e.actor, pair.ID(), "pares", "Pares")
+		pair, err = e.svc.UpdateUnit(t.Context(), e.actor, pair.ID(), app.UnitInput{Code: "pares", Name: "Pares"})
 		require.NoError(t, err)
 		require.Equal(t, "pares", pair.Code())
 
@@ -110,24 +110,39 @@ func TestUnits(t *testing.T) {
 		require.Equal(t, []string{"Docena", "Metro", "Pares"}, names)
 	})
 
+	t.Run("guarda el código DIAN al crear y al editar la unidad (metro de ferretería, par de calzado)", func(t *testing.T) {
+		e := newEnv(t)
+
+		pair, err := e.svc.CreateUnit(t.Context(), e.actor, app.UnitInput{Code: "par", Name: "Par", DIANCode: "pr"})
+		require.NoError(t, err)
+		require.Equal(t, "PR", pair.DIANCode())
+
+		meters, err := e.svc.UpdateUnit(t.Context(), e.actor, e.meters.ID(), app.UnitInput{Code: "m", Name: "Metro", DIANCode: "MTR"})
+		require.NoError(t, err)
+		require.Equal(t, "MTR", meters.DIANCode())
+
+		_, err = e.svc.UpdateUnit(t.Context(), e.actor, e.meters.ID(), app.UnitInput{Code: "m", Name: "Metro", DIANCode: "METRO"})
+		require.ErrorIs(t, err, domain.ErrInvalidUnitDIANCode)
+	})
+
 	t.Run("rechaza un código repetido en el tenant", func(t *testing.T) {
 		e := newEnv(t)
 
-		_, err := e.svc.CreateUnit(t.Context(), e.actor, " M ", "Metros")
+		_, err := e.svc.CreateUnit(t.Context(), e.actor, app.UnitInput{Code: " M ", Name: "Metros"})
 		require.ErrorIs(t, err, domain.ErrUnitCodeTaken)
 
-		kilo, err := e.svc.CreateUnit(t.Context(), e.actor, "kg", "Kilogramo")
+		kilo, err := e.svc.CreateUnit(t.Context(), e.actor, app.UnitInput{Code: "kg", Name: "Kilogramo"})
 		require.NoError(t, err)
-		_, err = e.svc.UpdateUnit(t.Context(), e.actor, kilo.ID(), "m", "Kilogramo")
+		_, err = e.svc.UpdateUnit(t.Context(), e.actor, kilo.ID(), app.UnitInput{Code: "m", Name: "Kilogramo"})
 		require.ErrorIs(t, err, domain.ErrUnitCodeTaken)
 	})
 
 	t.Run("rechaza datos inválidos sin guardar", func(t *testing.T) {
 		e := newEnv(t)
 
-		_, err := e.svc.CreateUnit(t.Context(), e.actor, "caja x12", "Caja")
+		_, err := e.svc.CreateUnit(t.Context(), e.actor, app.UnitInput{Code: "caja x12", Name: "Caja"})
 		require.ErrorIs(t, err, domain.ErrInvalidUnitCode)
-		_, err = e.svc.UpdateUnit(t.Context(), e.actor, e.meters.ID(), "m", "")
+		_, err = e.svc.UpdateUnit(t.Context(), e.actor, e.meters.ID(), app.UnitInput{Code: "m", Name: ""})
 		require.ErrorIs(t, err, domain.ErrInvalidUnitName)
 
 		units, err := e.svc.ListUnits(t.Context(), e.actor)
@@ -161,16 +176,16 @@ func TestUnits(t *testing.T) {
 		units, err := e.svc.ListUnits(t.Context(), other)
 		require.NoError(t, err)
 		require.Empty(t, units)
-		_, err = e.svc.UpdateUnit(t.Context(), other, e.meters.ID(), "mt", "Metro")
+		_, err = e.svc.UpdateUnit(t.Context(), other, e.meters.ID(), app.UnitInput{Code: "mt", Name: "Metro"})
 		require.ErrorIs(t, err, domain.ErrUnitNotFound)
 		require.ErrorIs(t, e.svc.DeleteUnit(t.Context(), other, e.meters.ID()), domain.ErrUnitNotFound)
 	})
 
 	t.Run("abre un span por caso de uso con el id de la unidad", func(t *testing.T) {
 		e := newEnv(t)
-		u, err := e.svc.CreateUnit(t.Context(), e.actor, "par", "Par")
+		u, err := e.svc.CreateUnit(t.Context(), e.actor, app.UnitInput{Code: "par", Name: "Par"})
 		require.NoError(t, err)
-		_, err = e.svc.UpdateUnit(t.Context(), e.actor, u.ID(), "par", "Pares")
+		_, err = e.svc.UpdateUnit(t.Context(), e.actor, u.ID(), app.UnitInput{Code: "par", Name: "Pares"})
 		require.NoError(t, err)
 		_, err = e.svc.ListUnits(t.Context(), e.actor)
 		require.NoError(t, err)

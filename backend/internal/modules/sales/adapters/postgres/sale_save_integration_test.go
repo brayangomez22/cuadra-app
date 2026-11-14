@@ -46,8 +46,8 @@ func TestSaleRepositorySave(t *testing.T) {
 		s, err := domain.NewSale(domain.NewSaleParams{ID: newID(), TenantID: tn.id, LocationID: tn.location, UserID: newID(), CreatedAt: now})
 		require.NoError(t, err)
 		// The variant exists in the tenant, but belongs to another product.
-		f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit_id, tax_rate, active, created_at)
-			VALUES ($1, $2, 'Arena fina', '', (SELECT id FROM units_of_measure WHERE code = 'und'), 0.19, true, $3)`,
+		f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit_id, tax_rate, tax_treatment, active, created_at)
+			VALUES ($1, $2, 'Arena fina', '', (SELECT id FROM units_of_measure WHERE code = 'und'), 0.19, 'taxed', true, $3)`,
 			otherProduct, tn.id, now)
 		require.NoError(t, s.AddLine(domain.LineInput{
 			ProductID: otherProduct, VariantID: tn.variant, ProductName: "Arena fina", Quantity: dec("1"),

@@ -40,6 +40,11 @@ type stubUseCases struct {
 	err      error
 }
 
+func (s *stubUseCases) ListMunicipalities(_ context.Context, a app.Actor) ([]domain.Municipality, error) {
+	s.actor = a
+	return []domain.Municipality{{Code: "05001", Name: "Medellín", DepartmentCode: "05", DepartmentName: "Antioquia"}}, s.err
+}
+
 func (s *stubUseCases) CreateCustomer(_ context.Context, a app.Actor, p domain.CustomerParams) (*domain.Customer, error) {
 	s.actor, s.params = a, p
 	return s.customer, s.err

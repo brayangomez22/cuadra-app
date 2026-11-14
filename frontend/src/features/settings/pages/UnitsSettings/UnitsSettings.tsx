@@ -12,6 +12,7 @@ import { UnitDialog } from './components/UnitDialog/UnitDialog';
 const columns: Column<UnitOfMeasure>[] = [
   { header: 'Nombre', cell: (unit) => unit.name },
   { header: 'Código', cell: (unit) => unit.code, monospace: true },
+  { header: 'Código DIAN', cell: (unit) => unit.dian_code ?? '94 (unidad)', monospace: true },
 ];
 
 /** /configuracion/unidades: the units the tenant counts and sells in. */

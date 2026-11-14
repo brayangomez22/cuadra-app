@@ -16,11 +16,13 @@ VALUES (sqlc.arg(id), sqlc.arg(tenant_id), sqlc.arg(location_id), sqlc.arg(numbe
 
 -- name: InsertSaleLine :exec
 INSERT INTO sale_lines (tenant_id, sale_id, position, variant_id, product_id, product_name, variant_label,
-                        quantity, unit_price, price_rule, tax_rate, discount, gross, tax, unit_code, unit_factor)
+                        quantity, unit_price, price_rule, tax_rate, discount, gross, tax, unit_code, unit_factor,
+                        sku, base_unit_code, unit_dian_code, tax_treatment)
 VALUES (sqlc.arg(tenant_id), sqlc.arg(sale_id), sqlc.arg(position), sqlc.arg(variant_id), sqlc.arg(product_id),
         sqlc.arg(product_name), sqlc.narg(variant_label), sqlc.arg(quantity), sqlc.arg(unit_price),
         sqlc.arg(price_rule), sqlc.arg(tax_rate), sqlc.arg(discount), sqlc.arg(gross), sqlc.arg(tax),
-        sqlc.narg(unit_code), sqlc.arg(unit_factor));
+        sqlc.narg(unit_code), sqlc.arg(unit_factor), sqlc.narg(sku), sqlc.narg(base_unit_code),
+        sqlc.narg(unit_dian_code), sqlc.arg(tax_treatment));
 
 -- name: InsertSalePayment :exec
 INSERT INTO sale_payments (tenant_id, sale_id, position, method, amount)

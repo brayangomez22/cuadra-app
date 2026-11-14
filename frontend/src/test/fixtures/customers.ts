@@ -51,6 +51,7 @@ export function aBoutique(overrides: Partial<Customer> = {}): Customer {
     trade_name: 'Boutique Sol',
     email: 'compras@boutiquesol.co',
     city: 'Medellín',
+    municipality_code: '05001',
     segment_id: segmentIds.wholesale,
     tax_responsibilities: ['O-13', 'O-15'],
     active: true,
@@ -58,6 +59,16 @@ export function aBoutique(overrides: Partial<Customer> = {}): Customer {
     ...overrides,
   };
 }
+
+type Municipality = components['schemas']['Municipality'];
+
+// A few municipalities of the DANE's catalog, of two departments, ordered as
+// the API orders them: by department and name.
+export const municipalities: Municipality[] = [
+  { code: '05266', name: 'Envigado', department_code: '05', department_name: 'Antioquia' },
+  { code: '05001', name: 'Medellín', department_code: '05', department_name: 'Antioquia' },
+  { code: '11001', name: 'Bogotá, D.C.', department_code: '11', department_name: 'Bogotá, D.C.' },
+];
 
 // The customers answer like the API: every word of q in the name or trade
 // name, or the document number as a prefix; and the segment's filter.

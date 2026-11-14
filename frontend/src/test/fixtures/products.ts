@@ -51,6 +51,7 @@ export function aProduct(overrides: ProductOverrides = {}): Product {
     base_unit_id: unit.id,
     unit,
     tax_rate: '0.19',
+    tax_treatment: 'taxed',
     attributes: {},
     active: true,
     created_at: '2026-10-01T15:00:00Z',

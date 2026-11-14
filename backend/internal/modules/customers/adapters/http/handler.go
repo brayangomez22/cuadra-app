@@ -18,6 +18,7 @@ import (
 type UseCases interface {
 	CustomerUseCases
 	SegmentUseCases
+	MunicipalityUseCases
 }
 
 // Handler implements customersapi.StrictServerInterface with a handler per
@@ -25,6 +26,7 @@ type UseCases interface {
 type Handler struct {
 	customerHandlers
 	segmentHandlers
+	municipalityHandlers
 }
 
 var _ customersapi.StrictServerInterface = (*Handler)(nil)
@@ -32,7 +34,10 @@ var _ customersapi.StrictServerInterface = (*Handler)(nil)
 // Register mounts the customers operations on mux, with the module's error
 // mapping.
 func Register(mux *http.ServeMux, uc UseCases, log *slog.Logger) {
-	h := &Handler{customerHandlers: customerHandlers{uc: uc}, segmentHandlers: segmentHandlers{uc: uc}}
+	h := &Handler{
+		customerHandlers: customerHandlers{uc: uc}, segmentHandlers: segmentHandlers{uc: uc},
+		municipalityHandlers: municipalityHandlers{uc: uc},
+	}
 	errs := httpx.NewErrorMapper(log, errorRules...)
 	customersapi.HandlerWithOptions(
 		customersapi.NewStrictHandlerWithOptions(h, []customersapi.StrictMiddlewareFunc{auth.RequirePrincipal[customersapi.StrictHandlerFunc]}, customersapi.StrictHTTPServerOptions{

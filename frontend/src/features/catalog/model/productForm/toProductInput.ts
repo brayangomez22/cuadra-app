@@ -1,6 +1,7 @@
 import type { ProductInput } from '../../api/types';
 import type { ResolvedRow } from '../variantMatrix/resolveRows';
 import { NO_CATEGORY, type ProductFormValues } from './productSchema';
+import { isZeroRate } from './taxRates';
 
 /** The default variant's fields: the form's, or its row's in the variant matrix. */
 export type DefaultVariantInput = Pick<ProductInput, 'sku' | 'cost' | 'price'> & { barcode: string };
@@ -24,6 +25,8 @@ export function productFields(values: ProductFormValues) {
     category_id: values.category_id === NO_CATEGORY ? null : values.category_id,
     base_unit_id: values.base_unit_id,
     tax_rate: values.tax_rate,
+    // A positive rate is taxed: the API deduces it. A 0 % one says which.
+    ...(isZeroRate(values.tax_rate) && { tax_treatment: values.zero_rate }),
     // The values replace the product's: an optional attribute left empty has none.
     attributes: Object.fromEntries(Object.entries(values.attributes).filter(([, value]) => value !== '')),
   };

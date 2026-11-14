@@ -23,6 +23,7 @@ export function aSale(overrides: Partial<Sale> = {}): Sale {
         unit_price: '10000.00',
         price_rule: 'variant_price',
         tax_rate: '0.19',
+        tax_treatment: 'taxed',
         discount: '0.00',
         gross: '10000.00',
         base: '10000.00',

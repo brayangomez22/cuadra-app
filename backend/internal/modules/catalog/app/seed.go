@@ -20,8 +20,9 @@ type Seed struct {
 	VariantAxes []AxisSeed
 }
 
-// UnitSeed is a unit of measure of a Seed.
-type UnitSeed struct{ Code, Name string }
+// UnitSeed is a unit of measure of a Seed, with its DIAN code if it has
+// one.
+type UnitSeed struct{ Code, Name, DIANCode string }
 
 // AxisSeed is a variant axis of a Seed and the values it allows.
 type AxisSeed struct {
@@ -50,6 +51,9 @@ func (s *Service) buildSeed(tenantID uuid.UUID, in Seed) (domain.TenantSeed, err
 	for _, u := range in.Units {
 		unit, err := domain.NewUnit(tenantID, u.Code, u.Name, now)
 		if err != nil {
+			return domain.TenantSeed{}, err
+		}
+		if err := unit.SetDIANCode(u.DIANCode); err != nil {
 			return domain.TenantSeed{}, err
 		}
 		seed.Units = append(seed.Units, unit)

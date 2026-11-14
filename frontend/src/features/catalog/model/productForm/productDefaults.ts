@@ -46,6 +46,7 @@ function productFields(product: Product): ProductFields {
     category_id: product.category_id ?? NO_CATEGORY,
     base_unit_id: product.base_unit_id,
     tax_rate: product.tax_rate,
+    zero_rate: product.tax_treatment === 'exempt' ? 'exempt' : 'excluded',
     cost: typed(main.cost),
     price: typed(main.price),
   };
@@ -62,6 +63,7 @@ function newProductFields({ units, defaultTaxRate }: DefaultsInput): ProductFiel
     category_id: NO_CATEGORY,
     base_unit_id: unit?.id ?? '',
     tax_rate: defaultTaxRate,
+    zero_rate: 'excluded',
     cost: '',
     price: '',
   };

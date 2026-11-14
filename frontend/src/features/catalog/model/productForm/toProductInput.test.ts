@@ -11,6 +11,7 @@ function formValues(overrides: Partial<ProductFormValues> = {}): ProductFormValu
     category_id: NO_CATEGORY,
     base_unit_id: unitOf('bulto').id,
     tax_rate: '0.19',
+    zero_rate: 'excluded',
     cost: '28000',
     price: '32000',
     attributes: {},
@@ -35,6 +36,15 @@ describe('toProductInput', () => {
       tax_rate: '0.19',
       attributes: {},
     });
+  });
+
+  it.each([
+    { negocio: 'papelería', zero_rate: 'exempt' as const },
+    { negocio: 'droguería', zero_rate: 'excluded' as const },
+  ])('con IVA 0 % ($negocio) envía si es exento o excluido', ({ zero_rate }) => {
+    const input = toProductInput(formValues({ tax_rate: '0', zero_rate }), variant);
+
+    expect(input).toMatchObject({ tax_rate: '0', tax_treatment: zero_rate });
   });
 
   it('envía la categoría, la descripción y el código de la variante por defecto', () => {

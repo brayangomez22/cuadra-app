@@ -67,10 +67,12 @@ type Template struct {
 	CustomerSegments []string
 }
 
-// Unit is a unit of measure of a template.
+// Unit is a unit of measure of a template. DIANCode is its UN/ECE Rec 20
+// code for the electronic invoice ("MTR"), if it has a clear one.
 type Unit struct {
-	Code string `yaml:"code"`
-	Name string `yaml:"name"`
+	Code     string `yaml:"code"`
+	Name     string `yaml:"name"`
+	DIANCode string `yaml:"dian_code"`
 }
 
 // Attribute is a product attribute definition of a template. Type is one of

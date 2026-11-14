@@ -13,8 +13,24 @@ describe('productDefaults', () => {
   it('un producto nuevo propone la unidad und y el IVA de la empresa', () => {
     const values = productDefaults({ units, definitions: [], defaultTaxRate: '0' });
 
-    expect(values).toMatchObject({ sku: '', name: '', category_id: NO_CATEGORY, tax_rate: '0', variants: [] });
+    expect(values).toMatchObject({
+      sku: '',
+      name: '',
+      category_id: NO_CATEGORY,
+      tax_rate: '0',
+      zero_rate: 'excluded',
+      variants: [],
+    });
     expect(values.base_unit_id).toBe(unitOf('und').id);
+  });
+
+  it.each([
+    { treatment: 'exempt' as const, want: 'exempt' },
+    { treatment: 'excluded' as const, want: 'excluded' },
+    { treatment: 'taxed' as const, want: 'excluded' },
+  ])('al editar un producto $treatment, el IVA 0 % propone $want', ({ treatment, want }) => {
+    const product = aProduct({ tax_rate: treatment === 'taxed' ? '0.19' : '0', tax_treatment: treatment });
+    expect(productDefaults({ product, units, definitions: [], defaultTaxRate: '0.19' }).zero_rate).toBe(want);
   });
 
   it.each([

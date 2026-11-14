@@ -5,7 +5,7 @@ import { Field, Input } from '@/shared/ui';
 import { useSaveUnit } from '../../../../api/units';
 import { FormDialog } from '../../../../components/FormDialog/FormDialog';
 import { useSaveDialog } from '../../../../hooks/useSaveDialog';
-import { unitErrorFields, unitSchema } from '../../../../model/unitSchema';
+import { toUnitInput, unitErrorFields, unitSchema, unitValues } from '../../../../model/unitSchema';
 
 type Props = {
   open: boolean;
@@ -17,12 +17,12 @@ type Props = {
 export function UnitDialog({ open, unit, onClose }: Props) {
   const form = useForm({
     resolver: zodResolver(unitSchema),
-    values: { code: unit?.code ?? '', name: unit?.name ?? '' },
+    values: unitValues(unit),
   });
   const { mutateAsync } = useSaveUnit();
   const { formError, onSubmit, close } = useSaveDialog(form, {
     fields: unitErrorFields,
-    save: (body) => mutateAsync({ id: unit?.id, body }),
+    save: (values) => mutateAsync({ id: unit?.id, body: toUnitInput(values) }),
     success: (saved) => ({ title: 'Unidad guardada', description: saved.name }),
     onClose,
   });
@@ -43,6 +43,14 @@ export function UnitDialog({ open, unit, onClose }: Props) {
       </Field>
       <Field label="Nombre" error={errors.name?.message}>
         <Input autoComplete="off" {...form.register('name')} />
+      </Field>
+      <Field
+        label="Código DIAN"
+        optional
+        hint="El de la factura electrónica: 94 unidad, MTR metro, KGM kilogramo. Si lo deja vacío, se usa 94."
+        error={errors.dian_code?.message}
+      >
+        <Input autoComplete="off" spellCheck={false} maxLength={3} {...form.register('dian_code')} />
       </Field>
     </FormDialog>
   );

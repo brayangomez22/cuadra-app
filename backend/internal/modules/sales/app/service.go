@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/kernel/vat"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/domain"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
@@ -50,6 +51,13 @@ type VariantInfo struct {
 	Active      bool
 	// Units are the variant's alternate units.
 	Units []UnitInfo
+	// SKU, the product's base unit (its code and DIAN code) and how the
+	// IVA treats the product are frozen in the line for the electronic
+	// document.
+	SKU              string
+	BaseUnitCode     string
+	BaseUnitDIANCode string
+	TaxTreatment     vat.Treatment
 }
 
 // UnitInfo is an alternate unit of a variant: a unit of the tenant, its
@@ -59,6 +67,8 @@ type UnitInfo struct {
 	Code   string
 	Factor decimal.Decimal
 	Price  decimal.Decimal
+	// DIANCode is the unit's UN/ECE Rec 20 code; empty if it has none.
+	DIANCode string
 }
 
 // VariantCatalog reads variants of the catalog module.

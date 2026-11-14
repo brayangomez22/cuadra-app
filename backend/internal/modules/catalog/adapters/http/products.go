@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/kernel/vat"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/adapters/http/catalogapi"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog/domain"
@@ -145,7 +146,7 @@ func productInput(body catalogapi.ProductInput) (app.ProductInput, error) {
 	if err != nil {
 		return app.ProductInput{}, err
 	}
-	rate, err := domain.ParseTaxRate(rateValue)
+	rate, err := domain.NewTaxRate(rateValue, treatment(body.TaxTreatment))
 	if err != nil {
 		return app.ProductInput{}, err
 	}
@@ -180,16 +181,17 @@ func productBody(p *domain.Product, seesCost bool) catalogapi.Product {
 		variants = append(variants, variantBody(v, p.TaxRate(), seesCost))
 	}
 	body := catalogapi.Product{
-		Id:         p.ID(),
-		Name:       p.Name(),
-		CategoryId: p.CategoryID(),
-		BaseUnitId: p.BaseUnit().ID,
-		Unit:       unitBody(p.BaseUnit()),
-		TaxRate:    formatRate(p.TaxRate()),
-		Attributes: attributesBody(p.Attributes()),
-		Active:     p.IsActive(),
-		CreatedAt:  p.CreatedAt(),
-		Variants:   variants,
+		Id:           p.ID(),
+		Name:         p.Name(),
+		CategoryId:   p.CategoryID(),
+		BaseUnitId:   p.BaseUnit().ID,
+		Unit:         unitBody(p.BaseUnit()),
+		TaxRate:      formatRate(p.TaxRate()),
+		TaxTreatment: catalogapi.TaxTreatment(p.TaxRate().Treatment()),
+		Attributes:   attributesBody(p.Attributes()),
+		Active:       p.IsActive(),
+		CreatedAt:    p.CreatedAt(),
+		Variants:     variants,
 	}
 	if description := p.Description(); description != "" {
 		body.Description = &description
@@ -199,3 +201,12 @@ func productBody(p *domain.Product, seesCost bool) catalogapi.Product {
 
 // formatRate writes a tax rate without trailing zeros: "0.19", "0".
 func formatRate(r domain.TaxRate) string { return r.Rate().String() }
+
+// treatment is the IVA treatment the body gives, or none (deduced from the
+// rate).
+func treatment(t *catalogapi.TaxTreatment) vat.Treatment {
+	if t == nil {
+		return ""
+	}
+	return vat.Treatment(*t)
+}

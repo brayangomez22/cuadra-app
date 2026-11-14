@@ -14,7 +14,7 @@ import { TradeNameField } from './TradeNameField';
 import styles from './CustomerForm.module.scss';
 
 /** The customer form: who it is, how to reach it and how it is classified. */
-export function CustomerForm({ data: { customer, segments } }: { data: CustomerFormData }) {
+export function CustomerForm({ data: { customer, segments, municipalities } }: { data: CustomerFormData }) {
   const form = useForm({ resolver: zodResolver(customerSchema), defaultValues: customerDefaults(customer) });
   const { formError, submit } = useSaveCustomerForm(form, customer);
   const canReadCredit = useCan()('receivables:read');
@@ -40,7 +40,7 @@ export function CustomerForm({ data: { customer, segments } }: { data: CustomerF
               <TradeNameField />
             </FormGrid>
           </FormSection>
-          <ContactSection />
+          <ContactSection municipalities={municipalities} />
           <TaxSection segments={segments} editing={Boolean(customer)} />
           <div className={styles.footer}>
             <ButtonLink to={paths.customers.list()} variant="ghost">

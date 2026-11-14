@@ -21,6 +21,8 @@ const (
 	segmentNameKey     = "customer_segments_tenant_id_name_key"
 	customerDocKey     = "customers_document_key"
 	customerSegmentKey = "customers_segment_fkey"
+	// customerMunicipalityKey is the customer's DANE municipality.
+	customerMunicipalityKey = "customers_municipality_fkey"
 )
 
 // SegmentRepository implements domain.SegmentRepository.

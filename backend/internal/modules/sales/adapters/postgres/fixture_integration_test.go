@@ -71,8 +71,8 @@ func (f fixture) createTenant(t *testing.T) tenant {
 	f.exec(t, tn.id, "INSERT INTO tenants (id, name, nit, status, business_template, created_at) VALUES ($1, 'Ferretería', '900123456-8', 'active', 'ferreteria', $2)", tn.id, now)
 	f.exec(t, tn.id, "INSERT INTO units_of_measure (id, tenant_id, code, name, created_at) VALUES ($1, $2, 'und', 'Unidad', $3)",
 		newID(), tn.id, now)
-	f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit_id, tax_rate, active, created_at)
-		VALUES ($1, $2, 'Cemento gris 50kg', '', (SELECT id FROM units_of_measure WHERE code = 'und'), 0.19, true, $3)`,
+	f.exec(t, tn.id, `INSERT INTO products (id, tenant_id, name, description, base_unit_id, tax_rate, tax_treatment, active, created_at)
+		VALUES ($1, $2, 'Cemento gris 50kg', '', (SELECT id FROM units_of_measure WHERE code = 'und'), 0.19, 'taxed', true, $3)`,
 		tn.product, tn.id, now)
 	f.exec(t, tn.id, `INSERT INTO product_variants (id, tenant_id, product_id, sku, cost, price, is_default, active, created_at)
 		VALUES ($1, $2, $1, $3, 25000, 30000, true, true, $4)`,

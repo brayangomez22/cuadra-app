@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/kernel/vat"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/adapters/postgres/sqlcgen"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/domain"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
@@ -78,6 +79,8 @@ func insertSale(ctx context.Context, q *sqlcgen.Queries, snap domain.SaleSnapsho
 			Quantity: l.Quantity, UnitPrice: l.UnitPrice, PriceRule: string(l.PriceRule),
 			TaxRate: l.TaxRate, Discount: l.Discount, Gross: l.Gross, Tax: l.Tax,
 			UnitCode: nonEmpty(l.Unit.Code), UnitFactor: l.Unit.Factor,
+			Sku: nonEmpty(l.SKU), BaseUnitCode: nonEmpty(l.BaseUnitCode), UnitDianCode: nonEmpty(l.UnitDIANCode),
+			TaxTreatment: string(l.TaxTreatment),
 		}); err != nil {
 			return err
 		}
@@ -185,6 +188,8 @@ func readSale(ctx context.Context, q *sqlcgen.Queries, row sqlcgen.Sale) (*domai
 			Quantity: l.Quantity, UnitPrice: l.UnitPrice, PriceRule: domain.PriceRuleID(l.PriceRule),
 			TaxRate: l.TaxRate, Discount: l.Discount, Gross: l.Gross, Tax: l.Tax,
 			Unit: domain.LineUnit{Code: valueOf(l.UnitCode), Factor: l.UnitFactor},
+			SKU:  valueOf(l.Sku), BaseUnitCode: valueOf(l.BaseUnitCode), UnitDIANCode: valueOf(l.UnitDianCode),
+			TaxTreatment: vat.Treatment(l.TaxTreatment),
 		})
 	}
 	for _, p := range payments {

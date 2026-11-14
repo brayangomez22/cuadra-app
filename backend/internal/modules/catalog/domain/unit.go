@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -14,6 +15,10 @@ const (
 	maxUnitNameLength = 50
 )
 
+// dianUnitCodeFormat is the shape of a UN/ECE Rec 20 code ("94", "MTR",
+// "KGM"). The list itself is the DIAN's, not checked here: it changes.
+var dianUnitCodeFormat = regexp.MustCompile(`^[A-Z0-9]{1,3}$`)
+
 // UnitOfMeasure is a unit a tenant counts and sells its products in ("m",
 // "kg", "par"). Each tenant has its own catalog of units. Quantities are
 // decimal, so fractional amounts (2.5 m) need no special unit.
@@ -22,6 +27,7 @@ type UnitOfMeasure struct {
 	tenantID  uuid.UUID
 	code      string
 	name      string
+	dianCode  string
 	createdAt time.Time
 }
 
@@ -31,6 +37,8 @@ type UnitRef struct {
 	ID   uuid.UUID
 	Code string
 	Name string
+	// DIANCode is the unit's UN/ECE Rec 20 code; empty if it has none.
+	DIANCode string
 }
 
 // NewUnit creates a unit with its own UUID v7.
@@ -52,6 +60,9 @@ func newUnit(s UnitSnapshot) (*UnitOfMeasure, error) {
 	}
 	u := &UnitOfMeasure{id: s.ID, tenantID: s.TenantID, createdAt: s.CreatedAt.UTC()}
 	if err := u.Update(s.Code, s.Name); err != nil {
+		return nil, err
+	}
+	if err := u.SetDIANCode(s.DIANCode); err != nil {
 		return nil, err
 	}
 	return u, nil
@@ -83,7 +94,24 @@ func (u *UnitOfMeasure) Name() string { return u.name }
 func (u *UnitOfMeasure) CreatedAt() time.Time { return u.createdAt }
 
 // Ref returns what a product keeps of the unit.
-func (u *UnitOfMeasure) Ref() UnitRef { return UnitRef{ID: u.id, Code: u.code, Name: u.name} }
+func (u *UnitOfMeasure) Ref() UnitRef {
+	return UnitRef{ID: u.id, Code: u.code, Name: u.name, DIANCode: u.dianCode}
+}
+
+// DIANCode returns the unit's UN/ECE Rec 20 code, which the electronic
+// invoice carries ("MTR"); empty if the tenant gave it none.
+func (u *UnitOfMeasure) DIANCode() string { return u.dianCode }
+
+// SetDIANCode replaces the unit's DIAN code, uppercased; empty removes it.
+// On error the unit is unchanged.
+func (u *UnitOfMeasure) SetDIANCode(code string) error {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	if code != "" && !dianUnitCodeFormat.MatchString(code) {
+		return ErrInvalidUnitDIANCode
+	}
+	u.dianCode = code
+	return nil
+}
 
 // Update replaces the code and the name; on error the unit is unchanged.
 func (u *UnitOfMeasure) Update(code, name string) error {
@@ -105,6 +133,7 @@ type UnitSnapshot struct {
 	TenantID  uuid.UUID
 	Code      string
 	Name      string
+	DIANCode  string
 	CreatedAt time.Time
 }
 

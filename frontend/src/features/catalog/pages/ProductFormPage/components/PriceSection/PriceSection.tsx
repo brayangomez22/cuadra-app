@@ -3,7 +3,7 @@ import { Field, FormGrid, FormSection, Input } from '@/shared/ui';
 import { useFieldError } from '@/shared/forms/useFieldError';
 import { SelectController } from '@/shared/forms/SelectController/SelectController';
 import type { ProductFormInput } from '../../../../model/productForm/productSchema';
-import { taxRateOptions } from '../../../../model/productForm/taxRates';
+import { isZeroRate, taxRateOptions, zeroRateOptions } from '../../../../model/productForm/taxRates';
 import { PricePreview } from '../PricePreview/PricePreview';
 
 type Props = {
@@ -39,6 +39,11 @@ export function PriceSection({ matrix, inactive }: Props) {
         <Field label="IVA" error={error('tax_rate')}>
           <SelectController control={control} name="tax_rate" options={taxRateOptions(taxRate)} />
         </Field>
+        {isZeroRate(taxRate) && (
+          <Field label="IVA 0 %" hint="Como lo pide la DIAN. Si no está seguro, pregúntele a su contador.">
+            <SelectController control={control} name="zero_rate" options={zeroRateOptions} />
+          </Field>
+        )}
       </FormGrid>
       <PricePreview />
     </FormSection>

@@ -593,7 +593,7 @@ paths:
         "422":
           description: |
             Algún dato no cumple las reglas (`invalid_sku`, `invalid_barcode`, `invalid_product_name`,
-            `invalid_description`, `invalid_price`, `invalid_cost`, `invalid_tax_rate`, `category_not_found`), falta
+            `invalid_description`, `invalid_price`, `invalid_cost`, `invalid_tax_rate`, `invalid_tax_treatment`, `category_not_found`), falta
             la unidad o vienen las dos formas de indicarla (`unit_required`), la unidad no existe en la empresa
             (`unit_not_found`), o un atributo no está definido (`unknown_attribute`), no tiene un valor válido
             (`invalid_attribute_value`) o es obligatorio y falta (`attribute_required`). Los errores de un atributo
@@ -1146,7 +1146,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
         "422":
-          description: El código o el nombre no son válidos (`invalid_unit_code`, `invalid_unit_name`).
+          description: El código, el nombre o el código DIAN no son válidos (`invalid_unit_code`, `invalid_unit_name`, `invalid_unit_dian_code`).
           content:
             application/json:
               schema:
@@ -1192,7 +1192,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
         "422":
-          description: El código o el nombre no son válidos (`invalid_unit_code`, `invalid_unit_name`).
+          description: El código, el nombre o el código DIAN no son válidos (`invalid_unit_code`, `invalid_unit_name`, `invalid_unit_dian_code`).
           content:
             application/json:
               schema:
@@ -2629,6 +2629,29 @@ paths:
                 $ref: "#/components/schemas/ReceivablesAging"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/municipalities:
+    get:
+      tags: [customers]
+      operationId: listMunicipalities
+      summary: Listar los municipios del DANE
+      description: |
+        Los 1.122 municipios del catálogo DIVIPOLA del DANE, ordenados por departamento y nombre, para elegir el
+        municipio de un cliente. Es el mismo para todas las empresas y no cambia entre versiones de Cuadra.
+      x-permission: customers:read
+      responses:
+        "200":
+          description: Los municipios.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MunicipalityList"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -4388,6 +4411,7 @@ components:
         válido para su tipo (`invalid_document`), el
         dígito de verificación del NIT no coincide (`invalid_nit_check_digit`), una persona jurídica sin NIT
         (`legal_person_requires_nit`), el nombre (`invalid_customer_name`), un dato de contacto (`invalid_customer_contact`),
+        el municipio (`invalid_municipality`),
         las responsabilidades fiscales (`invalid_tax_responsibilities`) o un segmento que no existe
         (`customer_segment_not_found`).
       content:
@@ -4737,6 +4761,13 @@ components:
       description: Tasa de IVA como fracción decimal (`0.19` es 19 %), menor que 1 y con hasta 4 decimales.
       pattern: '^0(\.\d{1,4})?$'
       example: "0.19"
+    TaxTreatment:
+      type: string
+      description: |
+        Cómo trata el IVA al producto, como lo distingue la DIAN: gravado (`taxed`, con tasa mayor que 0), exento
+        (`exempt`, tasa 0: el documento electrónico lleva el IVA en 0) o excluido (`excluded`, tasa 0: el documento no
+        lleva IVA).
+      enum: [taxed, exempt, excluded]
     UnitOfMeasure:
       type: object
       required: [id, code, name]
@@ -4752,6 +4783,13 @@ components:
         name:
           type: string
           example: Metro
+        dian_code:
+          type: string
+          description: |
+            Código de la unidad en la lista UN/ECE Rec 20 que pide la factura electrónica (`94` unidad, `MTR` metro,
+            `KGM` kilogramo). Se guarda en mayúsculas. Sin él, el documento lleva `94` (unidad).
+          pattern: '^[A-Za-z0-9]{1,3}$'
+          example: MTR
     UnitInput:
       type: object
       required: [code, name]
@@ -4768,6 +4806,13 @@ components:
           minLength: 1
           maxLength: 50
           example: Par
+        dian_code:
+          type: string
+          description: |
+            Código de la unidad en la lista UN/ECE Rec 20 que pide la factura electrónica (`94` unidad, `MTR` metro,
+            `KGM` kilogramo). Se guarda en mayúsculas. Vacío u omitido, la unidad queda sin código y, el documento lleva `94` (unidad).
+          pattern: '^([A-Za-z0-9]{1,3})?$'
+          example: MTR
     Module:
       type: object
       required: [id, name, depends_on, active]
@@ -5005,6 +5050,12 @@ components:
           $ref: "#/components/schemas/Money"
         tax_rate:
           $ref: "#/components/schemas/TaxRate"
+        tax_treatment:
+          allOf:
+            - $ref: "#/components/schemas/TaxTreatment"
+          description: |
+            Con tasa mayor que 0 solo puede ser `taxed`; con tasa 0, `exempt` o `excluded`. Si se omite, se deduce de la
+            tasa: `taxed` si es mayor que 0 y `excluded` si es 0 (`invalid_tax_treatment` si no corresponde).
         attributes:
           allOf:
             - $ref: "#/components/schemas/ProductAttributes"
@@ -5068,6 +5119,12 @@ components:
           format: uuid
         tax_rate:
           $ref: "#/components/schemas/TaxRate"
+        tax_treatment:
+          allOf:
+            - $ref: "#/components/schemas/TaxTreatment"
+          description: |
+            Con tasa mayor que 0 solo puede ser `taxed`; con tasa 0, `exempt` o `excluded`. Si se omite, se deduce de la
+            tasa: `taxed` si es mayor que 0 y `excluded` si es 0 (`invalid_tax_treatment` si no corresponde).
         attributes:
           $ref: "#/components/schemas/ProductAttributes"
         variants:
@@ -5184,7 +5241,7 @@ components:
         solo se envían a quien puede editar el catálogo (`catalog:write`).
     Product:
       type: object
-      required: [id, name, base_unit_id, unit, tax_rate, attributes, active, created_at, variants]
+      required: [id, name, base_unit_id, unit, tax_rate, tax_treatment, attributes, active, created_at, variants]
       properties:
         id:
           type: string
@@ -5205,6 +5262,8 @@ components:
           $ref: "#/components/schemas/UnitOfMeasure"
         tax_rate:
           $ref: "#/components/schemas/TaxRate"
+        tax_treatment:
+          $ref: "#/components/schemas/TaxTreatment"
         attributes:
           $ref: "#/components/schemas/ProductAttributes"
         active:
@@ -5763,8 +5822,11 @@ components:
     DocumentType:
       type: string
       description: |
-        Cédula de ciudadanía (`cc`), NIT (`nit`), cédula de extranjería (`ce`) o pasaporte (`passport`).
-      enum: [cc, nit, ce, passport]
+        Los tipos de documento de identificación de la DIAN: cédula de ciudadanía (`cc`), NIT (`nit`), cédula de
+        extranjería (`ce`), pasaporte (`passport`), tarjeta de identidad (`ti`), permiso por protección temporal (`ppt`),
+        NIT de otro país (`foreign_nit`) o documento de identificación extranjero (`foreign_id`). Una persona jurídica
+        se identifica con `nit` o `foreign_nit`.
+      enum: [cc, nit, ce, passport, ti, ppt, foreign_nit, foreign_id]
     TaxResponsibility:
       type: string
       description: |
@@ -5809,6 +5871,10 @@ components:
           type: string
         city:
           type: string
+        municipality_code:
+          type: string
+          description: El código DANE del municipio del cliente (`/municipalities`). No viene si no tiene.
+          example: "05001"
         segment_id:
           type: string
           format: uuid
@@ -5857,6 +5923,13 @@ components:
         city:
           type: string
           maxLength: 100
+        municipality_code:
+          type: string
+          description: |
+            El código DANE del municipio (`/municipalities`), que pide la factura electrónica junto con la dirección.
+            Vacío u omitido, el cliente queda sin municipio (`invalid_municipality` si no existe).
+          pattern: '^([0-9]{5})?$'
+          example: "05001"
         segment_id:
           type: string
           format: uuid
@@ -5867,6 +5940,31 @@ components:
           type: boolean
           default: true
           description: Un cliente inactivo no aparece en la búsqueda del POS ni se le puede vender.
+    Municipality:
+      type: object
+      description: Un municipio del catálogo DIVIPOLA del DANE.
+      required: [code, name, department_code, department_name]
+      properties:
+        code:
+          type: string
+          example: "05001"
+        name:
+          type: string
+          example: Medellín
+        department_code:
+          type: string
+          example: "05"
+        department_name:
+          type: string
+          example: Antioquia
+    MunicipalityList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Municipality"
     CustomerPage:
       type: object
       required: [items, total]
@@ -6691,7 +6789,7 @@ components:
         `price_rule` dice qué regla lo dio. `gross` = cantidad × precio redondeado a 2 decimales; `base` = `gross` −
         `discount`; `tax` = `base` × `tax_rate` redondeado a 2 decimales; `total` = `base` + `tax`. La cantidad y el
         precio son en la unidad vendida: `unit_code` si fue una unidad alternativa, o la unidad base del producto.
-      required: [variant_id, product_id, product_name, quantity, unit_factor, base_quantity, unit_price, price_rule, tax_rate, discount, gross, base, tax, total]
+      required: [variant_id, product_id, product_name, quantity, unit_factor, base_quantity, unit_price, price_rule, tax_rate, tax_treatment, discount, gross, base, tax, total]
       properties:
         variant_id:
           type: string
@@ -6719,6 +6817,16 @@ components:
           example: caja
         unit_factor:
           $ref: "#/components/schemas/UnitFactor"
+        base_unit_code:
+          type: string
+          description: |
+            El código de la unidad base del producto, congelado en la venta: con él se muestra una cantidad vendida
+            en la unidad base ("2 m"). No viene en las ventas guardadas antes de que se congelara.
+          example: m
+        sku:
+          type: string
+          description: El SKU de la variante en el momento de la venta. No viene si la variante ya no existía cuando se congeló.
+          example: CAB-12
         base_quantity:
           $ref: "#/components/schemas/Quantity"
         unit_price:
@@ -6732,6 +6840,8 @@ components:
           example: variant_price
         tax_rate:
           $ref: "#/components/schemas/TaxRate"
+        tax_treatment:
+          $ref: "#/components/schemas/TaxTreatment"
         discount:
           $ref: "#/components/schemas/Money"
         gross:

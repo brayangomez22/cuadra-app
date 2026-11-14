@@ -38,10 +38,12 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrDuplicateVariant, Status: http.StatusUnprocessableEntity, Code: "duplicate_variant", Message: "Ya existe una variante del producto con esos valores."},
 	{Err: domain.ErrInvalidUnit, Status: http.StatusUnprocessableEntity, Code: "invalid_unit", Message: "La unidad de medida no es válida."},
 	{Err: domain.ErrInvalidUnitCode, Status: http.StatusUnprocessableEntity, Code: "invalid_unit_code", Message: "El código de la unidad no es válido: sin espacios y máximo 16 caracteres."},
+	{Err: domain.ErrInvalidUnitDIANCode, Status: http.StatusUnprocessableEntity, Code: "invalid_unit_dian_code", Message: "El código DIAN de la unidad tiene de 1 a 3 letras o números (por ejemplo, 94, MTR o KGM)."},
 	{Err: domain.ErrInvalidUnitName, Status: http.StatusUnprocessableEntity, Code: "invalid_unit_name", Message: "Escriba el nombre de la unidad (máximo 50 caracteres)."},
 	{Err: domain.ErrInvalidPrice, Status: http.StatusUnprocessableEntity, Code: "invalid_price", Message: "El precio debe ser mayor que cero, con máximo 4 decimales."},
 	{Err: domain.ErrInvalidCost, Status: http.StatusUnprocessableEntity, Code: "invalid_cost", Message: "El costo no puede ser negativo y tiene máximo 4 decimales."},
 	{Err: domain.ErrInvalidTaxRate, Status: http.StatusUnprocessableEntity, Code: "invalid_tax_rate", Message: "La tasa de IVA debe estar entre 0 y 1 (por ejemplo, 0.19)."},
+	{Err: domain.ErrInvalidTaxTreatment, Status: http.StatusUnprocessableEntity, Code: "invalid_tax_treatment", Message: "Un producto con IVA mayor que 0 es gravado; uno con IVA 0 es exento o excluido."},
 	{Err: domain.ErrInvalidCategoryName, Status: http.StatusUnprocessableEntity, Code: "invalid_category_name", Message: "Escriba el nombre de la categoría (máximo 100 caracteres)."},
 	{Err: domain.ErrCategoryNotFound, Status: http.StatusUnprocessableEntity, Code: "category_not_found", Message: "La categoría no existe."},
 	// Before ErrUnitNotFound, which it wraps.

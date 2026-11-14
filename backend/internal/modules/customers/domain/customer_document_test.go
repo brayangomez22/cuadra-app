@@ -64,7 +64,7 @@ func TestParseDocument(t *testing.T) {
 	})
 
 	t.Run("rechaza un tipo de documento desconocido", func(t *testing.T) {
-		_, err := domain.ParseDocument("ti", "1020304050")
+		_, err := domain.ParseDocument("rut", "1020304050")
 		require.ErrorIs(t, err, domain.ErrInvalidDocumentType)
 	})
 

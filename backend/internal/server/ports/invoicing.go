@@ -59,7 +59,9 @@ func (s InvoicingSales) Sale(ctx context.Context, tenantID, userID, saleID uuid.
 	}
 	for _, l := range sale.Lines() {
 		data.Lines = append(data.Lines, invoicingapp.SaleLine{
-			VariantID: l.VariantID(), Name: lineName(l), Quantity: l.Quantity(), UnitPrice: l.UnitPrice(),
+			VariantID: l.VariantID(), Code: invoicingdomain.LineCode(l.SKU(), l.VariantID().String()),
+			UnitCode: invoicingdomain.UnitCode(l.UnitDIANCode()), TaxTreatment: l.TaxTreatment(),
+			Name: lineName(l), Quantity: l.Quantity(), UnitPrice: l.UnitPrice(),
 			Discount: l.Discount(), TaxRate: l.TaxRate(), Tax: l.Tax(), Total: l.Total(),
 		})
 	}
@@ -87,9 +89,11 @@ func (b InvoicingBuyers) Buyer(ctx context.Context, tenantID, userID, customerID
 	if err != nil {
 		return invoicingdomain.Buyer{}, err
 	}
-	id := c.ID()
+	id, contact := c.ID(), c.Contact()
 	return invoicingdomain.Buyer{
 		CustomerID: &id, PersonType: string(c.PersonType()), DocumentType: string(c.Document().Type()),
-		DocumentNumber: c.Document().Number(), Name: c.Name(), Email: c.Contact().Email,
+		IdentificationCode: c.Document().Type().DIANCode(),
+		DocumentNumber:     c.Document().Number(), Name: c.Name(), Email: contact.Email,
+		Address: contact.Address, City: contact.City, MunicipalityCode: contact.MunicipalityCode,
 	}, nil
 }

@@ -71,7 +71,7 @@ func (s TenantSetup) SetUpTenant(ctx context.Context, tenantID uuid.UUID, id str
 func catalogSeed(t templates.Template) catalogapp.Seed {
 	seed := catalogapp.Seed{Categories: t.Categories}
 	for _, u := range t.Units {
-		seed.Units = append(seed.Units, catalogapp.UnitSeed{Code: u.Code, Name: u.Name})
+		seed.Units = append(seed.Units, catalogapp.UnitSeed{Code: u.Code, Name: u.Name, DIANCode: u.DIANCode})
 	}
 	for _, a := range t.Attributes {
 		seed.Attributes = append(seed.Attributes, catalogdomain.AttributeParams{

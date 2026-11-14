@@ -23,6 +23,12 @@ describe('toCustomerInput', () => {
     expect(toCustomerInput(customerDefaults(customer))).toEqual(customerInput(customer));
   });
 
+  it('envía el municipio elegido y lo omite si no hay', () => {
+    const values = { ...customerDefaults(), document_number: '1', name: 'Ana', municipality_code: '11001' };
+    expect(toCustomerInput(values).municipality_code).toBe('11001');
+    expect(toCustomerInput({ ...values, municipality_code: '' })).not.toHaveProperty('municipality_code');
+  });
+
   it('envía el segmento elegido', () => {
     const values = { ...customerDefaults(), document_number: '1', name: 'Ana', segment_id: segmentIds.wholesale };
     expect(toCustomerInput(values).segment_id).toBe(segmentIds.wholesale);
