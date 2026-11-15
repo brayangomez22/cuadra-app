@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -54,6 +55,27 @@ func (e ElectronicDocumentStatus) Valid() bool {
 	case Rejected:
 		return true
 	case Sent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InvoicingProviderMode.
+const (
+	Habilitation InvoicingProviderMode = "habilitation"
+	Production   InvoicingProviderMode = "production"
+	Test         InvoicingProviderMode = "test"
+)
+
+// Valid indicates whether the value is a known member of the InvoicingProviderMode enum.
+func (e InvoicingProviderMode) Valid() bool {
+	switch e {
+	case Habilitation:
+		return true
+	case Production:
+		return true
+	case Test:
 		return true
 	default:
 		return false
@@ -122,6 +144,36 @@ type ErrorDetail struct {
 
 	// Message Mensaje en español que se puede mostrar al usuario.
 	Message string `json:"message"`
+}
+
+// InvoicingProvider defines model for InvoicingProvider.
+type InvoicingProvider struct {
+	// HasToken Si la empresa registró el token de su organización en el proveedor.
+	HasToken bool `json:"has_token"`
+
+	// Mode `test` no tiene efectos legales; `habilitation` envía el set de pruebas de la DIAN para habilitar a la empresa;
+	// `production` emite documentos con validez legal.
+	Mode InvoicingProviderMode `json:"mode"`
+
+	// TestSetId El set de pruebas que la DIAN le asignó a la empresa para la habilitación. Vacío si no tiene.
+	TestSetId string `json:"test_set_id"`
+}
+
+// InvoicingProviderMode `test` no tiene efectos legales; `habilitation` envía el set de pruebas de la DIAN para habilitar a la empresa;
+// `production` emite documentos con validez legal.
+type InvoicingProviderMode string
+
+// InvoicingProviderUpdate defines model for InvoicingProviderUpdate.
+type InvoicingProviderUpdate struct {
+	// Mode `test` no tiene efectos legales; `habilitation` envía el set de pruebas de la DIAN para habilitar a la empresa;
+	// `production` emite documentos con validez legal.
+	Mode InvoicingProviderMode `json:"mode"`
+
+	// TestSetId El set de pruebas de la DIAN (`testSetId`). Obligatorio en `habilitation`.
+	TestSetId *string `json:"test_set_id,omitempty"`
+
+	// Token El token de la organización en el proveedor. Omitido, se conserva el que había.
+	Token *string `json:"token,omitempty"`
 }
 
 // InvoicingSettings defines model for InvoicingSettings.
@@ -275,6 +327,9 @@ type ListElectronicDocumentsParams struct {
 	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// UpdateInvoicingProviderJSONRequestBody defines body for UpdateInvoicingProvider for application/json ContentType.
+type UpdateInvoicingProviderJSONRequestBody = InvoicingProviderUpdate
+
 // CreateNumberingResolutionJSONRequestBody defines body for CreateNumberingResolution for application/json ContentType.
 type CreateNumberingResolutionJSONRequestBody = NumberingResolutionInput
 
@@ -289,9 +344,18 @@ type ServerInterface interface {
 	// GetElectronicDocument Un documento electrónico
 	// (GET /api/v1/invoicing/documents/{documentId})
 	GetElectronicDocument(w http.ResponseWriter, r *http.Request, documentId DocumentId)
+	// GetElectronicDocumentFile Descargar un archivo de un documento electrónico
+	// (GET /api/v1/invoicing/documents/{documentId}/files/{fileKind})
+	GetElectronicDocumentFile(w http.ResponseWriter, r *http.Request, documentId DocumentId, fileKind string)
 	// RetryElectronicDocument Reenviar un documento electrónico
 	// (POST /api/v1/invoicing/documents/{documentId}/retry)
 	RetryElectronicDocument(w http.ResponseWriter, r *http.Request, documentId DocumentId)
+	// GetInvoicingProvider Cuenta en el proveedor tecnológico
+	// (GET /api/v1/invoicing/provider)
+	GetInvoicingProvider(w http.ResponseWriter, r *http.Request)
+	// UpdateInvoicingProvider Cambiar la cuenta en el proveedor tecnológico
+	// (PUT /api/v1/invoicing/provider)
+	UpdateInvoicingProvider(w http.ResponseWriter, r *http.Request)
 	// ListNumberingResolutions Resoluciones de numeración
 	// (GET /api/v1/invoicing/resolutions)
 	ListNumberingResolutions(w http.ResponseWriter, r *http.Request)
@@ -416,6 +480,41 @@ func (siw *ServerInterfaceWrapper) GetElectronicDocument(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetElectronicDocumentFile operation middleware
+func (siw *ServerInterfaceWrapper) GetElectronicDocumentFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "documentId" -------------
+	var documentId DocumentId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "documentId", r.PathValue("documentId"), &documentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "documentId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "fileKind" -------------
+	var fileKind string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "fileKind", r.PathValue("fileKind"), &fileKind, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "fileKind", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetElectronicDocumentFile(w, r, documentId, fileKind)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RetryElectronicDocument operation middleware
 func (siw *ServerInterfaceWrapper) RetryElectronicDocument(w http.ResponseWriter, r *http.Request) {
 
@@ -433,6 +532,34 @@ func (siw *ServerInterfaceWrapper) RetryElectronicDocument(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RetryElectronicDocument(w, r, documentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetInvoicingProvider operation middleware
+func (siw *ServerInterfaceWrapper) GetInvoicingProvider(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetInvoicingProvider(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateInvoicingProvider operation middleware
+func (siw *ServerInterfaceWrapper) UpdateInvoicingProvider(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateInvoicingProvider(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -646,12 +773,15 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/invoicing/settings", wrapper.GetInvoicingSettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/invoicing/settings", wrapper.UpdateInvoicingSettings)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/invoicing/provider", wrapper.GetInvoicingProvider)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/invoicing/provider", wrapper.UpdateInvoicingProvider)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/invoicing/resolutions", wrapper.ListNumberingResolutions)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/invoicing/resolutions", wrapper.CreateNumberingResolution)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/invoicing/resolutions/{resolutionId}", wrapper.DeleteNumberingResolution)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/invoicing/documents", wrapper.ListElectronicDocuments)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/invoicing/documents/{documentId}", wrapper.GetElectronicDocument)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/invoicing/documents/{documentId}/retry", wrapper.RetryElectronicDocument)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/invoicing/documents/{documentId}/files/{fileKind}", wrapper.GetElectronicDocumentFile)
 
 	return m
 }
@@ -820,6 +950,125 @@ func (response GetElectronicDocument500JSONResponse) VisitGetElectronicDocumentR
 	return err
 }
 
+type GetElectronicDocumentFileRequestObject struct {
+	DocumentId DocumentId `json:"documentId"`
+	FileKind   string     `json:"fileKind"`
+}
+
+type GetElectronicDocumentFileResponseObject interface {
+	VisitGetElectronicDocumentFileResponse(w http.ResponseWriter) error
+}
+
+type GetElectronicDocumentFile200ApplicationpdfResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetElectronicDocumentFile200ApplicationpdfResponse) VisitGetElectronicDocumentFileResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/pdf")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetElectronicDocumentFile200ApplicationxmlResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetElectronicDocumentFile200ApplicationxmlResponse) VisitGetElectronicDocumentFileResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/xml")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetElectronicDocumentFile400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetElectronicDocumentFile400JSONResponse) VisitGetElectronicDocumentFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetElectronicDocumentFile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetElectronicDocumentFile401JSONResponse) VisitGetElectronicDocumentFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetElectronicDocumentFile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetElectronicDocumentFile403JSONResponse) VisitGetElectronicDocumentFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetElectronicDocumentFile404JSONResponse Error
+
+func (response GetElectronicDocumentFile404JSONResponse) VisitGetElectronicDocumentFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetElectronicDocumentFile500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetElectronicDocumentFile500JSONResponse) VisitGetElectronicDocumentFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RetryElectronicDocumentRequestObject struct {
 	DocumentId DocumentId `json:"documentId"`
 }
@@ -901,6 +1150,161 @@ func (response RetryElectronicDocument409JSONResponse) VisitRetryElectronicDocum
 type RetryElectronicDocument500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response RetryElectronicDocument500JSONResponse) VisitRetryElectronicDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInvoicingProviderRequestObject struct {
+}
+
+type GetInvoicingProviderResponseObject interface {
+	VisitGetInvoicingProviderResponse(w http.ResponseWriter) error
+}
+
+type GetInvoicingProvider200JSONResponse InvoicingProvider
+
+func (response GetInvoicingProvider200JSONResponse) VisitGetInvoicingProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInvoicingProvider401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetInvoicingProvider401JSONResponse) VisitGetInvoicingProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInvoicingProvider403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetInvoicingProvider403JSONResponse) VisitGetInvoicingProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInvoicingProvider500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetInvoicingProvider500JSONResponse) VisitGetInvoicingProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInvoicingProviderRequestObject struct {
+	Body *UpdateInvoicingProviderJSONRequestBody
+}
+
+type UpdateInvoicingProviderResponseObject interface {
+	VisitUpdateInvoicingProviderResponse(w http.ResponseWriter) error
+}
+
+type UpdateInvoicingProvider200JSONResponse InvoicingProvider
+
+func (response UpdateInvoicingProvider200JSONResponse) VisitUpdateInvoicingProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInvoicingProvider400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateInvoicingProvider400JSONResponse) VisitUpdateInvoicingProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInvoicingProvider401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateInvoicingProvider401JSONResponse) VisitUpdateInvoicingProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInvoicingProvider403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateInvoicingProvider403JSONResponse) VisitUpdateInvoicingProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInvoicingProvider422JSONResponse Error
+
+func (response UpdateInvoicingProvider422JSONResponse) VisitUpdateInvoicingProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInvoicingProvider500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateInvoicingProvider500JSONResponse) VisitUpdateInvoicingProviderResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -1330,9 +1734,18 @@ type StrictServerInterface interface {
 	// GetElectronicDocument Un documento electrónico
 	// (GET /api/v1/invoicing/documents/{documentId})
 	GetElectronicDocument(ctx context.Context, request GetElectronicDocumentRequestObject) (GetElectronicDocumentResponseObject, error)
+	// GetElectronicDocumentFile Descargar un archivo de un documento electrónico
+	// (GET /api/v1/invoicing/documents/{documentId}/files/{fileKind})
+	GetElectronicDocumentFile(ctx context.Context, request GetElectronicDocumentFileRequestObject) (GetElectronicDocumentFileResponseObject, error)
 	// RetryElectronicDocument Reenviar un documento electrónico
 	// (POST /api/v1/invoicing/documents/{documentId}/retry)
 	RetryElectronicDocument(ctx context.Context, request RetryElectronicDocumentRequestObject) (RetryElectronicDocumentResponseObject, error)
+	// GetInvoicingProvider Cuenta en el proveedor tecnológico
+	// (GET /api/v1/invoicing/provider)
+	GetInvoicingProvider(ctx context.Context, request GetInvoicingProviderRequestObject) (GetInvoicingProviderResponseObject, error)
+	// UpdateInvoicingProvider Cambiar la cuenta en el proveedor tecnológico
+	// (PUT /api/v1/invoicing/provider)
+	UpdateInvoicingProvider(ctx context.Context, request UpdateInvoicingProviderRequestObject) (UpdateInvoicingProviderResponseObject, error)
 	// ListNumberingResolutions Resoluciones de numeración
 	// (GET /api/v1/invoicing/resolutions)
 	ListNumberingResolutions(ctx context.Context, request ListNumberingResolutionsRequestObject) (ListNumberingResolutionsResponseObject, error)
@@ -1441,6 +1854,33 @@ func (sh *strictHandler) GetElectronicDocument(w http.ResponseWriter, r *http.Re
 	}
 }
 
+// GetElectronicDocumentFile operation middleware
+func (sh *strictHandler) GetElectronicDocumentFile(w http.ResponseWriter, r *http.Request, documentId DocumentId, fileKind string) {
+	var request GetElectronicDocumentFileRequestObject
+
+	request.DocumentId = documentId
+	request.FileKind = fileKind
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetElectronicDocumentFile(ctx, request.(GetElectronicDocumentFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetElectronicDocumentFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetElectronicDocumentFileResponseObject); ok {
+		if err := validResponse.VisitGetElectronicDocumentFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RetryElectronicDocument operation middleware
 func (sh *strictHandler) RetryElectronicDocument(w http.ResponseWriter, r *http.Request, documentId DocumentId) {
 	var request RetryElectronicDocumentRequestObject
@@ -1460,6 +1900,61 @@ func (sh *strictHandler) RetryElectronicDocument(w http.ResponseWriter, r *http.
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RetryElectronicDocumentResponseObject); ok {
 		if err := validResponse.VisitRetryElectronicDocumentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetInvoicingProvider operation middleware
+func (sh *strictHandler) GetInvoicingProvider(w http.ResponseWriter, r *http.Request) {
+	var request GetInvoicingProviderRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetInvoicingProvider(ctx, request.(GetInvoicingProviderRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetInvoicingProvider")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetInvoicingProviderResponseObject); ok {
+		if err := validResponse.VisitGetInvoicingProviderResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateInvoicingProvider operation middleware
+func (sh *strictHandler) UpdateInvoicingProvider(w http.ResponseWriter, r *http.Request) {
+	var request UpdateInvoicingProviderRequestObject
+
+	var body UpdateInvoicingProviderJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateInvoicingProvider(ctx, request.(UpdateInvoicingProviderRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateInvoicingProvider")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateInvoicingProviderResponseObject); ok {
+		if err := validResponse.VisitUpdateInvoicingProviderResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

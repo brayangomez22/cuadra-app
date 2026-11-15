@@ -32,6 +32,7 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrUnknownBusinessTemplate, Status: http.StatusUnprocessableEntity, Code: "unknown_business_template", Message: "Elija uno de los tipos de negocio disponibles."},
 	{Err: domain.ErrInvalidDefaultTaxRate, Status: http.StatusUnprocessableEntity, Code: "invalid_default_tax_rate", Message: "El IVA por defecto debe ser un porcentaje de 0 a menos de 100, con hasta 2 decimales."},
 	{Err: domain.ErrInvalidTenantAddress, Status: http.StatusUnprocessableEntity, Code: "invalid_tenant_address", Message: "La dirección y la ciudad deben ir en una sola línea (máximo 200 y 100 caracteres)."},
+	{Err: domain.ErrInvalidMunicipality, Status: http.StatusUnprocessableEntity, Code: "invalid_municipality", Message: "Elija un municipio de la lista del DANE."},
 	{Err: domain.ErrInvalidTenantPhone, Status: http.StatusUnprocessableEntity, Code: "invalid_tenant_phone", Message: "Escriba el teléfono solo con números, espacios, +, - o paréntesis (máximo 30 caracteres)."},
 	// A token whose tenant no longer exists is an invalid session, as for its user.
 	{Err: domain.ErrTenantNotFound, Status: http.StatusUnauthorized, Code: "unauthorized", Message: unauthorizedMessage},

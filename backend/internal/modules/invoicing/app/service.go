@@ -34,15 +34,20 @@ type Actor struct {
 	UserID   uuid.UUID
 }
 
-// Deps are the Service's dependencies. Now defaults to time.Now, the
+// Deps are the Service's dependencies. Invoicer is the technology provider
+// and DemoInvoicer the simulated one of the demo tenants. Now defaults to time.Now, the
 // providers to no-ops and Logger to a discarding logger.
 type Deps struct {
-	Settings    domain.SettingsRepository
-	Resolutions domain.ResolutionRepository
-	Documents   domain.DocumentRepository
-	Invoicer    ElectronicInvoicer
-	Sales       SaleSource
-	Buyers      BuyerDirectory
+	Settings     domain.SettingsRepository
+	Resolutions  domain.ResolutionRepository
+	Documents    domain.DocumentRepository
+	Accounts     domain.ProviderAccountRepository
+	Files        domain.FileStore
+	Invoicer     ElectronicInvoicer
+	DemoInvoicer ElectronicInvoicer
+	Issuers      IssuerDirectory
+	Sales        SaleSource
+	Buyers       BuyerDirectory
 
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
@@ -60,12 +65,14 @@ type Service struct {
 	providerErrors metric.Int64Counter
 	nearEnd        metric.Int64Counter
 	retries        metric.Int64Counter
+	files          metric.Int64Counter
 }
 
 // NewService builds a Service. It fails if a dependency is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Settings, d.Resolutions, d.Documents, d.Invoicer, d.Sales, d.Buyers) {
+	if usecase.AnyNil(d.Settings, d.Resolutions, d.Documents, d.Accounts, d.Files,
+		d.Invoicer, d.DemoInvoicer, d.Issuers, d.Sales, d.Buyers) {
 		return nil, errors.New("invoicing: missing service dependency")
 	}
 	if d.Now == nil {
@@ -85,6 +92,8 @@ func NewService(d Deps) (*Service, error) {
 			"Numbering resolutions that crossed into their last tenth or their last 30 days, by document.kind.", "{resolution}"),
 		usecase.Counter(&s.retries, "cuadra.invoicing.manual_retries",
 			"Documents sent again by hand, by document.status before the retry.", "{document}"),
+		usecase.Counter(&s.files, "cuadra.invoicing.files",
+			"Files of accepted documents stored, by file.kind.", "{file}"),
 	)
 	if err != nil {
 		return nil, err

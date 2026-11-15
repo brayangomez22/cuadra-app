@@ -43,6 +43,9 @@ type Config struct {
 	// InvoicingProvider names the technology provider of the electronic
 	// documents (INVOICING_PROVIDER); empty is the simulated one.
 	InvoicingProvider string
+	// InvoicingTokenKey encrypts the tenants' tokens at the provider
+	// (INVOICING_TOKEN_KEY); empty is the module's development key.
+	InvoicingTokenKey []byte
 }
 
 // New builds every module and the handler that serves them. It fails, so

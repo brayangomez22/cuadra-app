@@ -28,3 +28,15 @@ var (
 	ErrMissingReasons          = errors.New("invoicing: a rejection needs its reasons")
 	ErrMissingCode             = errors.New("invoicing: an accepted document needs its CUDE or CUFE")
 )
+
+// Errors of the provider's account and the documents' files.
+var (
+	ErrInvalidProviderMode  = errors.New("invoicing: invalid provider mode")
+	ErrMissingTestSet       = errors.New("invoicing: habilitation requires the DIAN test set")
+	ErrInvalidTestSet       = errors.New("invoicing: invalid DIAN test set")
+	ErrInvalidProviderToken = errors.New("invoicing: invalid provider token")
+	ErrInvalidFileKind      = errors.New("invoicing: invalid file kind")
+	ErrEmptyFile            = errors.New("invoicing: empty file")
+	ErrFileTooLarge         = errors.New("invoicing: file too large")
+	ErrFileNotFound         = errors.New("invoicing: file not found")
+)

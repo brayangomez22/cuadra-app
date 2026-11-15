@@ -18,6 +18,15 @@ type store struct {
 	documents   map[uuid.UUID]domain.DocumentSnapshot
 	// enqueued are the documents whose issue was enqueued, in order.
 	enqueued []uuid.UUID
+	accounts map[uuid.UUID]domain.ProviderAccount
+	files    map[fileKey]domain.File
+	// filesDown makes storing a file fail.
+	filesDown bool
+}
+
+type fileKey struct {
+	tenantID, documentID uuid.UUID
+	kind                 domain.FileKind
 }
 
 func newStore() *store {
@@ -25,6 +34,8 @@ func newStore() *store {
 		settings:    map[uuid.UUID]domain.Settings{},
 		resolutions: map[uuid.UUID]domain.ResolutionSnapshot{},
 		documents:   map[uuid.UUID]domain.DocumentSnapshot{},
+		accounts:    map[uuid.UUID]domain.ProviderAccount{},
+		files:       map[fileKey]domain.File{},
 	}
 }
 

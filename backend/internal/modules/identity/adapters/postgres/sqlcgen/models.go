@@ -204,6 +204,14 @@ type ElectronicDocument struct {
 	UpdatedAt    time.Time
 }
 
+type ElectronicDocumentFile struct {
+	TenantID   uuid.UUID
+	DocumentID uuid.UUID
+	Kind       string
+	Content    []byte
+	CreatedAt  time.Time
+}
+
 type Import struct {
 	ID            uuid.UUID
 	TenantID      uuid.UUID
@@ -240,6 +248,14 @@ type ImportError struct {
 type InventorySetting struct {
 	TenantID           uuid.UUID
 	AllowNegativeStock bool
+}
+
+type InvoicingProviderAccount struct {
+	TenantID        uuid.UUID
+	Mode            string
+	TestSetID       string
+	TokenCiphertext []byte
+	UpdatedAt       time.Time
 }
 
 type InvoicingSetting struct {
@@ -629,6 +645,7 @@ type Tenant struct {
 	Address          string
 	City             string
 	Phone            string
+	MunicipalityCode *string
 }
 
 type TenantModule struct {

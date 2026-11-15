@@ -6,6 +6,7 @@
 package invoicing
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -28,6 +29,11 @@ import (
 // ProviderSimulated names the provider that never reaches the DIAN.
 const ProviderSimulated = "simulated"
 
+// developmentTokenKey encrypts the providers' tokens when the process has
+// no INVOICING_TOKEN_KEY: only outside production, where the configuration
+// requires one.
+var developmentTokenKey = []byte("cuadra-development-token-key-32b")
+
 // Config are the module's dependencies.
 type Config struct {
 	DB *db.DB
@@ -37,10 +43,15 @@ type Config struct {
 	Workers *river.Workers
 	// Provider names the technology provider (INVOICING_PROVIDER).
 	Provider string
+	// TokenKey encrypts the tenants' tokens at the provider
+	// (INVOICING_TOKEN_KEY); empty is the development key.
+	TokenKey []byte
 	// Sales and Buyers are the sales and the customers modules, adapted by
 	// internal/server.
-	Sales          app.SaleSource
-	Buyers         app.BuyerDirectory
+	Sales  app.SaleSource
+	Buyers app.BuyerDirectory
+	// Issuers is the identity module: the company of each tenant.
+	Issuers        app.IssuerDirectory
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -65,11 +76,19 @@ func New(cfg Config) (*Module, error) {
 	if err != nil {
 		return nil, err
 	}
+	tokens, err := tokenCipher(cfg)
+	if err != nil {
+		return nil, err
+	}
 	svc, err := app.NewService(app.Deps{
 		Settings:       postgres.NewSettingsRepository(cfg.DB),
 		Resolutions:    postgres.NewResolutionRepository(cfg.DB),
 		Documents:      postgres.NewDocumentRepository(cfg.DB, jobsadapter.Enqueuer(cfg.Jobs)),
+		Accounts:       postgres.NewProviderAccountRepository(cfg.DB, tokens),
+		Files:          postgres.NewFileStore(cfg.DB),
 		Invoicer:       invoicer,
+		DemoInvoicer:   simulated.Invoicer{},
+		Issuers:        cfg.Issuers,
 		Sales:          cfg.Sales,
 		Buyers:         cfg.Buyers,
 		TracerProvider: cfg.TracerProvider,
@@ -92,6 +111,16 @@ func provider(name string) (app.ElectronicInvoicer, error) {
 		return simulated.Invoicer{}, nil
 	}
 	return nil, fmt.Errorf("invoicing: unknown provider %q", name)
+}
+
+// tokenCipher returns the cipher of the providers' tokens, with the
+// development key if the process has none.
+func tokenCipher(cfg Config) (postgres.TokenCipher, error) {
+	if len(cfg.TokenKey) == 0 {
+		cfg.Logger.WarnContext(context.Background(), "invoicing uses the development key for the providers' tokens")
+		return postgres.NewTokenCipher(developmentTokenKey)
+	}
+	return postgres.NewTokenCipher(cfg.TokenKey)
 }
 
 // addJobs adds the issue and poll workers and, in the API process, the poll's

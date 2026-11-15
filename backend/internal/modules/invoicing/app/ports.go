@@ -37,6 +37,7 @@ type IssueRequest struct {
 	DocumentID uuid.UUID
 	Resolution domain.ResolutionParams
 	IssuedAt   time.Time
+	Issuer     domain.Issuer
 	Buyer      domain.Buyer
 	Sale       SaleData
 }
@@ -49,6 +50,7 @@ type Result struct {
 	Code       string
 	QR         string
 	Reasons    []string
+	Files      []domain.File
 }
 
 // ProviderErrorReason classifies a failure of the provider.
@@ -125,4 +127,9 @@ type SalePayment struct {
 // BuyerDirectory reads who a customer is, from the customers module.
 type BuyerDirectory interface {
 	Buyer(ctx context.Context, tenantID, userID, customerID uuid.UUID) (domain.Buyer, error)
+}
+
+// IssuerDirectory reads the tenant's company, from the identity module.
+type IssuerDirectory interface {
+	Issuer(ctx context.Context, tenantID uuid.UUID) (domain.Issuer, error)
 }

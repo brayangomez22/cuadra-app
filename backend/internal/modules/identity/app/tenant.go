@@ -19,6 +19,8 @@ type TenantUpdate struct {
 	Address        *string
 	City           *string
 	Phone          *string
+	// MunicipalityCode is the DANE code of the company's municipality.
+	MunicipalityCode *string
 }
 
 // UpdateTenant changes the settings of userID's tenant. The permission is
@@ -64,7 +66,15 @@ func (in TenantUpdate) contact(current domain.Contact) (domain.Contact, error) {
 	if in.Phone != nil {
 		phone = *in.Phone
 	}
-	return domain.NewContact(address, city, phone)
+	contact, err := domain.NewContact(address, city, phone)
+	if err != nil {
+		return domain.Contact{}, err
+	}
+	municipality := current.MunicipalityCode()
+	if in.MunicipalityCode != nil {
+		municipality = *in.MunicipalityCode
+	}
+	return contact.WithMunicipality(municipality)
 }
 
 // DefaultTaxRate returns the IVA the tenant proposes to a new product. It
@@ -79,4 +89,14 @@ func (s *Service) DefaultTaxRate(ctx context.Context, tenantID uuid.UUID) (_ dec
 		return decimal.Decimal{}, err
 	}
 	return tenant.DefaultTaxRate(), nil
+}
+
+// Tenant returns a tenant, for other modules: the invoicing module reads
+// the company that issues its documents.
+func (s *Service) Tenant(ctx context.Context, tenantID uuid.UUID) (_ *domain.Tenant, err error) {
+	ctx, span := s.startSpan(ctx, "GetTenant")
+	defer func() { usecase.End(span, err) }()
+	span.SetAttributes(attribute.String("tenant.id", tenantID.String()))
+
+	return s.Tenants.GetByID(ctx, tenantID)
 }

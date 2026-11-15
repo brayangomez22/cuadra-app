@@ -33,6 +33,9 @@ type Config struct {
 	// InvoicingProvider is the technology provider that issues the
 	// electronic documents (INVOICING_PROVIDER; see loadInvoicing).
 	InvoicingProvider string
+	// InvoicingTokenKey encrypts the tenants' tokens at the provider
+	// (INVOICING_TOKEN_KEY, 32 bytes in base64); see loadInvoicing.
+	InvoicingTokenKey []byte
 }
 
 // minDemoPassword is the shortest demo password accepted.

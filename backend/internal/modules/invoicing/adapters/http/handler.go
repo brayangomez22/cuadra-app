@@ -22,6 +22,8 @@ type UseCases interface {
 	SettingsUseCases
 	ResolutionUseCases
 	DocumentUseCases
+	ProviderUseCases
+	FileUseCases
 }
 
 // Handler implements invoicingapi.StrictServerInterface with a handler per
@@ -30,6 +32,8 @@ type Handler struct {
 	settingsHandlers
 	resolutionHandlers
 	documentHandlers
+	providerHandlers
+	fileHandlers
 }
 
 var _ invoicingapi.StrictServerInterface = (*Handler)(nil)
@@ -39,6 +43,7 @@ var _ invoicingapi.StrictServerInterface = (*Handler)(nil)
 func Register(mux *http.ServeMux, uc UseCases, log *slog.Logger) {
 	h := &Handler{
 		settingsHandlers: settingsHandlers{uc: uc}, resolutionHandlers: resolutionHandlers{uc: uc}, documentHandlers: documentHandlers{uc: uc},
+		providerHandlers: providerHandlers{uc: uc}, fileHandlers: fileHandlers{uc: uc},
 	}
 	errs := httpx.NewErrorMapper(log, errorRules...)
 	invoicingapi.HandlerWithOptions(

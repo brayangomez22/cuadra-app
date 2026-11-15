@@ -140,6 +140,7 @@ export function aUser(role: Me['role'] = 'owner'): Me {
     tenant_nit: '900123456-8',
     tenant_address: '',
     tenant_city: '',
+    tenant_municipality_code: '',
     tenant_phone: '',
     business_template: 'ferreteria',
     default_tax_rate: '0.19',

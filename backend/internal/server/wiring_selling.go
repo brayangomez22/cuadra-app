@@ -35,7 +35,7 @@ func (w *wiring) selling(c *catalog.Module, i *inventory.Module, cu *customers.M
 	if err != nil {
 		return sellingModules{}, err
 	}
-	inv, err := w.invoicing(s, cu)
+	inv, err := w.invoicing(s, cu, id)
 	if err != nil {
 		return sellingModules{}, err
 	}
@@ -89,7 +89,7 @@ func (w *wiring) receivables(cu *customers.Module, s *sales.Module) (*receivable
 
 // invoicing issues the electronic documents of the sales module's sales to
 // the customers module's customers, in the process's workers.
-func (w *wiring) invoicing(s *sales.Module, cu *customers.Module) (*invoicing.Module, error) {
+func (w *wiring) invoicing(s *sales.Module, cu *customers.Module, id *identity.Module) (*invoicing.Module, error) {
 	return invoicing.New(invoicing.Config{
 		DB:             w.DB,
 		Jobs:           w.Jobs,
@@ -98,6 +98,8 @@ func (w *wiring) invoicing(s *sales.Module, cu *customers.Module) (*invoicing.Mo
 		Provider:       cmp.Or(w.InvoicingProvider, invoicing.ProviderSimulated),
 		Sales:          ports.InvoicingSales{Sales: s},
 		Buyers:         ports.InvoicingBuyers{Customers: cu},
+		Issuers:        ports.InvoicingIssuers{Identity: id},
+		TokenKey:       w.InvoicingTokenKey,
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,

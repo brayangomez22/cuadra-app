@@ -199,7 +199,14 @@ type Me struct {
 	// TenantCity Ciudad o municipio de la empresa. Vacía si no se ha registrado.
 	TenantCity string             `json:"tenant_city"`
 	TenantId   openapi_types.UUID `json:"tenant_id"`
-	TenantName string             `json:"tenant_name"`
+
+	// TenantMunicipalityCode El código DANE del municipio de la empresa (`/municipalities`), el del emisor de los documentos electrónicos.
+	// Vacío si no se ha registrado.
+	//
+	//
+	// Example: 05001
+	TenantMunicipalityCode string `json:"tenant_municipality_code"`
+	TenantName             string `json:"tenant_name"`
 
 	// TenantNit NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
 	//
@@ -265,7 +272,14 @@ type Tenant struct {
 	// Example: 0.19
 	DefaultTaxRate TaxRate            `json:"default_tax_rate"`
 	Id             openapi_types.UUID `json:"id"`
-	Name           string             `json:"name"`
+
+	// MunicipalityCode El código DANE del municipio del negocio (`/municipalities`), el del emisor de los documentos electrónicos.
+	// Vacío si no se ha registrado.
+	//
+	//
+	// Example: 05001
+	MunicipalityCode string `json:"municipality_code"`
+	Name             string `json:"name"`
 
 	// Nit Example: 900123456-8
 	Nit string `json:"nit"`
@@ -296,6 +310,13 @@ type TenantUpdate struct {
 
 	// DefaultTaxRate La tasa de IVA que se propone a un producto nuevo. No cambia la de los productos que ya existen.
 	DefaultTaxRate *TaxRate `json:"default_tax_rate,omitempty"`
+
+	// MunicipalityCode El código DANE del municipio (`/municipalities`), que piden los documentos electrónicos del emisor. Vacío lo
+	// borra; uno que no existe es `invalid_municipality`.
+	//
+	//
+	// Example: 05001
+	MunicipalityCode *string `json:"municipality_code,omitempty"`
 
 	// Phone Teléfono, con dígitos, espacios, `+`, `-` y paréntesis. Vacío lo borra.
 	Phone *string `json:"phone,omitempty"`

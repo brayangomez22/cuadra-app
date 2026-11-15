@@ -17,6 +17,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 - Log Analytics mínimo y frontend estático (Static Web Apps o Storage + CDN).
 
 Estado remoto de Terraform en un Storage Account con bloqueo. Paso en el CI de `terraform fmt -check`, `validate` y `plan` en los PR que tocan `infra/`.
+**Pendientes que entran a esta tarea:** P166 (`docs/plan/pendientes.md`).
 **Revisa tú:** costos estimados por mes de cada ambiente antes de aplicar, y la red (Postgres sin acceso público).
 
 ### [ ] T46 · Entrega continua (CD)

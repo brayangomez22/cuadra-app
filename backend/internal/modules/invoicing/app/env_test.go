@@ -1,7 +1,9 @@
 package app_test
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -23,12 +25,16 @@ type env struct {
 	svc      *app.Service
 	store    *store
 	invoicer *fakeInvoicer
-	sales    fakeSales
-	buyers   fakeBuyers
-	actor    app.Actor
-	now      time.Time
-	spans    *tracetest.SpanRecorder
-	metrics  *sdkmetric.ManualReader
+	// demoInvoicer is the provider of the demo tenants.
+	demoInvoicer *fakeInvoicer
+	issuers      fakeIssuers
+	logs         *bytes.Buffer
+	sales        fakeSales
+	buyers       fakeBuyers
+	actor        app.Actor
+	now          time.Time
+	spans        *tracetest.SpanRecorder
+	metrics      *sdkmetric.ManualReader
 }
 
 // testNow is 2026-03-03 at 21:00 in Bogotá, already the 4th in UTC.
@@ -41,13 +47,16 @@ func dec(s string) decimal.Decimal { return decimal.RequireFromString(s) }
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	e := &env{
-		store:    newStore(),
-		invoicer: newInvoicer(),
-		sales:    fakeSales{sales: map[uuid.UUID]app.SaleData{}},
-		buyers:   fakeBuyers{buyers: map[uuid.UUID]domain.Buyer{}},
-		actor:    app.Actor{TenantID: newID(), UserID: newID()},
-		now:      testNow,
-		spans:    tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
+		store:        newStore(),
+		invoicer:     newInvoicer(),
+		demoInvoicer: newInvoicer(),
+		issuers:      fakeIssuers{issuers: map[uuid.UUID]domain.Issuer{}},
+		logs:         &bytes.Buffer{},
+		sales:        fakeSales{sales: map[uuid.UUID]app.SaleData{}},
+		buyers:       fakeBuyers{buyers: map[uuid.UUID]domain.Buyer{}},
+		actor:        app.Actor{TenantID: newID(), UserID: newID()},
+		now:          testNow,
+		spans:        tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
 	}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(e.spans))
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(e.metrics))
@@ -59,9 +68,14 @@ func newEnv(t *testing.T) *env {
 		Settings:       fakeSettings{e.store},
 		Resolutions:    fakeResolutions{e.store},
 		Documents:      fakeDocuments{e.store},
+		Accounts:       fakeAccounts{e.store},
+		Files:          fakeFiles{e.store},
 		Invoicer:       e.invoicer,
+		DemoInvoicer:   e.demoInvoicer,
+		Issuers:        e.issuers,
 		Sales:          e.sales,
 		Buyers:         e.buyers,
+		Logger:         slog.New(slog.NewJSONHandler(e.logs, nil)),
 		Now:            func() time.Time { return e.now },
 		TracerProvider: tp,
 		MeterProvider:  mp,

@@ -27,27 +27,34 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Pendientes que entran a esta tarea:** P03, P61, P91, P92, P154 y P160 (`docs/plan/pendientes.md`).
 **Tests primero:** un producto excluido no lleva IVA en el documento y uno exento lleva tasa 0; una unidad sin código DIAN usa el de unidad (`94`); un cliente con ciudad en texto libre sigue funcionando; los casos cubren al menos dos tipos de negocio.
 
-### [ ] T36b · Proveedor tecnológico real (Muisca)
+### [x] T36b · Preparación para el proveedor real
 **Depende de:** T36, T36a.
-**Alcance:** adaptador de Muisca del puerto `ElectronicInvoicer` (cliente generado de su OpenAPI, errores clasificados como en `docs/dian.md` §6), token de la organización **por tenant cifrado** en la base de datos con una llave de variable de entorno, `mode` y `testSetId` por tenant para la habilitación, puerto de almacenamiento para el XML y el PDF (nunca el disco del contenedor) y el envío al correo del cliente (según lo que responda el PT, P153). El tenant demo usa siempre el simulado (P108). `INVOICING_PROVIDER=muisca` en producción (P157). Empieza por la prueba en el sandbox (P152).
-**Pendientes que entran a esta tarea:** P108, P152, P153, P157, P159 y P162 (`docs/plan/pendientes.md`).
-**Tests primero:** un documento del demo no llega al proveedor; un 429 o un 5xx de Muisca es un error temporal y un 400 o 422 no se reintenta; el token nunca aparece en logs ni spans; el XML y el PDF de un documento aceptado quedan en el almacenamiento.
+**Alcance:** lo que el proveedor real necesita y no depende de su API: un selector de proveedor por tenant (el tenant demo usa siempre el simulado, P108); el token de la organización **por tenant cifrado** en la base de datos con una llave de variable de entorno, con el `mode` y el `testSetId` para la habilitación, y un endpoint solo para el dueño que nunca devuelve el token; el **puerto de almacenamiento** del XML y el PDF de cada documento aceptado (nunca el disco del contenedor) y su descarga (P159); y el municipio DANE de la empresa como emisor del documento (P162, backend y contrato; el campo en la pantalla va en T36c).
+**Pendientes que entran a esta tarea:** P108, P159 y P162 (`docs/plan/pendientes.md`).
+**División** (decisión del 2026-11-14): el adaptador de Muisca pasó a **T36d**, porque necesita la cuenta del sandbox (P152) y las respuestas del PT (P153).
+**Tests primero:** un documento del demo no llega al proveedor; el token nunca aparece en logs, spans ni respuestas; un token cifrado no se descifra con otra llave; el XML y el PDF de un documento aceptado quedan en el almacenamiento y el tenant B no los ve.
+
+### [ ] T36d · Adaptador de Muisca
+**Depende de:** T36b, la cuenta del sandbox de Muisca (P152).
+**Alcance:** empieza por la prueba en el sandbox (P152). Adaptador de Muisca del puerto `ElectronicInvoicer` (cliente generado de su OpenAPI o, si no lo comparten, de un subconjunto escrito en el repo a partir de su documentación), errores clasificados como en `docs/dian.md` §6, el XML y el PDF que devuelve al puerto de almacenamiento de T36b, el envío al correo del comprador según lo que responda el PT (P153) e `INVOICING_PROVIDER=muisca` en producción, que exige su URL (P157).
+**Pendientes que entran a esta tarea:** P152, P153 y P157 (`docs/plan/pendientes.md`).
+**Tests primero:** un 429 o un 5xx de Muisca es un error temporal y un 400 o 422 no se reintenta; una respuesta `Aprobada` trae el CUDE, el QR y el ID; `DianNoDisponible` deja el documento enviado; un rechazo guarda sus motivos; el token nunca aparece en logs ni spans.
 
 ### [ ] T36c · Pantallas de la facturación electrónica
-**Depende de:** T36, T36b.
+**Depende de:** T36, T36b, T36d.
 **Alcance:** en el frontend, sobre el contrato de T36 (`/invoicing/*`): activar la emisión y el tipo por defecto, registrar y borrar resoluciones con el aviso de fin de rango, el **panel de documentos** por estado con sus motivos y el reintento manual, el estado, el CUDE y el QR del documento en `/ventas/:id` y en la tirilla (`docs/dian.md` §5, regla 6: esperar unos segundos o imprimir "pendiente de validación"), y pedir factura en el POS (`document_kind`). Después, `/impeccable critique`.
-**Pendientes que entran a esta tarea:** P158 y P163 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P158, P163 y P165 (`docs/plan/pendientes.md`).
 **Tests primero:** el cajero ve el documento de la venta pero no reenvía; un documento rechazado muestra sus motivos y el botón de reenviar; pedir factura sin cliente muestra el error junto al cliente; responsive de 360 a 1920 px.
 
 ### [ ] T37 · Notas crédito y anulaciones
-**Depende de:** T36, T36b.
+**Depende de:** T36, T36d.
 **Alcance:** anular una venta facturada genera una nota crédito electrónica total; devoluciones parciales generan una nota crédito parcial y devuelven el stock de lo devuelto.
 **Tests primero:** una nota crédito nunca supera el valor pendiente del documento original; una devolución parcial devuelve exactamente las cantidades indicadas al inventario.
 
 ### [ ] T38 · Endurecimiento de seguridad
 **Alcance:** revisión contra OWASP ASVS nivel 1: headers de seguridad (CSP, HSTS...), CORS estricto, rate limiting global y por tenant **detrás de una interfaz `RateLimiter`** (implementación inicial en memoria o en Postgres; si la API corre en varias réplicas y una medición lo justifica, se agrega un adaptador de Redis sin tocar el resto), límites de tamaño de request, rotación de secretos JWT, **registro de auditoría** (quién anuló, cambió precios o ajustó inventario) consultable por el dueño **y agregable para métricas del negocio** (ver abajo), política de contraseñas y bloqueo por intentos. Escaneo DAST con OWASP ZAP contra staging desde el CI.
 **Registro de auditoría, diseñado para contarse y no solo para leerse:** tabla `audit_events` con `tenant_id` y RLS, inmutable (solo `INSERT`; la app no tiene `UPDATE` ni `DELETE`). Campos estructurados: quién (`user_id`, rol), qué (`action` de un **catálogo cerrado y versionado** en `docs/auditoria.md`, con nombres neutros: `sale.voided`, `sale.discount_applied`, `variant.price_changed`, `stock.adjusted`, `cash.closed_with_difference`, `module.enabled`, `module.disabled`, `tenant.settings_changed`...), sobre qué (`entity_type`, `entity_id`), dónde (`location_id`), cuándo (`occurred_at`) y un `details JSONB` con el dato que se va a agregar (precio anterior y nuevo, porcentaje de descuento, diferencia de caja, cantidad ajustada). Los montos van en `details` como strings decimales, nunca `float`. Se escribe **en la misma transacción** que la operación auditada (si la operación falla, no queda registro; si queda la operación, queda su registro). Índices por `(tenant_id, action, occurred_at)` y `(tenant_id, user_id, occurred_at)` para que T41 filtre y T42 agregue sin recorrer la tabla. Nada de datos personales de los compradores en `details`.
-**Pendientes que entran a esta tarea:** P04–P07, P40, P53, P60, P83 y P113 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P04–P07, P40, P53, P60, P83, P113 y P167 (`docs/plan/pendientes.md`).
 **Tests primero (auditoría):** cada acción del catálogo deja exactamente un evento en la misma transacción; si la operación se revierte, no queda evento; una `action` fuera del catálogo se rechaza; el tenant B no ve los eventos del tenant A; el rol de la app no puede modificar ni borrar eventos.
 **Aceptación:** checklist ASVS en `docs/seguridad.md` con cada punto resuelto o justificado.
 

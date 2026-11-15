@@ -22,12 +22,15 @@ var (
 	// limit or with line breaks.
 	ErrInvalidTenantAddress = errors.New("identity: invalid tenant address")
 	ErrInvalidTenantPhone   = errors.New("identity: invalid tenant phone")
-	ErrInvalidUserID        = errors.New("identity: invalid user id")
-	ErrInvalidUserName      = errors.New("identity: invalid user name")
-	ErrPasswordTooShort     = errors.New("identity: password too short")
-	ErrPasswordTooLong      = errors.New("identity: password too long")
-	ErrEmptyPasswordHash    = errors.New("identity: empty password hash")
-	ErrTenantNotFound       = errors.New("identity: tenant not found")
+	// ErrInvalidMunicipality reports a municipality code that is not five
+	// digits or not in the DANE catalog.
+	ErrInvalidMunicipality = errors.New("identity: invalid municipality")
+	ErrInvalidUserID       = errors.New("identity: invalid user id")
+	ErrInvalidUserName     = errors.New("identity: invalid user name")
+	ErrPasswordTooShort    = errors.New("identity: password too short")
+	ErrPasswordTooLong     = errors.New("identity: password too long")
+	ErrEmptyPasswordHash   = errors.New("identity: empty password hash")
+	ErrTenantNotFound      = errors.New("identity: tenant not found")
 	// ErrNotDemoTenant reports a purge of a tenant that is not a demo one:
 	// only demonstration tenants can be deleted.
 	ErrNotDemoTenant = errors.New("identity: not a demo tenant")

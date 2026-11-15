@@ -3,6 +3,7 @@
 package postgres_test
 
 import (
+	"bytes"
 	"context"
 	"sync"
 	"testing"
@@ -24,16 +25,23 @@ var now = time.Date(2026, 3, 3, 17, 0, 0, 123456000, time.UTC)
 
 // Compile-time checks: the adapters satisfy the domain ports.
 var (
-	_ domain.SettingsRepository   = (*postgres.SettingsRepository)(nil)
-	_ domain.ResolutionRepository = (*postgres.ResolutionRepository)(nil)
-	_ domain.DocumentRepository   = (*postgres.DocumentRepository)(nil)
+	_ domain.SettingsRepository        = (*postgres.SettingsRepository)(nil)
+	_ domain.ResolutionRepository      = (*postgres.ResolutionRepository)(nil)
+	_ domain.DocumentRepository        = (*postgres.DocumentRepository)(nil)
+	_ domain.ProviderAccountRepository = (*postgres.ProviderAccountRepository)(nil)
+	_ domain.FileStore                 = (*postgres.FileStore)(nil)
 )
+
+// tokenKey is the key of the fixture's token cipher.
+var tokenKey = bytes.Repeat([]byte{7}, postgres.TokenKeySize)
 
 type fixture struct {
 	db          *db.DB
 	settings    *postgres.SettingsRepository
 	resolutions *postgres.ResolutionRepository
 	documents   *postgres.DocumentRepository
+	accounts    *postgres.ProviderAccountRepository
+	files       *postgres.FileStore
 	queue       *queue
 }
 
@@ -63,7 +71,16 @@ func newFixture(t *testing.T) fixture {
 		settings:    postgres.NewSettingsRepository(d),
 		resolutions: postgres.NewResolutionRepository(d),
 		documents:   postgres.NewDocumentRepository(d, q.enqueue),
+		accounts:    postgres.NewProviderAccountRepository(d, mustCipher(t, tokenKey)),
+		files:       postgres.NewFileStore(d),
 	}
+}
+
+func mustCipher(t *testing.T, key []byte) postgres.TokenCipher {
+	t.Helper()
+	c, err := postgres.NewTokenCipher(key)
+	require.NoError(t, err)
+	return c
 }
 
 func newID() uuid.UUID { return uuid.Must(uuid.NewV7()) }
