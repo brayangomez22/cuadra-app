@@ -416,7 +416,8 @@ paths:
         "422":
           description: |
             El IVA por defecto no es válido (`invalid_default_tax_rate`), la dirección o la ciudad tienen saltos de línea
-            (`invalid_tenant_address`) o el teléfono tiene caracteres que no son de un teléfono (`invalid_tenant_phone`).
+            (`invalid_tenant_address`), el teléfono tiene caracteres que no son de un teléfono (`invalid_tenant_phone`) o
+            el municipio no está en la lista del DANE (`invalid_municipality`).
           content:
             application/json:
               schema:
@@ -4000,6 +4001,66 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalError"
+  /api/v1/invoicing/provider:
+    get:
+      tags: [invoicing]
+      operationId: getInvoicingProvider
+      summary: Cuenta en el proveedor tecnológico
+      description: |
+        El modo en que se emiten los documentos (`test`, `habilitation` o `production`), el set de pruebas de la
+        habilitación y si la empresa ya registró el token de su organización. El token nunca se devuelve.
+      x-permission: invoicing:provider
+      responses:
+        "200":
+          description: La cuenta de la empresa en el proveedor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoicingProvider"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags: [invoicing]
+      operationId: updateInvoicingProvider
+      summary: Cambiar la cuenta en el proveedor tecnológico
+      description: |
+        Fija el modo y el set de pruebas y, si viene, reemplaza el token de la organización (se guarda cifrado). Sin
+        `token` se conserva el que había. Rige desde el siguiente envío.
+      x-permission: invoicing:provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoicingProviderUpdate"
+      responses:
+        "200":
+          description: La cuenta nueva, sin el token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoicingProvider"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: |
+            La habilitación no trae el set de pruebas (`missing_test_set`), el set de pruebas tiene saltos de línea
+            (`invalid_test_set`) o el token tiene espacios (`invalid_provider_token`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/v1/invoicing/resolutions:
     get:
       tags: [invoicing]
@@ -4195,6 +4256,52 @@ paths:
                 $ref: "#/components/schemas/Error"
         "409":
           description: El documento está `sent` o `accepted` (`document_not_retryable`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/invoicing/documents/{documentId}/files/{fileKind}:
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+      - name: fileKind
+        in: path
+        required: true
+        description: "`xml`: el documento firmado que validó la DIAN. `pdf`: su representación gráfica con el QR."
+        schema:
+          type: string
+          enum: [xml, pdf]
+    get:
+      tags: [invoicing]
+      operationId: getElectronicDocumentFile
+      summary: Descargar un archivo de un documento electrónico
+      description: |
+        El XML firmado (`xml`) o la representación gráfica con el QR (`pdf`) de un documento aceptado, como los
+        devolvió el proveedor.
+      x-permission: invoicing:read
+      responses:
+        "200":
+          description: El archivo.
+          content:
+            application/xml:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: |
+            El documento no existe (`document_not_found`) o todavía no tiene ese archivo (`document_file_not_found`).
           content:
             application/json:
               schema:
@@ -4625,7 +4732,7 @@ components:
           $ref: "#/components/schemas/Me"
     Me:
       type: object
-      required: [id, tenant_id, tenant_name, tenant_nit, tenant_address, tenant_city, tenant_phone, business_template, default_tax_rate, name, email, role, permissions, modules, demo]
+      required: [id, tenant_id, tenant_name, tenant_nit, tenant_address, tenant_city, tenant_municipality_code, tenant_phone, business_template, default_tax_rate, name, email, role, permissions, modules, demo]
       properties:
         id:
           type: string
@@ -4645,6 +4752,12 @@ components:
         tenant_city:
           type: string
           description: Ciudad o municipio de la empresa. Vacía si no se ha registrado.
+        tenant_municipality_code:
+          type: string
+          description: |
+            El código DANE del municipio de la empresa (`/municipalities`), el del emisor de los documentos electrónicos.
+            Vacío si no se ha registrado.
+          example: "05001"
         tenant_phone:
           type: string
           description: Teléfono de la empresa. Vacío si no se ha registrado.
@@ -4683,7 +4796,7 @@ components:
           description: La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso.
     Tenant:
       type: object
-      required: [id, name, nit, business_template, default_tax_rate, address, city, phone]
+      required: [id, name, nit, business_template, default_tax_rate, address, city, municipality_code, phone]
       description: La empresa (tenant) y su configuración.
       properties:
         id:
@@ -4707,6 +4820,12 @@ components:
           type: string
           maxLength: 100
           description: Ciudad o municipio del negocio. Vacía si no se ha registrado.
+        municipality_code:
+          type: string
+          description: |
+            El código DANE del municipio del negocio (`/municipalities`), el del emisor de los documentos electrónicos.
+            Vacío si no se ha registrado.
+          example: "05001"
         phone:
           type: string
           maxLength: 30
@@ -4728,6 +4847,13 @@ components:
           type: string
           maxLength: 100
           description: Ciudad o municipio. Vacía la borra.
+        municipality_code:
+          type: string
+          pattern: '^([0-9]{5})?$'
+          description: |
+            El código DANE del municipio (`/municipalities`), que piden los documentos electrónicos del emisor. Vacío lo
+            borra; uno que no existe es `invalid_municipality`.
+          example: "05001"
         phone:
           type: string
           maxLength: 30
@@ -7399,6 +7525,41 @@ components:
     ElectronicDocumentStatus:
       type: string
       enum: [pending, sent, accepted, rejected]
+    InvoicingProvider:
+      type: object
+      required: [mode, test_set_id, has_token]
+      properties:
+        mode:
+          $ref: "#/components/schemas/InvoicingProviderMode"
+        test_set_id:
+          type: string
+          description: El set de pruebas que la DIAN le asignó a la empresa para la habilitación. Vacío si no tiene.
+        has_token:
+          type: boolean
+          description: Si la empresa registró el token de su organización en el proveedor.
+    InvoicingProviderUpdate:
+      type: object
+      required: [mode]
+      additionalProperties: false
+      properties:
+        mode:
+          $ref: "#/components/schemas/InvoicingProviderMode"
+        test_set_id:
+          type: string
+          maxLength: 100
+          description: El set de pruebas de la DIAN (`testSetId`). Obligatorio en `habilitation`.
+        token:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 4096
+          description: El token de la organización en el proveedor. Omitido, se conserva el que había.
+    InvoicingProviderMode:
+      type: string
+      enum: [test, habilitation, production]
+      description: |
+        `test` no tiene efectos legales; `habilitation` envía el set de pruebas de la DIAN para habilitar a la empresa;
+        `production` emite documentos con validez legal.
     InvoicingSettings:
       type: object
       required: [enabled, default_kind]

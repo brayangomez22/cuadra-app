@@ -38,3 +38,28 @@ func (m *Module) DemoTenants(ctx context.Context, template string) ([]uuid.UUID,
 func (m *Module) PurgeDemoTenant(ctx context.Context, id uuid.UUID) error {
 	return m.service.PurgeDemoTenant(ctx, id)
 }
+
+// TenantProfile is what other modules read of a tenant: the company that
+// issues the electronic documents.
+type TenantProfile struct {
+	Name             string
+	NIT              string
+	Address          string
+	City             string
+	MunicipalityCode string
+	Phone            string
+	Demo             bool
+}
+
+// TenantProfile returns the tenant's company.
+func (m *Module) TenantProfile(ctx context.Context, tenantID uuid.UUID) (TenantProfile, error) {
+	t, err := m.service.Tenant(ctx, tenantID)
+	if err != nil {
+		return TenantProfile{}, err
+	}
+	c := t.Contact()
+	return TenantProfile{
+		Name: t.Name(), NIT: t.NIT().String(), Address: c.Address(), City: c.City(),
+		MunicipalityCode: c.MunicipalityCode(), Phone: c.Phone(), Demo: t.IsDemo(),
+	}, nil
+}

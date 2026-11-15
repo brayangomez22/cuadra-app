@@ -1809,6 +1809,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoicing/provider": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cuenta en el proveedor tecnológico
+         * @description El modo en que se emiten los documentos (`test`, `habilitation` o `production`), el set de pruebas de la
+         *     habilitación y si la empresa ya registró el token de su organización. El token nunca se devuelve.
+         */
+        get: operations["getInvoicingProvider"];
+        /**
+         * Cambiar la cuenta en el proveedor tecnológico
+         * @description Fija el modo y el set de pruebas y, si viene, reemplaza el token de la organización (se guarda cifrado). Sin
+         *     `token` se conserva el que había. Rige desde el siguiente envío.
+         */
+        put: operations["updateInvoicingProvider"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoicing/resolutions": {
         parameters: {
             query?: never;
@@ -1914,6 +1940,31 @@ export interface paths {
          *     dato que falló (por ejemplo, el documento del cliente). Queda `pending` sin motivos ni error.
          */
         post: operations["retryElectronicDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoicing/documents/{documentId}/files/{fileKind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: components["parameters"]["DocumentId"];
+                /** @description `xml`: el documento firmado que validó la DIAN. `pdf`: su representación gráfica con el QR. */
+                fileKind: "xml" | "pdf";
+            };
+            cookie?: never;
+        };
+        /**
+         * Descargar un archivo de un documento electrónico
+         * @description El XML firmado (`xml`) o la representación gráfica con el QR (`pdf`) de un documento aceptado, como los
+         *     devolvió el proveedor.
+         */
+        get: operations["getElectronicDocumentFile"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2051,6 +2102,12 @@ export interface components {
             tenant_address: string;
             /** @description Ciudad o municipio de la empresa. Vacía si no se ha registrado. */
             tenant_city: string;
+            /**
+             * @description El código DANE del municipio de la empresa (`/municipalities`), el del emisor de los documentos electrónicos.
+             *     Vacío si no se ha registrado.
+             * @example 05001
+             */
+            tenant_municipality_code: string;
             /** @description Teléfono de la empresa. Vacío si no se ha registrado. */
             tenant_phone: string;
             /**
@@ -2099,6 +2156,12 @@ export interface components {
             address: string;
             /** @description Ciudad o municipio del negocio. Vacía si no se ha registrado. */
             city: string;
+            /**
+             * @description El código DANE del municipio del negocio (`/municipalities`), el del emisor de los documentos electrónicos.
+             *     Vacío si no se ha registrado.
+             * @example 05001
+             */
+            municipality_code: string;
             /** @description Teléfono del negocio. Vacío si no se ha registrado. */
             phone: string;
         };
@@ -2109,6 +2172,12 @@ export interface components {
             address?: string;
             /** @description Ciudad o municipio. Vacía la borra. */
             city?: string;
+            /**
+             * @description El código DANE del municipio (`/municipalities`), que piden los documentos electrónicos del emisor. Vacío lo
+             *     borra; uno que no existe es `invalid_municipality`.
+             * @example 05001
+             */
+            municipality_code?: string;
             /** @description Teléfono, con dígitos, espacios, `+`, `-` y paréntesis. Vacío lo borra. */
             phone?: string;
         };
@@ -3810,6 +3879,26 @@ export interface components {
         ElectronicDocumentKind: "pos" | "invoice";
         /** @enum {string} */
         ElectronicDocumentStatus: "pending" | "sent" | "accepted" | "rejected";
+        InvoicingProvider: {
+            mode: components["schemas"]["InvoicingProviderMode"];
+            /** @description El set de pruebas que la DIAN le asignó a la empresa para la habilitación. Vacío si no tiene. */
+            test_set_id: string;
+            /** @description Si la empresa registró el token de su organización en el proveedor. */
+            has_token: boolean;
+        };
+        InvoicingProviderUpdate: {
+            mode: components["schemas"]["InvoicingProviderMode"];
+            /** @description El set de pruebas de la DIAN (`testSetId`). Obligatorio en `habilitation`. */
+            test_set_id?: string;
+            /** @description El token de la organización en el proveedor. Omitido, se conserva el que había. */
+            token?: string;
+        };
+        /**
+         * @description `test` no tiene efectos legales; `habilitation` envía el set de pruebas de la DIAN para habilitar a la empresa;
+         *     `production` emite documentos con validez legal.
+         * @enum {string}
+         */
+        InvoicingProviderMode: "test" | "habilitation" | "production";
         InvoicingSettings: {
             /** @description Si las ventas confirmadas reciben un documento electrónico. */
             enabled: boolean;
@@ -4390,7 +4479,8 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             /**
              * @description El IVA por defecto no es válido (`invalid_default_tax_rate`), la dirección o la ciudad tienen saltos de línea
-             *     (`invalid_tenant_address`) o el teléfono tiene caracteres que no son de un teléfono (`invalid_tenant_phone`).
+             *     (`invalid_tenant_address`), el teléfono tiene caracteres que no son de un teléfono (`invalid_tenant_phone`) o
+             *     el municipio no está en la lista del DANE (`invalid_municipality`).
              */
             422: {
                 headers: {
@@ -8141,6 +8231,69 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    getInvoicingProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La cuenta de la empresa en el proveedor. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoicingProvider"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateInvoicingProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoicingProviderUpdate"];
+            };
+        };
+        responses: {
+            /** @description La cuenta nueva, sin el token. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoicingProvider"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /**
+             * @description La habilitación no trae el set de pruebas (`missing_test_set`), el set de pruebas tiene saltos de línea
+             *     (`invalid_test_set`) o el token tiene espacios (`invalid_provider_token`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
     listNumberingResolutions: {
         parameters: {
             query?: never;
@@ -8357,6 +8510,44 @@ export interface operations {
             };
             /** @description El documento está `sent` o `accepted` (`document_not_retryable`). */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getElectronicDocumentFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: components["parameters"]["DocumentId"];
+                /** @description `xml`: el documento firmado que validó la DIAN. `pdf`: su representación gráfica con el QR. */
+                fileKind: "xml" | "pdf";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El archivo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/xml": string;
+                    "application/pdf": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description El documento no existe (`document_not_found`) o todavía no tiene ese archivo (`document_file_not_found`). */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

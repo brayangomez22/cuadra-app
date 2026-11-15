@@ -50,7 +50,7 @@ func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) erro
 }
 
 const getTenant = `-- name: GetTenant :one
-SELECT id, name, nit, status, business_template, default_tax_rate, address, city, phone, demo, created_at
+SELECT id, name, nit, status, business_template, default_tax_rate, address, city, phone, municipality_code, demo, created_at
 FROM tenants
 WHERE id = $1
 `
@@ -65,6 +65,7 @@ type GetTenantRow struct {
 	Address          string
 	City             string
 	Phone            string
+	MunicipalityCode *string
 	Demo             bool
 	CreatedAt        time.Time
 }
@@ -82,6 +83,7 @@ func (q *Queries) GetTenant(ctx context.Context, id uuid.UUID) (GetTenantRow, er
 		&i.Address,
 		&i.City,
 		&i.Phone,
+		&i.MunicipalityCode,
 		&i.Demo,
 		&i.CreatedAt,
 	)
@@ -90,18 +92,20 @@ func (q *Queries) GetTenant(ctx context.Context, id uuid.UUID) (GetTenantRow, er
 
 const updateTenant = `-- name: UpdateTenant :execrows
 UPDATE tenants
-SET name = $2, status = $3, default_tax_rate = $4, address = $5, city = $6, phone = $7
+SET name = $2, status = $3, default_tax_rate = $4, address = $5, city = $6, phone = $7,
+    municipality_code = $8
 WHERE id = $1
 `
 
 type UpdateTenantParams struct {
-	ID             uuid.UUID
-	Name           string
-	Status         string
-	DefaultTaxRate decimal.Decimal
-	Address        string
-	City           string
-	Phone          string
+	ID               uuid.UUID
+	Name             string
+	Status           string
+	DefaultTaxRate   decimal.Decimal
+	Address          string
+	City             string
+	Phone            string
+	MunicipalityCode *string
 }
 
 func (q *Queries) UpdateTenant(ctx context.Context, arg UpdateTenantParams) (int64, error) {
@@ -113,6 +117,7 @@ func (q *Queries) UpdateTenant(ctx context.Context, arg UpdateTenantParams) (int
 		arg.Address,
 		arg.City,
 		arg.Phone,
+		arg.MunicipalityCode,
 	)
 	if err != nil {
 		return 0, err

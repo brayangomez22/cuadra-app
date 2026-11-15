@@ -64,3 +64,19 @@ type DocumentRepository interface {
 	// Sent returns the tenant's sent documents, the oldest first.
 	Sent(ctx context.Context, tenantID uuid.UUID, limit int) ([]*Document, error)
 }
+
+// ProviderAccountRepository stores the tenant's account at the provider.
+type ProviderAccountRepository interface {
+	// Get returns the tenant's account, or DefaultProviderAccount if it
+	// never set one.
+	Get(ctx context.Context, tenantID uuid.UUID) (ProviderAccount, error)
+	Save(ctx context.Context, tenantID uuid.UUID, a ProviderAccount) error
+}
+
+// FileStore keeps the files of the documents: the signed XML and the PDF.
+type FileStore interface {
+	// Put stores a document's file, replacing the one of its kind.
+	Put(ctx context.Context, tenantID, documentID uuid.UUID, f File) error
+	// Get returns a document's file, or ErrFileNotFound.
+	Get(ctx context.Context, tenantID, documentID uuid.UUID, kind FileKind) (File, error)
+}

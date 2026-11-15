@@ -99,16 +99,19 @@ func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.T
 func (r *TenantRepository) Update(ctx context.Context, t *domain.Tenant) error {
 	affected, err := db.Affected(ctx, r.db, t.ID(), func(tx pgx.Tx) (int64, error) {
 		return sqlcgen.New(tx).UpdateTenant(ctx, sqlcgen.UpdateTenantParams{
-			ID:             t.ID(),
-			Name:           t.Name(),
-			Status:         string(t.Status()),
-			DefaultTaxRate: t.DefaultTaxRate(),
-			Address:        t.Contact().Address(),
-			City:           t.Contact().City(),
-			Phone:          t.Contact().Phone(),
+			ID:               t.ID(),
+			Name:             t.Name(),
+			Status:           string(t.Status()),
+			DefaultTaxRate:   t.DefaultTaxRate(),
+			Address:          t.Contact().Address(),
+			City:             t.Contact().City(),
+			Phone:            t.Contact().Phone(),
+			MunicipalityCode: nullable(t.Contact().MunicipalityCode()),
 		})
 	})
 	switch {
+	case db.Violates(err, db.ForeignKeyViolation, tenantsMunicipalityKey):
+		return domain.ErrInvalidMunicipality
 	case err != nil:
 		return fmt.Errorf("identity: update tenant: %w", err)
 	case affected == 0:
@@ -123,6 +126,9 @@ func tenantFromRow(row sqlcgen.GetTenantRow) (*domain.Tenant, error) {
 		return nil, fmt.Errorf("identity: tenant %s: stored NIT: %w", row.ID, err)
 	}
 	contact, err := domain.NewContact(row.Address, row.City, row.Phone)
+	if err == nil {
+		contact, err = contact.WithMunicipality(value(row.MunicipalityCode))
+	}
 	if err != nil {
 		return nil, fmt.Errorf("identity: tenant %s: stored contact: %w", row.ID, err)
 	}
@@ -141,4 +147,20 @@ func tenantFromRow(row sqlcgen.GetTenantRow) (*domain.Tenant, error) {
 		return nil, fmt.Errorf("identity: tenant %s: %w", row.ID, err)
 	}
 	return t, nil
+}
+
+// nullable stores "" as NULL.
+func nullable(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+// value reads NULL as "".
+func value(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

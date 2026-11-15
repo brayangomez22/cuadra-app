@@ -42,6 +42,7 @@ func TestGetMe(t *testing.T) {
 			"tenant_nit": "900123456-8",
 			"tenant_address": "Calle 45 # 12-30",
 			"tenant_city": "Medellín",
+			"tenant_municipality_code": "",
 			"tenant_phone": "604 444 1234",
 			"business_template": "ferreteria",
 			"default_tax_rate": "0.19",

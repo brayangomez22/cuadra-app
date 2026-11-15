@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/invoicing"
 	invoicingapp "github.com/brayangomez22/cuadra-app/backend/internal/modules/invoicing/app"
 	invoicingdomain "github.com/brayangomez22/cuadra-app/backend/internal/modules/invoicing/domain"
@@ -95,5 +96,21 @@ func (b InvoicingBuyers) Buyer(ctx context.Context, tenantID, userID, customerID
 		IdentificationCode: c.Document().Type().DIANCode(),
 		DocumentNumber:     c.Document().Number(), Name: c.Name(), Email: contact.Email,
 		Address: contact.Address, City: contact.City, MunicipalityCode: contact.MunicipalityCode,
+	}, nil
+}
+
+// InvoicingIssuers satisfies invoicingapp.IssuerDirectory with the identity
+// module: the tenant's company issues its documents.
+type InvoicingIssuers struct{ Identity *identity.Module }
+
+// Issuer reads the tenant's company.
+func (i InvoicingIssuers) Issuer(ctx context.Context, tenantID uuid.UUID) (invoicingdomain.Issuer, error) {
+	p, err := i.Identity.TenantProfile(ctx, tenantID)
+	if err != nil {
+		return invoicingdomain.Issuer{}, err
+	}
+	return invoicingdomain.Issuer{
+		NIT: p.NIT, Name: p.Name, Address: p.Address, City: p.City,
+		MunicipalityCode: p.MunicipalityCode, Phone: p.Phone, Demo: p.Demo,
 	}, nil
 }

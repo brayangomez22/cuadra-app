@@ -19,6 +19,8 @@ type Contact struct {
 	address string
 	city    string
 	phone   string
+	// municipalityCode is the DANE code of the municipality.
+	municipalityCode string
 }
 
 // NewContact trims the fields and checks them: the address and the city fit
@@ -40,6 +42,29 @@ func (c Contact) Address() string { return c.address }
 
 // City returns the city or municipality, or "".
 func (c Contact) City() string { return c.city }
+
+// MunicipalityCode returns the DANE code of the municipality (05001), or
+// "": the one the electronic documents carry for their issuer.
+func (c Contact) MunicipalityCode() string { return c.municipalityCode }
+
+// WithMunicipality returns the contact with the DANE code of its
+// municipality: five digits, or "" for none (ErrInvalidMunicipality). The
+// repository checks it is in the catalog.
+func (c Contact) WithMunicipality(code string) (Contact, error) {
+	if !isMunicipalityCode(code) {
+		return Contact{}, ErrInvalidMunicipality
+	}
+	c.municipalityCode = code
+	return c, nil
+}
+
+// isMunicipalityCode reports whether code is "" or five digits.
+func isMunicipalityCode(code string) bool {
+	if code == "" {
+		return true
+	}
+	return len(code) == 5 && !strings.ContainsFunc(code, func(r rune) bool { return r < '0' || r > '9' })
+}
 
 // Phone returns the phone number as written, or "".
 func (c Contact) Phone() string { return c.phone }

@@ -10,7 +10,9 @@ import (
 
 func TestLoadInvoicing(t *testing.T) {
 	vars := func(extra map[string]string) func(string) string {
-		v := map[string]string{"DATABASE_URL": "postgres://x", "JWT_SECRET": jwtSecret}
+		// A valid token key, required in production.
+		v := map[string]string{"DATABASE_URL": "postgres://x", "JWT_SECRET": jwtSecret,
+			"INVOICING_TOKEN_KEY": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc="}
 		for k, val := range extra {
 			v[k] = val
 		}

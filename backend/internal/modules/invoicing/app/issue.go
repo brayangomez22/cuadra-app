@@ -32,19 +32,23 @@ func (s *Service) IssueDocument(ctx context.Context, tenantID, id uuid.UUID) (er
 	if doc.Status() != domain.StatusPending || doc.LastError() != "" {
 		return nil
 	}
-	if done, err := s.lookUpFirst(ctx, doc); done || err != nil {
+	inv, issuer, err := s.invoicerFor(ctx, tenantID)
+	if err != nil {
 		return err
 	}
-	return s.send(ctx, doc)
+	if done, err := s.lookUpFirst(ctx, inv, doc); done || err != nil {
+		return err
+	}
+	return s.send(ctx, inv, issuer, doc)
 }
 
 // lookUpFirst looks a document sent before up by its number, and records the
 // answer the provider already has. done is false when it must be sent.
-func (s *Service) lookUpFirst(ctx context.Context, doc *domain.Document) (done bool, _ error) {
+func (s *Service) lookUpFirst(ctx context.Context, inv ElectronicInvoicer, doc *domain.Document) (done bool, _ error) {
 	if doc.Attempts() == 0 {
 		return false, nil
 	}
-	res, found, err := s.Invoicer.Lookup(ctx, refOf(doc))
+	res, found, err := inv.Lookup(ctx, refOf(doc))
 	if err != nil {
 		return true, s.providerFailed(ctx, doc, err)
 	}
@@ -57,8 +61,8 @@ func (s *Service) lookUpFirst(ctx context.Context, doc *domain.Document) (done b
 }
 
 // send sends the document to the provider and records its answer.
-func (s *Service) send(ctx context.Context, doc *domain.Document) error {
-	req, err := s.issueRequest(ctx, doc)
+func (s *Service) send(ctx context.Context, inv ElectronicInvoicer, issuer domain.Issuer, doc *domain.Document) error {
+	req, err := s.issueRequest(ctx, issuer, doc)
 	if err != nil {
 		return err
 	}
@@ -70,7 +74,7 @@ func (s *Service) send(ctx context.Context, doc *domain.Document) error {
 	if err := s.Documents.Save(ctx, doc); err != nil {
 		return err
 	}
-	res, err := s.Invoicer.Issue(ctx, req)
+	res, err := inv.Issue(ctx, req)
 	if err != nil {
 		return s.providerFailed(ctx, doc, err)
 	}
@@ -78,7 +82,7 @@ func (s *Service) send(ctx context.Context, doc *domain.Document) error {
 }
 
 // issueRequest reads the document's sale and buyer.
-func (s *Service) issueRequest(ctx context.Context, doc *domain.Document) (IssueRequest, error) {
+func (s *Service) issueRequest(ctx context.Context, issuer domain.Issuer, doc *domain.Document) (IssueRequest, error) {
 	sale, err := s.Sales.Sale(ctx, doc.TenantID(), doc.CreatedBy(), doc.SaleID())
 	if err != nil {
 		return IssueRequest{}, fmt.Errorf("invoicing: read sale: %w", err)
@@ -95,7 +99,7 @@ func (s *Service) issueRequest(ctx context.Context, doc *domain.Document) (Issue
 	}
 	return IssueRequest{
 		DocumentRef: refOf(doc), DocumentID: doc.ID(), Resolution: r.Params(),
-		IssuedAt: doc.IssuedAt(), Buyer: buyer, Sale: sale,
+		IssuedAt: doc.IssuedAt(), Issuer: issuer, Buyer: buyer, Sale: sale,
 	}, nil
 }
 
@@ -145,12 +149,17 @@ func (s *Service) countProviderError(ctx context.Context, perr *ProviderError) {
 	s.providerErrors.Add(ctx, 1, metric.WithAttributes(attribute.String("provider.reason", string(perr.Reason))))
 }
 
-// apply records the provider's answer on the document.
+// apply records the provider's answer on the document. The files of an
+// acceptance are stored first: if that fails the document stays as it was,
+// and the next attempt finds the acceptance again.
 func (s *Service) apply(ctx context.Context, doc *domain.Document, res Result) error {
 	now := s.Now()
 	var err error
 	switch res.Status {
 	case domain.StatusAccepted:
+		if err := s.storeFiles(ctx, doc, res.Files); err != nil {
+			return err
+		}
 		err = doc.Accept(domain.Acceptance{ProviderID: res.ProviderID, Code: res.Code, QR: res.QR}, now)
 	case domain.StatusSent:
 		err = doc.MarkSent(res.ProviderID, now)

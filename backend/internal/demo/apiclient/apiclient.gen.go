@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
@@ -420,6 +421,27 @@ func (e ImportUploadOnExistingSku) Valid() bool {
 	case ImportUploadOnExistingSkuSkip:
 		return true
 	case ImportUploadOnExistingSkuUpdate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InvoicingProviderMode.
+const (
+	Habilitation InvoicingProviderMode = "habilitation"
+	Production   InvoicingProviderMode = "production"
+	Test         InvoicingProviderMode = "test"
+)
+
+// Valid indicates whether the value is a known member of the InvoicingProviderMode enum.
+func (e InvoicingProviderMode) Valid() bool {
+	switch e {
+	case Habilitation:
+		return true
+	case Production:
+		return true
+	case Test:
 		return true
 	default:
 		return false
@@ -1791,6 +1813,36 @@ type InventorySettingsUpdate struct {
 	AllowNegativeStock *bool `json:"allow_negative_stock,omitempty"`
 }
 
+// InvoicingProvider defines model for InvoicingProvider.
+type InvoicingProvider struct {
+	// HasToken Si la empresa registró el token de su organización en el proveedor.
+	HasToken bool `json:"has_token"`
+
+	// Mode `test` no tiene efectos legales; `habilitation` envía el set de pruebas de la DIAN para habilitar a la empresa;
+	// `production` emite documentos con validez legal.
+	Mode InvoicingProviderMode `json:"mode"`
+
+	// TestSetId El set de pruebas que la DIAN le asignó a la empresa para la habilitación. Vacío si no tiene.
+	TestSetId string `json:"test_set_id"`
+}
+
+// InvoicingProviderMode `test` no tiene efectos legales; `habilitation` envía el set de pruebas de la DIAN para habilitar a la empresa;
+// `production` emite documentos con validez legal.
+type InvoicingProviderMode string
+
+// InvoicingProviderUpdate defines model for InvoicingProviderUpdate.
+type InvoicingProviderUpdate struct {
+	// Mode `test` no tiene efectos legales; `habilitation` envía el set de pruebas de la DIAN para habilitar a la empresa;
+	// `production` emite documentos con validez legal.
+	Mode InvoicingProviderMode `json:"mode"`
+
+	// TestSetId El set de pruebas de la DIAN (`testSetId`). Obligatorio en `habilitation`.
+	TestSetId *string `json:"test_set_id,omitempty"`
+
+	// Token El token de la organización en el proveedor. Omitido, se conserva el que había.
+	Token *string `json:"token,omitempty"`
+}
+
 // InvoicingSettings defines model for InvoicingSettings.
 type InvoicingSettings struct {
 	// DefaultKind `pos`: documento equivalente electrónico POS (la venta de mostrador). `invoice`: factura electrónica de venta
@@ -1864,7 +1916,14 @@ type Me struct {
 	// TenantCity Ciudad o municipio de la empresa. Vacía si no se ha registrado.
 	TenantCity string             `json:"tenant_city"`
 	TenantId   openapi_types.UUID `json:"tenant_id"`
-	TenantName string             `json:"tenant_name"`
+
+	// TenantMunicipalityCode El código DANE del municipio de la empresa (`/municipalities`), el del emisor de los documentos electrónicos.
+	// Vacío si no se ha registrado.
+	//
+	//
+	// Example: 05001
+	TenantMunicipalityCode string `json:"tenant_municipality_code"`
+	TenantName             string `json:"tenant_name"`
 
 	// TenantNit NIT de la empresa con dígito de verificación, para la tirilla y los documentos.
 	//
@@ -3381,7 +3440,14 @@ type Tenant struct {
 	// Example: 0.19
 	DefaultTaxRate TaxRate            `json:"default_tax_rate"`
 	Id             openapi_types.UUID `json:"id"`
-	Name           string             `json:"name"`
+
+	// MunicipalityCode El código DANE del municipio del negocio (`/municipalities`), el del emisor de los documentos electrónicos.
+	// Vacío si no se ha registrado.
+	//
+	//
+	// Example: 05001
+	MunicipalityCode string `json:"municipality_code"`
+	Name             string `json:"name"`
 
 	// Nit Example: 900123456-8
 	Nit string `json:"nit"`
@@ -3412,6 +3478,13 @@ type TenantUpdate struct {
 
 	// DefaultTaxRate La tasa de IVA que se propone a un producto nuevo. No cambia la de los productos que ya existen.
 	DefaultTaxRate *TaxRate `json:"default_tax_rate,omitempty"`
+
+	// MunicipalityCode El código DANE del municipio (`/municipalities`), que piden los documentos electrónicos del emisor. Vacío lo
+	// borra; uno que no existe es `invalid_municipality`.
+	//
+	//
+	// Example: 05001
+	MunicipalityCode *string `json:"municipality_code,omitempty"`
 
 	// Phone Teléfono, con dígitos, espacios, `+`, `-` y paréntesis. Vacío lo borra.
 	Phone *string `json:"phone,omitempty"`
@@ -3997,6 +4070,9 @@ type UpdateInventorySettingsJSONRequestBody = InventorySettingsUpdate
 
 // TransferStockJSONRequestBody defines body for TransferStock for application/json ContentType.
 type TransferStockJSONRequestBody = TransferInput
+
+// UpdateInvoicingProviderJSONRequestBody defines body for UpdateInvoicingProvider for application/json ContentType.
+type UpdateInvoicingProviderJSONRequestBody = InvoicingProviderUpdate
 
 // CreateNumberingResolutionJSONRequestBody defines body for CreateNumberingResolution for application/json ContentType.
 type CreateNumberingResolutionJSONRequestBody = NumberingResolutionInput
@@ -4688,6 +4764,14 @@ type ClientInterface interface {
 	// Corresponds with GET /api/v1/invoicing/documents/{documentId} (the `GetElectronicDocument` operationId).
 	GetElectronicDocument(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetElectronicDocumentFile Descargar un archivo de un documento electrónico
+	//
+	// El XML firmado (`xml`) o la representación gráfica con el QR (`pdf`) de un documento aceptado, como los
+	// devolvió el proveedor.
+	//
+	// Corresponds with GET /api/v1/invoicing/documents/{documentId}/files/{fileKind} (the `GetElectronicDocumentFile` operationId).
+	GetElectronicDocumentFile(ctx context.Context, documentId DocumentId, fileKind string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RetryElectronicDocument Reenviar un documento electrónico
 	//
 	// Vuelve a enviar al proveedor un documento `pending` o `rejected`, con el mismo número, después de corregir el
@@ -4695,6 +4779,34 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /api/v1/invoicing/documents/{documentId}/retry (the `RetryElectronicDocument` operationId).
 	RetryElectronicDocument(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetInvoicingProvider Cuenta en el proveedor tecnológico
+	//
+	// El modo en que se emiten los documentos (`test`, `habilitation` o `production`), el set de pruebas de la
+	// habilitación y si la empresa ya registró el token de su organización. El token nunca se devuelve.
+	//
+	// Corresponds with GET /api/v1/invoicing/provider (the `GetInvoicingProvider` operationId).
+	GetInvoicingProvider(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateInvoicingProviderWithBody Cambiar la cuenta en el proveedor tecnológico
+	//
+	// Fija el modo y el set de pruebas y, si viene, reemplaza el token de la organización (se guarda cifrado). Sin
+	// `token` se conserva el que había. Rige desde el siguiente envío.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /api/v1/invoicing/provider (the `UpdateInvoicingProvider` operationId).
+	UpdateInvoicingProviderWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateInvoicingProvider Cambiar la cuenta en el proveedor tecnológico
+	//
+	// Fija el modo y el set de pruebas y, si viene, reemplaza el token de la organización (se guarda cifrado). Sin
+	// `token` se conserva el que había. Rige desde el siguiente envío.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /api/v1/invoicing/provider (the `UpdateInvoicingProvider` operationId).
+	UpdateInvoicingProvider(ctx context.Context, body UpdateInvoicingProviderJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListNumberingResolutions Resoluciones de numeración
 	//
@@ -6715,6 +6827,24 @@ func (c *Client) GetElectronicDocument(ctx context.Context, documentId DocumentI
 	return c.Client.Do(req)
 }
 
+// GetElectronicDocumentFile Descargar un archivo de un documento electrónico
+//
+// El XML firmado (`xml`) o la representación gráfica con el QR (`pdf`) de un documento aceptado, como los
+// devolvió el proveedor.
+//
+// Corresponds with GET /api/v1/invoicing/documents/{documentId}/files/{fileKind} (the `GetElectronicDocumentFile` operationId).
+func (c *Client) GetElectronicDocumentFile(ctx context.Context, documentId DocumentId, fileKind string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetElectronicDocumentFileRequest(c.Server, documentId, fileKind)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // RetryElectronicDocument Reenviar un documento electrónico
 //
 // Vuelve a enviar al proveedor un documento `pending` o `rejected`, con el mismo número, después de corregir el
@@ -6723,6 +6853,64 @@ func (c *Client) GetElectronicDocument(ctx context.Context, documentId DocumentI
 // Corresponds with POST /api/v1/invoicing/documents/{documentId}/retry (the `RetryElectronicDocument` operationId).
 func (c *Client) RetryElectronicDocument(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRetryElectronicDocumentRequest(c.Server, documentId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetInvoicingProvider Cuenta en el proveedor tecnológico
+//
+// El modo en que se emiten los documentos (`test`, `habilitation` o `production`), el set de pruebas de la
+// habilitación y si la empresa ya registró el token de su organización. El token nunca se devuelve.
+//
+// Corresponds with GET /api/v1/invoicing/provider (the `GetInvoicingProvider` operationId).
+func (c *Client) GetInvoicingProvider(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetInvoicingProviderRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateInvoicingProviderWithBody Cambiar la cuenta en el proveedor tecnológico
+//
+// Fija el modo y el set de pruebas y, si viene, reemplaza el token de la organización (se guarda cifrado). Sin
+// `token` se conserva el que había. Rige desde el siguiente envío.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /api/v1/invoicing/provider (the `UpdateInvoicingProvider` operationId).
+func (c *Client) UpdateInvoicingProviderWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateInvoicingProviderRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateInvoicingProvider Cambiar la cuenta en el proveedor tecnológico
+//
+// Fija el modo y el set de pruebas y, si viene, reemplaza el token de la organización (se guarda cifrado). Sin
+// `token` se conserva el que había. Rige desde el siguiente envío.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /api/v1/invoicing/provider (the `UpdateInvoicingProvider` operationId).
+func (c *Client) UpdateInvoicingProvider(ctx context.Context, body UpdateInvoicingProviderJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateInvoicingProviderRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10516,6 +10704,47 @@ func NewGetElectronicDocumentRequest(server string, documentId DocumentId) (*htt
 	return req, nil
 }
 
+// NewGetElectronicDocumentFileRequest constructs an http.Request for the GetElectronicDocumentFile method
+func NewGetElectronicDocumentFileRequest(server string, documentId DocumentId, fileKind string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "documentId", documentId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "fileKind", fileKind, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invoicing/documents/%s/files/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewRetryElectronicDocumentRequest constructs an http.Request for the RetryElectronicDocument method
 func NewRetryElectronicDocumentRequest(server string, documentId DocumentId) (*http.Request, error) {
 	var err error
@@ -10546,6 +10775,73 @@ func NewRetryElectronicDocumentRequest(server string, documentId DocumentId) (*h
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewGetInvoicingProviderRequest constructs an http.Request for the GetInvoicingProvider method
+func NewGetInvoicingProviderRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invoicing/provider")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateInvoicingProviderRequest calls the generic UpdateInvoicingProvider builder with application/json body
+func NewUpdateInvoicingProviderRequest(server string, body UpdateInvoicingProviderJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateInvoicingProviderRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewUpdateInvoicingProviderRequestWithBody constructs an http.Request for the UpdateInvoicingProvider method, with any body, and a specified content type
+func NewUpdateInvoicingProviderRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invoicing/provider")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -14401,6 +14697,16 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /api/v1/invoicing/documents/{documentId} (the `GetElectronicDocument` operationId).
 	GetElectronicDocumentWithResponse(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*GetElectronicDocumentResponse, error)
 
+	// GetElectronicDocumentFileWithResponse Descargar un archivo de un documento electrónico
+	//
+	// El XML firmado (`xml`) o la representación gráfica con el QR (`pdf`) de un documento aceptado, como los
+	// devolvió el proveedor.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/invoicing/documents/{documentId}/files/{fileKind} (the `GetElectronicDocumentFile` operationId).
+	GetElectronicDocumentFileWithResponse(ctx context.Context, documentId DocumentId, fileKind string, reqEditors ...RequestEditorFn) (*GetElectronicDocumentFileResponse, error)
+
 	// RetryElectronicDocumentWithResponse Reenviar un documento electrónico
 	//
 	// Vuelve a enviar al proveedor un documento `pending` o `rejected`, con el mismo número, después de corregir el
@@ -14410,6 +14716,36 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /api/v1/invoicing/documents/{documentId}/retry (the `RetryElectronicDocument` operationId).
 	RetryElectronicDocumentWithResponse(ctx context.Context, documentId DocumentId, reqEditors ...RequestEditorFn) (*RetryElectronicDocumentResponse, error)
+
+	// GetInvoicingProviderWithResponse Cuenta en el proveedor tecnológico
+	//
+	// El modo en que se emiten los documentos (`test`, `habilitation` o `production`), el set de pruebas de la
+	// habilitación y si la empresa ya registró el token de su organización. El token nunca se devuelve.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/invoicing/provider (the `GetInvoicingProvider` operationId).
+	GetInvoicingProviderWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetInvoicingProviderResponse, error)
+
+	// UpdateInvoicingProviderWithBodyWithResponse Cambiar la cuenta en el proveedor tecnológico
+	//
+	// Fija el modo y el set de pruebas y, si viene, reemplaza el token de la organización (se guarda cifrado). Sin
+	// `token` se conserva el que había. Rige desde el siguiente envío.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /api/v1/invoicing/provider (the `UpdateInvoicingProvider` operationId).
+	UpdateInvoicingProviderWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateInvoicingProviderResponse, error)
+
+	// UpdateInvoicingProviderWithResponse Cambiar la cuenta en el proveedor tecnológico
+	//
+	// Fija el modo y el set de pruebas y, si viene, reemplaza el token de la organización (se guarda cifrado). Sin
+	// `token` se conserva el que había. Rige desde el siguiente envío.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /api/v1/invoicing/provider (the `UpdateInvoicingProvider` operationId).
+	UpdateInvoicingProviderWithResponse(ctx context.Context, body UpdateInvoicingProviderJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateInvoicingProviderResponse, error)
 
 	// ListNumberingResolutionsWithResponse Resoluciones de numeración
 	//
@@ -18540,6 +18876,82 @@ func (r GetElectronicDocumentResponse) ContentType() string {
 	return ""
 }
 
+type GetElectronicDocumentFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// XML200 the response for an HTTP 200 `application/xml` response
+	XML200 *openapi_types.File
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetXML200 returns the response for an HTTP 200 `application/xml` response
+func (r GetElectronicDocumentFileResponse) GetXML200() *openapi_types.File {
+	return r.XML200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetElectronicDocumentFileResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetElectronicDocumentFileResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetElectronicDocumentFileResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetElectronicDocumentFileResponse) GetJSON404() *Error {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetElectronicDocumentFileResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetElectronicDocumentFileResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetElectronicDocumentFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetElectronicDocumentFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetElectronicDocumentFileResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type RetryElectronicDocumentResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -18610,6 +19022,144 @@ func (r RetryElectronicDocumentResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RetryElectronicDocumentResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetInvoicingProviderResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InvoicingProvider
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetInvoicingProviderResponse) GetJSON200() *InvoicingProvider {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetInvoicingProviderResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetInvoicingProviderResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetInvoicingProviderResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetInvoicingProviderResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetInvoicingProviderResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetInvoicingProviderResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetInvoicingProviderResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateInvoicingProviderResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InvoicingProvider
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateInvoicingProviderResponse) GetJSON200() *InvoicingProvider {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateInvoicingProviderResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateInvoicingProviderResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateInvoicingProviderResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r UpdateInvoicingProviderResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateInvoicingProviderResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateInvoicingProviderResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateInvoicingProviderResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateInvoicingProviderResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateInvoicingProviderResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -24829,6 +25379,22 @@ func (c *ClientWithResponses) GetElectronicDocumentWithResponse(ctx context.Cont
 	return ParseGetElectronicDocumentResponse(rsp)
 }
 
+// GetElectronicDocumentFileWithResponse Descargar un archivo de un documento electrónico
+//
+// El XML firmado (`xml`) o la representación gráfica con el QR (`pdf`) de un documento aceptado, como los
+// devolvió el proveedor.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/invoicing/documents/{documentId}/files/{fileKind} (the `GetElectronicDocumentFile` operationId).
+func (c *ClientWithResponses) GetElectronicDocumentFileWithResponse(ctx context.Context, documentId DocumentId, fileKind string, reqEditors ...RequestEditorFn) (*GetElectronicDocumentFileResponse, error) {
+	rsp, err := c.GetElectronicDocumentFile(ctx, documentId, fileKind, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetElectronicDocumentFileResponse(rsp)
+}
+
 // RetryElectronicDocumentWithResponse Reenviar un documento electrónico
 //
 // Vuelve a enviar al proveedor un documento `pending` o `rejected`, con el mismo número, después de corregir el
@@ -24843,6 +25409,54 @@ func (c *ClientWithResponses) RetryElectronicDocumentWithResponse(ctx context.Co
 		return nil, err
 	}
 	return ParseRetryElectronicDocumentResponse(rsp)
+}
+
+// GetInvoicingProviderWithResponse Cuenta en el proveedor tecnológico
+//
+// El modo en que se emiten los documentos (`test`, `habilitation` o `production`), el set de pruebas de la
+// habilitación y si la empresa ya registró el token de su organización. El token nunca se devuelve.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/invoicing/provider (the `GetInvoicingProvider` operationId).
+func (c *ClientWithResponses) GetInvoicingProviderWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetInvoicingProviderResponse, error) {
+	rsp, err := c.GetInvoicingProvider(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetInvoicingProviderResponse(rsp)
+}
+
+// UpdateInvoicingProviderWithBodyWithResponse Cambiar la cuenta en el proveedor tecnológico
+//
+// Fija el modo y el set de pruebas y, si viene, reemplaza el token de la organización (se guarda cifrado). Sin
+// `token` se conserva el que había. Rige desde el siguiente envío.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /api/v1/invoicing/provider (the `UpdateInvoicingProvider` operationId).
+func (c *ClientWithResponses) UpdateInvoicingProviderWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateInvoicingProviderResponse, error) {
+	rsp, err := c.UpdateInvoicingProviderWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateInvoicingProviderResponse(rsp)
+}
+
+// UpdateInvoicingProviderWithResponse Cambiar la cuenta en el proveedor tecnológico
+//
+// Fija el modo y el set de pruebas y, si viene, reemplaza el token de la organización (se guarda cifrado). Sin
+// `token` se conserva el que había. Rige desde el siguiente envío.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /api/v1/invoicing/provider (the `UpdateInvoicingProvider` operationId).
+func (c *ClientWithResponses) UpdateInvoicingProviderWithResponse(ctx context.Context, body UpdateInvoicingProviderJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateInvoicingProviderResponse, error) {
+	rsp, err := c.UpdateInvoicingProvider(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateInvoicingProviderResponse(rsp)
 }
 
 // ListNumberingResolutionsWithResponse Resoluciones de numeración
@@ -28985,6 +29599,70 @@ func ParseGetElectronicDocumentResponse(rsp *http.Response) (*GetElectronicDocum
 	return response, nil
 }
 
+// ParseGetElectronicDocumentFileResponse parses an HTTP response from a GetElectronicDocumentFileWithResponse call
+func ParseGetElectronicDocumentFileResponse(rsp *http.Response) (*GetElectronicDocumentFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetElectronicDocumentFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "xml") && rsp.StatusCode == 200:
+		var dest openapi_types.File
+		if err := xml.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.XML200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case rsp.StatusCode == 200:
+		// Content-type (application/pdf) unsupported
+
+	}
+
+	return response, nil
+}
+
 // ParseRetryElectronicDocumentResponse parses an HTTP response from a RetryElectronicDocumentWithResponse call
 func ParseRetryElectronicDocumentResponse(rsp *http.Response) (*RetryElectronicDocumentResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -29033,6 +29711,114 @@ func ParseRetryElectronicDocumentResponse(rsp *http.Response) (*RetryElectronicD
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetInvoicingProviderResponse parses an HTTP response from a GetInvoicingProviderWithResponse call
+func ParseGetInvoicingProviderResponse(rsp *http.Response) (*GetInvoicingProviderResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetInvoicingProviderResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InvoicingProvider
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateInvoicingProviderResponse parses an HTTP response from a UpdateInvoicingProviderWithResponse call
+func ParseUpdateInvoicingProviderResponse(rsp *http.Response) (*UpdateInvoicingProviderResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateInvoicingProviderResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InvoicingProvider
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalError

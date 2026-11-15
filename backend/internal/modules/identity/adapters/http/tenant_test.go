@@ -46,6 +46,7 @@ func TestUpdateTenant(t *testing.T) {
 			"default_tax_rate": "0.05",
 			"address": "",
 			"city": "",
+			"municipality_code": "",
 			"phone": ""
 		}`, rec.Body.String())
 	})

@@ -17,7 +17,9 @@ func (h *Handler) UpdateTenant(ctx context.Context, req identityapi.UpdateTenant
 	if !ok {
 		return identityapi.UpdateTenant401JSONResponse{UnauthorizedJSONResponse: identityapi.UnauthorizedJSONResponse(errorBody("unauthorized", unauthorizedMessage))}, nil
 	}
-	in := app.TenantUpdate{Address: req.Body.Address, City: req.Body.City, Phone: req.Body.Phone}
+	in := app.TenantUpdate{
+		Address: req.Body.Address, City: req.Body.City, Phone: req.Body.Phone, MunicipalityCode: req.Body.MunicipalityCode,
+	}
 	if req.Body.DefaultTaxRate != nil {
 		rate, err := decimal.NewFromString(*req.Body.DefaultTaxRate)
 		if err != nil {
@@ -37,6 +39,7 @@ func (h *Handler) UpdateTenant(ctx context.Context, req identityapi.UpdateTenant
 		DefaultTaxRate:   tenant.DefaultTaxRate().String(),
 		Address:          tenant.Contact().Address(),
 		City:             tenant.Contact().City(),
+		MunicipalityCode: tenant.Contact().MunicipalityCode(),
 		Phone:            tenant.Contact().Phone(),
 	}, nil
 }

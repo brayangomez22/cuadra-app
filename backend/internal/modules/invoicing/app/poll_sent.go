@@ -43,10 +43,17 @@ func (s *Service) pollTenant(ctx context.Context, tenantID uuid.UUID) (int, erro
 	if err != nil {
 		return 0, err
 	}
+	if len(docs) == 0 {
+		return 0, nil
+	}
+	inv, _, err := s.invoicerFor(ctx, tenantID)
+	if err != nil {
+		return 0, err
+	}
 	updated := 0
 	var errs []error
 	for _, doc := range docs {
-		res, found, err := s.Invoicer.Lookup(ctx, refOf(doc))
+		res, found, err := inv.Lookup(ctx, refOf(doc))
 		if err != nil {
 			s.countProviderError(ctx, classify(err))
 			errs = append(errs, err)
