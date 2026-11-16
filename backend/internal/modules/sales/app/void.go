@@ -33,10 +33,15 @@ func (s *Service) VoidSale(ctx context.Context, a Actor, id uuid.UUID, reason st
 		if err := s.Stock.ReverseSale(ctx, a.TenantID, a.UserID, sale.ID()); err != nil {
 			return err
 		}
-		if sale.CreditAmount().IsZero() {
-			return nil
+		if sale.CreditAmount().IsPositive() {
+			if err := s.Credit.CancelSale(ctx, a.TenantID, a.UserID, sale.ID()); err != nil {
+				return err
+			}
 		}
-		return s.Credit.CancelSale(ctx, a.TenantID, a.UserID, sale.ID())
+		return s.Audit.Record(ctx, a.TenantID, a.UserID, AuditEntry{
+			Action: auditSaleVoided, EntityID: sale.ID(), LocationID: sale.LocationID(),
+			Details: map[string]string{"total": sale.Totals().Total.StringFixed(2)},
+		})
 	})
 	if err != nil {
 		return nil, err

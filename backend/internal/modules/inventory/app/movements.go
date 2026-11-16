@@ -91,12 +91,18 @@ func (s *Service) AdjustStock(ctx context.Context, a Actor, in AdjustmentInput) 
 		return Movement{}, err
 	}
 	var m *domain.StockMovement
-	err = s.Stock.Apply(ctx, a.TenantID, in.VariantID, []uuid.UUID{in.LocationID},
-		func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
-			var err error
-			m, err = levels[0].Adjust(in.Quantity, in.Reason, policy, s.info(a))
-			return []*domain.StockMovement{m}, err
-		})
+	err = s.Tx.InTx(ctx, a.TenantID, func(ctx context.Context) error {
+		err := s.Stock.Apply(ctx, a.TenantID, in.VariantID, []uuid.UUID{in.LocationID},
+			func(levels []*domain.StockLevel) ([]*domain.StockMovement, error) {
+				var err error
+				m, err = levels[0].Adjust(in.Quantity, in.Reason, policy, s.info(a))
+				return []*domain.StockMovement{m}, err
+			})
+		if err != nil {
+			return err
+		}
+		return s.auditAdjustment(ctx, a, in.VariantID, in.LocationID, in.Quantity, adjustmentSourceUser)
+	})
 	if err != nil {
 		s.countInsufficient(ctx, err, domain.MovementAdjustment)
 		return Movement{}, err

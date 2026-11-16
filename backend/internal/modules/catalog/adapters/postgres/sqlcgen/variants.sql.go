@@ -239,6 +239,18 @@ func (q *Queries) ListVariants(ctx context.Context, productIds []uuid.UUID) ([]L
 	return items, nil
 }
 
+const lockTenantBarcodes = `-- name: LockTenantBarcodes :exec
+SELECT pg_advisory_xact_lock(hashtextextended('catalog.barcodes:' || $1::text, 0))
+`
+
+// LockTenantBarcodes serializes the barcode checks of a tenant's product
+// writes until the transaction ends (P60): with READ COMMITTED, a check that
+// waited for the lock sees what the other write committed.
+func (q *Queries) LockTenantBarcodes(ctx context.Context, tenantID string) error {
+	_, err := q.db.Exec(ctx, lockTenantBarcodes, tenantID)
+	return err
+}
+
 const sKUProducts = `-- name: SKUProducts :many
 SELECT DISTINCT product_id
 FROM product_variants

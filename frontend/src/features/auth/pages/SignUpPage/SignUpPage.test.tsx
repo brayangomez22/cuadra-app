@@ -95,6 +95,24 @@ describe('SignUpPage', () => {
     expect(screen.getByLabelText('NIT')).toHaveFocus();
   });
 
+  it('muestra en el campo de contraseña que es de las más usadas', async () => {
+    signUpApi({
+      'POST /api/v1/auth/signup': apiError(422, {
+        code: 'password_too_common',
+        message: 'Esa contraseña es de las más usadas y fácil de adivinar.',
+      }),
+    });
+    renderApp('/registro');
+
+    await fillSignUp({ password: 'colombia123' });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Contraseña')).toHaveAccessibleDescription(
+        expect.stringContaining('Esa contraseña es de las más usadas'),
+      ),
+    );
+  });
+
   it('registra la empresa con el tipo de negocio elegido y entra a la aplicación', async () => {
     const tests = [
       { name: 'Ferretería', id: 'ferreteria' },

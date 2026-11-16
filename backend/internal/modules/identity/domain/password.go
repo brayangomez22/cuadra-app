@@ -20,7 +20,8 @@ type PasswordHasher interface {
 	Verify(plain, hash string) (bool, error)
 }
 
-// ValidatePassword checks the password policy before hashing.
+// ValidatePassword checks the password policy before hashing: its length
+// and that it is not one of the most used passwords.
 func ValidatePassword(plain string) error {
 	n := utf8.RuneCountInString(plain)
 	switch {
@@ -28,6 +29,8 @@ func ValidatePassword(plain string) error {
 		return ErrPasswordTooShort
 	case n > MaxPasswordLength:
 		return ErrPasswordTooLong
+	case isCommonPassword(plain):
+		return ErrPasswordTooCommon
 	}
 	return nil
 }

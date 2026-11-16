@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"strconv"
 	"time"
 )
@@ -35,7 +36,23 @@ type Config struct {
 	InvoicingProvider string
 	// InvoicingTokenKey encrypts the tenants' tokens at the provider
 	// (INVOICING_TOKEN_KEY, 32 bytes in base64); see loadInvoicing.
-	InvoicingTokenKey []byte
+	// InvoicingPreviousTokenKey (INVOICING_TOKEN_KEY_PREVIOUS) still opens
+	// the tokens encrypted before a rotation. Never logged.
+	InvoicingTokenKey         []byte
+	InvoicingPreviousTokenKey []byte
+	// JWTPreviousSecret (JWT_SECRET_PREVIOUS) still verifies the access
+	// tokens signed before a rotation of JWT_SECRET. Never logged.
+	JWTPreviousSecret []byte
+	// TrustedProxies are the proxies (the cloud's ingress) whose
+	// X-Forwarded-For names the client (TRUSTED_PROXIES); see loadSecurity.
+	TrustedProxies []netip.Prefix
+	// CORSAllowedOrigins may call the API from a browser
+	// (CORS_ALLOWED_ORIGINS); empty means only the API's own origin.
+	CORSAllowedOrigins []string
+	// RateLimitsEnabled limits the requests per client IP and per tenant,
+	// and the sign-ups per IP (RATE_LIMITS_ENABLED, on by default). Only
+	// the end-to-end and DAST stacks turn it off; production cannot.
+	RateLimitsEnabled bool
 }
 
 // minDemoPassword is the shortest demo password accepted.
@@ -82,6 +99,10 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 
 	if err := cfg.loadInvoicing(getenv); err != nil {
+		errs = append(errs, err)
+	}
+
+	if err := cfg.loadSecurity(getenv); err != nil {
 		errs = append(errs, err)
 	}
 

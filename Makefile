@@ -10,7 +10,7 @@ OPENAPI_SPEC := $(CURDIR)/api/openapi.yaml
 export
 
 .DEFAULT_GOAL := help
-.PHONY: help up down run test test-int lint lint-size lint-guards lint-neutral check migrate seed sqlc openapi e2e-up e2e e2e-down obs-up obs-down obs-alert-test jobs-ui
+.PHONY: help up down run test test-int lint lint-size lint-guards lint-neutral check migrate seed sqlc openapi e2e-up e2e e2e-down dast obs-up obs-down obs-alert-test jobs-ui
 
 help: ## List available commands
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -81,6 +81,9 @@ e2e: ## End-to-end tests (Playwright) against the stack of `make e2e-up`
 
 e2e-down: ## Stop the end-to-end stack and drop its data
 	docker compose --profile e2e rm --stop --force --volumes postgres-e2e migrate-e2e api-e2e
+
+dast: ## OWASP ZAP API scan (DAST) against the stack of `make e2e-up`; report in zap-report/
+	.github/zap/scan.sh
 
 jobs-ui: ## Start River UI to browse background jobs (:8081, development only)
 	docker compose --profile jobs up -d riverui

@@ -75,6 +75,17 @@ type DemoTenantRepository interface {
 	Purge(ctx context.Context, id uuid.UUID) error
 }
 
+// ExpiredRefreshTokens finds and deletes the expired refresh tokens of every
+// tenant, for the nightly purge (P07).
+type ExpiredRefreshTokens interface {
+	// TenantsWithExpired returns, across tenants, up to limit of those with
+	// tokens expired before before: only their ids.
+	TenantsWithExpired(ctx context.Context, before time.Time, limit int) ([]uuid.UUID, error)
+	// DeleteExpired deletes the tenant's tokens expired before before and
+	// returns how many.
+	DeleteExpired(ctx context.Context, tenantID uuid.UUID, before time.Time) (int64, error)
+}
+
 // RefreshTokenRepository persists refresh tokens, scoped to their tenant.
 type RefreshTokenRepository interface {
 	// Create stores a new token.

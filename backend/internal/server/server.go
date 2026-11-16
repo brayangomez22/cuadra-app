@@ -45,7 +45,16 @@ type Config struct {
 	InvoicingProvider string
 	// InvoicingTokenKey encrypts the tenants' tokens at the provider
 	// (INVOICING_TOKEN_KEY); empty is the module's development key.
-	InvoicingTokenKey []byte
+	// InvoicingPreviousTokenKey still opens the tokens encrypted before a
+	// rotation (INVOICING_TOKEN_KEY_PREVIOUS).
+	InvoicingTokenKey         []byte
+	InvoicingPreviousTokenKey []byte
+	// Edge configures the checks before routing (client IP, security
+	// headers, CORS); RateLimits, the requests per client IP and per tenant.
+	// The API process sets DefaultRateLimits; nil (the demo generator, the
+	// tests) does not limit.
+	Edge       Edge
+	RateLimits *RateLimits
 }
 
 // New builds every module and the handler that serves them. It fails, so
@@ -75,6 +84,8 @@ func build(cfg Config) (http.Handler, *wiring, error) {
 		Permissions:    w.permissions,
 		Modules:        w.moduleService,
 		Routes:         routes,
+		Edge:           cfg.Edge,
+		RateLimits:     cfg.RateLimits,
 	})
 	return h, w, err
 }

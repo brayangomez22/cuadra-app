@@ -66,6 +66,7 @@ func (w *wiring) sales(
 		Authorizer:     ports.SalesAuthorizer{Identity: cr.identity},
 		Users:          cr.identity,
 		Documents:      docs,
+		Audit:          ports.SalesAudit{Auditor: w.auditor},
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
@@ -91,18 +92,20 @@ func (w *wiring) receivables(cu *customers.Module, s *sales.Module) (*receivable
 // the customers module's customers, in the process's workers.
 func (w *wiring) invoicing(s *sales.Module, cu *customers.Module, id *identity.Module) (*invoicing.Module, error) {
 	return invoicing.New(invoicing.Config{
-		DB:             w.DB,
-		Jobs:           w.Jobs,
-		Workers:        w.Workers,
-		Schedule:       w.Schedule,
-		Provider:       cmp.Or(w.InvoicingProvider, invoicing.ProviderSimulated),
-		Sales:          ports.InvoicingSales{Sales: s},
-		Buyers:         ports.InvoicingBuyers{Customers: cu},
-		Issuers:        ports.InvoicingIssuers{Identity: id},
-		TokenKey:       w.InvoicingTokenKey,
-		Logger:         w.Log,
-		TracerProvider: w.TracerProvider,
-		MeterProvider:  w.MeterProvider,
-		Now:            w.Now,
+		DB:       w.DB,
+		Jobs:     w.Jobs,
+		Workers:  w.Workers,
+		Schedule: w.Schedule,
+		Provider: cmp.Or(w.InvoicingProvider, invoicing.ProviderSimulated),
+		Sales:    ports.InvoicingSales{Sales: s},
+		Buyers:   ports.InvoicingBuyers{Customers: cu},
+		Issuers:  ports.InvoicingIssuers{Identity: id},
+		TokenKey: w.InvoicingTokenKey,
+		// The previous key only makes sense with a current one.
+		PreviousTokenKey: w.InvoicingPreviousTokenKey,
+		Logger:           w.Log,
+		TracerProvider:   w.TracerProvider,
+		MeterProvider:    w.MeterProvider,
+		Now:              w.Now,
 	})
 }

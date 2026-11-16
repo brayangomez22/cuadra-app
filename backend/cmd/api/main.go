@@ -139,7 +139,11 @@ func setUpTelemetry(ctx context.Context, cfg config.Config) (log *slog.Logger, f
 // newAPIHandler builds the API (internal/server) with the access tokens of
 // cfg; the modules enqueue with jobClient and add their workers to workers.
 func newAPIHandler(cfg config.Config, database *db.DB, log *slog.Logger, jobClient *jobs.Client, workers *river.Workers) (http.Handler, error) {
-	tokens, err := auth.NewJWT(cfg.JWTSecret, accessTokenTTL)
+	var rotation []auth.Option
+	if cfg.JWTPreviousSecret != nil {
+		rotation = append(rotation, auth.WithPreviousSecret(cfg.JWTPreviousSecret))
+	}
+	tokens, err := auth.NewJWT(cfg.JWTSecret, accessTokenTTL, rotation...)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +161,23 @@ func newAPIHandler(cfg config.Config, database *db.DB, log *slog.Logger, jobClie
 		DemoEnabled:       cfg.DemoEnabled,
 		InvoicingProvider: cfg.InvoicingProvider,
 		InvoicingTokenKey: cfg.InvoicingTokenKey,
+		// Rotating INVOICING_TOKEN_KEY keeps the previous one for the tokens
+		// not yet encrypted again.
+		InvoicingPreviousTokenKey: cfg.InvoicingPreviousTokenKey,
+		Edge: server.Edge{
+			TrustedProxies: cfg.TrustedProxies, CORSAllowedOrigins: cfg.CORSAllowedOrigins, HSTS: cfg.HSTS(),
+		},
+		RateLimits: rateLimits(cfg),
 	})
+}
+
+// rateLimits are the API's limits, or none when RATE_LIMITS_ENABLED is off
+// (the end-to-end and DAST stacks, never production).
+func rateLimits(cfg config.Config) *server.RateLimits {
+	if !cfg.RateLimitsEnabled {
+		return nil
+	}
+	return server.DefaultRateLimits()
 }
 
 // scheduleDemo resets the demo tenants every night when the demo is on

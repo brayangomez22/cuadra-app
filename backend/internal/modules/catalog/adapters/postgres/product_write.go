@@ -75,11 +75,16 @@ func createVariantUnits(ctx context.Context, q *sqlcgen.Queries, p *domain.Produ
 
 // checkBarcodesElsewhere fails with domain.ErrBarcodeTaken, naming the
 // barcode, when a barcode of p's variants or units is taken in the other
-// table by another product.
+// table by another product. It first takes the tenant's barcode lock, held
+// until the write commits: two concurrent writes of the same code to both
+// tables cannot both pass the check (P60).
 func checkBarcodesElsewhere(ctx context.Context, q *sqlcgen.Queries, p *domain.Product) error {
 	variantCodes, unitCodes := barcodesOf(p)
 	if len(variantCodes) == 0 && len(unitCodes) == 0 {
 		return nil
+	}
+	if err := q.LockTenantBarcodes(ctx, p.TenantID().String()); err != nil {
+		return err
 	}
 	taken, err := q.BarcodesTakenElsewhere(ctx, sqlcgen.BarcodesTakenElsewhereParams{
 		ProductID: p.ID(), VariantBarcodes: variantCodes, UnitBarcodes: unitCodes,

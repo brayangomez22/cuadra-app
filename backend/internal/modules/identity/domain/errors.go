@@ -29,8 +29,11 @@ var (
 	ErrInvalidUserName     = errors.New("identity: invalid user name")
 	ErrPasswordTooShort    = errors.New("identity: password too short")
 	ErrPasswordTooLong     = errors.New("identity: password too long")
-	ErrEmptyPasswordHash   = errors.New("identity: empty password hash")
-	ErrTenantNotFound      = errors.New("identity: tenant not found")
+	// ErrPasswordTooCommon is a password of the list of the most used ones,
+	// the first ones an attacker tries (OWASP ASVS 2.1.7).
+	ErrPasswordTooCommon = errors.New("identity: password too common")
+	ErrEmptyPasswordHash = errors.New("identity: empty password hash")
+	ErrTenantNotFound    = errors.New("identity: tenant not found")
 	// ErrNotDemoTenant reports a purge of a tenant that is not a demo one:
 	// only demonstration tenants can be deleted.
 	ErrNotDemoTenant = errors.New("identity: not a demo tenant")

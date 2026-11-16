@@ -15,6 +15,9 @@ coverage.*
 node_modules/
 dist/
 
+# OWASP ZAP reports (make dast)
+/zap-report/
+
 # Editors and OS
 .idea/
 .vscode/

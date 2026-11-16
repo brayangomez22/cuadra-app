@@ -1971,6 +1971,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consultar el registro de auditoría
+         * @description Lista los eventos de auditoría de la empresa, del más reciente al más antiguo. `from` y `to` son días en
+         *     Colombia (incluidos).
+         */
+        get: operations["listAuditEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2964,6 +2985,58 @@ export interface components {
         };
         MunicipalityList: {
             items: components["schemas"]["Municipality"][];
+        };
+        /**
+         * @description Acción del catálogo de auditoría (versión 1, `docs/auditoria.md`).
+         * @enum {string}
+         */
+        AuditAction: "cash.closed_with_difference" | "module.disabled" | "module.enabled" | "purchase.voided" | "sale.discount_applied" | "sale.voided" | "stock.adjusted" | "tenant.settings_changed" | "variant.price_changed";
+        AuditEvent: {
+            /** Format: uuid */
+            id: string;
+            action: components["schemas"]["AuditAction"];
+            /**
+             * Format: uuid
+             * @description Quién hizo la operación.
+             */
+            user_id: string;
+            /**
+             * @description El rol que tenía al hacerla.
+             * @example cashier
+             */
+            role: string;
+            /**
+             * @description Sobre qué tipo de entidad (`sale`, `variant`, `cash_session`, `purchase`, `module`, `tenant`).
+             * @example sale
+             */
+            entity_type: string;
+            /**
+             * Format: uuid
+             * @description La entidad; no viene en las acciones sobre un módulo.
+             */
+            entity_id?: string;
+            /**
+             * Format: uuid
+             * @description La sede, cuando la operación tiene una.
+             */
+            location_id?: string;
+            /** Format: date-time */
+            occurred_at: string;
+            /**
+             * @description El dato que se agrega, según la acción (montos y cantidades como strings decimales).
+             * @example {
+             *       "old_price": "4500.00",
+             *       "new_price": "4800.00"
+             *     }
+             */
+            details: {
+                [key: string]: string;
+            };
+        };
+        AuditEventPage: {
+            items: components["schemas"]["AuditEvent"][];
+            /** @description Cantidad total de eventos que cumplen el filtro, sin paginar. */
+            total: number;
         };
         CustomerPage: {
             items: components["schemas"]["Customer"][];
@@ -4192,11 +4265,22 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             /**
              * @description Algún dato no cumple las reglas (`invalid_email`, `invalid_nit`, `invalid_nit_check_digit`,
-             *     `password_too_short`, `password_too_long`, `invalid_tenant_name`, `invalid_user_name`,
-             *     `unknown_business_template`).
+             *     `password_too_short`, `password_too_long`, `password_too_common`, `invalid_tenant_name`,
+             *     `invalid_user_name`, `unknown_business_template`).
              */
             422: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Demasiados registros desde la misma conexión (`code` = `too_many_requests`). */
+            429: {
+                headers: {
+                    /** @description Segundos que hay que esperar antes de intentar de nuevo. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -8548,6 +8632,54 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             /** @description El documento no existe (`document_not_found`) o todavía no tiene ese archivo (`document_file_not_found`). */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listAuditEvents: {
+        parameters: {
+            query?: {
+                /** @description Solo los eventos de esta acción. */
+                action?: components["schemas"]["AuditAction"];
+                /** @description Solo los eventos de este usuario. */
+                user_id?: string;
+                /** @description Solo los eventos sobre esta entidad (una venta, una variante...). */
+                entity_id?: string;
+                /** @description Eventos desde este día (incluido). */
+                from?: string;
+                /** @description Eventos hasta este día (incluido). */
+                to?: string;
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de eventos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEventPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description El rango de fechas está invertido (`invalid_filter`). */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

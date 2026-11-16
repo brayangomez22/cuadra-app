@@ -25,6 +25,7 @@ type env struct {
 	purchases *fakePurchases
 	catalog   *fakeCatalog
 	stock     *fakeStock
+	audit     *fakeAudit
 	actor     app.Actor
 	location  uuid.UUID
 	spans     *tracetest.SpanRecorder
@@ -45,7 +46,7 @@ func newEnv(t *testing.T) *env {
 	t.Helper()
 	e := &env{
 		suppliers: newFakeSuppliers(), purchases: &fakePurchases{},
-		catalog: &fakeCatalog{variants: map[uuid.UUID]app.VariantInfo{}}, stock: &fakeStock{},
+		catalog: &fakeCatalog{variants: map[uuid.UUID]app.VariantInfo{}}, stock: &fakeStock{}, audit: &fakeAudit{},
 		actor:    app.Actor{TenantID: newID(), UserID: newID()},
 		location: newID(),
 		spans:    tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
@@ -57,7 +58,7 @@ func newEnv(t *testing.T) *env {
 		_ = mp.Shutdown(context.Background())
 	})
 	svc, err := app.NewService(app.Deps{
-		Suppliers: e.suppliers, Purchases: e.purchases, Catalog: e.catalog, Stock: e.stock,
+		Suppliers: e.suppliers, Purchases: e.purchases, Catalog: e.catalog, Stock: e.stock, Audit: e.audit,
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,

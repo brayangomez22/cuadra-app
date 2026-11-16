@@ -128,6 +128,7 @@ func requireSameToken(t *testing.T, want, got *domain.RefreshToken) {
 	require.Equal(t, want.ExpiresAt(), got.ExpiresAt())
 	require.Equal(t, want.CreatedAt(), got.CreatedAt())
 	require.Equal(t, want.RevokedAt(), got.RevokedAt())
+	require.Equal(t, want.FamilyStartedAt(), got.FamilyStartedAt())
 }
 
 func TestRefreshTokenRepository(t *testing.T) {

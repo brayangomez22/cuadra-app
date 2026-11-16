@@ -17,13 +17,13 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 - Log Analytics mínimo y frontend estático (Static Web Apps o Storage + CDN).
 
 Estado remoto de Terraform en un Storage Account con bloqueo. Paso en el CI de `terraform fmt -check`, `validate` y `plan` en los PR que tocan `infra/`.
-**Pendientes que entran a esta tarea:** P166 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P166, P169 y P174 (`docs/plan/pendientes.md`).
 **Revisa tú:** costos estimados por mes de cada ambiente antes de aplicar, y la red (Postgres sin acceso público).
 
 ### [ ] T46 · Entrega continua (CD)
 **Depende de:** T45.
 **Alcance:** al integrar a `main`, el CI construye la imagen con tag del commit, la publica en ACR, ejecuta las migraciones (job separado, con el rol de migraciones, que en Azure no es superusuario: verificar que corren igual que en `dbtest`, P26) y despliega a **staging**. Despliegue a **producción** con aprobación manual (GitHub Environments). Smoke test post-despliegue contra `/readyz` y rollback automático a la revisión anterior si falla. Autenticación del CI con Azure por OIDC (sin secretos de larga duración).
-**Pendientes que entran a esta tarea:** P13 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P13 y P170 (`docs/plan/pendientes.md`).
 **Aceptación:** de merge a staging sin intervención; de staging a producción con un clic.
 
 ### [ ] T47 · Observabilidad en producción

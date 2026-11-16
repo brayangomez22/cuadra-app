@@ -73,13 +73,13 @@ func (s *Service) UpdateVariant(ctx context.Context, a Actor, productID, variant
 	if err != nil {
 		return nil, err
 	}
-	priceChanged := !in.Price.Equal(v.Price())
+	before := variantPrices(p)
 	if err := p.UpdateVariant(variantID, domain.VariantDetails{
 		SKU: in.SKU, Barcode: in.Barcode, Cost: in.Cost, AxisValues: axes,
 	}); err != nil {
 		return nil, err
 	}
-	if priceChanged {
+	if !in.Price.Equal(v.Price()) {
 		if err := p.ChangeVariantPrice(variantID, in.Price); err != nil {
 			return nil, err
 		}
@@ -87,11 +87,10 @@ func (s *Service) UpdateVariant(ctx context.Context, a Actor, productID, variant
 	if err := p.SetVariantActive(variantID, in.Active); err != nil {
 		return nil, err
 	}
-	if err := s.Products.Update(ctx, p); err != nil {
+	changed, err := s.saveProduct(ctx, a, p, before)
+	if err != nil {
 		return nil, err
 	}
-	if priceChanged {
-		s.priceChanges.Add(ctx, 1)
-	}
+	s.priceChanges.Add(ctx, int64(changed))
 	return p, nil
 }

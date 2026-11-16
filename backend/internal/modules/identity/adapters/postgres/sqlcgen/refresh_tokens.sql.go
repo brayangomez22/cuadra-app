@@ -13,19 +13,20 @@ import (
 )
 
 const createRefreshToken = `-- name: CreateRefreshToken :exec
-INSERT INTO refresh_tokens (id, tenant_id, user_id, family_id, token_hash, expires_at, created_at, revoked_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO refresh_tokens (id, tenant_id, user_id, family_id, token_hash, expires_at, created_at, revoked_at, family_started_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type CreateRefreshTokenParams struct {
-	ID        uuid.UUID
-	TenantID  uuid.UUID
-	UserID    uuid.UUID
-	FamilyID  uuid.UUID
-	TokenHash []byte
-	ExpiresAt time.Time
-	CreatedAt time.Time
-	RevokedAt *time.Time
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	UserID          uuid.UUID
+	FamilyID        uuid.UUID
+	TokenHash       []byte
+	ExpiresAt       time.Time
+	CreatedAt       time.Time
+	RevokedAt       *time.Time
+	FamilyStartedAt time.Time
 }
 
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error {
@@ -38,12 +39,26 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 		arg.ExpiresAt,
 		arg.CreatedAt,
 		arg.RevokedAt,
+		arg.FamilyStartedAt,
 	)
 	return err
 }
 
+const deleteExpiredRefreshTokens = `-- name: DeleteExpiredRefreshTokens :execrows
+DELETE FROM refresh_tokens
+WHERE expires_at < $1
+`
+
+func (q *Queries) DeleteExpiredRefreshTokens(ctx context.Context, before time.Time) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredRefreshTokens, before)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getRefreshTokenByHash = `-- name: GetRefreshTokenByHash :one
-SELECT id, tenant_id, user_id, family_id, token_hash, expires_at, created_at, revoked_at
+SELECT id, tenant_id, user_id, family_id, token_hash, expires_at, created_at, revoked_at, family_started_at
 FROM refresh_tokens
 WHERE tenant_id = $1 AND token_hash = $2
 `
@@ -65,6 +80,7 @@ func (q *Queries) GetRefreshTokenByHash(ctx context.Context, arg GetRefreshToken
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.RevokedAt,
+		&i.FamilyStartedAt,
 	)
 	return i, err
 }
@@ -109,4 +125,35 @@ func (q *Queries) RevokeRefreshTokenFamily(ctx context.Context, arg RevokeRefres
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const tenantsWithExpiredRefreshTokens = `-- name: TenantsWithExpiredRefreshTokens :many
+SELECT tenant_id::uuid FROM tenants_with_expired_refresh_tokens($1::timestamptz, $2::int)
+`
+
+type TenantsWithExpiredRefreshTokensParams struct {
+	Before     time.Time
+	MaxTenants int32
+}
+
+// TenantsWithExpiredRefreshTokens lists, across tenants, those with tokens
+// expired before $1 (00035, SECURITY DEFINER): only their ids.
+func (q *Queries) TenantsWithExpiredRefreshTokens(ctx context.Context, arg TenantsWithExpiredRefreshTokensParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, tenantsWithExpiredRefreshTokens, arg.Before, arg.MaxTenants)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var tenant_id uuid.UUID
+		if err := rows.Scan(&tenant_id); err != nil {
+			return nil, err
+		}
+		items = append(items, tenant_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

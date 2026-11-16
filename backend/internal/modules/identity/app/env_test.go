@@ -20,20 +20,22 @@ import (
 
 // env is a Service wired to fakes, with recorders for spans and metrics.
 type env struct {
-	svc          *app.Service
-	clock        *fakeClock
-	tenants      *fakeTenants
-	users        *fakeUsers
-	tokens       *fakeTokens
-	demo         *fakeDemo
-	hasher       *fakeHasher
-	setup        *fakeSetup
-	modules      *fakeModules
-	ipLimiter    *fakeLimiter
-	emailLimiter *fakeLimiter
-	demoLimiter  *fakeLimiter
-	spans        *tracetest.SpanRecorder
-	metrics      *sdkmetric.ManualReader
+	svc           *app.Service
+	clock         *fakeClock
+	tenants       *fakeTenants
+	users         *fakeUsers
+	tokens        *fakeTokens
+	demo          *fakeDemo
+	hasher        *fakeHasher
+	setup         *fakeSetup
+	modules       *fakeModules
+	ipLimiter     *fakeLimiter
+	emailLimiter  *fakeLimiter
+	demoLimiter   *fakeLimiter
+	signupLimiter *fakeLimiter
+	audit         *fakeAudit
+	spans         *tracetest.SpanRecorder
+	metrics       *sdkmetric.ManualReader
 }
 
 // newEnv builds the env with the demo on; opts change the service's
@@ -43,18 +45,20 @@ func newEnv(t *testing.T, opts ...func(*app.Deps)) *env {
 	clock := &fakeClock{now: time.Date(2026, 10, 10, 15, 0, 0, 0, time.UTC)}
 	users := &fakeUsers{byID: map[uuid.UUID]*domain.User{}}
 	e := &env{
-		clock:        clock,
-		users:        users,
-		tenants:      &fakeTenants{byID: map[uuid.UUID]*domain.Tenant{}, users: users},
-		tokens:       &fakeTokens{byID: map[uuid.UUID]*domain.RefreshToken{}},
-		hasher:       &fakeHasher{},
-		setup:        &fakeSetup{},
-		modules:      &fakeModules{active: map[uuid.UUID][]string{}},
-		ipLimiter:    &fakeLimiter{denied: map[string]bool{}},
-		emailLimiter: &fakeLimiter{denied: map[string]bool{}},
-		demoLimiter:  &fakeLimiter{denied: map[string]bool{}},
-		spans:        tracetest.NewSpanRecorder(),
-		metrics:      sdkmetric.NewManualReader(),
+		clock:         clock,
+		users:         users,
+		tenants:       &fakeTenants{byID: map[uuid.UUID]*domain.Tenant{}, users: users},
+		tokens:        &fakeTokens{byID: map[uuid.UUID]*domain.RefreshToken{}},
+		hasher:        &fakeHasher{},
+		setup:         &fakeSetup{},
+		modules:       &fakeModules{active: map[uuid.UUID][]string{}},
+		ipLimiter:     &fakeLimiter{denied: map[string]bool{}},
+		emailLimiter:  &fakeLimiter{denied: map[string]bool{}},
+		demoLimiter:   &fakeLimiter{denied: map[string]bool{}},
+		signupLimiter: &fakeLimiter{denied: map[string]bool{}},
+		audit:         &fakeAudit{},
+		spans:         tracetest.NewSpanRecorder(),
+		metrics:       sdkmetric.NewManualReader(),
 	}
 	e.demo = &fakeDemo{tenants: e.tenants, users: users}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(e.spans))
@@ -70,6 +74,7 @@ func newEnv(t *testing.T, opts ...func(*app.Deps)) *env {
 		Tenants:        e.tenants,
 		Users:          users,
 		Tokens:         e.tokens,
+		ExpiredTokens:  e.tokens,
 		Demo:           e.demo,
 		Directory:      users,
 		Hasher:         e.hasher,
@@ -80,7 +85,10 @@ func newEnv(t *testing.T, opts ...func(*app.Deps)) *env {
 		IPLimiter:      e.ipLimiter,
 		EmailLimiter:   e.emailLimiter,
 		DemoLimiter:    e.demoLimiter,
+		SignupLimiter:  e.signupLimiter,
 		DemoEnabled:    true,
+		Audit:          e.audit,
+		Tx:             fakeTx{},
 		Now:            clock.Now,
 		TracerProvider: tp,
 		MeterProvider:  mp,

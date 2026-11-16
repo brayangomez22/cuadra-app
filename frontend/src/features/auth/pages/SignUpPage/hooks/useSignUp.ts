@@ -13,6 +13,7 @@ const fieldByErrorCode: FieldsByErrorCode<SignUpValues> = {
   invalid_email: 'email',
   password_too_short: 'password',
   password_too_long: 'password',
+  password_too_common: 'password',
   unknown_business_template: 'business_template',
 };
 

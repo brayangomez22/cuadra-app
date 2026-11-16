@@ -21,14 +21,16 @@ const instrumentationName = "github.com/brayangomez22/cuadra-app/backend/interna
 // Deps are the Service's dependencies. Now defaults to time.Now, the
 // providers to no-ops and Logger to a discarding logger.
 type Deps struct {
-	Tenants   domain.TenantRepository
-	Users     domain.UserRepository
-	Tokens    domain.RefreshTokenRepository
-	Directory domain.LoginDirectory
-	Demo      domain.DemoTenantRepository
-	Hasher    domain.PasswordHasher
-	Issuer    AccessTokenIssuer
-	Setup     TenantSetup
+	Tenants domain.TenantRepository
+	Users   domain.UserRepository
+	Tokens  domain.RefreshTokenRepository
+	// ExpiredTokens purges the expired refresh tokens of every tenant.
+	ExpiredTokens domain.ExpiredRefreshTokens
+	Directory     domain.LoginDirectory
+	Demo          domain.DemoTenantRepository
+	Hasher        domain.PasswordHasher
+	Issuer        AccessTokenIssuer
+	Setup         TenantSetup
 	// Permissions is the role → permission matrix; Modules, the active
 	// modules of each tenant.
 	Permissions *domain.PermissionMatrix
@@ -39,8 +41,14 @@ type Deps struct {
 	EmailLimiter RateLimiter
 	// DemoEnabled lets anyone enter the demo tenants without a password
 	// (DEMO_ENABLED); DemoLimiter, keyed by client IP, counts those entries.
-	DemoEnabled    bool
-	DemoLimiter    RateLimiter
+	DemoEnabled bool
+	DemoLimiter RateLimiter
+	// SignupLimiter, keyed by client IP, counts the sign-ups.
+	SignupLimiter RateLimiter
+	// Audit records the changes of the tenant's settings, stored together
+	// through Tx.
+	Audit          AuditLog
+	Tx             Transactor
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -60,13 +68,14 @@ type Service struct {
 	signups        metric.Int64Counter
 	reuseAlerts    metric.Int64Counter
 	demoLogins     metric.Int64Counter
+	tokensPurged   metric.Int64Counter
 }
 
 // NewService builds a Service. It fails if a required dependency is missing
 // or a metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Tenants, d.Users, d.Tokens, d.Directory, d.Demo, d.Hasher, d.Issuer, d.Setup,
-		d.Permissions, d.Modules, d.IPLimiter, d.EmailLimiter, d.DemoLimiter) {
+	if usecase.AnyNil(d.Tenants, d.Users, d.Tokens, d.ExpiredTokens, d.Directory, d.Demo, d.Hasher, d.Issuer, d.Setup,
+		d.Permissions, d.Modules, d.IPLimiter, d.EmailLimiter, d.DemoLimiter, d.SignupLimiter, d.Audit, d.Tx) {
 		return nil, errors.New("identity: missing service dependency")
 	}
 	if d.Now == nil {
@@ -86,6 +95,8 @@ func NewService(d Deps) (*Service, error) {
 			"Reused refresh tokens that revoked a live session: a sign of token theft.", "{event}"),
 		usecase.Counter(&s.demoLogins, "cuadra.identity.demo_logins",
 			"Entries to the public demo, by result, role and business template.", "{session}"),
+		usecase.Counter(&s.tokensPurged, "cuadra.identity.refresh_tokens_purged",
+			"Expired refresh tokens deleted by the nightly purge.", "{token}"),
 	)
 	if err != nil {
 		return nil, err

@@ -26,6 +26,7 @@ const (
 	PermInvoicingRead        Permission = "invoicing:read"         // electronic documents and their state
 	PermInvoicingManage      Permission = "invoicing:manage"       // emission settings, numbering resolutions, manual retry
 	PermInvoicingProvider    Permission = "invoicing:provider"     // the account and token at the technology provider (owner only)
+	PermAuditRead            Permission = "audit:read"             // the audit log (owner only)
 	PermPurchasesRead        Permission = "purchases:read"         // suppliers and purchases, with their costs
 	PermPurchasesWrite       Permission = "purchases:write"        // create suppliers and register purchases
 	PermReceivablesRead      Permission = "receivables:read"       // customers' credit, statements and aging
@@ -124,6 +125,7 @@ var corePermissions = []Permission{
 	PermCashManage,
 	PermUsersManage,
 	PermTenantManage,
+	PermAuditRead,
 }
 
 // CoreGrants returns the core permissions, each with the roles other than

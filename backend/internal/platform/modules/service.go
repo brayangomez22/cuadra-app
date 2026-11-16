@@ -47,6 +47,8 @@ type Decide func(active []string) (change Change, ok bool, err error)
 type Deps struct {
 	Registry       *Registry
 	Store          Store
+	Audit          AuditLog
+	Tx             Transactor
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -66,10 +68,10 @@ type Service struct {
 	changes metric.Int64Counter
 }
 
-// NewService builds a Service. It fails if the registry or the store is
-// missing, or the metric cannot be created.
+// NewService builds a Service. It fails if a dependency is missing, or the
+// metric cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Registry, d.Store) {
+	if usecase.AnyNil(d.Registry, d.Store, d.Audit, d.Tx) {
 		return nil, errors.New("modules: missing service dependency")
 	}
 	if d.Now == nil {
@@ -133,7 +135,7 @@ func (s *Service) List(ctx context.Context, tenantID uuid.UUID) (_ []Status, err
 }
 
 // SetActive turns the module id on or off for the tenant, on behalf of
-// userID. It is idempotent. A module is turned on only when its
+// userID, with its audit event in the same transaction. It is idempotent. A module is turned on only when its
 // dependencies are active, and off only when no active module depends on
 // it; otherwise it fails with a *DependencyError. Turning a module off
 // keeps its data.
@@ -154,18 +156,7 @@ func (s *Service) SetActive(ctx context.Context, tenantID, userID uuid.UUID, id 
 	if !ok {
 		return Status{}, ErrUnknownModule
 	}
-	changed := false
-	err = s.Store.Update(ctx, tenantID, func(current []string) (Change, bool, error) {
-		current = s.registered(current)
-		if slices.Contains(current, id) == active {
-			return Change{}, false, nil
-		}
-		if err := s.checkDependencies(def, current, active); err != nil {
-			return Change{}, false, err
-		}
-		changed = true
-		return Change{Module: id, Active: active, By: userID, At: s.Now().UTC()}, true, nil
-	})
+	changed, err := s.change(ctx, tenantID, userID, def, active)
 	if err != nil {
 		return Status{}, err
 	}
@@ -179,6 +170,31 @@ func (s *Service) SetActive(ctx context.Context, tenantID, userID uuid.UUID, id 
 		s.Logger.InfoContext(ctx, "module changed", slog.String("module_id", id), slog.String("action", action))
 	}
 	return Status{Definition: def.clone(), Active: active}, nil
+}
+
+// change applies the change of SetActive and records it in the audit log,
+// in one transaction; changed is false when the module was already so.
+func (s *Service) change(ctx context.Context, tenantID, userID uuid.UUID, def Definition, active bool) (changed bool, err error) {
+	err = s.Tx.InTx(ctx, tenantID, func(ctx context.Context) error {
+		var c Change
+		err := s.Store.Update(ctx, tenantID, func(current []string) (Change, bool, error) {
+			current = s.registered(current)
+			if slices.Contains(current, def.ID) == active {
+				return Change{}, false, nil
+			}
+			if err := s.checkDependencies(def, current, active); err != nil {
+				return Change{}, false, err
+			}
+			c = Change{Module: def.ID, Active: active, By: userID, At: s.Now().UTC()}
+			return c, true, nil
+		})
+		if err != nil || c.Module == "" {
+			return err
+		}
+		changed = true
+		return s.Audit.RecordModuleChange(ctx, tenantID, c)
+	})
+	return changed && err == nil, err
 }
 
 // SetUpTenant turns on the modules ids for a new tenant, as its business

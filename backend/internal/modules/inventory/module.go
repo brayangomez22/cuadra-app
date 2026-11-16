@@ -28,7 +28,10 @@ type Config struct {
 	Authorize auth.Authorizer
 	// Variants is the catalog as the inventory needs it; internal/server adapts the
 	// catalog module to it.
-	Variants       app.ProductVariants
+	Variants app.ProductVariants
+	// Audit records the stock adjustments; internal/server adapts the audit
+	// module.
+	Audit          app.AuditLog
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -59,6 +62,8 @@ func New(cfg Config) (*Module, error) {
 		Counts:         postgres.NewStockCountRepository(cfg.DB),
 		CountEntries:   postgres.NewCountEntryRepository(cfg.DB),
 		Variants:       cfg.Variants,
+		Audit:          cfg.Audit,
+		Tx:             db.NewTransactor(cfg.DB),
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Now:            cfg.Now,

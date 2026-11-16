@@ -25,7 +25,13 @@ func (s *Service) VoidPurchase(ctx context.Context, a Actor, id uuid.UUID, reaso
 		if err := p.Void(a.UserID, reason, s.Now()); err != nil {
 			return err
 		}
-		return lineOf(p, s.Stock.ReversePurchase(ctx, a.TenantID, a.UserID, p.ID()))
+		if err := lineOf(p, s.Stock.ReversePurchase(ctx, a.TenantID, a.UserID, p.ID())); err != nil {
+			return err
+		}
+		return s.Audit.Record(ctx, a.TenantID, a.UserID, AuditEntry{
+			Action: auditPurchaseVoided, EntityID: p.ID(), LocationID: p.LocationID(),
+			Details: map[string]string{"total": p.Totals().Total.StringFixed(2)},
+		})
 	})
 	if err != nil {
 		return nil, err

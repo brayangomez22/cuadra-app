@@ -1,0 +1,20 @@
+# OWASP ZAP rules for the API scan (zap-api-scan.py -c rules.tsv).
+# One rule per line: <id> TAB <IGNORE|INFO|WARN|FAIL> TAB <name>.
+# FAIL breaks the CI job; WARN only goes to the report. Rules not listed
+# keep ZAP's default (WARN).
+10020	FAIL	Missing anti-clickjacking header
+10021	FAIL	X-Content-Type-Options header missing
+10038	FAIL	Content Security Policy header not set
+10049	INFO	Non-storable content (the API answers no-store on purpose)
+10035	IGNORE	Strict-Transport-Security not set (the scan runs over HTTP; production sends it)
+40012	FAIL	Cross site scripting (reflected)
+40014	FAIL	Cross site scripting (persistent)
+40018	FAIL	SQL injection
+40019	FAIL	SQL injection - MySQL
+40022	FAIL	SQL injection - PostgreSQL
+90019	FAIL	Server side code injection
+90020	FAIL	Remote OS command injection
+6	WARN	Path traversal (the API never maps a request value to a file path: files live in Postgres under generated names; ZAP flags an echoed unit code)
+7	FAIL	Remote file inclusion
+90023	FAIL	XML external entity attack
+40003	FAIL	CRLF injection

@@ -21,6 +21,10 @@ func TestValidatePassword(t *testing.T) {
 		{name: "rechaza contraseña de menos de 8 caracteres", in: "clave12", wantErr: domain.ErrPasswordTooShort},
 		{name: "rechaza contraseña vacía", in: "", wantErr: domain.ErrPasswordTooShort},
 		{name: "rechaza contraseña de más de 72 caracteres", in: strings.Repeat("a", 73), wantErr: domain.ErrPasswordTooLong},
+		{name: "rechaza una contraseña de las más usadas", in: "12345678", wantErr: domain.ErrPasswordTooCommon},
+		{name: "rechaza una contraseña común sin importar mayúsculas", in: "Contraseña123", wantErr: domain.ErrPasswordTooCommon},
+		{name: "rechaza el nombre del producto como contraseña", in: "cuadra123", wantErr: domain.ErrPasswordTooCommon},
+		{name: "acepta una frase aunque contenga una palabra común", in: "password de la ferretería norte"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

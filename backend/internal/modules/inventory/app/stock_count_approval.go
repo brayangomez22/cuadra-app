@@ -39,7 +39,7 @@ func (s *Service) ApproveStockCount(ctx context.Context, a Actor, id uuid.UUID) 
 		if err != nil {
 			return err
 		}
-		movements, err = s.adjustCounted(ctx, c, adjustments, policy, c.AdjustmentInfo(a.UserID, now))
+		movements, err = s.adjustCounted(ctx, a, c, adjustments, policy, c.AdjustmentInfo(a.UserID, now))
 		return err
 	})
 	if err != nil {
@@ -56,8 +56,9 @@ func (s *Service) ApproveStockCount(ctx context.Context, a Actor, id uuid.UUID) 
 }
 
 // adjustCounted records the adjustments of an approved count, in the order
-// given (by variant), within the count's transaction.
-func (s *Service) adjustCounted(ctx context.Context, c *domain.StockCount, adjustments []domain.CountAdjustment,
+// given (by variant), each with its audit event, within the count's
+// transaction.
+func (s *Service) adjustCounted(ctx context.Context, a Actor, c *domain.StockCount, adjustments []domain.CountAdjustment,
 	policy domain.StockPolicy, info domain.MovementInfo,
 ) ([]*domain.StockMovement, error) {
 	movements := make([]*domain.StockMovement, 0, len(adjustments))
@@ -74,6 +75,9 @@ func (s *Service) adjustCounted(ctx context.Context, c *domain.StockCount, adjus
 		if err != nil {
 			s.countInsufficient(ctx, err, domain.MovementAdjustment)
 			return nil, &VariantStockError{VariantID: adj.VariantID, Err: err}
+		}
+		if err := s.auditAdjustment(ctx, a, adj.VariantID, c.LocationID(), adj.Delta, adjustmentSourceCount); err != nil {
+			return nil, err
 		}
 	}
 	return movements, nil

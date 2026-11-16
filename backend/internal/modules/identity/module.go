@@ -10,17 +10,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/riverqueue/river"
 	"github.com/shopspring/decimal"
-
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/adapters/argon2id"
 	httpadapter "github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/adapters/http"
+	jobsadapter "github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/adapters/jobs"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/adapters/postgres"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/domain"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/jobs"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/ratelimit"
 )
 
@@ -49,11 +51,23 @@ type Config struct {
 	// modules of each tenant.
 	Permissions *Permissions
 	Modules     app.ActiveModules
+	// Audit records the changes of the tenant's settings; internal/server
+	// adapts the audit module.
+	Audit app.AuditLog
 	// Now is the clock of the use cases; nil is time.Now (the demo generator
 	// simulates one).
 	Now func() time.Time
 	// DemoEnabled lets anyone enter the demo tenants (DEMO_ENABLED).
-	DemoEnabled    bool
+	DemoEnabled bool
+	// SignupLimiter, keyed by client IP, limits the sign-ups (P04); nil does
+	// not limit them (the demo generator, the tests).
+	SignupLimiter app.RateLimiter
+	// Workers is the bundle of the process's job workers, where the module
+	// adds its own; Jobs and Schedule add its periodic jobs (the API
+	// process).
+	Jobs           *jobs.Client
+	Workers        *river.Workers
+	Schedule       bool
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -67,14 +81,15 @@ type Module struct {
 
 // New builds the module on PostgreSQL, Argon2id and in-memory login limits.
 func New(cfg Config) (*Module, error) {
-	if cfg.DB == nil || cfg.Issuer == nil || cfg.Setup == nil || cfg.Permissions == nil || cfg.Modules == nil || cfg.Logger == nil {
+	if cfg.missing() {
 		return nil, errors.New("identity: missing module dependency")
 	}
-	users := postgres.NewUserRepository(cfg.DB)
+	users, tokens := postgres.NewUserRepository(cfg.DB), postgres.NewRefreshTokenRepository(cfg.DB)
 	svc, err := app.NewService(app.Deps{
 		Tenants:        postgres.NewTenantRepository(cfg.DB),
 		Users:          users,
-		Tokens:         postgres.NewRefreshTokenRepository(cfg.DB),
+		Tokens:         tokens,
+		ExpiredTokens:  tokens,
 		Directory:      postgres.NewLoginDirectory(cfg.DB),
 		Demo:           postgres.NewDemoTenantRepository(cfg.DB),
 		Hasher:         argon2id.New(argon2id.DefaultParams),
@@ -82,9 +97,12 @@ func New(cfg Config) (*Module, error) {
 		Setup:          cfg.Setup,
 		Permissions:    cfg.Permissions.matrix,
 		Modules:        cfg.Modules,
+		Audit:          cfg.Audit,
+		Tx:             db.NewTransactor(cfg.DB),
 		IPLimiter:      ratelimit.NewFixedWindow(loginsPerIP, loginsPerIPWindow),
 		EmailLimiter:   ratelimit.NewFixedWindow(loginsPerEmail, loginsPerEmailWindow),
 		DemoLimiter:    ratelimit.NewFixedWindow(demoEntriesPerIP, demoEntriesPerIPWindow),
+		SignupLimiter:  signupLimiter(cfg),
 		DemoEnabled:    cfg.DemoEnabled,
 		Now:            cfg.Now,
 		TracerProvider: cfg.TracerProvider,
@@ -94,7 +112,44 @@ func New(cfg Config) (*Module, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := addJobs(cfg, svc); err != nil {
+		return nil, err
+	}
 	return &Module{service: svc, log: cfg.Logger}, nil
+}
+
+// RateLimiter counts attempts per key (see app.RateLimiter).
+type RateLimiter = app.RateLimiter
+
+// missing tells whether a required dependency is missing.
+func (cfg Config) missing() bool {
+	return cfg.DB == nil || cfg.Issuer == nil || cfg.Setup == nil || cfg.Permissions == nil ||
+		cfg.Modules == nil || cfg.Logger == nil || cfg.Jobs == nil || cfg.Workers == nil
+}
+
+// unlimited allows every attempt.
+type unlimited struct{}
+
+func (unlimited) Allow(string) (bool, time.Duration) { return true, 0 }
+
+// signupLimiter is cfg's, or one that does not limit.
+func signupLimiter(cfg Config) app.RateLimiter {
+	if cfg.SignupLimiter == nil {
+		return unlimited{}
+	}
+	return cfg.SignupLimiter
+}
+
+// addJobs adds the purge of expired refresh tokens to the workers and, in
+// the API process, its nightly schedule.
+func addJobs(cfg Config, svc *app.Service) error {
+	if err := river.AddWorkerSafely(cfg.Workers, &jobsadapter.PurgeTokensWorker{Purger: svc}); err != nil {
+		return err
+	}
+	if cfg.Schedule {
+		return cfg.Jobs.AddPeriodic(jobsadapter.PurgeTokensSchedule())
+	}
+	return nil
 }
 
 // RegisterRoutes mounts the module's operations (tag "auth") on mux.
@@ -151,4 +206,12 @@ func (m *Module) AuthorizeAction(ctx context.Context, tenantID uuid.UUID, email,
 	return m.service.AuthorizeAction(ctx, app.AuthorizationInput{
 		TenantID: tenantID, Email: email, Password: password, Permission: permission,
 	})
+}
+
+// UserRole returns the current role of userID in tenantID (see
+// app.Service.UserRole). It is for the audit log of the operations that
+// run without an access token.
+func (m *Module) UserRole(ctx context.Context, tenantID, userID uuid.UUID) (string, error) {
+	role, err := m.service.UserRole(ctx, tenantID, userID)
+	return string(role), err
 }

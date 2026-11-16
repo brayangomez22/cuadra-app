@@ -211,6 +211,7 @@ func cloneToken(t *domain.RefreshToken) *domain.RefreshToken {
 	c, err := domain.RehydrateRefreshToken(domain.RefreshTokenSnapshot{
 		ID: t.ID(), TenantID: t.TenantID(), UserID: t.UserID(), FamilyID: t.FamilyID(),
 		Hash: t.Hash(), ExpiresAt: t.ExpiresAt(), CreatedAt: t.CreatedAt(), RevokedAt: t.RevokedAt(),
+		FamilyStartedAt: t.FamilyStartedAt(),
 	})
 	if err != nil {
 		panic(err)

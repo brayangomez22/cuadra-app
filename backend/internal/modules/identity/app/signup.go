@@ -22,16 +22,22 @@ type SignUpInput struct {
 	Password   string
 	// BusinessTemplate is the ID of the template the tenant starts from.
 	BusinessTemplate string
+	// ClientIP keys the limit of sign-ups per connection.
+	ClientIP string
 }
 
 // SignUp creates the tenant and its owner, and prepares the tenant's initial
 // data in the other modules from its business template (Setup), in one
 // transaction; then it starts a session. Every field is validated before
-// anything is stored or hashed.
+// anything is stored or hashed, and the sign-ups of one client IP are
+// limited (P04).
 func (s *Service) SignUp(ctx context.Context, in SignUpInput) (_ Session, err error) {
 	ctx, span := s.startSpan(ctx, "SignUp")
 	defer func() { usecase.End(span, err) }()
 
+	if ok, retryAfter := s.SignupLimiter.Allow(in.ClientIP); !ok {
+		return Session{}, &RateLimitError{RetryAfter: retryAfter}
+	}
 	signUp, err := s.parseSignUp(in)
 	if err != nil {
 		return Session{}, err

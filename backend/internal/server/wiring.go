@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/audit"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity"
@@ -22,24 +23,33 @@ type wiring struct {
 	permissions   *identity.Permissions
 	// identityModule is kept for the demo (NewDemo).
 	identityModule *identity.Module
+	// auditor writes to the audit log for every audited module.
+	auditor *ports.Auditor
 }
 
-// newWiring builds the activable modules and the permission matrix, which
-// the business modules authorize with.
+// newWiring builds the audit log, the activable modules (whose changes it
+// records) and the permission matrix, which the business modules authorize
+// with.
 func newWiring(cfg Config) (*wiring, error) {
 	registry, err := modules.NewRegistry(modules.Builtin()...)
 	if err != nil {
 		return nil, err
 	}
-	moduleService, err := newModuleService(registry, cfg)
+	w := &wiring{Config: cfg, registry: registry}
+	auditModule, err := w.auditLog()
 	if err != nil {
+		return nil, err
+	}
+	w.auditor = &ports.Auditor{Audit: auditModule}
+	if w.moduleService, err = newModuleService(registry, cfg, w.auditor); err != nil {
 		return nil, err
 	}
 	permissions, err := identity.NewPermissions(ports.IdentityRegistry{Registry: registry})
 	if err != nil {
 		return nil, err
 	}
-	return &wiring{Config: cfg, registry: registry, moduleService: moduleService, permissions: permissions}, nil
+	w.permissions = permissions
+	return w, nil
 }
 
 // modules builds every business module, joined through the ports of each
@@ -62,6 +72,7 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 		return nil, err
 	}
 	w.identityModule = identityModule
+	w.auditor.Identity = identityModule
 	inventoryModule, err := w.inventory(catalogModule)
 	if err != nil {
 		return nil, err
@@ -83,6 +94,7 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 		identityModule.RegisterRoutes, catalogModule.RegisterRoutes, customersModule.RegisterRoutes,
 		inventoryModule.RegisterRoutes, sell.sales.RegisterRoutes, sell.receivables.RegisterRoutes,
 		sell.invoicing.RegisterRoutes, importsModule.RegisterRoutes, purchasesModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
+		w.auditor.Audit.RegisterRoutes,
 	}, nil
 }
 
@@ -91,11 +103,30 @@ func (w *wiring) catalog(history *ports.CatalogHistory) (*catalog.Module, error)
 		DB:             w.DB,
 		Authorize:      w.permissions.Authorize,
 		History:        history,
+		Audit:          ports.CatalogAudit{Auditor: w.auditor},
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
 		Now:            w.Now,
 	})
+}
+
+func (w *wiring) auditLog() (*audit.Module, error) {
+	return audit.New(audit.Config{
+		DB:             w.DB,
+		Logger:         w.Log,
+		TracerProvider: w.TracerProvider,
+		MeterProvider:  w.MeterProvider,
+		Now:            w.Now,
+	})
+}
+
+// signupLimiter is the sign-ups' limit of the API's RateLimits, or none.
+func (w *wiring) signupLimiter() identity.RateLimiter {
+	if l := w.RateLimits.signupLimiter(); l != nil {
+		return l
+	}
+	return nil
 }
 
 func (w *wiring) customers() (*customers.Module, error) {
@@ -121,6 +152,11 @@ func (w *wiring) identity(c *catalog.Module, cu *customers.Module) (*identity.Mo
 		Setup:          setup,
 		Permissions:    w.permissions,
 		Modules:        w.moduleService,
+		Audit:          ports.IdentityAudit{Auditor: w.auditor},
+		SignupLimiter:  w.signupLimiter(),
+		Jobs:           w.Jobs,
+		Workers:        w.Workers,
+		Schedule:       w.Schedule,
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
@@ -134,6 +170,7 @@ func (w *wiring) inventory(c *catalog.Module) (*inventory.Module, error) {
 		DB:             w.DB,
 		Authorize:      w.permissions.Authorize,
 		Variants:       ports.InventoryCatalog{Catalog: c},
+		Audit:          ports.InventoryAudit{Auditor: w.auditor},
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
@@ -165,6 +202,7 @@ func (w *wiring) purchases(c *catalog.Module, i *inventory.Module) (*purchases.M
 		DB:             w.DB,
 		Catalog:        ports.PurchasesCatalog{Catalog: c},
 		Stock:          ports.PurchasesStock{Inventory: i},
+		Audit:          ports.PurchasesAudit{Auditor: w.auditor},
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,
