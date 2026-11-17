@@ -51,12 +51,13 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Alcance:** anular una venta facturada genera una nota crédito electrónica total; devoluciones parciales generan una nota crédito parcial y devuelven el stock de lo devuelto.
 **Tests primero:** una nota crédito nunca supera el valor pendiente del documento original; una devolución parcial devuelve exactamente las cantidades indicadas al inventario.
 
-### [ ] T38 · Endurecimiento de seguridad
+### [x] T38 · Endurecimiento de seguridad
 **Alcance:** revisión contra OWASP ASVS nivel 1: headers de seguridad (CSP, HSTS...), CORS estricto, rate limiting global y por tenant **detrás de una interfaz `RateLimiter`** (implementación inicial en memoria o en Postgres; si la API corre en varias réplicas y una medición lo justifica, se agrega un adaptador de Redis sin tocar el resto), límites de tamaño de request, rotación de secretos JWT, **registro de auditoría** (quién anuló, cambió precios o ajustó inventario) consultable por el dueño **y agregable para métricas del negocio** (ver abajo), política de contraseñas y bloqueo por intentos. Escaneo DAST con OWASP ZAP contra staging desde el CI.
 **Registro de auditoría, diseñado para contarse y no solo para leerse:** tabla `audit_events` con `tenant_id` y RLS, inmutable (solo `INSERT`; la app no tiene `UPDATE` ni `DELETE`). Campos estructurados: quién (`user_id`, rol), qué (`action` de un **catálogo cerrado y versionado** en `docs/auditoria.md`, con nombres neutros: `sale.voided`, `sale.discount_applied`, `variant.price_changed`, `stock.adjusted`, `cash.closed_with_difference`, `module.enabled`, `module.disabled`, `tenant.settings_changed`...), sobre qué (`entity_type`, `entity_id`), dónde (`location_id`), cuándo (`occurred_at`) y un `details JSONB` con el dato que se va a agregar (precio anterior y nuevo, porcentaje de descuento, diferencia de caja, cantidad ajustada). Los montos van en `details` como strings decimales, nunca `float`. Se escribe **en la misma transacción** que la operación auditada (si la operación falla, no queda registro; si queda la operación, queda su registro). Índices por `(tenant_id, action, occurred_at)` y `(tenant_id, user_id, occurred_at)` para que T41 filtre y T42 agregue sin recorrer la tabla. Nada de datos personales de los compradores en `details`.
 **Pendientes que entran a esta tarea:** P04–P07, P40, P53, P60, P83, P113 y P167 (`docs/plan/pendientes.md`).
 **Tests primero (auditoría):** cada acción del catálogo deja exactamente un evento en la misma transacción; si la operación se revierte, no queda evento; una `action` fuera del catálogo se rechaza; el tenant B no ve los eventos del tenant A; el rol de la app no puede modificar ni borrar eventos.
 **Aceptación:** checklist ASVS en `docs/seguridad.md` con cada punto resuelto o justificado.
+**Hecho así:** sin staging todavía, el DAST de ZAP corre en el CI contra la API del stack E2E; contra staging queda para T46 (P170). Se adelantó a T36d, T36c y T37, que esperan la cuenta del sandbox de Muisca (`docs/decisiones.md`, 2026-11-15).
 
 ### [ ] T39 · Feature flags por tenant
 **Alcance:** interfaz estándar **OpenFeature** (SDK de Go) con un proveedor propio sobre Postgres: valor por defecto global y excepciones por tenant, en caché en memoria con expiración corta. Las flags activas del tenant se exponen al frontend en `GET /api/v1/me`. Pantalla interna para activarlas o desactivarlas. Usos: liberar una función solo a un piloto, apagar algo que falla sin desplegar y, más adelante, **activar módulos por vertical** (talleres, V3-6).
@@ -69,7 +70,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T41 · Gestión de usuarios y auditoría
 **Depende de:** T38 (registro de auditoría).
 **Alcance:** UI para invitar usuarios por correo, asignar rol y sede, desactivar y restablecer contraseña. Límites por rol configurables (por ejemplo, el descuento máximo del cajero). Pantalla de **auditoría** para el dueño: quién anuló ventas, cambió precios, ajustó inventario o modificó cupos, y cuándo (consume el registro de auditoría de T38).
-**Pendientes que entran a esta tarea:** P08–P10 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P08–P10, P172 y P176 (`docs/plan/pendientes.md`).
 **Tests primero:** solo `owner` y `admin` gestionan usuarios; un usuario desactivado pierde el acceso en su siguiente request; el dueño no puede quitarse su propio rol de owner si es el único.
 
 ### [ ] T42 · Reportes

@@ -128,6 +128,9 @@ services:
       DATABASE_URL: postgres://app_user:app_user@postgres-e2e:5432/cuadra?sslmode=disable
       JWT_SECRET: e2e-only-secret-not-for-real-use-0123456789
       OTEL_SDK_DISABLED: "true"
+      # The tests sign up many businesses and the DAST scan sends thousands
+      # of requests from one IP; the limits have their own tests.
+      RATE_LIMITS_ENABLED: "false"
       LOG_LEVEL: warn
     ports:
       - "127.0.0.1:18080:8080"

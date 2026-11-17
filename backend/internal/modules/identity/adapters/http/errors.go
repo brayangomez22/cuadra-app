@@ -28,6 +28,7 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrInvalidNIT, Status: http.StatusUnprocessableEntity, Code: "invalid_nit", Message: "El NIT no es válido. Escríbalo con su dígito de verificación, por ejemplo 900123456-8."},
 	{Err: domain.ErrPasswordTooShort, Status: http.StatusUnprocessableEntity, Code: "password_too_short", Message: "La contraseña debe tener al menos 8 caracteres."},
 	{Err: domain.ErrPasswordTooLong, Status: http.StatusUnprocessableEntity, Code: "password_too_long", Message: "La contraseña puede tener máximo 72 caracteres."},
+	{Err: domain.ErrPasswordTooCommon, Status: http.StatusUnprocessableEntity, Code: "password_too_common", Message: "Esa contraseña es de las más usadas y fácil de adivinar. Elija otra, por ejemplo una frase."},
 	{Err: domain.ErrInvalidTenantName, Status: http.StatusUnprocessableEntity, Code: "invalid_tenant_name", Message: "Escriba el nombre de la empresa (máximo 200 caracteres)."},
 	{Err: domain.ErrUnknownBusinessTemplate, Status: http.StatusUnprocessableEntity, Code: "unknown_business_template", Message: "Elija uno de los tipos de negocio disponibles."},
 	{Err: domain.ErrInvalidDefaultTaxRate, Status: http.StatusUnprocessableEntity, Code: "invalid_default_tax_rate", Message: "El IVA por defecto debe ser un porcentaje de 0 a menos de 100, con hasta 2 decimales."},

@@ -28,7 +28,10 @@ type Config struct {
 	Authorize auth.Authorizer
 	// History tells whether variants have stock movements; internal/server
 	// adapts the inventory module to it.
-	History        app.StockHistory
+	History app.StockHistory
+	// Audit records the price changes; internal/server adapts the audit
+	// module.
+	Audit          app.AuditLog
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -59,6 +62,8 @@ func New(cfg Config) (*Module, error) {
 		VariantAxes:    postgres.NewVariantAxisRepository(cfg.DB),
 		Seeds:          postgres.NewSeedRepository(cfg.DB),
 		History:        cfg.History,
+		Audit:          cfg.Audit,
+		Tx:             db.NewTransactor(cfg.DB),
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Now:            cfg.Now,

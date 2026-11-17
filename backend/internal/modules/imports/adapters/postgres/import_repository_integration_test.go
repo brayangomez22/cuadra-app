@@ -27,7 +27,7 @@ var now = time.Date(2026, 10, 26, 20, 30, 15, 123456000, time.UTC)
 // Compile-time checks: the adapters satisfy the ports.
 var (
 	_ domain.ImportRepository = (*postgres.ImportRepository)(nil)
-	_ app.Transactor          = postgres.Transactor{}
+	_ app.Transactor          = db.Transactor{}
 )
 
 type fixture struct {
@@ -137,7 +137,7 @@ func TestImportRepository(t *testing.T) {
 		require.NoError(t, imp.Confirm())
 		require.NoError(t, imp.Start(now))
 		require.NoError(t, f.imports.Save(t.Context(), imp, nil))
-		tx := postgres.NewTransactor(f.db)
+		tx := db.NewTransactor(f.db)
 
 		err := tx.InTx(t.Context(), tenant, func(ctx context.Context) error {
 			require.NoError(t, imp.RecordBatch(domain.BatchResult{Created: 5}))

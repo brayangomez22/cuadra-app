@@ -37,6 +37,8 @@ type Deps struct {
 	Reorder        domain.ReorderRuleRepository
 	Counts         domain.StockCountRepository
 	CountEntries   domain.CountEntryRepository
+	Audit          AuditLog
+	Tx             Transactor
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -81,7 +83,7 @@ type Service struct {
 // NewService builds a Service. It fails if a repository is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Locations, d.Stock, d.Policies, d.Variants, d.Reorder, d.Counts, d.CountEntries) {
+	if usecase.AnyNil(d.Locations, d.Stock, d.Policies, d.Variants, d.Reorder, d.Counts, d.CountEntries, d.Audit, d.Tx) {
 		return nil, errors.New("inventory: missing service dependency")
 	}
 	if d.Now == nil {

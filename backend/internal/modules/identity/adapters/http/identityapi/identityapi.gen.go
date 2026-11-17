@@ -1208,6 +1208,30 @@ func (response SignUp422JSONResponse) VisitSignUpResponse(w http.ResponseWriter)
 	return err
 }
 
+type SignUp429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type SignUp429JSONResponse struct {
+	Body    Error
+	Headers SignUp429ResponseHeaders
+}
+
+func (response SignUp429JSONResponse) VisitSignUpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SignUp500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response SignUp500JSONResponse) VisitSignUpResponse(w http.ResponseWriter) error {

@@ -58,6 +58,7 @@ type env struct {
 	now     time.Time
 	spans   *tracetest.SpanRecorder
 	metrics *sdkmetric.ManualReader
+	audit   *fakeAudit
 }
 
 func newEnv(t *testing.T) *env {
@@ -66,6 +67,7 @@ func newEnv(t *testing.T) *env {
 	require.NoError(t, err)
 	e := &env{
 		store:   newFakeStore(),
+		audit:   &fakeAudit{},
 		now:     time.Date(2026, 10, 16, 15, 0, 0, 0, time.UTC),
 		spans:   tracetest.NewSpanRecorder(),
 		metrics: sdkmetric.NewManualReader(),
@@ -79,6 +81,8 @@ func newEnv(t *testing.T) *env {
 	e.svc, err = modules.NewService(modules.Deps{
 		Registry:       registry,
 		Store:          e.store,
+		Audit:          e.audit,
+		Tx:             fakeTx{},
 		Now:            func() time.Time { return e.now },
 		TracerProvider: tp,
 		MeterProvider:  mp,
@@ -304,7 +308,7 @@ func TestNewService(t *testing.T) {
 		registry, err := modules.NewRegistry(testDefinitions()...)
 		require.NoError(t, err)
 		boom := errors.New("boom")
-		svc, err := modules.NewService(modules.Deps{Registry: registry, Store: failingStore{boom}})
+		svc, err := modules.NewService(modules.Deps{Registry: registry, Store: failingStore{boom}, Audit: &fakeAudit{}, Tx: fakeTx{}})
 		require.NoError(t, err)
 
 		_, err = svc.SetActive(t.Context(), uuid.Must(uuid.NewV7()), uuid.Must(uuid.NewV7()), "variants", true)

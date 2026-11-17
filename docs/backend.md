@@ -74,7 +74,7 @@ Un value object puro que validan los `domain/` de más de un módulo vive en `in
 | `domain` | importar algo que no sea la librería estándar, `uuid`, `decimal` o `internal/kernel` (tampoco `net/http`) |
 | `kernel` | que `internal/kernel` importe algo fuera de la librería estándar |
 | `app` | importar `adapters`, `pgx`, `net/http` o el SDK de OpenTelemetry (`otel/sdk`) |
-| `catalog`, `customers`, `identity`, `imports`, `inventory`, `purchases`, `receivables`, `sales` | importar otro módulo |
+| `audit`, `catalog`, `customers`, `identity`, `imports`, `inventory`, `invoicing`, `purchases`, `receivables`, `sales` | importar otro módulo |
 | `platform` | importar cualquier módulo |
 | `demo` | que `internal/demo` (el generador de la demo) importe un módulo: escribe por la API (`internal/server`) |
 | `composition` | que `cmd/` o `test/api` importen un módulo: solo `internal/server` (y su `ports/`) los une, y los demás usan `server.New` |
@@ -120,8 +120,8 @@ Antes de escribir algo en un módulo, revisa si ya existe aquí. Un helper nuevo
 | Paquete | Qué da | Quién lo usa |
 |---|---|---|
 | `platform/usecase` | `NewSpans` (spans `<modulo>.<CasoDeUso>`; `StartFor` agrega `tenant.id` y `user.id`), `End` (`RecordError` + `SetStatus`), `Create` con `Counter` e `Histogram` (los instrumentos de un servicio, declarados en una lista), `Meter`, `Logger` y `AnyNil` (dependencias faltantes) | `app/` de cada módulo y `platform/modules`. Solo importa la API de OpenTelemetry |
-| `platform/db` | `Read` (lee un valor dentro de `WithTenantTx`), `Affected` (filas que tocó una escritura), `Violates` y `HasCode` con `UniqueViolation` y `ForeignKeyViolation`, `PageBounds` | los repositorios |
-| `platform/httpx` | `FormatMoney`, `FormatDecimal`, `ParseDecimal` (los formatos decimales del contrato); `Describe` (el código y el mensaje de un error según las reglas de un módulo, fuera de una respuesta); `LimitBody` (tamaño máximo del cuerpo) | los handlers; `Describe` también la importación, que reporta los errores del catálogo por fila |
+| `platform/db` | `Read` (lee un valor dentro de `WithTenantTx`), `Affected` (filas que tocó una escritura), `Violates` y `HasCode` con `UniqueViolation` y `ForeignKeyViolation`, `PageBounds`; `Transactor` (el puerto `Transactor` de un `app` sobre `InTenantTx`: una operación y su evento de auditoría, o el lote de una importación, en una transacción) | los repositorios; `Transactor`, los `module.go` |
+| `platform/httpx` | `FormatMoney`, `FormatDecimal`, `ParseDecimal` (los formatos decimales del contrato); `Describe` (el código y el mensaje de un error según las reglas de un módulo, fuera de una respuesta); `LimitBody` (tamaño máximo del cuerpo); el borde de la API: `ClientIP` y `ClientIPFrom` (la IP real detrás de los proxies de confianza), `SecurityHeaders`, `CORS`, `RateLimit` y `RejectNUL` (texto que Postgres no guarda) | los handlers; `Describe` también la importación, que reporta los errores del catálogo por fila; el borde, `internal/server` (`edge.go`) y los límites de `identity` |
 | `platform/auth` | `RequirePrincipal[<pkg>.StrictHandlerFunc]` (401 si no llegó un principal), `SeesCosts` y `CostPermission` (quién ve costos y márgenes) | los handlers |
 
 `RequirePrincipal` vive en `auth` y no en `httpx` porque `auth` ya importa `httpx`.

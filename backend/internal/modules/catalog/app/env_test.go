@@ -24,6 +24,7 @@ type env struct {
 	actor app.Actor
 	// meters is a unit of the actor's tenant.
 	meters  *domain.UnitOfMeasure
+	audit   *fakeAudit
 	spans   *tracetest.SpanRecorder
 	metrics *sdkmetric.ManualReader
 }
@@ -33,6 +34,7 @@ var testNow = time.Date(2026, 10, 10, 15, 0, 0, 0, time.UTC)
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	e := &env{
+		audit: &fakeAudit{},
 		store: &store{
 			products:   map[uuid.UUID]*domain.Product{},
 			categories: map[uuid.UUID]*domain.Category{},
@@ -58,6 +60,8 @@ func newEnv(t *testing.T) *env {
 		VariantAxes:    fakeAxes{e.store},
 		Seeds:          fakeSeeds{e.store},
 		History:        fakeHistory{e.store},
+		Audit:          e.audit,
+		Tx:             fakeTx{},
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,

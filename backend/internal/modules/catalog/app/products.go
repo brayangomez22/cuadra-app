@@ -117,35 +117,34 @@ func (s *Service) UpdateProduct(ctx context.Context, a Actor, id uuid.UUID, in P
 		return nil, err
 	}
 	span.SetAttributes(variantAttr(p.DefaultVariant().ID()))
-	priceChanged, err := updateDefaultVariant(p, in)
-	if err != nil {
+	before := variantPrices(p)
+	if err := updateDefaultVariant(p, in); err != nil {
 		return nil, err
 	}
 	if err := s.requireCategory(ctx, a, p.CategoryID()); err != nil {
 		return nil, err
 	}
-	if err := s.Products.Update(ctx, p); err != nil {
+	changed, err := s.saveProduct(ctx, a, p, before)
+	if err != nil {
 		return nil, err
 	}
-	if priceChanged {
-		s.priceChanges.Add(ctx, 1)
-	}
+	s.priceChanges.Add(ctx, int64(changed))
 	return p, nil
 }
 
 // updateDefaultVariant replaces the default variant's data with in's, and
-// its price when in has another one (priceChanged).
-func updateDefaultVariant(p *domain.Product, in ProductInput) (priceChanged bool, err error) {
+// its price when in has another one.
+func updateDefaultVariant(p *domain.Product, in ProductInput) error {
 	def := p.DefaultVariant()
 	if err := p.UpdateVariant(def.ID(), domain.VariantDetails{
 		SKU: in.SKU, Barcode: in.Barcode, Cost: in.Cost, AxisValues: def.AxisValues(),
 	}); err != nil {
-		return false, err
+		return err
 	}
 	if in.Price.Equal(def.Price()) {
-		return false, nil
+		return nil
 	}
-	return true, p.ChangeVariantPrice(def.ID(), in.Price)
+	return p.ChangeVariantPrice(def.ID(), in.Price)
 }
 
 // resolveUnit returns the tenant's unit that in names;

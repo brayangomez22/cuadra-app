@@ -50,19 +50,21 @@ func (s *Service) updateDraft(ctx context.Context, a Actor, c *draftCatalog, exi
 		return DraftResult{Err: err}
 	}
 	r := DraftResult{ProductID: existing.ID(), Outcome: DraftUpdated}
-	prices, added := 0, 0
+	before := variantPrices(existing)
+	added := 0
 	for _, in := range d.Variants {
-		v, priceChanged, created, err := s.draftVariant(c, existing, in)
+		v, created, err := s.draftVariant(c, existing, in)
 		if err != nil {
 			return DraftResult{Err: err}
 		}
 		r.Variants = append(r.Variants, DraftVariant{ID: v.ID(), Created: created})
-		prices, added = prices+boolCount(priceChanged), added+boolCount(created)
+		added += boolCount(created)
 	}
 	if !save {
 		return r
 	}
-	if err := s.Products.Update(ctx, existing); err != nil {
+	prices, err := s.saveProduct(ctx, a, existing, before)
+	if err != nil {
 		return DraftResult{Err: err}
 	}
 	s.priceChanges.Add(ctx, int64(prices))
@@ -70,26 +72,27 @@ func (s *Service) updateDraft(ctx context.Context, a Actor, c *draftCatalog, exi
 	return r
 }
 
-// draftVariant updates the variant of p with in's SKU, or adds it.
-func (s *Service) draftVariant(c *draftCatalog, p *domain.Product, in VariantInput) (_ *domain.ProductVariant, priceChanged, created bool, err error) {
+// draftVariant updates the variant of p with in's SKU, or adds it
+// (created).
+func (s *Service) draftVariant(c *draftCatalog, p *domain.Product, in VariantInput) (_ *domain.ProductVariant, created bool, err error) {
 	params, err := variantParams(in, c.axes)
 	if err != nil {
-		return nil, false, false, err
+		return nil, false, err
 	}
 	v, ok := variantWithSKU(p, in.SKU)
 	if !ok {
 		v, err = p.AddVariant(params, s.Now())
-		return v, false, true, err
+		return v, true, err
 	}
 	if err := p.UpdateVariant(v.ID(), domain.VariantDetails{
 		SKU: params.SKU, Barcode: params.Barcode, Cost: params.Cost, AxisValues: params.AxisValues,
 	}); err != nil {
-		return nil, false, false, err
+		return nil, false, err
 	}
 	if params.Price.Equal(v.Price()) {
-		return v, false, false, nil
+		return v, false, nil
 	}
-	return v, true, false, p.ChangeVariantPrice(v.ID(), params.Price)
+	return v, false, p.ChangeVariantPrice(v.ID(), params.Price)
 }
 
 // draftDetails resolves d's unit, category, IVA and attributes. The

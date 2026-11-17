@@ -153,10 +153,14 @@ func (s *Service) saveSale(ctx context.Context, span trace.Span, a Actor, sale *
 		if err := s.chargeCredit(ctx, a, sale, c.authorizedBy); err != nil {
 			return err
 		}
-		return s.Documents.RegisterSale(ctx, DocumentRequest{
+		err := s.Documents.RegisterSale(ctx, DocumentRequest{
 			TenantID: a.TenantID, UserID: a.UserID, SaleID: sale.ID(), Kind: c.documentKind,
 			Credit: sale.CreditAmount().IsPositive(), HasCustomer: sale.CustomerID() != nil,
 		})
+		if err != nil {
+			return err
+		}
+		return s.auditDiscount(ctx, a, sale)
 	})
 	var stockErr *domain.InsufficientStockError
 	if errors.As(err, &stockErr) {
@@ -165,6 +169,20 @@ func (s *Service) saveSale(ctx context.Context, span trace.Span, a Actor, sale *
 		span.SetAttributes(attribute.String("variant.id", stockErr.VariantID.String()))
 	}
 	return err
+}
+
+// auditDiscount records the sale's discounts, if it has any, in the audit
+// log: one event per sale, with the discounted amount and the gross before
+// it.
+func (s *Service) auditDiscount(ctx context.Context, a Actor, sale *domain.Sale) error {
+	t := sale.Totals()
+	if !t.Discounts.IsPositive() {
+		return nil
+	}
+	return s.Audit.Record(ctx, a.TenantID, a.UserID, AuditEntry{
+		Action: auditSaleDiscountApplied, EntityID: sale.ID(), LocationID: sale.LocationID(),
+		Details: map[string]string{"discount": t.Discounts.StringFixed(2), "gross": t.Subtotal.StringFixed(2)},
+	})
 }
 
 // recordSale counts a confirmed sale in its metrics.

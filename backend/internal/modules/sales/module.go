@@ -42,6 +42,9 @@ type Config struct {
 	// Documents numbers each sale's electronic document; internal/server
 	// adapts the invoicing module.
 	Documents app.ElectronicDocuments
+	// Audit records the voids, the discounts and the cash closings with a
+	// difference; internal/server adapts the audit module.
+	Audit app.AuditLog
 	// Prices gives the unit price of each line: the chain of the price rules
 	// of the active modules. Nil sells each variant at its price.
 	Prices         app.PriceResolver
@@ -74,6 +77,8 @@ func New(cfg Config) (*Module, error) {
 		Authorizer:     cfg.Authorizer,
 		Users:          cfg.Users,
 		Documents:      cfg.Documents,
+		Audit:          cfg.Audit,
+		Tx:             db.NewTransactor(cfg.DB),
 		Sales:          postgres.NewSaleRepository(cfg.DB),
 		Policies:       postgres.NewPolicyRepository(cfg.DB),
 		CashSessions:   postgres.NewCashSessionRepository(cfg.DB),

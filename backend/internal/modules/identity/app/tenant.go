@@ -23,8 +23,9 @@ type TenantUpdate struct {
 	MunicipalityCode *string
 }
 
-// UpdateTenant changes the settings of userID's tenant. The permission is
-// checked by the API (tenant:manage); an invalid value changes nothing.
+// UpdateTenant changes the settings of userID's tenant, with an audit event
+// per changed setting in the same transaction. The permission is checked by
+// the API (tenant:manage); an invalid value changes nothing.
 func (s *Service) UpdateTenant(ctx context.Context, tenantID, userID uuid.UUID, in TenantUpdate) (_ *domain.Tenant, err error) {
 	ctx, span := s.startSpan(ctx, "UpdateTenant")
 	defer func() { usecase.End(span, err) }()
@@ -37,6 +38,7 @@ func (s *Service) UpdateTenant(ctx context.Context, tenantID, userID uuid.UUID, 
 	if in == (TenantUpdate{}) {
 		return tenant, nil
 	}
+	before := tenantSettings(tenant)
 	contact, err := in.contact(tenant.Contact())
 	if err != nil {
 		return nil, err
@@ -47,7 +49,13 @@ func (s *Service) UpdateTenant(ctx context.Context, tenantID, userID uuid.UUID, 
 		}
 	}
 	tenant.SetContact(contact)
-	if err := s.Tenants.Update(ctx, tenant); err != nil {
+	err = s.Tx.InTx(ctx, tenantID, func(ctx context.Context) error {
+		if err := s.Tenants.Update(ctx, tenant); err != nil {
+			return err
+		}
+		return s.auditSettings(ctx, userID, tenant, before)
+	})
+	if err != nil {
 		return nil, err
 	}
 	s.Logger.InfoContext(ctx, "tenant settings updated", slog.String("default_tax_rate", tenant.DefaultTaxRate().String()))

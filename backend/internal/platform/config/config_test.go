@@ -52,6 +52,7 @@ func TestLoad(t *testing.T) {
 			ShutdownTimeout: 15 * time.Second,
 			// Producción exige un proveedor real (config_invoicing_test.go).
 			InvoicingProvider: config.ProviderSimulated,
+			RateLimitsEnabled: true,
 		}, cfg)
 	})
 

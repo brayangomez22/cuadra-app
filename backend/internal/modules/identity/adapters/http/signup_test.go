@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -26,8 +27,8 @@ func TestSignUp(t *testing.T) {
 		requireSession(t, rec, http.StatusCreated, want)
 		require.Equal(t, app.SignUpInput{
 			TenantName: "Ferretería El Tornillo", NIT: "900123456-8", OwnerName: "Ana Gómez",
-			Email: "ana@eltornillo.co", Password: "clave-segura-123",
-		}, got, "without business_template the use case picks the default")
+			Email: "ana@eltornillo.co", Password: "clave-segura-123", ClientIP: "192.0.2.1",
+		}, got, "without business_template the use case picks the default; the IP keys the limit")
 	})
 
 	t.Run("pasa la plantilla de tipo de negocio elegida", func(t *testing.T) {
@@ -51,6 +52,7 @@ func TestSignUp(t *testing.T) {
 			{err: domain.ErrInvalidNITCheckDigit, code: "invalid_nit_check_digit"},
 			{err: domain.ErrPasswordTooShort, code: "password_too_short"},
 			{err: domain.ErrPasswordTooLong, code: "password_too_long"},
+			{err: domain.ErrPasswordTooCommon, code: "password_too_common"},
 			{err: domain.ErrInvalidTenantName, code: "invalid_tenant_name"},
 			{err: domain.ErrInvalidUserName, code: "invalid_user_name"},
 			{err: domain.ErrUnknownBusinessTemplate, code: "unknown_business_template"},
@@ -61,6 +63,15 @@ func TestSignUp(t *testing.T) {
 				requireError(t, serve(t, uc, post("/api/v1/auth/signup", body)), http.StatusUnprocessableEntity, tt.code)
 			})
 		}
+	})
+
+	t.Run("demasiados registros responden 429 con Retry-After en segundos", func(t *testing.T) {
+		uc := &stubUseCases{signUp: func(app.SignUpInput) (app.Session, error) {
+			return app.Session{}, &app.RateLimitError{RetryAfter: 30 * time.Minute}
+		}}
+		rec := serve(t, uc, post("/api/v1/auth/signup", body))
+		requireError(t, rec, http.StatusTooManyRequests, "too_many_requests")
+		require.Equal(t, "1800", rec.Header().Get("Retry-After"))
 	})
 
 	t.Run("un error inesperado responde 500 sin detalles", func(t *testing.T) {

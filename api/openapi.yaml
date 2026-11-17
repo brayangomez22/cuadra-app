@@ -12,6 +12,11 @@ info:
     - El dinero y las cantidades viajan como strings decimales (`"12500.00"`), nunca como números.
     - La paginación usa `limit` (máximo 100) y `offset`.
     - Las fechas van en RFC 3339, en UTC.
+
+    Límites de cualquier operación (no se repiten en cada una):
+    - `429` `rate_limited`, con `Retry-After`: demasiadas solicitudes desde la misma IP o de la misma empresa.
+    - `413` `request_too_large`: un cuerpo de más de 1 MB (10 MB para la subida de una importación).
+    - `403` `origin_not_allowed`: una escritura desde un navegador en un origen no permitido.
 servers:
   - url: http://localhost:8080
     description: Desarrollo local
@@ -88,6 +93,12 @@ tags:
       (con número, sin respuesta), `sent` (el proveedor espera a la DIAN), `accepted` (con CUDE o CUFE y QR) y
       `rejected` (con los motivos; no se reintenta solo). Un reintento nunca toma un número nuevo.
 
+  - name: audit
+    description: |
+      Registro de auditoría de la empresa: quién anuló, aplicó descuentos, cambió precios, ajustó inventario, cerró
+      caja con diferencia o cambió la configuración. Cada evento se guarda en la misma transacción que la operación y
+      no se puede modificar ni borrar. Las acciones forman un catálogo cerrado y versionado (`docs/auditoria.md`) y
+      `details` trae el dato que los reportes suman (montos como strings decimales).
 # Authorization is declared here and enforced by the API before the request
 # is validated: every operation requires a bearer token unless it says
 # `security: []`, and `x-permission` names the permission the user's role
@@ -160,8 +171,19 @@ paths:
         "422":
           description: |
             Algún dato no cumple las reglas (`invalid_email`, `invalid_nit`, `invalid_nit_check_digit`,
-            `password_too_short`, `password_too_long`, `invalid_tenant_name`, `invalid_user_name`,
-            `unknown_business_template`).
+            `password_too_short`, `password_too_long`, `password_too_common`, `invalid_tenant_name`,
+            `invalid_user_name`, `unknown_business_template`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Demasiados registros desde la misma conexión (`code` = `too_many_requests`).
+          headers:
+            Retry-After:
+              description: Segundos que hay que esperar antes de intentar de nuevo.
+              schema:
+                type: integer
           content:
             application/json:
               schema:
@@ -4309,6 +4331,74 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/audit-events:
+    get:
+      tags: [audit]
+      operationId: listAuditEvents
+      summary: Consultar el registro de auditoría
+      description: |
+        Lista los eventos de auditoría de la empresa, del más reciente al más antiguo. `from` y `to` son días en
+        Colombia (incluidos).
+      x-permission: audit:read
+      parameters:
+        - name: action
+          in: query
+          description: Solo los eventos de esta acción.
+          required: false
+          schema:
+            $ref: "#/components/schemas/AuditAction"
+        - name: user_id
+          in: query
+          description: Solo los eventos de este usuario.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: entity_id
+          in: query
+          description: Solo los eventos sobre esta entidad (una venta, una variante...).
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          description: Eventos desde este día (incluido).
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          description: Eventos hasta este día (incluido).
+          required: false
+          schema:
+            type: string
+            format: date
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página de eventos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditEventPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: El rango de fechas está invertido (`invalid_filter`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   headers:
     SetRefreshCookie:
@@ -6091,6 +6181,70 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Municipality"
+    AuditAction:
+      type: string
+      description: Acción del catálogo de auditoría (versión 1, `docs/auditoria.md`).
+      enum:
+        - cash.closed_with_difference
+        - module.disabled
+        - module.enabled
+        - purchase.voided
+        - sale.discount_applied
+        - sale.voided
+        - stock.adjusted
+        - tenant.settings_changed
+        - variant.price_changed
+    AuditEvent:
+      type: object
+      required: [id, action, user_id, role, entity_type, occurred_at, details]
+      properties:
+        id:
+          type: string
+          format: uuid
+        action:
+          $ref: "#/components/schemas/AuditAction"
+        user_id:
+          type: string
+          format: uuid
+          description: Quién hizo la operación.
+        role:
+          type: string
+          description: El rol que tenía al hacerla.
+          example: cashier
+        entity_type:
+          type: string
+          description: Sobre qué tipo de entidad (`sale`, `variant`, `cash_session`, `purchase`, `module`, `tenant`).
+          example: sale
+        entity_id:
+          type: string
+          format: uuid
+          description: La entidad; no viene en las acciones sobre un módulo.
+        location_id:
+          type: string
+          format: uuid
+          description: La sede, cuando la operación tiene una.
+        occurred_at:
+          type: string
+          format: date-time
+        details:
+          type: object
+          description: El dato que se agrega, según la acción (montos y cantidades como strings decimales).
+          additionalProperties:
+            type: string
+          example:
+            old_price: "4500.00"
+            new_price: "4800.00"
+    AuditEventPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+        total:
+          type: integer
+          description: Cantidad total de eventos que cumplen el filtro, sin paginar.
     CustomerPage:
       type: object
       required: [items, total]

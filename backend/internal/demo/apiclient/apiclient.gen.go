@@ -43,6 +43,45 @@ func (e AttributeType) Valid() bool {
 	}
 }
 
+// Defines values for AuditAction.
+const (
+	CashClosedWithDifference AuditAction = "cash.closed_with_difference"
+	ModuleDisabled           AuditAction = "module.disabled"
+	ModuleEnabled            AuditAction = "module.enabled"
+	PurchaseVoided           AuditAction = "purchase.voided"
+	SaleDiscountApplied      AuditAction = "sale.discount_applied"
+	SaleVoided               AuditAction = "sale.voided"
+	StockAdjusted            AuditAction = "stock.adjusted"
+	TenantSettingsChanged    AuditAction = "tenant.settings_changed"
+	VariantPriceChanged      AuditAction = "variant.price_changed"
+)
+
+// Valid indicates whether the value is a known member of the AuditAction enum.
+func (e AuditAction) Valid() bool {
+	switch e {
+	case CashClosedWithDifference:
+		return true
+	case ModuleDisabled:
+		return true
+	case ModuleEnabled:
+		return true
+	case PurchaseVoided:
+		return true
+	case SaleDiscountApplied:
+		return true
+	case SaleVoided:
+		return true
+	case StockAdjusted:
+		return true
+	case TenantSettingsChanged:
+		return true
+	case VariantPriceChanged:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AuthSessionTokenType.
 const (
 	Bearer AuthSessionTokenType = "Bearer"
@@ -1020,6 +1059,49 @@ type AttributeType string
 // AttributeValue Un texto para los atributos de texto, número y lista (un número va como texto decimal, `"2.5"`, nunca como
 // número JSON) o un booleano para los de sí/no.
 type AttributeValue = interface{}
+
+// AuditAction Acción del catálogo de auditoría (versión 1, `docs/auditoria.md`).
+type AuditAction string
+
+// AuditEvent defines model for AuditEvent.
+type AuditEvent struct {
+	// Action Acción del catálogo de auditoría (versión 1, `docs/auditoria.md`).
+	Action AuditAction `json:"action"`
+
+	// Details El dato que se agrega, según la acción (montos y cantidades como strings decimales).
+	//
+	// Example: {"new_price":"4800.00","old_price":"4500.00"}
+	Details map[string]string `json:"details"`
+
+	// EntityId La entidad; no viene en las acciones sobre un módulo.
+	EntityId *openapi_types.UUID `json:"entity_id,omitempty"`
+
+	// EntityType Sobre qué tipo de entidad (`sale`, `variant`, `cash_session`, `purchase`, `module`, `tenant`).
+	//
+	// Example: sale
+	EntityType string             `json:"entity_type"`
+	Id         openapi_types.UUID `json:"id"`
+
+	// LocationId La sede, cuando la operación tiene una.
+	LocationId *openapi_types.UUID `json:"location_id,omitempty"`
+	OccurredAt time.Time           `json:"occurred_at"`
+
+	// Role El rol que tenía al hacerla.
+	//
+	// Example: cashier
+	Role string `json:"role"`
+
+	// UserId Quién hizo la operación.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// AuditEventPage defines model for AuditEventPage.
+type AuditEventPage struct {
+	Items []AuditEvent `json:"items"`
+
+	// Total Cantidad total de eventos que cumplen el filtro, sin paginar.
+	Total int `json:"total"`
+}
 
 // AuthSession defines model for AuthSession.
 type AuthSession struct {
@@ -3745,6 +3827,30 @@ type StockCountNotFound = Error
 // Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Unauthorized = Error
 
+// ListAuditEventsParams defines parameters for ListAuditEvents.
+type ListAuditEventsParams struct {
+	// Action Solo los eventos de esta acción.
+	Action *AuditAction `form:"action,omitempty" json:"action,omitempty"`
+
+	// UserId Solo los eventos de este usuario.
+	UserId *openapi_types.UUID `form:"user_id,omitempty" json:"user_id,omitempty"`
+
+	// EntityId Solo los eventos sobre esta entidad (una venta, una variante...).
+	EntityId *openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
+
+	// From Eventos desde este día (incluido).
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Eventos hasta este día (incluido).
+	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // LogoutParams defines parameters for Logout.
 type LogoutParams struct {
 	// CuadraRefresh Refresh token. Lo pone la API; el navegador lo envía solo a `/api/v1/auth`.
@@ -4234,6 +4340,14 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+
+	// ListAuditEvents Consultar el registro de auditoría
+	//
+	// Lista los eventos de auditoría de la empresa, del más reciente al más antiguo. `from` y `to` son días en
+	// Colombia (incluidos).
+	//
+	// Corresponds with GET /api/v1/audit-events (the `ListAuditEvents` operationId).
+	ListAuditEvents(ctx context.Context, params *ListAuditEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListDemos Demostraciones disponibles
 	//
@@ -5696,6 +5810,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /readyz (the `GetReadyz` operationId).
 	GetReadyz(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+// ListAuditEvents Consultar el registro de auditoría
+//
+// Lista los eventos de auditoría de la empresa, del más reciente al más antiguo. `from` y `to` son días en
+// Colombia (incluidos).
+//
+// Corresponds with GET /api/v1/audit-events (the `ListAuditEvents` operationId).
+func (c *Client) ListAuditEvents(ctx context.Context, params *ListAuditEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListAuditEventsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 // ListDemos Demostraciones disponibles
@@ -8798,6 +8930,132 @@ func (c *Client) GetReadyz(ctx context.Context, reqEditors ...RequestEditorFn) (
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewListAuditEventsRequest constructs an http.Request for the ListAuditEvents method
+func NewListAuditEventsRequest(server string, params *ListAuditEventsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/audit-events")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Action != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "action", *params.Action, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.UserId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "user_id", *params.UserId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EntityId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "entity_id", *params.EntityId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.From != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "from", *params.From, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.To != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "to", *params.To, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewListDemosRequest constructs an http.Request for the ListDemos method
@@ -14122,6 +14380,16 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 
+	// ListAuditEventsWithResponse Consultar el registro de auditoría
+	//
+	// Lista los eventos de auditoría de la empresa, del más reciente al más antiguo. `from` y `to` son días en
+	// Colombia (incluidos).
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/audit-events (the `ListAuditEvents` operationId).
+	ListAuditEventsWithResponse(ctx context.Context, params *ListAuditEventsParams, reqEditors ...RequestEditorFn) (*ListAuditEventsResponse, error)
+
 	// ListDemosWithResponse Demostraciones disponibles
 	//
 	// Los tipos de negocio que tienen una empresa de demostración, para el botón «Probar la demo». Sus datos se
@@ -15719,6 +15987,82 @@ type ClientWithResponsesInterface interface {
 	GetReadyzWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetReadyzResponse, error)
 }
 
+type ListAuditEventsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AuditEventPage
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListAuditEventsResponse) GetJSON200() *AuditEventPage {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ListAuditEventsResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListAuditEventsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListAuditEventsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r ListAuditEventsResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListAuditEventsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListAuditEventsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListAuditEventsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListAuditEventsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListAuditEventsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListDemosResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -16076,6 +16420,11 @@ type SignUpResponse201Headers struct {
 	SetCookie *string
 }
 
+// SignUpResponse429Headers the declared response headers of an HTTP 429 response for SignUp
+type SignUpResponse429Headers struct {
+	RetryAfter *int
+}
+
 type SignUpResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -16085,10 +16434,14 @@ type SignUpResponse struct {
 	JSON400 *BadRequest
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *Error
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *Error
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *InternalError
 	// Headers201 the parsed response headers for an HTTP 201 response
 	Headers201 *SignUpResponse201Headers
+	// Headers429 the parsed response headers for an HTTP 429 response
+	Headers429 *SignUpResponse429Headers
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
@@ -16104,6 +16457,11 @@ func (r SignUpResponse) GetJSON400() *BadRequest {
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
 func (r SignUpResponse) GetJSON422() *Error {
 	return r.JSON422
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r SignUpResponse) GetJSON429() *Error {
+	return r.JSON429
 }
 
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
@@ -24444,6 +24802,22 @@ func (r GetReadyzResponse) ContentType() string {
 	return ""
 }
 
+// ListAuditEventsWithResponse Consultar el registro de auditoría
+//
+// Lista los eventos de auditoría de la empresa, del más reciente al más antiguo. `from` y `to` son días en
+// Colombia (incluidos).
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/audit-events (the `ListAuditEvents` operationId).
+func (c *ClientWithResponses) ListAuditEventsWithResponse(ctx context.Context, params *ListAuditEventsParams, reqEditors ...RequestEditorFn) (*ListAuditEventsResponse, error) {
+	rsp, err := c.ListAuditEvents(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListAuditEventsResponse(rsp)
+}
+
 // ListDemosWithResponse Demostraciones disponibles
 //
 // Los tipos de negocio que tienen una empresa de demostración, para el botón «Probar la demo». Sus datos se
@@ -27024,6 +27398,67 @@ func (c *ClientWithResponses) GetReadyzWithResponse(ctx context.Context, reqEdit
 	return ParseGetReadyzResponse(rsp)
 }
 
+// ParseListAuditEventsResponse parses an HTTP response from a ListAuditEventsWithResponse call
+func ParseListAuditEventsResponse(rsp *http.Response) (*ListAuditEventsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListAuditEventsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AuditEventPage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListDemosResponse parses an HTTP response from a ListDemosWithResponse call
 func ParseListDemosResponse(rsp *http.Response) (*ListDemosResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -27372,6 +27807,13 @@ func ParseSignUpResponse(rsp *http.Response) (*SignUpResponse, error) {
 		}
 		response.JSON422 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -27392,6 +27834,16 @@ func ParseSignUpResponse(rsp *http.Response) (*SignUpResponse, error) {
 			headers.SetCookie = &value
 		}
 		response.Headers201 = &headers
+	case rsp.StatusCode == 429:
+		var headers SignUpResponse429Headers
+		if values := rsp.Header.Values("Retry-After"); len(values) > 0 {
+			var value int
+			if err := runtime.BindStyledParameterWithOptions("simple", "Retry-After", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.RetryAfter = &value
+		}
+		response.Headers429 = &headers
 	}
 
 	return response, nil

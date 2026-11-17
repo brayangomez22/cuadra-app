@@ -59,7 +59,7 @@ func New(cfg Config) (*Module, error) {
 	}
 	svc, err := app.NewService(app.Deps{
 		Imports:        postgres.NewImportRepository(cfg.DB, jobsadapter.Enqueuer(cfg.Jobs)),
-		Tx:             postgres.NewTransactor(cfg.DB),
+		Tx:             db.NewTransactor(cfg.DB),
 		Catalog:        cfg.Catalog,
 		Stock:          cfg.Stock,
 		Modules:        cfg.Modules,

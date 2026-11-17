@@ -110,10 +110,17 @@ func (s *Service) CloseCashSession(ctx context.Context, a Actor, sessionID uuid.
 	if err != nil {
 		return CashSessionView{}, err
 	}
-	session, err := s.CashSessions.Close(ctx, a.TenantID, sessionID, func(session *domain.CashSession, activity domain.CashActivity) error {
-		return session.Close(domain.CloseCashInput{
-			UserID: a.UserID, ManagesCash: a.ManagesCash, Count: count, Activity: activity, Notes: in.Notes, At: s.Now(),
+	var session *domain.CashSession
+	err = s.Tx.InTx(ctx, a.TenantID, func(ctx context.Context) error {
+		session, err = s.CashSessions.Close(ctx, a.TenantID, sessionID, func(session *domain.CashSession, activity domain.CashActivity) error {
+			return session.Close(domain.CloseCashInput{
+				UserID: a.UserID, ManagesCash: a.ManagesCash, Count: count, Activity: activity, Notes: in.Notes, At: s.Now(),
+			})
 		})
+		if err != nil {
+			return err
+		}
+		return s.auditCashDifference(ctx, a, session)
 	})
 	if err != nil {
 		return CashSessionView{}, err
@@ -178,4 +185,20 @@ func (s *Service) view(ctx context.Context, a Actor, session *domain.CashSession
 		return CashSessionView{}, err
 	}
 	return CashSessionView{Session: session, Movements: movements}, nil
+}
+
+// auditCashDifference records a closing whose count did not match the
+// expected cash in the audit log; a matching one is not an event.
+func (s *Service) auditCashDifference(ctx context.Context, a Actor, session *domain.CashSession) error {
+	closing := session.Closing()
+	if closing.Difference.IsZero() {
+		return nil
+	}
+	return s.Audit.Record(ctx, a.TenantID, a.UserID, AuditEntry{
+		Action: auditCashClosedWithDifference, EntityID: session.ID(), LocationID: session.LocationID(),
+		Details: map[string]string{
+			"expected": closing.Expected.StringFixed(2), "counted": closing.Counted.StringFixed(2),
+			"difference": closing.Difference.StringFixed(2),
+		},
+	})
 }

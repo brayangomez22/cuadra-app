@@ -44,8 +44,11 @@ type Config struct {
 	// Provider names the technology provider (INVOICING_PROVIDER).
 	Provider string
 	// TokenKey encrypts the tenants' tokens at the provider
-	// (INVOICING_TOKEN_KEY); empty is the development key.
-	TokenKey []byte
+	// (INVOICING_TOKEN_KEY); empty is the development key. PreviousTokenKey
+	// still opens the tokens encrypted before a rotation, which are then
+	// encrypted again with TokenKey (INVOICING_TOKEN_KEY_PREVIOUS).
+	TokenKey         []byte
+	PreviousTokenKey []byte
 	// Sales and Buyers are the sales and the customers modules, adapted by
 	// internal/server.
 	Sales  app.SaleSource
@@ -120,7 +123,7 @@ func tokenCipher(cfg Config) (postgres.TokenCipher, error) {
 		cfg.Logger.WarnContext(context.Background(), "invoicing uses the development key for the providers' tokens")
 		return postgres.NewTokenCipher(developmentTokenKey)
 	}
-	return postgres.NewTokenCipher(cfg.TokenKey)
+	return postgres.NewTokenCipher(cfg.TokenKey, cfg.PreviousTokenKey)
 }
 
 // addJobs adds the issue and poll workers and, in the API process, the poll's

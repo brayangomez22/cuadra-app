@@ -38,7 +38,7 @@ func (r *ProviderAccountRepository) Get(ctx context.Context, tenantID uuid.UUID)
 	case err != nil:
 		return domain.ProviderAccount{}, fmt.Errorf("invoicing: get provider account: %w", err)
 	}
-	token, err := r.token(tenantID, row.TokenCiphertext)
+	token, stale, err := r.token(tenantID, row.TokenCiphertext)
 	if err != nil {
 		return domain.ProviderAccount{}, err
 	}
@@ -46,23 +46,31 @@ func (r *ProviderAccountRepository) Get(ctx context.Context, tenantID uuid.UUID)
 	if err != nil {
 		return domain.ProviderAccount{}, fmt.Errorf("invoicing: tenant %s: stored provider account: %w", tenantID, err)
 	}
+	if stale {
+		// Encrypted with the key before a rotation: store it with the
+		// current one, so the previous key can be retired.
+		if err := r.Save(ctx, tenantID, a); err != nil {
+			return domain.ProviderAccount{}, err
+		}
+	}
 	return a, nil
 }
 
-// token opens the stored token; none is the zero Secret.
-func (r *ProviderAccountRepository) token(tenantID uuid.UUID, sealed []byte) (domain.Secret, error) {
+// token opens the stored token; none is the zero Secret. stale tells that
+// it opened with the previous key.
+func (r *ProviderAccountRepository) token(tenantID uuid.UUID, sealed []byte) (_ domain.Secret, stale bool, _ error) {
 	if sealed == nil {
-		return domain.Secret{}, nil
+		return domain.Secret{}, false, nil
 	}
-	plain, err := r.cipher.Open(tenantID, sealed)
+	plain, stale, err := r.cipher.OpenRotating(tenantID, sealed)
 	if err != nil {
-		return domain.Secret{}, fmt.Errorf("invoicing: tenant %s: %w", tenantID, err)
+		return domain.Secret{}, false, fmt.Errorf("invoicing: tenant %s: %w", tenantID, err)
 	}
 	s, err := domain.NewSecret(plain)
 	if err != nil {
-		return domain.Secret{}, fmt.Errorf("invoicing: tenant %s: stored token: %w", tenantID, err)
+		return domain.Secret{}, false, fmt.Errorf("invoicing: tenant %s: stored token: %w", tenantID, err)
 	}
-	return s, nil
+	return s, stale, nil
 }
 
 // Save stores the tenant's account, with its token encrypted.

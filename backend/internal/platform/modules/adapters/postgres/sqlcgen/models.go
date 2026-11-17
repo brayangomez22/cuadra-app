@@ -72,6 +72,19 @@ type AttributeDefinition struct {
 	CreatedAt time.Time
 }
 
+type AuditEvent struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	UserID     uuid.UUID
+	Role       string
+	Action     string
+	EntityType string
+	EntityID   *uuid.UUID
+	LocationID *uuid.UUID
+	OccurredAt time.Time
+	Details    []byte
+}
+
 type CashMovement struct {
 	ID        uuid.UUID
 	TenantID  uuid.UUID
@@ -388,14 +401,15 @@ type Receivable struct {
 }
 
 type RefreshToken struct {
-	ID        uuid.UUID
-	TenantID  uuid.UUID
-	UserID    uuid.UUID
-	FamilyID  uuid.UUID
-	TokenHash []byte
-	ExpiresAt time.Time
-	CreatedAt time.Time
-	RevokedAt pgtype.Timestamptz
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	UserID          uuid.UUID
+	FamilyID        uuid.UUID
+	TokenHash       []byte
+	ExpiresAt       time.Time
+	CreatedAt       time.Time
+	RevokedAt       pgtype.Timestamptz
+	FamilyStartedAt time.Time
 }
 
 type ReorderRule struct {

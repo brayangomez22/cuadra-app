@@ -52,8 +52,13 @@ export default defineConfig(({ mode }) => ({
     // Same origin as the API in development: the refresh cookie (SameSite=Strict,
     // path /api/v1/auth) reaches it and the API needs no CORS.
     // `vite preview` uses it too. The end-to-end tests point it to their own API.
+    // changeOrigin stays off so the API sees the browser's Host, which matches
+    // its Origin: the strict CORS check treats the request as same-origin.
     proxy: {
-      '/api': process.env.API_PROXY_TARGET ?? 'http://localhost:8080',
+      '/api': {
+        target: process.env.API_PROXY_TARGET ?? 'http://localhost:8080',
+        changeOrigin: false,
+      },
     },
   },
   test: {

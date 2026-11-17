@@ -43,6 +43,8 @@ func createToken(ctx context.Context, q *sqlcgen.Queries, t *domain.RefreshToken
 		ExpiresAt: t.ExpiresAt(),
 		CreatedAt: t.CreatedAt(),
 		RevokedAt: t.RevokedAt(),
+
+		FamilyStartedAt: t.FamilyStartedAt(),
 	})
 }
 
@@ -67,6 +69,8 @@ func (r *RefreshTokenRepository) GetByHash(ctx context.Context, tenantID uuid.UU
 		ExpiresAt: row.ExpiresAt,
 		CreatedAt: row.CreatedAt,
 		RevokedAt: row.RevokedAt,
+
+		FamilyStartedAt: row.FamilyStartedAt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("identity: refresh token %s: %w", row.ID, err)

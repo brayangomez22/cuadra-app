@@ -245,6 +245,7 @@ type env struct {
 	actor   app.Actor
 	spans   *tracetest.SpanRecorder
 	metrics *sdkmetric.ManualReader
+	audit   *fakeAudit
 	// now is the service's clock; advance moves it.
 	now time.Time
 }
@@ -264,6 +265,7 @@ func newEnv(t *testing.T) *env {
 			countStore: newCountStore(),
 		},
 		now:   testNow,
+		audit: &fakeAudit{},
 		actor: app.Actor{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())},
 		spans: tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
 	}
@@ -281,6 +283,8 @@ func newEnv(t *testing.T) *env {
 		Reorder:        fakeReorder{e.store},
 		Counts:         fakeCounts{e.store},
 		CountEntries:   fakeEntries{e.store},
+		Audit:          e.audit,
+		Tx:             fakeTx{},
 		Now:            func() time.Time { return e.now },
 		TracerProvider: tp,
 		MeterProvider:  mp,

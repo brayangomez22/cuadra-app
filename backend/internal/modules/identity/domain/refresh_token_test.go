@@ -133,6 +133,8 @@ func TestRehydrateRefreshToken(t *testing.T) {
 			Hash:      make([]byte, 32),
 			ExpiresAt: now.Add(time.Hour),
 			CreatedAt: now,
+
+			FamilyStartedAt: now.Add(-time.Hour),
 		}
 	}
 
@@ -155,6 +157,7 @@ func TestRehydrateRefreshToken(t *testing.T) {
 			{name: "sin usuario", mutate: func(s *domain.RefreshTokenSnapshot) { s.UserID = uuid.Nil }},
 			{name: "sin familia", mutate: func(s *domain.RefreshTokenSnapshot) { s.FamilyID = uuid.Nil }},
 			{name: "hash de otro tamaño", mutate: func(s *domain.RefreshTokenSnapshot) { s.Hash = []byte("abc") }},
+			{name: "familia que empieza después del token", mutate: func(s *domain.RefreshTokenSnapshot) { s.FamilyStartedAt = now.Add(time.Minute) }},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {

@@ -42,6 +42,12 @@ WHERE variant_id = ANY(sqlc.arg(variant_ids)::uuid[]);
 INSERT INTO variant_units (tenant_id, variant_id, unit_id, factor, price, barcode)
 VALUES ($1, $2, $3, $4, $5, $6);
 
+-- LockTenantBarcodes serializes the barcode checks of a tenant's product
+-- writes until the transaction ends (P60): with READ COMMITTED, a check that
+-- waited for the lock sees what the other write committed.
+-- name: LockTenantBarcodes :exec
+SELECT pg_advisory_xact_lock(hashtextextended('catalog.barcodes:' || sqlc.arg(tenant_id)::text, 0));
+
 -- BarcodesTakenElsewhere returns the barcodes of a product used in the
 -- other table by another product of the tenant: one of its variants' by an
 -- alternate unit, or one of its units' by a variant. Each table's unique key

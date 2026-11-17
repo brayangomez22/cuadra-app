@@ -78,9 +78,18 @@ func (h *Handler) SignUp(ctx context.Context, req identityapi.SignUpRequestObjec
 		Password:   req.Body.Password,
 
 		BusinessTemplate: req.Body.BusinessTemplate,
+		ClientIP:         clientIP(ctx),
 	}
 	session, err := h.uc.SignUp(ctx, in)
-	if err != nil {
+	var limited *app.RateLimitError
+	switch {
+	case errors.As(err, &limited):
+		retryAfter := int(math.Ceil(limited.RetryAfter.Seconds()))
+		return identityapi.SignUp429JSONResponse{
+			Body:    errorBody("too_many_requests", tooManyRequestsMessage),
+			Headers: identityapi.SignUp429ResponseHeaders{RetryAfter: &retryAfter},
+		}, nil
+	case err != nil:
 		return nil, err
 	}
 	body, cookie := h.authSession(session)
@@ -231,14 +240,17 @@ func errorBody(code, message string) identityapi.Error {
 
 type clientIPKey struct{}
 
-// withClientIP stores the client IP (RemoteAddr without the port) for the
-// login rate limit. Forwarded headers are not trusted: behind a proxy, the
-// trusted-proxy configuration belongs to the hardening task (T28).
+// withClientIP stores the client IP for the login, sign-up and demo rate
+// limits: the one httpx.ClientIP resolved (the client behind the trusted
+// proxies), or RemoteAddr without the port when the handler runs without it.
 func withClientIP(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			ip = r.RemoteAddr
+		ip := httpx.ClientIPFrom(r.Context())
+		if ip == "" {
+			var err error
+			if ip, _, err = net.SplitHostPort(r.RemoteAddr); err != nil {
+				ip = r.RemoteAddr
+			}
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), clientIPKey{}, ip)))
 	})

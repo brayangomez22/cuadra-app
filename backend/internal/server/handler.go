@@ -35,15 +35,18 @@ type handlerConfig struct {
 	Modules moduleGate
 	// Routes mount each module's operations on the API mux.
 	Routes []func(*http.ServeMux)
+	// Edge configures what the API checks of every request before routing
+	// it; RateLimits, the requests a client IP and a tenant may make (nil:
+	// no limits).
+	Edge       Edge
+	RateLimits *RateLimits
 }
-
-// maxRequestBytes is the largest request body the API reads: an import's
-// file (10 MB) and its form.
-const maxRequestBytes = 11 << 20
 
 // newHandler builds the API's routes and middleware chain. otelhttp is the
 // outermost layer so every log written while serving a request carries its
-// trace context.
+// trace context. The edge (client IP, security headers, CORS and the limit
+// per IP) comes before any routing, and the limit per tenant right after
+// the token is checked.
 //
 // The operations of api/openapi.yaml live on api, behind three gates: first
 // auth.Enforce applies the contract's security (a token, and the operation's
@@ -93,9 +96,9 @@ func newHandler(cfg handlerConfig) (http.Handler, error) {
 	if cfg.Docs {
 		apispec.RegisterDocs(root)
 	}
-	root.Handle("/", enforce(gate(httpx.LimitBody(maxRequestBytes)(validate(api)))))
+	root.Handle("/", enforce(tenantLimit(cfg.RateLimits)(gate(limitBodies(api)(validate(api))))))
 
-	handler := httpx.RequestID(httpx.Logging(cfg.Log)(httpx.Recover(cfg.Log)(root)))
+	handler := httpx.RequestID(httpx.Logging(cfg.Log)(httpx.Recover(cfg.Log)(edge(root, cfg.Edge, cfg.RateLimits))))
 	traced := otelhttp.NewHandler(handler, "http.server", otelhttp.WithTracerProvider(cfg.TracerProvider))
 	return withRoutePattern(traced, api, root), nil
 }

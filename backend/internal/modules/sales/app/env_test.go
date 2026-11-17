@@ -26,6 +26,7 @@ type env struct {
 	authorizer *fakeAuthorizer
 	users      fakeUsers
 	documents  *fakeDocuments
+	audit      *fakeAudit
 	actor      app.Actor
 	spans      *tracetest.SpanRecorder
 	metrics    *sdkmetric.ManualReader
@@ -44,6 +45,7 @@ func newEnv(t *testing.T, rules ...app.PriceRule) *env {
 			customers: map[catalogKey]bool{},
 		},
 		credit:     &fakeCredit{},
+		audit:      &fakeAudit{},
 		authorizer: &fakeAuthorizer{users: map[app.Credentials]uuid.UUID{}},
 		users:      fakeUsers{names: map[uuid.UUID]string{}},
 		documents:  &fakeDocuments{invoiced: map[uuid.UUID]bool{}},
@@ -67,6 +69,8 @@ func newEnv(t *testing.T, rules ...app.PriceRule) *env {
 		Authorizer:     e.authorizer,
 		Users:          e.users,
 		Documents:      e.documents,
+		Audit:          e.audit,
+		Tx:             fakeTx{},
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,

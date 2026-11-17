@@ -24,8 +24,10 @@ type Config struct {
 	DB *db.DB
 	// Catalog and Stock are the catalog and inventory modules, adapted by
 	// internal/server.
-	Catalog        app.VariantCatalog
-	Stock          app.PurchaseStock
+	Catalog app.VariantCatalog
+	Stock   app.PurchaseStock
+	// Audit records the voids; internal/server adapts the audit module.
+	Audit          app.AuditLog
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -50,6 +52,7 @@ func New(cfg Config) (*Module, error) {
 		Purchases:      postgres.NewPurchaseRepository(cfg.DB),
 		Catalog:        cfg.Catalog,
 		Stock:          cfg.Stock,
+		Audit:          cfg.Audit,
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Now:            cfg.Now,

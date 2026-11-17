@@ -38,6 +38,7 @@ type Deps struct {
 	Purchases      domain.PurchaseRepository
 	Catalog        VariantCatalog
 	Stock          PurchaseStock
+	Audit          AuditLog
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -60,7 +61,7 @@ type Service struct {
 // NewService builds a Service. It fails if a dependency is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Suppliers, d.Purchases, d.Catalog, d.Stock) {
+	if usecase.AnyNil(d.Suppliers, d.Purchases, d.Catalog, d.Stock, d.Audit) {
 		return nil, errors.New("purchases: missing service dependency")
 	}
 	if d.Now == nil {

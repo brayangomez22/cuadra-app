@@ -11,8 +11,14 @@ import (
 )
 
 // RefreshTokenTTL is how long a refresh token lives. Each rotation issues a
-// successor with a fresh TTL (sliding session).
+// successor with a fresh TTL (sliding session), but never past
+// SessionMaxAge since the login.
 const RefreshTokenTTL = 7 * 24 * time.Hour
+
+// SessionMaxAge is the longest a session lives, however often it is used
+// (P06): then the user logs in again, which checks the password and the
+// user's state once more.
+const SessionMaxAge = 30 * 24 * time.Hour
 
 // refreshSecretBytes is the entropy of a refresh token's secret.
 const refreshSecretBytes = 32
@@ -34,6 +40,9 @@ type RefreshToken struct {
 	expiresAt time.Time
 	createdAt time.Time
 	revokedAt *time.Time
+	// familyStartedAt is when the family's login happened: no successor
+	// outlives it by more than SessionMaxAge.
+	familyStartedAt time.Time
 }
 
 // NewRefreshToken starts a new family for userID and returns the token and
@@ -46,10 +55,10 @@ func NewRefreshToken(tenantID, userID uuid.UUID, now time.Time) (*RefreshToken, 
 	if err != nil {
 		return nil, "", err
 	}
-	return issueRefreshToken(tenantID, userID, familyID, now)
+	return issueRefreshToken(tenantID, userID, familyID, now.UTC(), now)
 }
 
-func issueRefreshToken(tenantID, userID, familyID uuid.UUID, now time.Time) (*RefreshToken, string, error) {
+func issueRefreshToken(tenantID, userID, familyID uuid.UUID, familyStartedAt, now time.Time) (*RefreshToken, string, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return nil, "", err
@@ -64,8 +73,10 @@ func issueRefreshToken(tenantID, userID, familyID uuid.UUID, now time.Time) (*Re
 		UserID:    userID,
 		FamilyID:  familyID,
 		Hash:      hashSecret(secret),
-		ExpiresAt: now.Add(RefreshTokenTTL),
+		ExpiresAt: minTime(now.Add(RefreshTokenTTL), familyStartedAt.Add(SessionMaxAge)),
 		CreatedAt: now,
+
+		FamilyStartedAt: familyStartedAt,
 	})
 	if err != nil {
 		return nil, "", err
@@ -105,6 +116,9 @@ func (t *RefreshToken) TenantID() uuid.UUID { return t.tenantID }
 // UserID returns the user the token signs in.
 func (t *RefreshToken) UserID() uuid.UUID { return t.userID }
 
+// FamilyStartedAt returns when the login that started the family happened.
+func (t *RefreshToken) FamilyStartedAt() time.Time { return t.familyStartedAt }
+
 // FamilyID identifies the chain of rotations started by one login.
 func (t *RefreshToken) FamilyID() uuid.UUID { return t.familyID }
 
@@ -143,7 +157,7 @@ func (t *RefreshToken) Rotate(now time.Time) (*RefreshToken, string, error) {
 	case t.IsExpired(now):
 		return nil, "", ErrRefreshTokenExpired
 	}
-	next, raw, err := issueRefreshToken(t.tenantID, t.userID, t.familyID, now)
+	next, raw, err := issueRefreshToken(t.tenantID, t.userID, t.familyID, t.familyStartedAt, now)
 	if err != nil {
 		return nil, "", err
 	}
@@ -162,6 +176,8 @@ type RefreshTokenSnapshot struct {
 	ExpiresAt time.Time
 	CreatedAt time.Time
 	RevokedAt *time.Time
+	// FamilyStartedAt is when the login that started the family happened.
+	FamilyStartedAt time.Time
 }
 
 // RehydrateRefreshToken rebuilds a stored token, checking the same
@@ -172,7 +188,7 @@ func RehydrateRefreshToken(s RefreshTokenSnapshot) (*RefreshToken, error) {
 
 func newRefreshToken(s RefreshTokenSnapshot) (*RefreshToken, error) {
 	if s.ID == uuid.Nil || s.TenantID == uuid.Nil || s.UserID == uuid.Nil || s.FamilyID == uuid.Nil ||
-		len(s.Hash) != sha256.Size {
+		len(s.Hash) != sha256.Size || s.FamilyStartedAt.After(s.CreatedAt) {
 		return nil, ErrInvalidRefreshToken
 	}
 	t := &RefreshToken{
@@ -183,10 +199,19 @@ func newRefreshToken(s RefreshTokenSnapshot) (*RefreshToken, error) {
 		hash:      append([]byte(nil), s.Hash...),
 		expiresAt: s.ExpiresAt.UTC(),
 		createdAt: s.CreatedAt.UTC(),
+
+		familyStartedAt: s.FamilyStartedAt.UTC(),
 	}
 	if s.RevokedAt != nil {
 		revokedAt := s.RevokedAt.UTC()
 		t.revokedAt = &revokedAt
 	}
 	return t, nil
+}
+
+func minTime(a, b time.Time) time.Time {
+	if a.Before(b) {
+		return a
+	}
+	return b
 }

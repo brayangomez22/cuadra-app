@@ -79,6 +79,27 @@ func TestProviderAccountRepository(t *testing.T) {
 		require.NotContains(t, err.Error(), orgToken)
 	})
 
+	t.Run("tras rotar la llave abre el token con la anterior y lo vuelve a cifrar con la nueva", func(t *testing.T) {
+		tn := f.createTenant(t)
+		before := postgres.NewProviderAccountRepository(f.db, mustCipher(t, bytes.Repeat([]byte{7}, 32)))
+		require.NoError(t, before.Save(t.Context(), tn.id, account(t, "habilitation", "set-9", orgToken)))
+		sealedBefore := f.storedToken(t, tn)
+
+		rotatedCipher, err := postgres.NewTokenCipher(bytes.Repeat([]byte{8}, 32), bytes.Repeat([]byte{7}, 32))
+		require.NoError(t, err)
+		rotated := postgres.NewProviderAccountRepository(f.db, rotatedCipher)
+		got, err := rotated.Get(t.Context(), tn.id)
+		require.NoError(t, err)
+		require.Equal(t, orgToken, got.Token.Reveal())
+		require.Equal(t, "set-9", got.TestSetID)
+		require.NotEqual(t, sealedBefore, f.storedToken(t, tn))
+
+		onlyNew := postgres.NewProviderAccountRepository(f.db, mustCipher(t, bytes.Repeat([]byte{8}, 32)))
+		got, err = onlyNew.Get(t.Context(), tn.id)
+		require.NoError(t, err, "ya no necesita la llave anterior")
+		require.Equal(t, orgToken, got.Token.Reveal())
+	})
+
 	t.Run("aislamiento: el tenant B no ve ni cambia la cuenta del tenant A", func(t *testing.T) {
 		a, b := f.createTenant(t), f.createTenant(t)
 		require.NoError(t, f.accounts.Save(t.Context(), a.id, account(t, "production", "", orgToken)))
