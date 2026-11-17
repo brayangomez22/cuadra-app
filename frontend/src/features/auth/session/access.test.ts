@@ -42,4 +42,23 @@ describe('visibleItems', () => {
 
     expect(labels(visibleItems(items, access))).toEqual(['Inicio', 'Productos', 'Lotes']);
   });
+
+  it('un menú detrás de una flag aparece solo si la empresa la tiene prendida', () => {
+    // Una ferretería piloto con el POS nuevo y un almacén de calzado sin él.
+    const withFlag = [...items, { to: '/vender-nuevo', label: 'POS nuevo', flag: 'new_pos' }];
+    const permissions = ['catalog:read'];
+
+    expect(labels(visibleItems(withFlag, { permissions, modules: [], flags: ['new_pos'] }))).toContain('POS nuevo');
+    expect(labels(visibleItems(withFlag, { permissions, modules: [], flags: [] }))).not.toContain('POS nuevo');
+  });
+
+  it('un menú de operadores aparece solo para los operadores de la plataforma', () => {
+    const withOperator = [...items, { to: '/interno/flags', label: 'Feature flags', operator: true }];
+
+    expect(labels(visibleItems(withOperator, { permissions: [], modules: [], operator: true }))).toEqual([
+      'Inicio',
+      'Feature flags',
+    ]);
+    expect(labels(visibleItems(withOperator, { permissions: [], modules: [] }))).toEqual(['Inicio']);
+  });
 });

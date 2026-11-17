@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/riverqueue/river"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -55,6 +56,16 @@ type Config struct {
 	// tests) does not limit.
 	Edge       Edge
 	RateLimits *RateLimits
+	// PlatformOperators manage the feature flags (PLATFORM_OPERATORS);
+	// FlagsCacheTTL is how long each instance reuses what it read of them
+	// (zero: every evaluation reads the database).
+	PlatformOperators []uuid.UUID
+	FlagsCacheTTL     time.Duration
+	// AnalyticsSecret keys the users' pseudonyms in the usage analytics
+	// (empty: /me brings none and the app sends nothing);
+	// FeedbackWebhookURL receives the users' comments (empty: the log).
+	AnalyticsSecret    []byte
+	FeedbackWebhookURL string
 }
 
 // New builds every module and the handler that serves them. It fails, so

@@ -224,6 +224,24 @@ type ElectronicDocumentFile struct {
 	CreatedAt  time.Time
 }
 
+type FeatureFlag struct {
+	Key       string
+	Enabled   bool
+	UpdatedAt time.Time
+	UpdatedBy uuid.UUID
+}
+
+type Feedback struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	UserID     uuid.UUID
+	Message    string
+	Screen     string
+	AppVersion string
+	CreatedAt  time.Time
+	NotifiedAt pgtype.Timestamptz
+}
+
 type Import struct {
 	ID            uuid.UUID
 	TenantID      uuid.UUID
@@ -659,6 +677,15 @@ type Tenant struct {
 	City             string
 	Phone            string
 	MunicipalityCode *string
+	AnalyticsConsent bool
+}
+
+type TenantFeatureFlag struct {
+	TenantID  uuid.UUID
+	Key       string
+	Enabled   bool
+	UpdatedAt time.Time
+	UpdatedBy uuid.UUID
 }
 
 type TenantModule struct {

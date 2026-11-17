@@ -25,7 +25,7 @@ Decisión: `docs/decisiones.md`, 2026-10-18 (diseño) y 2026-11-15 (T38).
 | `cash.closed_with_difference` | `cash_session` | sí | `expected`, `counted`, `difference` (`counted − expected`: negativo es faltante). Solo si hay diferencia | `sales.CloseCashSession` |
 | `purchase.voided` | `purchase` | sí | `total`: total de la compra anulada | `purchases.VoidPurchase` |
 | `module.enabled` / `module.disabled` | `module` (sin `entity_id`) | no | `module`: el ID del módulo. Activar los módulos de la plantilla al registrarse no deja eventos | `PUT /api/v1/modules/{id}` |
-| `tenant.settings_changed` | `tenant` | no | `setting` (`address`, `city`, `default_tax_rate`, `municipality_code`, `phone`), `old`, `new`. Un evento por dato que cambia | `identity.UpdateTenant` |
+| `tenant.settings_changed` | `tenant` | no | `setting` (`address`, `analytics_consent`, `city`, `default_tax_rate`, `municipality_code`, `phone`), `old`, `new`. Un evento por dato que cambia | `identity.UpdateTenant` |
 
 ## Lo que viene
 

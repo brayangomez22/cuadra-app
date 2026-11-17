@@ -36,13 +36,20 @@ func newAPI(t *testing.T) (handler http.Handler, tokens *auth.JWT) {
 // works them once started.
 func newAPIWithJobs(t *testing.T) (handler http.Handler, tokens *auth.JWT, jobClient *jobs.Client) {
 	t.Helper()
+	return newAPIWith(t, func(*server.Config) {})
+}
+
+// newAPIWith is newAPIWithJobs with the configuration that set changes,
+// for the settings of cmd/api the defaults leave off (operators, keys...).
+func newAPIWith(t *testing.T, set func(*server.Config)) (handler http.Handler, tokens *auth.JWT, jobClient *jobs.Client) {
+	t.Helper()
 	tokens, err := auth.NewJWT(testSecret, 15*time.Minute)
 	require.NoError(t, err)
 	database := dbtest.New(t)
 	workers := river.NewWorkers()
 	jobClient, err = jobs.New(jobs.Config{DB: database, Workers: workers})
 	require.NoError(t, err)
-	handler, err = server.New(server.Config{
+	cfg := server.Config{
 		DB:             database,
 		Tokens:         tokens,
 		Jobs:           jobClient,
@@ -50,7 +57,9 @@ func newAPIWithJobs(t *testing.T) (handler http.Handler, tokens *auth.JWT, jobCl
 		Log:            slog.New(slog.DiscardHandler),
 		TracerProvider: noop.NewTracerProvider(),
 		MeterProvider:  metricnoop.NewMeterProvider(),
-	})
+	}
+	set(&cfg)
+	handler, err = server.New(cfg)
 	require.NoError(t, err)
 	return handler, tokens, jobClient
 }

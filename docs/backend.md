@@ -74,7 +74,7 @@ Un value object puro que validan los `domain/` de más de un módulo vive en `in
 | `domain` | importar algo que no sea la librería estándar, `uuid`, `decimal` o `internal/kernel` (tampoco `net/http`) |
 | `kernel` | que `internal/kernel` importe algo fuera de la librería estándar |
 | `app` | importar `adapters`, `pgx`, `net/http` o el SDK de OpenTelemetry (`otel/sdk`) |
-| `audit`, `catalog`, `customers`, `identity`, `imports`, `inventory`, `invoicing`, `purchases`, `receivables`, `sales` | importar otro módulo |
+| `audit`, `catalog`, `customers`, `feedback`, `identity`, `imports`, `inventory`, `invoicing`, `purchases`, `receivables`, `sales` | importar otro módulo |
 | `platform` | importar cualquier módulo |
 | `demo` | que `internal/demo` (el generador de la demo) importe un módulo: escribe por la API (`internal/server`) |
 | `composition` | que `cmd/` o `test/api` importen un módulo: solo `internal/server` (y su `ports/`) los une, y los demás usan `server.New` |

@@ -29,6 +29,8 @@ type env struct {
 	hasher        *fakeHasher
 	setup         *fakeSetup
 	modules       *fakeModules
+	flags         *fakeFlags
+	pseudonyms    *fakePseudonyms
 	ipLimiter     *fakeLimiter
 	emailLimiter  *fakeLimiter
 	demoLimiter   *fakeLimiter
@@ -52,6 +54,8 @@ func newEnv(t *testing.T, opts ...func(*app.Deps)) *env {
 		hasher:        &fakeHasher{},
 		setup:         &fakeSetup{},
 		modules:       &fakeModules{active: map[uuid.UUID][]string{}},
+		flags:         &fakeFlags{on: map[uuid.UUID][]string{}},
+		pseudonyms:    &fakePseudonyms{},
 		ipLimiter:     &fakeLimiter{denied: map[string]bool{}},
 		emailLimiter:  &fakeLimiter{denied: map[string]bool{}},
 		demoLimiter:   &fakeLimiter{denied: map[string]bool{}},
@@ -82,6 +86,8 @@ func newEnv(t *testing.T, opts ...func(*app.Deps)) *env {
 		Setup:          e.setup,
 		Permissions:    permissions,
 		Modules:        e.modules,
+		Flags:          e.flags,
+		Pseudonyms:     e.pseudonyms,
 		IPLimiter:      e.ipLimiter,
 		EmailLimiter:   e.emailLimiter,
 		DemoLimiter:    e.demoLimiter,

@@ -50,7 +50,8 @@ func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) erro
 }
 
 const getTenant = `-- name: GetTenant :one
-SELECT id, name, nit, status, business_template, default_tax_rate, address, city, phone, municipality_code, demo, created_at
+SELECT id, name, nit, status, business_template, default_tax_rate, address, city, phone, municipality_code, demo, created_at,
+       analytics_consent
 FROM tenants
 WHERE id = $1
 `
@@ -68,6 +69,7 @@ type GetTenantRow struct {
 	MunicipalityCode *string
 	Demo             bool
 	CreatedAt        time.Time
+	AnalyticsConsent bool
 }
 
 func (q *Queries) GetTenant(ctx context.Context, id uuid.UUID) (GetTenantRow, error) {
@@ -86,6 +88,7 @@ func (q *Queries) GetTenant(ctx context.Context, id uuid.UUID) (GetTenantRow, er
 		&i.MunicipalityCode,
 		&i.Demo,
 		&i.CreatedAt,
+		&i.AnalyticsConsent,
 	)
 	return i, err
 }
@@ -93,7 +96,7 @@ func (q *Queries) GetTenant(ctx context.Context, id uuid.UUID) (GetTenantRow, er
 const updateTenant = `-- name: UpdateTenant :execrows
 UPDATE tenants
 SET name = $2, status = $3, default_tax_rate = $4, address = $5, city = $6, phone = $7,
-    municipality_code = $8
+    municipality_code = $8, analytics_consent = $9
 WHERE id = $1
 `
 
@@ -106,6 +109,7 @@ type UpdateTenantParams struct {
 	City             string
 	Phone            string
 	MunicipalityCode *string
+	AnalyticsConsent bool
 }
 
 func (q *Queries) UpdateTenant(ctx context.Context, arg UpdateTenantParams) (int64, error) {
@@ -118,6 +122,7 @@ func (q *Queries) UpdateTenant(ctx context.Context, arg UpdateTenantParams) (int
 		arg.City,
 		arg.Phone,
 		arg.MunicipalityCode,
+		arg.AnalyticsConsent,
 	)
 	if err != nil {
 		return 0, err

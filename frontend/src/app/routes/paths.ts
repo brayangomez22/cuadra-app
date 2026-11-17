@@ -98,6 +98,9 @@ export const paths = {
     customerSegments: route('/configuracion/segmentos'),
     modules: route('/configuracion/modulos'),
   },
+  platform: {
+    flags: route('/interno/flags'),
+  },
   dev: {
     ui: route('/dev/ui'),
   },

@@ -21,6 +21,8 @@ type TenantUpdate struct {
 	Phone          *string
 	// MunicipalityCode is the DANE code of the company's municipality.
 	MunicipalityCode *string
+	// AnalyticsConsent is the owner's answer to sharing the usage analytics.
+	AnalyticsConsent *bool
 }
 
 // UpdateTenant changes the settings of userID's tenant, with an audit event
@@ -49,6 +51,9 @@ func (s *Service) UpdateTenant(ctx context.Context, tenantID, userID uuid.UUID, 
 		}
 	}
 	tenant.SetContact(contact)
+	if in.AnalyticsConsent != nil {
+		tenant.SetAnalyticsConsent(*in.AnalyticsConsent)
+	}
 	err = s.Tx.InTx(ctx, tenantID, func(ctx context.Context) error {
 		if err := s.Tenants.Update(ctx, tenant); err != nil {
 			return err

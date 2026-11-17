@@ -101,6 +101,9 @@ type CustomerId = openapi_types.UUID
 // DocumentId defines model for DocumentId.
 type DocumentId = openapi_types.UUID
 
+// FlagKey defines model for FlagKey.
+type FlagKey = string
+
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID
 

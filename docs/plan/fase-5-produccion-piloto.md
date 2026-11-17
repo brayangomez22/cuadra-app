@@ -23,7 +23,7 @@ Estado remoto de Terraform en un Storage Account con bloqueo. Paso en el CI de `
 ### [ ] T46 · Entrega continua (CD)
 **Depende de:** T45.
 **Alcance:** al integrar a `main`, el CI construye la imagen con tag del commit, la publica en ACR, ejecuta las migraciones (job separado, con el rol de migraciones, que en Azure no es superusuario: verificar que corren igual que en `dbtest`, P26) y despliega a **staging**. Despliegue a **producción** con aprobación manual (GitHub Environments). Smoke test post-despliegue contra `/readyz` y rollback automático a la revisión anterior si falla. Autenticación del CI con Azure por OIDC (sin secretos de larga duración).
-**Pendientes que entran a esta tarea:** P13 y P170 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P13, P170 y P178 (`docs/plan/pendientes.md`).
 **Aceptación:** de merge a staging sin intervención; de staging a producción con un clic.
 
 ### [ ] T47 · Observabilidad en producción
@@ -49,4 +49,5 @@ Estado remoto de Terraform en un Storage Account con bloqueo. Paso en el CI de `
 - Páginas públicas para cada documento; aceptación obligatoria en el registro, guardando versión, fecha, usuario e IP; nueva aceptación cuando cambia la versión.
 - Procedimiento para atender consultas y reclamos de titulares (conocer, actualizar, suprimir), en `docs/legal/`.
 
+**Pendientes que entran a esta tarea:** P179 (`docs/plan/pendientes.md`).
 **Tests primero:** un usuario no puede usar la app sin aceptar la versión vigente; la aceptación queda registrada e inmutable.

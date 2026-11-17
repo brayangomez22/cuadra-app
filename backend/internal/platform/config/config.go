@@ -8,6 +8,8 @@ import (
 	"net/netip"
 	"strconv"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // minJWTSecretLength is the minimum HS256 key size (RFC 7518 §3.2).
@@ -53,6 +55,17 @@ type Config struct {
 	// and the sign-ups per IP (RATE_LIMITS_ENABLED, on by default). Only
 	// the end-to-end and DAST stacks turn it off; production cannot.
 	RateLimitsEnabled bool
+	// PlatformOperators are the users of the team who manage the feature
+	// flags (PLATFORM_OPERATORS); FlagsCacheTTL, how long each instance
+	// reuses what it read of them (FEATURE_FLAGS_CACHE_TTL). See loadFlags.
+	PlatformOperators []uuid.UUID
+	FlagsCacheTTL     time.Duration
+	// AnalyticsSecret keys the users' pseudonyms in the usage analytics
+	// (ANALYTICS_SECRET; empty: no analytics). Never logged.
+	// FeedbackWebhookURL is the team's chat webhook for the users'
+	// comments (FEEDBACK_WEBHOOK_URL; empty: the log). See loadAnalytics.
+	AnalyticsSecret    []byte
+	FeedbackWebhookURL string
 }
 
 // minDemoPassword is the shortest demo password accepted.
@@ -94,16 +107,11 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 	}
 
-	if err := cfg.loadDemo(getenv); err != nil {
-		errs = append(errs, err)
-	}
-
-	if err := cfg.loadInvoicing(getenv); err != nil {
-		errs = append(errs, err)
-	}
-
-	if err := cfg.loadSecurity(getenv); err != nil {
-		errs = append(errs, err)
+	// Each group of settings reads its own variables (config_*.go).
+	for _, load := range []func(func(string) string) error{cfg.loadDemo, cfg.loadInvoicing, cfg.loadSecurity, cfg.loadFlags, cfg.loadAnalytics} {
+		if err := load(getenv); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	if len(errs) > 0 {

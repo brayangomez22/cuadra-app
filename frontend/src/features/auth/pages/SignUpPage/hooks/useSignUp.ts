@@ -1,3 +1,4 @@
+import { track } from '@/features/analytics';
 import type { UseFormSetError } from 'react-hook-form';
 import { useApiFormErrors, type FieldsByErrorCode } from '@/shared/forms/useApiFormErrors';
 import { signUp } from '../../../api/signUp';
@@ -26,6 +27,8 @@ export function useSignUp(setError: UseFormSetError<SignUpValues>) {
     clearFormError();
     try {
       startSession(await signUp(values));
+      // Sent only if the session already shares analytics (docs/eventos.md).
+      void track('signup_completed', { business_template: values.business_template });
     } catch (error) {
       handleError(error);
     }

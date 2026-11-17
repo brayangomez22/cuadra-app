@@ -19,6 +19,7 @@ func (h *Handler) UpdateTenant(ctx context.Context, req identityapi.UpdateTenant
 	}
 	in := app.TenantUpdate{
 		Address: req.Body.Address, City: req.Body.City, Phone: req.Body.Phone, MunicipalityCode: req.Body.MunicipalityCode,
+		AnalyticsConsent: req.Body.AnalyticsConsent,
 	}
 	if req.Body.DefaultTaxRate != nil {
 		rate, err := decimal.NewFromString(*req.Body.DefaultTaxRate)
@@ -41,5 +42,6 @@ func (h *Handler) UpdateTenant(ctx context.Context, req identityapi.UpdateTenant
 		City:             tenant.Contact().City(),
 		MunicipalityCode: tenant.Contact().MunicipalityCode(),
 		Phone:            tenant.Contact().Phone(),
+		AnalyticsConsent: tenant.AnalyticsConsent(),
 	}, nil
 }

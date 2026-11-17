@@ -2,6 +2,7 @@ import { QueryState } from '@/shared/query';
 import { Stack } from '@/shared/ui';
 import { useSalesRules, useStockRules } from '../../api/businessRules';
 import { SettingsSection } from '../../components/SettingsSection/SettingsSection';
+import { AnalyticsConsentForm } from './components/AnalyticsConsentForm/AnalyticsConsentForm';
 import { BusinessContactForm } from './components/BusinessContactForm/BusinessContactForm';
 import { DefaultTaxForm } from './components/DefaultTaxForm/DefaultTaxForm';
 import { SalesRulesForm } from './components/SalesRulesForm/SalesRulesForm';
@@ -25,6 +26,7 @@ export function GeneralSettings() {
             </>
           )}
         </QueryState>
+        <AnalyticsConsentForm />
       </Stack>
     </SettingsSection>
   );

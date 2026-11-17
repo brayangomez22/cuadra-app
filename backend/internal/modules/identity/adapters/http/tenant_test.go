@@ -47,8 +47,25 @@ func TestUpdateTenant(t *testing.T) {
 			"address": "",
 			"city": "",
 			"municipality_code": "",
-			"phone": ""
+			"phone": "",
+			"analytics_consent": false
 		}`, rec.Body.String())
+	})
+
+	t.Run("pasa el consentimiento de la analítica al caso de uso", func(t *testing.T) {
+		p := profile(t, domain.RoleOwner)
+		var got app.TenantUpdate
+		uc := &stubUseCases{update: func(_, _ uuid.UUID, in app.TenantUpdate) (*domain.Tenant, error) {
+			got = in
+			p.Tenant.SetAnalyticsConsent(*in.AnalyticsConsent)
+			return p.Tenant, nil
+		}}
+
+		rec := serve(t, uc, patch(p, `{"analytics_consent": true}`))
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.True(t, *got.AnalyticsConsent)
+		require.Contains(t, rec.Body.String(), `"analytics_consent":true`)
 	})
 
 	t.Run("pasa la dirección, la ciudad y el teléfono al caso de uso y responde los guardados", func(t *testing.T) {

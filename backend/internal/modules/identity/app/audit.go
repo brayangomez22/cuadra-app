@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/google/uuid"
 
@@ -41,6 +42,7 @@ func tenantSettings(t *domain.Tenant) []setting {
 	c := t.Contact()
 	return []setting{
 		{"address", c.Address()},
+		{"analytics_consent", strconv.FormatBool(t.AnalyticsConsent())},
 		{"city", c.City()},
 		{"default_tax_rate", t.DefaultTaxRate().String()},
 		{"municipality_code", c.MunicipalityCode()},

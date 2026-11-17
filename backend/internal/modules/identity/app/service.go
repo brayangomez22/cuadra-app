@@ -35,6 +35,10 @@ type Deps struct {
 	// modules of each tenant.
 	Permissions *domain.PermissionMatrix
 	Modules     ActiveModules
+	// Flags are the feature flags of each tenant, for /me; Pseudonyms, the
+	// IDs of the users in the usage analytics.
+	Flags      Flags
+	Pseudonyms Pseudonyms
 	// IPLimiter is keyed by client IP and EmailLimiter by normalized email;
 	// both count every login attempt.
 	IPLimiter    RateLimiter
@@ -75,7 +79,7 @@ type Service struct {
 // or a metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
 	if usecase.AnyNil(d.Tenants, d.Users, d.Tokens, d.ExpiredTokens, d.Directory, d.Demo, d.Hasher, d.Issuer, d.Setup,
-		d.Permissions, d.Modules, d.IPLimiter, d.EmailLimiter, d.DemoLimiter, d.SignupLimiter, d.Audit, d.Tx) {
+		d.Permissions, d.Modules, d.Flags, d.Pseudonyms, d.IPLimiter, d.EmailLimiter, d.DemoLimiter, d.SignupLimiter, d.Audit, d.Tx) {
 		return nil, errors.New("identity: missing service dependency")
 	}
 	if d.Now == nil {

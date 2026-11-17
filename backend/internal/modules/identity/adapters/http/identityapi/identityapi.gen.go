@@ -166,6 +166,14 @@ type LoginRequest struct {
 
 // Me defines model for Me.
 type Me struct {
+	// AnalyticsId El seudónimo del usuario en la analítica de uso (un hash con clave, nunca el correo ni el nombre). Solo viene
+	// si la empresa aceptó compartir la analítica, la flag `analytics` está prendida y la analítica está
+	// configurada: sin él, la app no envía ningún evento.
+	//
+	//
+	// Example: 3f2a9c0d1e4b5a6978c0d1e2f3a4b5c6
+	AnalyticsId *string `json:"analytics_id,omitempty"`
+
 	// BusinessTemplate Plantilla de tipo de negocio con la que se registró la empresa.
 	//
 	// Example: generica
@@ -176,8 +184,15 @@ type Me struct {
 	DefaultTaxRate TaxRate `json:"default_tax_rate"`
 
 	// Demo La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso.
-	Demo  bool               `json:"demo"`
-	Email string             `json:"email"`
+	Demo  bool   `json:"demo"`
+	Email string `json:"email"`
+
+	// Flags Feature flags prendidas para la empresa, para mostrar u ocultar lo que se está liberando. Distintas de
+	// `modules`: una flag es temporal y la maneja el equipo de Cuadra.
+	//
+	//
+	// Example: ["feedback"]
+	Flags []string           `json:"flags"`
 	Id    openapi_types.UUID `json:"id"`
 
 	// Modules Módulos activos de la empresa, para mostrar u ocultar menús, columnas y campos.
@@ -185,6 +200,9 @@ type Me struct {
 	// Example: ["variants"]
 	Modules []string `json:"modules"`
 	Name    string   `json:"name"`
+
+	// Operator El usuario es operador de la plataforma (equipo de Cuadra) y puede usar `/platform/flags`.
+	Operator bool `json:"operator"`
 
 	// Permissions Permisos del rol, para mostrar u ocultar acciones en la UI. Incluye los de los módulos activos.
 	//
@@ -195,6 +213,9 @@ type Me struct {
 
 	// TenantAddress Dirección de la empresa, para la tirilla y el cierre de caja. Vacía si no se ha registrado.
 	TenantAddress string `json:"tenant_address"`
+
+	// TenantAnalyticsConsent La empresa aceptó compartir la analítica de uso (se cambia con `PATCH /api/v1/tenant`).
+	TenantAnalyticsConsent bool `json:"tenant_analytics_consent"`
 
 	// TenantCity Ciudad o municipio de la empresa. Vacía si no se ha registrado.
 	TenantCity string             `json:"tenant_city"`
@@ -261,6 +282,10 @@ type Tenant struct {
 	// Address Dirección del negocio, para la tirilla y los documentos. Vacía si no se ha registrado.
 	Address string `json:"address"`
 
+	// AnalyticsConsent El dueño aceptó compartir la analítica de uso de la app con Cuadra (seudónima, sin datos personales). Apagado
+	// hasta que lo acepte.
+	AnalyticsConsent bool `json:"analytics_consent"`
+
 	// BusinessTemplate Example: generica
 	BusinessTemplate string `json:"business_template"`
 
@@ -305,6 +330,9 @@ type TenantUpdate struct {
 	// Address Dirección del negocio. Vacía la borra.
 	Address *string `json:"address,omitempty"`
 
+	// AnalyticsConsent Acepta (o retira) compartir la analítica de uso de la app con Cuadra.
+	AnalyticsConsent *bool `json:"analytics_consent,omitempty"`
+
 	// City Ciudad o municipio. Vacía la borra.
 	City *string `json:"city,omitempty"`
 
@@ -342,6 +370,9 @@ type CustomerId = openapi_types.UUID
 
 // DocumentId defines model for DocumentId.
 type DocumentId = openapi_types.UUID
+
+// FlagKey defines model for FlagKey.
+type FlagKey = string
 
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID

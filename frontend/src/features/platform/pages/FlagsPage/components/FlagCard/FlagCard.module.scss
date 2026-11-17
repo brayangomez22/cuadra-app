@@ -1,0 +1,48 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.key {
+  margin: 0;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-md);
+}
+
+.description,
+.empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.exceptions {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// The business's name takes the room; the value and the action keep their width.
+.exception {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  padding-block: var(--space-2);
+
+  & + & {
+    border-block-start: 1px solid var(--color-border-default);
+  }
+}
+
+.tenant {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

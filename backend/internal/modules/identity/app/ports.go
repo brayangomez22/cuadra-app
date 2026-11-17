@@ -55,6 +55,21 @@ type ModuleRegistry interface {
 	Permissions() []ModulePermission
 }
 
+// Flags tells which feature flags are on for a tenant and who operates the
+// platform. internal/server satisfies it with platform/flags.
+type Flags interface {
+	Active(ctx context.Context, tenantID uuid.UUID) ([]string, error)
+	IsOperator(userID uuid.UUID) bool
+}
+
+// Pseudonyms gives the pseudonymous ID of a user for the usage analytics
+// (a keyed hash of the ID: never the email nor the name); ok is false when
+// the analytics is not configured. internal/server satisfies it with
+// platform/analytics.
+type Pseudonyms interface {
+	Pseudonym(userID uuid.UUID) (id string, ok bool)
+}
+
 // ActiveModules tells which modules a tenant has active. internal/server satisfies
 // it with platform/modules.
 type ActiveModules interface {

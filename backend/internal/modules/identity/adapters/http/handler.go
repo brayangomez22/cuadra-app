@@ -206,6 +206,10 @@ func me(p app.Profile) identityapi.Me {
 	if modules == nil {
 		modules = []string{}
 	}
+	flags := p.Flags
+	if flags == nil {
+		flags = []string{}
+	}
 	return identityapi.Me{
 		Id:                     p.User.ID(),
 		TenantId:               p.Tenant.ID(),
@@ -222,6 +226,10 @@ func me(p app.Profile) identityapi.Me {
 		Role:                   identityapi.MeRole(p.User.Role()),
 		Permissions:            names,
 		Modules:                modules,
+		Flags:                  flags,
+		Operator:               p.Operator,
+		TenantAnalyticsConsent: p.Tenant.AnalyticsConsent(),
+		AnalyticsId:            analyticsID(p.AnalyticsID),
 		Demo:                   p.Tenant.IsDemo(),
 	}
 }
@@ -259,4 +267,13 @@ func withClientIP(next http.Handler) http.Handler {
 func clientIP(ctx context.Context) string {
 	ip, _ := ctx.Value(clientIPKey{}).(string)
 	return ip
+}
+
+// analyticsID is the pseudonym for /me, absent when the app must not send
+// analytics.
+func analyticsID(id string) *string {
+	if id == "" {
+		return nil
+	}
+	return &id
 }

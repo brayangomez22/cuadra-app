@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { describeError } from '@/shared/api/errors';
+import { errorShown } from '@/shared/observability/errorsShown';
 import { useToast } from '@/shared/ui';
 
 type ToastContent = { title: string; description?: string };
@@ -28,7 +29,11 @@ export function useMutationToast<TData>({ success, error }: Options<TData>) {
   );
 
   const onError = useCallback(
-    (failure: unknown) => toast({ tone: 'danger', title: error, description: describeError(failure).message }),
+    (failure: unknown) => {
+      const { code, message } = describeError(failure);
+      errorShown(code);
+      toast({ tone: 'danger', title: error, description: message });
+    },
     [error, toast],
   );
 

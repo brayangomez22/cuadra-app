@@ -10,6 +10,8 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/imports"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/purchases"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/analytics"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/flags"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
 	"github.com/brayangomez22/cuadra-app/backend/internal/server/ports"
 )
@@ -20,6 +22,7 @@ type wiring struct {
 	Config
 	registry      *modules.Registry
 	moduleService *modules.Service
+	flagService   *flags.Service
 	permissions   *identity.Permissions
 	// identityModule is kept for the demo (NewDemo).
 	identityModule *identity.Module
@@ -42,6 +45,9 @@ func newWiring(cfg Config) (*wiring, error) {
 	}
 	w.auditor = &ports.Auditor{Audit: auditModule}
 	if w.moduleService, err = newModuleService(registry, cfg, w.auditor); err != nil {
+		return nil, err
+	}
+	if w.flagService, err = newFlagService(cfg); err != nil {
 		return nil, err
 	}
 	permissions, err := identity.NewPermissions(ports.IdentityRegistry{Registry: registry})
@@ -90,11 +96,15 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 	if err != nil {
 		return nil, err
 	}
+	feedbackModule, err := w.feedback()
+	if err != nil {
+		return nil, err
+	}
 	return []func(*http.ServeMux){
 		identityModule.RegisterRoutes, catalogModule.RegisterRoutes, customersModule.RegisterRoutes,
 		inventoryModule.RegisterRoutes, sell.sales.RegisterRoutes, sell.receivables.RegisterRoutes,
 		sell.invoicing.RegisterRoutes, importsModule.RegisterRoutes, purchasesModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
-		w.auditor.Audit.RegisterRoutes,
+		w.auditor.Audit.RegisterRoutes, flagRoutes(w.flagService, w.Log), feedbackModule.RegisterRoutes,
 	}, nil
 }
 
@@ -152,6 +162,8 @@ func (w *wiring) identity(c *catalog.Module, cu *customers.Module) (*identity.Mo
 		Setup:          setup,
 		Permissions:    w.permissions,
 		Modules:        w.moduleService,
+		Flags:          w.flagService,
+		Pseudonyms:     analytics.NewPseudonyms(w.AnalyticsSecret),
 		Audit:          ports.IdentityAudit{Auditor: w.auditor},
 		SignupLimiter:  w.signupLimiter(),
 		Jobs:           w.Jobs,

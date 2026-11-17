@@ -36,6 +36,9 @@ type Tenant struct {
 	// night and never reach real third parties (DIAN, messages).
 	demo      bool
 	createdAt time.Time
+	// analyticsConsent is the owner's yes to share the app's usage
+	// analytics with Cuadra (T40): off until the owner turns it on.
+	analyticsConsent bool
 }
 
 // businessTemplateFormat is the format of a business template ID (the name
@@ -81,6 +84,7 @@ func newTenant(s TenantSnapshot) (*Tenant, error) {
 	return &Tenant{
 		id: s.ID, name: name, nit: s.NIT, status: s.Status, template: s.BusinessTemplate,
 		defaultTaxRate: s.DefaultTaxRate, contact: s.Contact, demo: s.Demo, createdAt: s.CreatedAt.UTC(),
+		analyticsConsent: s.AnalyticsConsent,
 	}, nil
 }
 
@@ -137,6 +141,13 @@ func (t *Tenant) Suspend() { t.status = TenantSuspended }
 // Activate reactivates a suspended tenant. Idempotent.
 func (t *Tenant) Activate() { t.status = TenantActive }
 
+// AnalyticsConsent tells whether the owner agreed to share the app's
+// usage analytics (pseudonymous, never personal data) with Cuadra.
+func (t *Tenant) AnalyticsConsent() bool { return t.analyticsConsent }
+
+// SetAnalyticsConsent records the owner's answer; it can change any time.
+func (t *Tenant) SetAnalyticsConsent(consent bool) { t.analyticsConsent = consent }
+
 // TenantSnapshot holds a stored tenant's fields, for RehydrateTenant.
 type TenantSnapshot struct {
 	ID               uuid.UUID
@@ -148,6 +159,7 @@ type TenantSnapshot struct {
 	Contact          Contact
 	Demo             bool
 	CreatedAt        time.Time
+	AnalyticsConsent bool
 }
 
 // RehydrateTenant rebuilds a stored tenant, checking the same invariants as

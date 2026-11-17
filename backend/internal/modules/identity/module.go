@@ -51,6 +51,10 @@ type Config struct {
 	// modules of each tenant.
 	Permissions *Permissions
 	Modules     app.ActiveModules
+	// Flags are the feature flags of each tenant (platform/flags), and
+	// Pseudonyms the users' IDs in the usage analytics (platform/analytics).
+	Flags      app.Flags
+	Pseudonyms app.Pseudonyms
 	// Audit records the changes of the tenant's settings; internal/server
 	// adapts the audit module.
 	Audit app.AuditLog
@@ -97,6 +101,8 @@ func New(cfg Config) (*Module, error) {
 		Setup:          cfg.Setup,
 		Permissions:    cfg.Permissions.matrix,
 		Modules:        cfg.Modules,
+		Flags:          cfg.Flags,
+		Pseudonyms:     cfg.Pseudonyms,
 		Audit:          cfg.Audit,
 		Tx:             db.NewTransactor(cfg.DB),
 		IPLimiter:      ratelimit.NewFixedWindow(loginsPerIP, loginsPerIPWindow),
@@ -124,7 +130,7 @@ type RateLimiter = app.RateLimiter
 // missing tells whether a required dependency is missing.
 func (cfg Config) missing() bool {
 	return cfg.DB == nil || cfg.Issuer == nil || cfg.Setup == nil || cfg.Permissions == nil ||
-		cfg.Modules == nil || cfg.Logger == nil || cfg.Jobs == nil || cfg.Workers == nil
+		cfg.Modules == nil || cfg.Flags == nil || cfg.Pseudonyms == nil || cfg.Logger == nil || cfg.Jobs == nil || cfg.Workers == nil
 }
 
 // unlimited allows every attempt.

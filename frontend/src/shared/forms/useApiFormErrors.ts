@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { FieldValues, Path, UseFormSetError } from 'react-hook-form';
 import { describeError } from '@/shared/api/errors';
+import { errorShown } from '@/shared/observability/errorsShown';
 
 /** The form fields an API error code belongs to: `{ sku_taken: 'sku' }`. */
 export type FieldsByErrorCode<T extends FieldValues> = Partial<Record<string, Path<T> | Path<T>[]>>;
@@ -16,6 +17,7 @@ export function useApiFormErrors<T extends FieldValues>(setError: UseFormSetErro
   const handleError = useCallback(
     (error: unknown) => {
       const { code, message } = describeError(error);
+      errorShown(code);
       const target = code === undefined ? undefined : fields[code];
       if (target === undefined) {
         setFormError(message);
