@@ -7,6 +7,7 @@ import {
   IconCash,
   IconCashStack,
   IconClipboardCheck,
+  IconFlag,
   IconHome,
   IconSettings,
   IconTag,
@@ -50,4 +51,6 @@ export const navItems: NavItem[] = [
   { to: paths.inventory.counts(), label: 'Toma física', icon: IconClipboardCheck, permission: 'inventory:count' },
   // Owners and admins configure the catalog; the owner also the business.
   { to: paths.settings.home(), label: 'Configuración', icon: IconSettings, permission: 'catalog:write' },
+  // Only for the Cuadra team (PLATFORM_OPERATORS).
+  { to: paths.platform.flags(), label: 'Feature flags', icon: IconFlag, operator: true },
 ];

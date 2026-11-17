@@ -7,11 +7,13 @@ import { importStage } from '../../model/importProgress';
 import { ImportFailure } from './components/ImportFailure/ImportFailure';
 import { ImportProgress } from './components/ImportProgress/ImportProgress';
 import { ImportReport } from './components/ImportReport/ImportReport';
+import { useTrackImportCompleted } from './hooks/useTrackImportCompleted';
 
 /** /productos/importar/:importId: the progress of a confirmed import and its final report. */
 export function ImportStatusPage() {
   const { importId = '' } = useParams();
   const found = useImport(importId);
+  useTrackImportCompleted(found.data);
   return (
     <Page title="Importar productos" description={found.data?.file_name}>
       <QueryState queries={[found]} errorTitle="No pudimos cargar la importación">

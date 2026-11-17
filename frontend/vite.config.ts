@@ -2,7 +2,7 @@
 import { fileURLToPath, URL } from 'node:url';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, searchForWorkspaceRoot } from 'vite';
 
 // Source maps are uploaded to Sentry only from the CI, which has SENTRY_AUTH_TOKEN
 // (plus SENTRY_ORG and SENTRY_PROJECT). They are "hidden" (no sourceMappingURL
@@ -60,6 +60,9 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: false,
       },
     },
+    // Only the tests read ../docs: the analytics catalog checks it agrees with
+    // docs/eventos.md. The dev server keeps Vite's default (the frontend only).
+    fs: mode === 'test' ? { allow: [searchForWorkspaceRoot(process.cwd()), '../docs'] } : undefined,
   },
   test: {
     environment: 'jsdom',

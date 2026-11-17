@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -18,6 +19,14 @@ type Profile struct {
 	// user's role grants with them.
 	Modules     []string
 	Permissions []domain.Permission
+	// Flags are the feature flags on for the tenant, and Operator whether
+	// the user operates the platform (sees the flags screen).
+	Flags    []string
+	Operator bool
+	// AnalyticsID is the user's pseudonym in the usage analytics, empty
+	// unless the tenant consented, the "analytics" flag is on and the
+	// analytics is configured: the frontend sends nothing without it.
+	AnalyticsID string
 }
 
 func setProfileAttrs(span trace.Span, p Profile) {
@@ -46,17 +55,36 @@ func NewPermissionMatrix(registry ModuleRegistry) (*domain.PermissionMatrix, err
 	return domain.NewPermissionMatrix(grants)
 }
 
-// profile completes a user's profile with the tenant's active modules and
-// what the user's role grants with them.
+// profile completes a user's profile with the tenant's active modules,
+// what the user's role grants with them and the tenant's feature flags.
 func (s *Service) profile(ctx context.Context, user *domain.User, tenant *domain.Tenant) (Profile, error) {
 	modules, err := s.Modules.Active(ctx, tenant.ID())
 	if err != nil {
 		return Profile{}, fmt.Errorf("identity: active modules: %w", err)
+	}
+	flags, err := s.Flags.Active(ctx, tenant.ID())
+	if err != nil {
+		return Profile{}, fmt.Errorf("identity: feature flags: %w", err)
 	}
 	return Profile{
 		User:        user,
 		Tenant:      tenant,
 		Modules:     modules,
 		Permissions: s.Permissions.Permissions(user.Role(), modules),
+		Flags:       flags,
+		Operator:    s.Flags.IsOperator(user.ID()),
+		AnalyticsID: s.analyticsID(user, tenant, flags),
 	}, nil
+}
+
+// analyticsFlag is the feature flag that releases the usage analytics.
+const analyticsFlag = "analytics"
+
+// analyticsID is the user's pseudonym when the tenant shares the analytics.
+func (s *Service) analyticsID(user *domain.User, tenant *domain.Tenant, flags []string) string {
+	if !tenant.AnalyticsConsent() || !slices.Contains(flags, analyticsFlag) {
+		return ""
+	}
+	id, _ := s.Pseudonyms.Pseudonym(user.ID())
+	return id
 }

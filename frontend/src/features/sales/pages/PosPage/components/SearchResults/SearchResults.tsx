@@ -2,6 +2,7 @@ import { variantName } from '@/features/catalog';
 import { formatMoney } from '@/shared/format';
 import { Spinner } from '@/shared/ui';
 import type { PosSearch } from '../../hooks/usePosSearch';
+import { useTrackEmptySearch } from '../../hooks/useTrackEmptySearch';
 import styles from './SearchResults.module.scss';
 
 type Props = { listId: string; search: PosSearch };
@@ -9,6 +10,7 @@ type Props = { listId: string; search: PosSearch };
 /** What the search found: a message while there is nothing to choose, and the listbox of variants. */
 export function SearchResults({ listId, search }: Props) {
   const { results, active } = search;
+  useTrackEmptySearch(search);
   return (
     <div className={styles.root} aria-live="polite">
       <SearchMessage search={search} />

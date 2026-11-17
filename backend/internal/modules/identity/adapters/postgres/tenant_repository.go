@@ -94,7 +94,8 @@ func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.T
 	return tenantFromRow(row)
 }
 
-// Update stores the name, status, default tax rate and contact;
+// Update stores the name, status, default tax rate, contact and analytics
+// consent;
 // domain.ErrTenantNotFound if the tenant does not exist.
 func (r *TenantRepository) Update(ctx context.Context, t *domain.Tenant) error {
 	affected, err := db.Affected(ctx, r.db, t.ID(), func(tx pgx.Tx) (int64, error) {
@@ -107,6 +108,7 @@ func (r *TenantRepository) Update(ctx context.Context, t *domain.Tenant) error {
 			City:             t.Contact().City(),
 			Phone:            t.Contact().Phone(),
 			MunicipalityCode: nullable(t.Contact().MunicipalityCode()),
+			AnalyticsConsent: t.AnalyticsConsent(),
 		})
 	})
 	switch {
@@ -142,6 +144,7 @@ func tenantFromRow(row sqlcgen.GetTenantRow) (*domain.Tenant, error) {
 		Contact:          contact,
 		Demo:             row.Demo,
 		CreatedAt:        row.CreatedAt,
+		AnalyticsConsent: row.AnalyticsConsent,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("identity: tenant %s: %w", row.ID, err)

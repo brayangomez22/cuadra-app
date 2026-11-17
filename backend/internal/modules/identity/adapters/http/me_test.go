@@ -14,9 +14,13 @@ import (
 )
 
 func TestGetMe(t *testing.T) {
-	t.Run("devuelve el usuario del token con su empresa, su NIT, sus permisos y los módulos activos", func(t *testing.T) {
+	t.Run("devuelve el usuario del token con su empresa, su NIT, sus permisos, los módulos activos y las flags", func(t *testing.T) {
 		p := profile(t, domain.RoleCashier)
 		p.Modules = []string{"variants"}
+		p.Flags = []string{"feedback"}
+		p.Operator = true
+		p.AnalyticsID = "3f2a9c0d1e4b5a6978c0d1e2f3a4b5c6"
+		p.Tenant.SetAnalyticsConsent(true)
 		contact, err := domain.NewContact("Calle 45 # 12-30", "Medellín", "604 444 1234")
 		require.NoError(t, err)
 		p.Tenant.SetContact(contact)
@@ -51,6 +55,10 @@ func TestGetMe(t *testing.T) {
 			"role": "cashier",
 			"permissions": ["catalog:read", "inventory:read", "sales:create", "sales:read"],
 			"modules": ["variants"],
+			"flags": ["feedback"],
+			"operator": true,
+			"tenant_analytics_consent": true,
+			"analytics_id": "3f2a9c0d1e4b5a6978c0d1e2f3a4b5c6",
 			"demo": false
 		}`, rec.Body.String())
 	})

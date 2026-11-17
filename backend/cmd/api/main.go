@@ -167,7 +167,12 @@ func newAPIHandler(cfg config.Config, database *db.DB, log *slog.Logger, jobClie
 		Edge: server.Edge{
 			TrustedProxies: cfg.TrustedProxies, CORSAllowedOrigins: cfg.CORSAllowedOrigins, HSTS: cfg.HSTS(),
 		},
-		RateLimits: rateLimits(cfg),
+		RateLimits:        rateLimits(cfg),
+		PlatformOperators: cfg.PlatformOperators,
+		FlagsCacheTTL:     cfg.FlagsCacheTTL,
+		AnalyticsSecret:   cfg.AnalyticsSecret,
+		// Without a webhook the users' comments are only logged.
+		FeedbackWebhookURL: cfg.FeedbackWebhookURL,
 	})
 }
 

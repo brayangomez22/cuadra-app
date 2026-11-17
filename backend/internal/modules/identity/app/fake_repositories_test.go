@@ -23,6 +23,7 @@ func cloneTenant(t *domain.Tenant) *domain.Tenant {
 	c, err := domain.RehydrateTenant(domain.TenantSnapshot{
 		ID: t.ID(), Name: t.Name(), NIT: t.NIT(), Status: t.Status(), BusinessTemplate: t.BusinessTemplate(),
 		DefaultTaxRate: t.DefaultTaxRate(), Contact: t.Contact(), Demo: t.IsDemo(), CreatedAt: t.CreatedAt(),
+		AnalyticsConsent: t.AnalyticsConsent(),
 	})
 	if err != nil {
 		panic(err)

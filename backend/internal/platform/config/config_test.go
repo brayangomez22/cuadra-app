@@ -53,6 +53,7 @@ func TestLoad(t *testing.T) {
 			// Producción exige un proveedor real (config_invoicing_test.go).
 			InvoicingProvider: config.ProviderSimulated,
 			RateLimitsEnabled: true,
+			FlagsCacheTTL:     30 * time.Second,
 		}, cfg)
 	})
 

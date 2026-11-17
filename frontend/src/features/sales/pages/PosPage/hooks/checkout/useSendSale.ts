@@ -1,3 +1,4 @@
+import { track } from '@/features/analytics';
 import type { ChosenCustomer } from '@/features/customers';
 import { ApiError, describeError } from '@/shared/api/errors';
 import { useConfirmSale } from '../../../../api/sales';
@@ -40,6 +41,11 @@ export function useSendSale({ cart, buyer, locationId, onSold, onCashLost }: Opt
     if (credit) body.credit_authorization = credit;
     const onSuccess = (sale: Sale) => {
       authorization.clear();
+      void track('sale_confirmed', {
+        lines: lines.length,
+        payment_methods: payments.length,
+        with_customer: Boolean(buyer),
+      });
       onSold(sale, buyer);
     };
     const onError = (error: Error) => {

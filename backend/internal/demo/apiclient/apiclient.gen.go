@@ -1769,6 +1769,61 @@ type ErrorDetail struct {
 // nuevas; `skip` lo deja como está.
 type ExistingSkuPolicy string
 
+// FeatureFlag defines model for FeatureFlag.
+type FeatureFlag struct {
+	Description string `json:"description"`
+
+	// Enabled El valor global, para las empresas sin excepción.
+	Enabled    bool                   `json:"enabled"`
+	Exceptions []FeatureFlagException `json:"exceptions"`
+
+	// Key Example: feedback
+	Key string `json:"key"`
+}
+
+// FeatureFlagException defines model for FeatureFlagException.
+type FeatureFlagException struct {
+	Enabled    bool               `json:"enabled"`
+	TenantId   openapi_types.UUID `json:"tenant_id"`
+	TenantName string             `json:"tenant_name"`
+}
+
+// FeatureFlagList defines model for FeatureFlagList.
+type FeatureFlagList struct {
+	Items []FeatureFlag `json:"items"`
+}
+
+// FeatureFlagUpdate defines model for FeatureFlagUpdate.
+type FeatureFlagUpdate struct {
+	Enabled bool `json:"enabled"`
+}
+
+// FeatureFlagValue defines model for FeatureFlagValue.
+type FeatureFlagValue struct {
+	Description string `json:"description"`
+	Enabled     bool   `json:"enabled"`
+	Key         string `json:"key"`
+}
+
+// FeedbackInput defines model for FeedbackInput.
+type FeedbackInput struct {
+	// AppVersion Example: 1.4.0
+	AppVersion string `json:"app_version"`
+
+	// Message Lo que el usuario quiere decir.
+	Message string `json:"message"`
+
+	// Screen La ruta de la pantalla en la que estaba.
+	//
+	// Example: /vender
+	Screen string `json:"screen"`
+}
+
+// FeedbackReceipt defines model for FeedbackReceipt.
+type FeedbackReceipt struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
 // HealthStatus defines model for HealthStatus.
 type HealthStatus struct {
 	Status HealthStatusStatus `json:"status"`
@@ -1965,6 +2020,14 @@ type LoginRequest struct {
 
 // Me defines model for Me.
 type Me struct {
+	// AnalyticsId El seudónimo del usuario en la analítica de uso (un hash con clave, nunca el correo ni el nombre). Solo viene
+	// si la empresa aceptó compartir la analítica, la flag `analytics` está prendida y la analítica está
+	// configurada: sin él, la app no envía ningún evento.
+	//
+	//
+	// Example: 3f2a9c0d1e4b5a6978c0d1e2f3a4b5c6
+	AnalyticsId *string `json:"analytics_id,omitempty"`
+
 	// BusinessTemplate Plantilla de tipo de negocio con la que se registró la empresa.
 	//
 	// Example: generica
@@ -1975,8 +2038,15 @@ type Me struct {
 	DefaultTaxRate TaxRate `json:"default_tax_rate"`
 
 	// Demo La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso.
-	Demo  bool               `json:"demo"`
-	Email string             `json:"email"`
+	Demo  bool   `json:"demo"`
+	Email string `json:"email"`
+
+	// Flags Feature flags prendidas para la empresa, para mostrar u ocultar lo que se está liberando. Distintas de
+	// `modules`: una flag es temporal y la maneja el equipo de Cuadra.
+	//
+	//
+	// Example: ["feedback"]
+	Flags []string           `json:"flags"`
 	Id    openapi_types.UUID `json:"id"`
 
 	// Modules Módulos activos de la empresa, para mostrar u ocultar menús, columnas y campos.
@@ -1984,6 +2054,9 @@ type Me struct {
 	// Example: ["variants"]
 	Modules []string `json:"modules"`
 	Name    string   `json:"name"`
+
+	// Operator El usuario es operador de la plataforma (equipo de Cuadra) y puede usar `/platform/flags`.
+	Operator bool `json:"operator"`
 
 	// Permissions Permisos del rol, para mostrar u ocultar acciones en la UI. Incluye los de los módulos activos.
 	//
@@ -1994,6 +2067,9 @@ type Me struct {
 
 	// TenantAddress Dirección de la empresa, para la tirilla y el cierre de caja. Vacía si no se ha registrado.
 	TenantAddress string `json:"tenant_address"`
+
+	// TenantAnalyticsConsent La empresa aceptó compartir la analítica de uso (se cambia con `PATCH /api/v1/tenant`).
+	TenantAnalyticsConsent bool `json:"tenant_analytics_consent"`
 
 	// TenantCity Ciudad o municipio de la empresa. Vacía si no se ha registrado.
 	TenantCity string             `json:"tenant_city"`
@@ -3511,6 +3587,10 @@ type Tenant struct {
 	// Address Dirección del negocio, para la tirilla y los documentos. Vacía si no se ha registrado.
 	Address string `json:"address"`
 
+	// AnalyticsConsent El dueño aceptó compartir la analítica de uso de la app con Cuadra (seudónima, sin datos personales). Apagado
+	// hasta que lo acepte.
+	AnalyticsConsent bool `json:"analytics_consent"`
+
 	// BusinessTemplate Example: generica
 	BusinessTemplate string `json:"business_template"`
 
@@ -3554,6 +3634,9 @@ type TenantSelectionRequired struct {
 type TenantUpdate struct {
 	// Address Dirección del negocio. Vacía la borra.
 	Address *string `json:"address,omitempty"`
+
+	// AnalyticsConsent Acepta (o retira) compartir la analítica de uso de la app con Cuadra.
+	AnalyticsConsent *bool `json:"analytics_consent,omitempty"`
 
 	// City Ciudad o municipio. Vacía la borra.
 	City *string `json:"city,omitempty"`
@@ -3757,6 +3840,9 @@ type CustomerId = openapi_types.UUID
 
 // DocumentId defines model for DocumentId.
 type DocumentId = openapi_types.UUID
+
+// FlagKey defines model for FlagKey.
+type FlagKey = string
 
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID
@@ -4162,6 +4248,9 @@ type SetCustomerCreditJSONRequestBody = CreditTermsInput
 // RecordCustomerPaymentJSONRequestBody defines body for RecordCustomerPayment for application/json ContentType.
 type RecordCustomerPaymentJSONRequestBody = CustomerPaymentInput
 
+// SendFeedbackJSONRequestBody defines body for SendFeedback for application/json ContentType.
+type SendFeedbackJSONRequestBody = FeedbackInput
+
 // UploadImportMultipartRequestBody defines body for UploadImport for multipart/form-data ContentType.
 type UploadImportMultipartRequestBody = ImportUpload
 
@@ -4194,6 +4283,12 @@ type SetReorderRuleJSONRequestBody = ReorderRuleInput
 
 // SetModuleActiveJSONRequestBody defines body for SetModuleActive for application/json ContentType.
 type SetModuleActiveJSONRequestBody = ModuleUpdate
+
+// SetFlagGlobalJSONRequestBody defines body for SetFlagGlobal for application/json ContentType.
+type SetFlagGlobalJSONRequestBody = FeatureFlagUpdate
+
+// SetFlagExceptionJSONRequestBody defines body for SetFlagException for application/json ContentType.
+type SetFlagExceptionJSONRequestBody = FeatureFlagUpdate
 
 // CreateAttributeJSONRequestBody defines body for CreateAttribute for application/json ContentType.
 type CreateAttributeJSONRequestBody = AttributeDefinitionInput
@@ -4726,6 +4821,26 @@ type ClientInterface interface {
 	// Corresponds with POST /api/v1/customers/{customerId}/payments (the `RecordCustomerPayment` operationId).
 	RecordCustomerPayment(ctx context.Context, customerId CustomerId, body RecordCustomerPaymentJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SendFeedbackWithBody Enviar un comentario
+	//
+	// Guarda el comentario del usuario con la pantalla en la que estaba y la versión de la app, y avisa al equipo de
+	// Cuadra. De la pantalla solo se guarda la ruta (sin `?` ni `#`).
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /api/v1/feedback (the `SendFeedback` operationId).
+	SendFeedbackWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendFeedback Enviar un comentario
+	//
+	// Guarda el comentario del usuario con la pantalla en la que estaba y la versión de la app, y avisa al equipo de
+	// Cuadra. De la pantalla solo se guarda la ruta (sin `?` ni `#`).
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /api/v1/feedback (the `SendFeedback` operationId).
+	SendFeedback(ctx context.Context, body SendFeedbackJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetImportTemplate Descargar la plantilla de importación
 	//
 	// Un archivo vacío con las columnas de la empresa. El `.xlsx` trae además una hoja de ayuda con las unidades,
@@ -5095,6 +5210,56 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /api/v1/payables (the `ListPayables` operationId).
 	ListPayables(ctx context.Context, params *ListPayablesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListFlags Listar las feature flags
+	//
+	// Las flags que declara el código, con su valor global y las excepciones de cada empresa.
+	//
+	// Corresponds with GET /api/v1/platform/flags (the `ListFlags` operationId).
+	ListFlags(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetFlagGlobalWithBody Cambiar el valor global de una flag
+	//
+	// Vale para todas las empresas sin una excepción. Las demás instancias de la API lo ven en segundos.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /api/v1/platform/flags/{flagKey} (the `SetFlagGlobal` operationId).
+	SetFlagGlobalWithBody(ctx context.Context, flagKey FlagKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetFlagGlobal Cambiar el valor global de una flag
+	//
+	// Vale para todas las empresas sin una excepción. Las demás instancias de la API lo ven en segundos.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /api/v1/platform/flags/{flagKey} (the `SetFlagGlobal` operationId).
+	SetFlagGlobal(ctx context.Context, flagKey FlagKey, body SetFlagGlobalJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ClearFlagException Quitar la excepción de una flag a una empresa
+	//
+	// La empresa vuelve a usar el valor global. Es idempotente.
+	//
+	// Corresponds with DELETE /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `ClearFlagException` operationId).
+	ClearFlagException(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetFlagExceptionWithBody Poner una excepción de una flag a una empresa
+	//
+	// La empresa usa este valor en vez del global.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `SetFlagException` operationId).
+	SetFlagExceptionWithBody(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetFlagException Poner una excepción de una flag a una empresa
+	//
+	// La empresa usa este valor en vez del global.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `SetFlagException` operationId).
+	SetFlagException(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, body SetFlagExceptionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListAttributes Listar los atributos de producto
 	//
@@ -6637,6 +6802,46 @@ func (c *Client) RecordCustomerPayment(ctx context.Context, customerId CustomerI
 	return c.Client.Do(req)
 }
 
+// SendFeedbackWithBody Enviar un comentario
+//
+// Guarda el comentario del usuario con la pantalla en la que estaba y la versión de la app, y avisa al equipo de
+// Cuadra. De la pantalla solo se guarda la ruta (sin `?` ni `#`).
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /api/v1/feedback (the `SendFeedback` operationId).
+func (c *Client) SendFeedbackWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendFeedbackRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SendFeedback Enviar un comentario
+//
+// Guarda el comentario del usuario con la pantalla en la que estaba y la versión de la app, y avisa al equipo de
+// Cuadra. De la pantalla solo se guarda la ruta (sin `?` ni `#`).
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /api/v1/feedback (the `SendFeedback` operationId).
+func (c *Client) SendFeedback(ctx context.Context, body SendFeedbackJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendFeedbackRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetImportTemplate Descargar la plantilla de importación
 //
 // Un archivo vacío con las columnas de la empresa. El `.xlsx` trae además una hoja de ayuda con las unidades,
@@ -7417,6 +7622,116 @@ func (c *Client) ListMunicipalities(ctx context.Context, reqEditors ...RequestEd
 // Corresponds with GET /api/v1/payables (the `ListPayables` operationId).
 func (c *Client) ListPayables(ctx context.Context, params *ListPayablesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListPayablesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListFlags Listar las feature flags
+//
+// Las flags que declara el código, con su valor global y las excepciones de cada empresa.
+//
+// Corresponds with GET /api/v1/platform/flags (the `ListFlags` operationId).
+func (c *Client) ListFlags(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListFlagsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetFlagGlobalWithBody Cambiar el valor global de una flag
+//
+// Vale para todas las empresas sin una excepción. Las demás instancias de la API lo ven en segundos.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /api/v1/platform/flags/{flagKey} (the `SetFlagGlobal` operationId).
+func (c *Client) SetFlagGlobalWithBody(ctx context.Context, flagKey FlagKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetFlagGlobalRequestWithBody(c.Server, flagKey, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetFlagGlobal Cambiar el valor global de una flag
+//
+// Vale para todas las empresas sin una excepción. Las demás instancias de la API lo ven en segundos.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /api/v1/platform/flags/{flagKey} (the `SetFlagGlobal` operationId).
+func (c *Client) SetFlagGlobal(ctx context.Context, flagKey FlagKey, body SetFlagGlobalJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetFlagGlobalRequest(c.Server, flagKey, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ClearFlagException Quitar la excepción de una flag a una empresa
+//
+// La empresa vuelve a usar el valor global. Es idempotente.
+//
+// Corresponds with DELETE /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `ClearFlagException` operationId).
+func (c *Client) ClearFlagException(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewClearFlagExceptionRequest(c.Server, flagKey, tenantId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetFlagExceptionWithBody Poner una excepción de una flag a una empresa
+//
+// La empresa usa este valor en vez del global.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `SetFlagException` operationId).
+func (c *Client) SetFlagExceptionWithBody(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetFlagExceptionRequestWithBody(c.Server, flagKey, tenantId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetFlagException Poner una excepción de una flag a una empresa
+//
+// La empresa usa este valor en vez del global.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `SetFlagException` operationId).
+func (c *Client) SetFlagException(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, body SetFlagExceptionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetFlagExceptionRequest(c.Server, flagKey, tenantId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -10349,6 +10664,46 @@ func NewRecordCustomerPaymentRequestWithBody(server string, customerId CustomerI
 	return req, nil
 }
 
+// NewSendFeedbackRequest calls the generic SendFeedback builder with application/json body
+func NewSendFeedbackRequest(server string, body SendFeedbackJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendFeedbackRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendFeedbackRequestWithBody constructs an http.Request for the SendFeedback method, with any body, and a specified content type
+func NewSendFeedbackRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/feedback")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetImportTemplateRequest constructs an http.Request for the GetImportTemplate method
 func NewGetImportTemplateRequest(server string, params *GetImportTemplateParams) (*http.Request, error) {
 	var err error
@@ -11721,6 +12076,175 @@ func NewListPayablesRequest(server string, params *ListPayablesParams) (*http.Re
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewListFlagsRequest constructs an http.Request for the ListFlags method
+func NewListFlagsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/platform/flags")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSetFlagGlobalRequest calls the generic SetFlagGlobal builder with application/json body
+func NewSetFlagGlobalRequest(server string, flagKey FlagKey, body SetFlagGlobalJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetFlagGlobalRequestWithBody(server, flagKey, "application/json", bodyReader)
+}
+
+// NewSetFlagGlobalRequestWithBody constructs an http.Request for the SetFlagGlobal method, with any body, and a specified content type
+func NewSetFlagGlobalRequestWithBody(server string, flagKey FlagKey, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "flagKey", flagKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/platform/flags/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewClearFlagExceptionRequest constructs an http.Request for the ClearFlagException method
+func NewClearFlagExceptionRequest(server string, flagKey FlagKey, tenantId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "flagKey", flagKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "tenantId", tenantId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/platform/flags/%s/tenants/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSetFlagExceptionRequest calls the generic SetFlagException builder with application/json body
+func NewSetFlagExceptionRequest(server string, flagKey FlagKey, tenantId openapi_types.UUID, body SetFlagExceptionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetFlagExceptionRequestWithBody(server, flagKey, tenantId, "application/json", bodyReader)
+}
+
+// NewSetFlagExceptionRequestWithBody constructs an http.Request for the SetFlagException method, with any body, and a specified content type
+func NewSetFlagExceptionRequestWithBody(server string, flagKey FlagKey, tenantId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "flagKey", flagKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "tenantId", tenantId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/platform/flags/%s/tenants/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -14797,6 +15321,26 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /api/v1/customers/{customerId}/payments (the `RecordCustomerPayment` operationId).
 	RecordCustomerPaymentWithResponse(ctx context.Context, customerId CustomerId, body RecordCustomerPaymentJSONRequestBody, reqEditors ...RequestEditorFn) (*RecordCustomerPaymentResponse, error)
 
+	// SendFeedbackWithBodyWithResponse Enviar un comentario
+	//
+	// Guarda el comentario del usuario con la pantalla en la que estaba y la versión de la app, y avisa al equipo de
+	// Cuadra. De la pantalla solo se guarda la ruta (sin `?` ni `#`).
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/feedback (the `SendFeedback` operationId).
+	SendFeedbackWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendFeedbackResponse, error)
+
+	// SendFeedbackWithResponse Enviar un comentario
+	//
+	// Guarda el comentario del usuario con la pantalla en la que estaba y la versión de la app, y avisa al equipo de
+	// Cuadra. De la pantalla solo se guarda la ruta (sin `?` ni `#`).
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/feedback (the `SendFeedback` operationId).
+	SendFeedbackWithResponse(ctx context.Context, body SendFeedbackJSONRequestBody, reqEditors ...RequestEditorFn) (*SendFeedbackResponse, error)
+
 	// GetImportTemplateWithResponse Descargar la plantilla de importación
 	//
 	// Un archivo vacío con las columnas de la empresa. El `.xlsx` trae además una hoja de ayuda con las unidades,
@@ -15208,6 +15752,60 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /api/v1/payables (the `ListPayables` operationId).
 	ListPayablesWithResponse(ctx context.Context, params *ListPayablesParams, reqEditors ...RequestEditorFn) (*ListPayablesResponse, error)
+
+	// ListFlagsWithResponse Listar las feature flags
+	//
+	// Las flags que declara el código, con su valor global y las excepciones de cada empresa.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/platform/flags (the `ListFlags` operationId).
+	ListFlagsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListFlagsResponse, error)
+
+	// SetFlagGlobalWithBodyWithResponse Cambiar el valor global de una flag
+	//
+	// Vale para todas las empresas sin una excepción. Las demás instancias de la API lo ven en segundos.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /api/v1/platform/flags/{flagKey} (the `SetFlagGlobal` operationId).
+	SetFlagGlobalWithBodyWithResponse(ctx context.Context, flagKey FlagKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetFlagGlobalResponse, error)
+
+	// SetFlagGlobalWithResponse Cambiar el valor global de una flag
+	//
+	// Vale para todas las empresas sin una excepción. Las demás instancias de la API lo ven en segundos.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /api/v1/platform/flags/{flagKey} (the `SetFlagGlobal` operationId).
+	SetFlagGlobalWithResponse(ctx context.Context, flagKey FlagKey, body SetFlagGlobalJSONRequestBody, reqEditors ...RequestEditorFn) (*SetFlagGlobalResponse, error)
+
+	// ClearFlagExceptionWithResponse Quitar la excepción de una flag a una empresa
+	//
+	// La empresa vuelve a usar el valor global. Es idempotente.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `ClearFlagException` operationId).
+	ClearFlagExceptionWithResponse(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ClearFlagExceptionResponse, error)
+
+	// SetFlagExceptionWithBodyWithResponse Poner una excepción de una flag a una empresa
+	//
+	// La empresa usa este valor en vez del global.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `SetFlagException` operationId).
+	SetFlagExceptionWithBodyWithResponse(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetFlagExceptionResponse, error)
+
+	// SetFlagExceptionWithResponse Poner una excepción de una flag a una empresa
+	//
+	// La empresa usa este valor en vez del global.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `SetFlagException` operationId).
+	SetFlagExceptionWithResponse(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, body SetFlagExceptionJSONRequestBody, reqEditors ...RequestEditorFn) (*SetFlagExceptionResponse, error)
 
 	// ListAttributesWithResponse Listar los atributos de producto
 	//
@@ -18267,6 +18865,75 @@ func (r RecordCustomerPaymentResponse) ContentType() string {
 	return ""
 }
 
+type SendFeedbackResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *FeedbackReceipt
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r SendFeedbackResponse) GetJSON201() *FeedbackReceipt {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SendFeedbackResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SendFeedbackResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r SendFeedbackResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r SendFeedbackResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r SendFeedbackResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SendFeedbackResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendFeedbackResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendFeedbackResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetImportTemplateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -20567,6 +21234,254 @@ func (r ListPayablesResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListPayablesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListFlagsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *FeatureFlagList
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListFlagsResponse) GetJSON200() *FeatureFlagList {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListFlagsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ListFlagsResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListFlagsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListFlagsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListFlagsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListFlagsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListFlagsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetFlagGlobalResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *FeatureFlagValue
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SetFlagGlobalResponse) GetJSON200() *FeatureFlagValue {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SetFlagGlobalResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SetFlagGlobalResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SetFlagGlobalResponse) GetJSON404() *Error {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r SetFlagGlobalResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r SetFlagGlobalResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetFlagGlobalResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetFlagGlobalResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetFlagGlobalResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ClearFlagExceptionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ClearFlagExceptionResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ClearFlagExceptionResponse) GetJSON404() *Error {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ClearFlagExceptionResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ClearFlagExceptionResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ClearFlagExceptionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ClearFlagExceptionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ClearFlagExceptionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetFlagExceptionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SetFlagExceptionResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SetFlagExceptionResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SetFlagExceptionResponse) GetJSON404() *Error {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r SetFlagExceptionResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r SetFlagExceptionResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetFlagExceptionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetFlagExceptionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetFlagExceptionResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -25483,6 +26398,38 @@ func (c *ClientWithResponses) RecordCustomerPaymentWithResponse(ctx context.Cont
 	return ParseRecordCustomerPaymentResponse(rsp)
 }
 
+// SendFeedbackWithBodyWithResponse Enviar un comentario
+//
+// Guarda el comentario del usuario con la pantalla en la que estaba y la versión de la app, y avisa al equipo de
+// Cuadra. De la pantalla solo se guarda la ruta (sin `?` ni `#`).
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/feedback (the `SendFeedback` operationId).
+func (c *ClientWithResponses) SendFeedbackWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendFeedbackResponse, error) {
+	rsp, err := c.SendFeedbackWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendFeedbackResponse(rsp)
+}
+
+// SendFeedbackWithResponse Enviar un comentario
+//
+// Guarda el comentario del usuario con la pantalla en la que estaba y la versión de la app, y avisa al equipo de
+// Cuadra. De la pantalla solo se guarda la ruta (sin `?` ni `#`).
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/feedback (the `SendFeedback` operationId).
+func (c *ClientWithResponses) SendFeedbackWithResponse(ctx context.Context, body SendFeedbackJSONRequestBody, reqEditors ...RequestEditorFn) (*SendFeedbackResponse, error) {
+	rsp, err := c.SendFeedback(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendFeedbackResponse(rsp)
+}
+
 // GetImportTemplateWithResponse Descargar la plantilla de importación
 //
 // Un archivo vacío con las columnas de la empresa. El `.xlsx` trae además una hoja de ayuda con las unidades,
@@ -26145,6 +27092,96 @@ func (c *ClientWithResponses) ListPayablesWithResponse(ctx context.Context, para
 		return nil, err
 	}
 	return ParseListPayablesResponse(rsp)
+}
+
+// ListFlagsWithResponse Listar las feature flags
+//
+// Las flags que declara el código, con su valor global y las excepciones de cada empresa.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/platform/flags (the `ListFlags` operationId).
+func (c *ClientWithResponses) ListFlagsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListFlagsResponse, error) {
+	rsp, err := c.ListFlags(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListFlagsResponse(rsp)
+}
+
+// SetFlagGlobalWithBodyWithResponse Cambiar el valor global de una flag
+//
+// Vale para todas las empresas sin una excepción. Las demás instancias de la API lo ven en segundos.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /api/v1/platform/flags/{flagKey} (the `SetFlagGlobal` operationId).
+func (c *ClientWithResponses) SetFlagGlobalWithBodyWithResponse(ctx context.Context, flagKey FlagKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetFlagGlobalResponse, error) {
+	rsp, err := c.SetFlagGlobalWithBody(ctx, flagKey, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetFlagGlobalResponse(rsp)
+}
+
+// SetFlagGlobalWithResponse Cambiar el valor global de una flag
+//
+// Vale para todas las empresas sin una excepción. Las demás instancias de la API lo ven en segundos.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /api/v1/platform/flags/{flagKey} (the `SetFlagGlobal` operationId).
+func (c *ClientWithResponses) SetFlagGlobalWithResponse(ctx context.Context, flagKey FlagKey, body SetFlagGlobalJSONRequestBody, reqEditors ...RequestEditorFn) (*SetFlagGlobalResponse, error) {
+	rsp, err := c.SetFlagGlobal(ctx, flagKey, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetFlagGlobalResponse(rsp)
+}
+
+// ClearFlagExceptionWithResponse Quitar la excepción de una flag a una empresa
+//
+// La empresa vuelve a usar el valor global. Es idempotente.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `ClearFlagException` operationId).
+func (c *ClientWithResponses) ClearFlagExceptionWithResponse(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ClearFlagExceptionResponse, error) {
+	rsp, err := c.ClearFlagException(ctx, flagKey, tenantId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseClearFlagExceptionResponse(rsp)
+}
+
+// SetFlagExceptionWithBodyWithResponse Poner una excepción de una flag a una empresa
+//
+// La empresa usa este valor en vez del global.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `SetFlagException` operationId).
+func (c *ClientWithResponses) SetFlagExceptionWithBodyWithResponse(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetFlagExceptionResponse, error) {
+	rsp, err := c.SetFlagExceptionWithBody(ctx, flagKey, tenantId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetFlagExceptionResponse(rsp)
+}
+
+// SetFlagExceptionWithResponse Poner una excepción de una flag a una empresa
+//
+// La empresa usa este valor en vez del global.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /api/v1/platform/flags/{flagKey}/tenants/{tenantId} (the `SetFlagException` operationId).
+func (c *ClientWithResponses) SetFlagExceptionWithResponse(ctx context.Context, flagKey FlagKey, tenantId openapi_types.UUID, body SetFlagExceptionJSONRequestBody, reqEditors ...RequestEditorFn) (*SetFlagExceptionResponse, error) {
+	rsp, err := c.SetFlagException(ctx, flagKey, tenantId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetFlagExceptionResponse(rsp)
 }
 
 // ListAttributesWithResponse Listar los atributos de producto
@@ -29279,6 +30316,60 @@ func ParseRecordCustomerPaymentResponse(rsp *http.Response) (*RecordCustomerPaym
 	return response, nil
 }
 
+// ParseSendFeedbackResponse parses an HTTP response from a SendFeedbackWithResponse call
+func ParseSendFeedbackResponse(rsp *http.Response) (*SendFeedbackResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendFeedbackResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest FeedbackReceipt
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetImportTemplateResponse parses an HTTP response from a GetImportTemplateWithResponse call
 func ParseGetImportTemplateResponse(rsp *http.Response) (*GetImportTemplateResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -31101,6 +32192,200 @@ func ParseListPayablesResponse(rsp *http.Response) (*ListPayablesResponse, error
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListFlagsResponse parses an HTTP response from a ListFlagsWithResponse call
+func ParseListFlagsResponse(rsp *http.Response) (*ListFlagsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListFlagsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FeatureFlagList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetFlagGlobalResponse parses an HTTP response from a SetFlagGlobalWithResponse call
+func ParseSetFlagGlobalResponse(rsp *http.Response) (*SetFlagGlobalResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetFlagGlobalResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FeatureFlagValue
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseClearFlagExceptionResponse parses an HTTP response from a ClearFlagExceptionWithResponse call
+func ParseClearFlagExceptionResponse(rsp *http.Response) (*ClearFlagExceptionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ClearFlagExceptionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetFlagExceptionResponse parses an HTTP response from a SetFlagExceptionWithResponse call
+func ParseSetFlagExceptionResponse(rsp *http.Response) (*SetFlagExceptionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetFlagExceptionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalError

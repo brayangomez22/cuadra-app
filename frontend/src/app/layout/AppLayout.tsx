@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router';
+import { useAnalyticsSession } from '@/features/analytics';
 import { useAuth } from '@/features/auth';
 import { Drawer, IconButton, IconMenu } from '@/shared/ui';
 import { AccountPanel } from './AccountPanel';
@@ -14,6 +15,7 @@ import styles from './AppLayout.module.scss';
 export function AppLayout() {
   const auth = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  useAnalyticsSession(auth.status === 'authenticated' ? auth.user : null);
   if (auth.status !== 'authenticated') return null;
   const { user, logout } = auth;
 

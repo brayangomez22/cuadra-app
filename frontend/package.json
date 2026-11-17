@@ -29,6 +29,7 @@
     "barcode-detector": "3.2.3",
     "clsx": "2.1.1",
     "openapi-fetch": "0.17.0",
+    "posthog-js": "1.444.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-hook-form": "7.91.0",

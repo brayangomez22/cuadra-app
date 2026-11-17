@@ -59,11 +59,11 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Aceptación:** checklist ASVS en `docs/seguridad.md` con cada punto resuelto o justificado.
 **Hecho así:** sin staging todavía, el DAST de ZAP corre en el CI contra la API del stack E2E; contra staging queda para T46 (P170). Se adelantó a T36d, T36c y T37, que esperan la cuenta del sandbox de Muisca (`docs/decisiones.md`, 2026-11-15).
 
-### [ ] T39 · Feature flags por tenant
+### [x] T39 · Feature flags por tenant
 **Alcance:** interfaz estándar **OpenFeature** (SDK de Go) con un proveedor propio sobre Postgres: valor por defecto global y excepciones por tenant, en caché en memoria con expiración corta. Las flags activas del tenant se exponen al frontend en `GET /api/v1/me`. Pantalla interna para activarlas o desactivarlas. Usos: liberar una función solo a un piloto, apagar algo que falla sin desplegar y, más adelante, **activar módulos por vertical** (talleres, V3-6).
 **Tests primero:** la excepción del tenant tiene prioridad sobre el valor global; una flag desconocida devuelve el valor por defecto seguro (apagada); un cambio se refleja después de la expiración de la caché.
 
-### [ ] T40 · Analítica de uso y comentarios dentro de la app
+### [x] T40 · Analítica de uso y comentarios dentro de la app
 **Alcance:** analítica de producto (propuesta: **PostHog**; confirmar antes de agregar la dependencia) con eventos definidos en un catálogo versionado (`docs/eventos.md`: venta confirmada, búsqueda sin resultados, importación completada, error mostrado al usuario...). Identificadores seudónimos: `tenant_id` y un hash del usuario, **nunca** nombres, correos ni datos de los clientes del negocio. Embudos clave: registro → importación → primera venta. Botón "Danos tu opinión" en la app que guarda el comentario con contexto (pantalla, versión) y te avisa.
 **Tests primero:** ningún evento contiene campos fuera de la lista permitida del catálogo; con la analítica desactivada (variable de entorno o tenant que no consintió) no se envía nada.
 
@@ -88,5 +88,5 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T44 · Lista de primeros pasos
 **Depende de:** T29, T36, T41.
 **Alcance:** guía dentro de la app para un tenant nuevo, calculada a partir del **estado real** y no de clics: 1) datos del negocio, 2) resolución de facturación DIAN, 3) importar productos, 4) cargar inventario inicial, 5) invitar al equipo, 6) abrir caja y hacer la primera venta. Los pasos se toman de la **plantilla del tipo de negocio** (por ejemplo, una droguería con `lots_expiry` tiene el paso "registra lotes y vencimientos"). Muestra el progreso y se puede ocultar, pero vuelve a aparecer si falta algo crítico (por ejemplo, la resolución DIAN vencida). Estados vacíos de cada pantalla con la acción siguiente ("Aún no tienes productos: impórtalos desde Excel"). Evento de analítica por paso completado (T40).
-**Pendientes que entran a esta tarea:** P12 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P12 y P177 (`docs/plan/pendientes.md`).
 **Tests primero:** un paso se marca como completo solo cuando el dato existe (por ejemplo, ≥ 1 venta confirmada); la lista desaparece al completar todo y no se muestra a roles sin permiso para resolver los pasos; dos plantillas distintas producen listas de pasos distintas.

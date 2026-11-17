@@ -72,6 +72,16 @@ tags:
       Módulos que la empresa puede activar según su tipo de negocio (variantes, lotes, listas de precios...). Las
       operaciones de un módulo inactivo responden 404, y sus permisos no aparecen en `/me`. Desactivar un módulo no
       borra sus datos.
+  - name: flags
+    description: |
+      Feature flags de la plataforma, solo para los operadores del equipo de Cuadra (`PLATFORM_OPERATORS`): un valor
+      global por flag y excepciones por empresa, que ganan sobre el global. Una flag sin valor está apagada. Para los
+      demás usuarios estas operaciones no existen (404). No son módulos: un módulo es una capacidad de la empresa; una
+      flag, un interruptor temporal para liberar algo a un piloto o apagar algo que falla.
+  - name: feedback
+    description: |
+      Comentarios que los usuarios envían desde la app («Danos tu opinión»), con la pantalla y la versión. Cualquier
+      usuario con sesión puede enviar uno; el equipo de Cuadra recibe un aviso.
   - name: cash
     description: |
       Caja del cajero: apertura con base, ingresos y egresos con motivo, y cierre con arqueo por denominación. Cada
@@ -509,6 +519,153 @@ paths:
           description: |
             Una dependencia del módulo está inactiva (`module_dependency_inactive`) o un módulo activo depende de
             él (`module_required_by`). El módulo que bloquea el cambio va en `details.module`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/platform/flags:
+    get:
+      tags: [flags]
+      operationId: listFlags
+      summary: Listar las feature flags
+      description: Las flags que declara el código, con su valor global y las excepciones de cada empresa.
+      responses:
+        "200":
+          description: Las flags, en el orden en que se declaran.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlagList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/platform/flags/{flagKey}:
+    parameters:
+      - $ref: "#/components/parameters/FlagKey"
+    put:
+      tags: [flags]
+      operationId: setFlagGlobal
+      summary: Cambiar el valor global de una flag
+      description: Vale para todas las empresas sin una excepción. Las demás instancias de la API lo ven en segundos.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagUpdate"
+      responses:
+        "200":
+          description: La flag con su valor global nuevo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlagValue"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: La flag no existe (`unknown_flag`) o el usuario no es operador (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/platform/flags/{flagKey}/tenants/{tenantId}:
+    parameters:
+      - $ref: "#/components/parameters/FlagKey"
+      - name: tenantId
+        in: path
+        required: true
+        description: |
+          La empresa de la excepción. Es la única ruta en la que la empresa no sale del token: el operador de la
+          plataforma elige a qué empresa le cambia la flag.
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [flags]
+      operationId: setFlagException
+      summary: Poner una excepción de una flag a una empresa
+      description: La empresa usa este valor en vez del global.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagUpdate"
+      responses:
+        "204":
+          description: La excepción quedó guardada.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: |
+            La flag no existe (`unknown_flag`), la empresa no existe (`unknown_tenant`) o el usuario no es operador
+            (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [flags]
+      operationId: clearFlagException
+      summary: Quitar la excepción de una flag a una empresa
+      description: La empresa vuelve a usar el valor global. Es idempotente.
+      responses:
+        "204":
+          description: La empresa ya no tiene excepción.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: La flag no existe (`unknown_flag`) o el usuario no es operador (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/feedback:
+    post:
+      tags: [feedback]
+      operationId: sendFeedback
+      summary: Enviar un comentario
+      description: |
+        Guarda el comentario del usuario con la pantalla en la que estaba y la versión de la app, y avisa al equipo de
+        Cuadra. De la pantalla solo se guarda la ruta (sin `?` ni `#`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackInput"
+      responses:
+        "201":
+          description: El comentario quedó guardado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedbackReceipt"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          description: El comentario está vacío (`invalid_feedback`), o la pantalla o la versión no son válidas.
           content:
             application/json:
               schema:
@@ -4448,6 +4605,14 @@ components:
       schema:
         type: string
         format: uuid
+    FlagKey:
+      name: flagKey
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-z][a-z0-9_]{0,63}$"
+      example: feedback
     ModuleId:
       name: moduleId
       in: path
@@ -4822,7 +4987,7 @@ components:
           $ref: "#/components/schemas/Me"
     Me:
       type: object
-      required: [id, tenant_id, tenant_name, tenant_nit, tenant_address, tenant_city, tenant_municipality_code, tenant_phone, business_template, default_tax_rate, name, email, role, permissions, modules, demo]
+      required: [id, tenant_id, tenant_name, tenant_nit, tenant_address, tenant_city, tenant_municipality_code, tenant_phone, business_template, default_tax_rate, name, email, role, permissions, modules, flags, operator, tenant_analytics_consent, demo]
       properties:
         id:
           type: string
@@ -4881,12 +5046,33 @@ components:
           items:
             type: string
           example: [variants]
+        flags:
+          type: array
+          description: |
+            Feature flags prendidas para la empresa, para mostrar u ocultar lo que se está liberando. Distintas de
+            `modules`: una flag es temporal y la maneja el equipo de Cuadra.
+          items:
+            type: string
+          example: [feedback]
+        operator:
+          type: boolean
+          description: El usuario es operador de la plataforma (equipo de Cuadra) y puede usar `/platform/flags`.
+        tenant_analytics_consent:
+          type: boolean
+          description: La empresa aceptó compartir la analítica de uso (se cambia con `PATCH /api/v1/tenant`).
+        analytics_id:
+          type: string
+          description: |
+            El seudónimo del usuario en la analítica de uso (un hash con clave, nunca el correo ni el nombre). Solo viene
+            si la empresa aceptó compartir la analítica, la flag `analytics` está prendida y la analítica está
+            configurada: sin él, la app no envía ningún evento.
+          example: 3f2a9c0d1e4b5a6978c0d1e2f3a4b5c6
         demo:
           type: boolean
           description: La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso.
     Tenant:
       type: object
-      required: [id, name, nit, business_template, default_tax_rate, address, city, municipality_code, phone]
+      required: [id, name, nit, business_template, default_tax_rate, address, city, municipality_code, phone, analytics_consent]
       description: La empresa (tenant) y su configuración.
       properties:
         id:
@@ -4920,6 +5106,11 @@ components:
           type: string
           maxLength: 30
           description: Teléfono del negocio. Vacío si no se ha registrado.
+        analytics_consent:
+          type: boolean
+          description: |
+            El dueño aceptó compartir la analítica de uso de la app con Cuadra (seudónima, sin datos personales). Apagado
+            hasta que lo acepte.
     TenantUpdate:
       type: object
       minProperties: 1
@@ -4948,6 +5139,9 @@ components:
           type: string
           maxLength: 30
           description: Teléfono, con dígitos, espacios, `+`, `-` y paréntesis. Vacío lo borra.
+        analytics_consent:
+          type: boolean
+          description: Acepta (o retira) compartir la analítica de uso de la app con Cuadra.
     TenantSelectionRequired:
       type: object
       required: [error, tenants]
@@ -5045,6 +5239,86 @@ components:
           items:
             type: string
         active:
+          type: boolean
+    FeedbackInput:
+      type: object
+      required: [message, screen, app_version]
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Lo que el usuario quiere decir.
+        screen:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: La ruta de la pantalla en la que estaba.
+          example: /vender
+        app_version:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: "1.4.0"
+    FeedbackReceipt:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+    FeatureFlagList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureFlag"
+    FeatureFlag:
+      type: object
+      required: [key, description, enabled, exceptions]
+      properties:
+        key:
+          type: string
+          example: feedback
+        description:
+          type: string
+        enabled:
+          type: boolean
+          description: El valor global, para las empresas sin excepción.
+        exceptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureFlagException"
+    FeatureFlagException:
+      type: object
+      required: [tenant_id, tenant_name, enabled]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        tenant_name:
+          type: string
+        enabled:
+          type: boolean
+    FeatureFlagValue:
+      type: object
+      required: [key, description, enabled]
+      properties:
+        key:
+          type: string
+        description:
+          type: string
+        enabled:
+          type: boolean
+    FeatureFlagUpdate:
+      type: object
+      required: [enabled]
+      additionalProperties: false
+      properties:
+        enabled:
           type: boolean
     ModuleList:
       type: object

@@ -131,6 +131,9 @@ Estados: `[ ]` pendiente · `[x]` hecho · `[-]` descartado (con el motivo).
 | [ ] | P172 | Revisar los formularios de contraseña contra ASVS 2.1.11 y 2.1.12 (se puede pegar y hay cómo ver lo escrito) al hacer el cambio y el restablecimiento de contraseña | T38 | T41 |
 | [ ] | P175 | El rate limit cuenta por réplica (memoria): con varias réplicas de la API el límite efectivo se multiplica. Medir con k6 y, si importa, un adaptador de `httpx.Limiter` compartido (Postgres o Redis, según `docs/decisiones.md`) | T38 | T51 |
 | [ ] | P176 | El catálogo de auditoría v1 no registra los cambios de cupo y plazo de un cliente (`receivables`), que la pantalla de auditoría de T41 promete: agregar `credit.terms_changed` (cupo y plazo anteriores y nuevos) en la versión 2 del catálogo, con las acciones de usuarios | T38 | T41 |
+| [ ] | P177 | El embudo registro → importación → primera venta no ve el registro: una empresa nueva no ha aceptado la analítica, así que `signup_completed` no se envía (el número de registros sale de `cuadra.identity.signups`). Preguntar el consentimiento de la analítica en los primeros pasos (o en el registro) para que el embudo empiece en el registro | T40 | T44 |
+| [ ] | P178 | Cuando el frontend se sirva desde Azure, su CSP (`connect-src`) debe permitir el host de PostHog (`VITE_POSTHOG_HOST`) o pasar los eventos por un proxy propio (`/ingest`) para que los bloqueadores no los corten; hoy la CSP de la T38 solo cubre las respuestas de la API | T40 | T46 |
+| [ ] | P179 | La política de datos debe nombrar a PostHog (analítica de uso, seudónima) y al proveedor del webhook de comentarios como encargados, explicar el consentimiento de la analítica (`analytics_consent`, apagado por defecto) y que los comentarios guardan la pantalla y la versión | T40 | T50 |
 
 ## Para trabajar ahora (ninguna tarea los cubre)
 

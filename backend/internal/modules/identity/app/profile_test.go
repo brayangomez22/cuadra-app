@@ -56,6 +56,24 @@ func TestMe(t *testing.T) {
 		require.Equal(t, []string{"variants", "lots_expiry"}, profile.Modules)
 	})
 
+	t.Run("trae las flags prendidas del tenant y si el usuario es operador", func(t *testing.T) {
+		e := newEnv(t)
+		tenant, operator := e.seed(t, "dueno@eltornillo.co", validPassword, domain.RoleOwner)
+		other, cashier := e.seed(t, "caja@modaurbana.co", validPassword, domain.RoleCashier)
+		e.flags.turnOn(tenant.ID(), "feedback")
+		e.flags.addOperator(operator.ID())
+
+		profile, err := e.svc.Me(t.Context(), tenant.ID(), operator.ID())
+		require.NoError(t, err)
+		require.Equal(t, []string{"feedback"}, profile.Flags)
+		require.True(t, profile.Operator)
+
+		profile, err = e.svc.Me(t.Context(), other.ID(), cashier.ID())
+		require.NoError(t, err)
+		require.Empty(t, profile.Flags)
+		require.False(t, profile.Operator)
+	})
+
 	t.Run("los permisos de un módulo inactivo no aparecen en /me", func(t *testing.T) {
 		e := newEnv(t)
 		tenant, user := e.seed(t, "bodega@eltornillo.co", validPassword, domain.RoleWarehouse)

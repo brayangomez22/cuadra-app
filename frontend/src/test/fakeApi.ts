@@ -149,6 +149,9 @@ export function aUser(role: Me['role'] = 'owner'): Me {
     role,
     permissions: permissionsByRole[role],
     modules: [],
+    flags: [],
+    operator: false,
+    tenant_analytics_consent: false,
     demo: false,
   };
 }

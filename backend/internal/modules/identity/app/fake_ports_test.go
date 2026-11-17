@@ -41,6 +41,47 @@ func (f *fakeModules) activate(tenantID uuid.UUID, ids ...string) {
 	f.active[tenantID] = append(f.active[tenantID], ids...)
 }
 
+// fakeFlags keeps the feature flags on for each tenant and the operators.
+type fakeFlags struct {
+	mu        sync.Mutex
+	on        map[uuid.UUID][]string
+	operators []uuid.UUID
+}
+
+func (f *fakeFlags) Active(_ context.Context, tenantID uuid.UUID) ([]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.on[tenantID]), nil
+}
+
+func (f *fakeFlags) IsOperator(userID uuid.UUID) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Contains(f.operators, userID)
+}
+
+func (f *fakeFlags) turnOn(tenantID uuid.UUID, keys ...string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.on[tenantID] = append(f.on[tenantID], keys...)
+}
+
+func (f *fakeFlags) addOperator(userID uuid.UUID) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.operators = append(f.operators, userID)
+}
+
+// fakePseudonyms gives a recognizable pseudonym when analytics is enabled.
+type fakePseudonyms struct{ enabled bool }
+
+func (f *fakePseudonyms) Pseudonym(userID uuid.UUID) (string, bool) {
+	if !f.enabled {
+		return "", false
+	}
+	return "seud-" + userID.String(), true
+}
+
 // fakeRegistry is the module registry as identity sees it: the permissions
 // each module declares.
 type fakeRegistry []app.ModulePermission

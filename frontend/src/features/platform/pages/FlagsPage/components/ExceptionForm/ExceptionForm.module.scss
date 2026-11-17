@@ -1,0 +1,12 @@
+@use '@/styles/abstracts' as *;
+
+// One column on the phone; the ID, the value and the button in a row on wider screens.
+.root {
+  display: grid;
+  gap: var(--space-3);
+  align-items: end;
+
+  @include respond-to(md) {
+    grid-template-columns: minmax(0, 2fr) auto auto;
+  }
+}

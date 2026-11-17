@@ -3,6 +3,7 @@ import { RequireAuth } from '@/features/auth';
 import { authRoutes } from '@/features/auth/routes';
 import { catalogRoutes } from '@/features/catalog/routes';
 import { customersRoutes } from '@/features/customers/routes';
+import { platformRoutes } from '@/features/platform/routes';
 import { purchasesRoutes } from '@/features/purchases/routes';
 import { receivablesRoutes } from '@/features/receivables/routes';
 import { devRoutes } from '@/features/dev/routes';
@@ -43,6 +44,7 @@ export const routes: RouteObject[] = [
               ...inventoryRoutes,
               ...salesRoutes,
               ...settingsRoutes,
+              ...platformRoutes,
             ],
           },
         ],

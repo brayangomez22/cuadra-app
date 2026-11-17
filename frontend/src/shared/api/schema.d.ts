@@ -258,6 +258,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar las feature flags
+         * @description Las flags que declara el código, con su valor global y las excepciones de cada empresa.
+         */
+        get: operations["listFlags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/flags/{flagKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example feedback */
+                flagKey: components["parameters"]["FlagKey"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Cambiar el valor global de una flag
+         * @description Vale para todas las empresas sin una excepción. Las demás instancias de la API lo ven en segundos.
+         */
+        put: operations["setFlagGlobal"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/flags/{flagKey}/tenants/{tenantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example feedback */
+                flagKey: components["parameters"]["FlagKey"];
+                /**
+                 * @description La empresa de la excepción. Es la única ruta en la que la empresa no sale del token: el operador de la
+                 *     plataforma elige a qué empresa le cambia la flag.
+                 */
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Poner una excepción de una flag a una empresa
+         * @description La empresa usa este valor en vez del global.
+         */
+        put: operations["setFlagException"];
+        post?: never;
+        /**
+         * Quitar la excepción de una flag a una empresa
+         * @description La empresa vuelve a usar el valor global. Es idempotente.
+         */
+        delete: operations["clearFlagException"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enviar un comentario
+         * @description Guarda el comentario del usuario con la pantalla en la que estaba y la versión de la app, y avisa al equipo de
+         *     Cuadra. De la pantalla solo se guarda la ruta (sin `?` ni `#`).
+         */
+        post: operations["sendFeedback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/products": {
         parameters: {
             query?: never;
@@ -2160,6 +2256,25 @@ export interface components {
              *     ]
              */
             modules: string[];
+            /**
+             * @description Feature flags prendidas para la empresa, para mostrar u ocultar lo que se está liberando. Distintas de
+             *     `modules`: una flag es temporal y la maneja el equipo de Cuadra.
+             * @example [
+             *       "feedback"
+             *     ]
+             */
+            flags: string[];
+            /** @description El usuario es operador de la plataforma (equipo de Cuadra) y puede usar `/platform/flags`. */
+            operator: boolean;
+            /** @description La empresa aceptó compartir la analítica de uso (se cambia con `PATCH /api/v1/tenant`). */
+            tenant_analytics_consent: boolean;
+            /**
+             * @description El seudónimo del usuario en la analítica de uso (un hash con clave, nunca el correo ni el nombre). Solo viene
+             *     si la empresa aceptó compartir la analítica, la flag `analytics` está prendida y la analítica está
+             *     configurada: sin él, la app no envía ningún evento.
+             * @example 3f2a9c0d1e4b5a6978c0d1e2f3a4b5c6
+             */
+            analytics_id?: string;
             /** @description La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso. */
             demo: boolean;
         };
@@ -2185,6 +2300,11 @@ export interface components {
             municipality_code: string;
             /** @description Teléfono del negocio. Vacío si no se ha registrado. */
             phone: string;
+            /**
+             * @description El dueño aceptó compartir la analítica de uso de la app con Cuadra (seudónima, sin datos personales). Apagado
+             *     hasta que lo acepte.
+             */
+            analytics_consent: boolean;
         };
         TenantUpdate: {
             /** @description La tasa de IVA que se propone a un producto nuevo. No cambia la de los productos que ya existen. */
@@ -2201,6 +2321,8 @@ export interface components {
             municipality_code?: string;
             /** @description Teléfono, con dígitos, espacios, `+`, `-` y paréntesis. Vacío lo borra. */
             phone?: string;
+            /** @description Acepta (o retira) compartir la analítica de uso de la app con Cuadra. */
+            analytics_consent?: boolean;
         };
         TenantSelectionRequired: {
             error: components["schemas"]["ErrorDetail"];
@@ -2269,6 +2391,46 @@ export interface components {
             /** @description Módulos que deben estar activos para activar este. */
             depends_on: string[];
             active: boolean;
+        };
+        FeedbackInput: {
+            /** @description Lo que el usuario quiere decir. */
+            message: string;
+            /**
+             * @description La ruta de la pantalla en la que estaba.
+             * @example /vender
+             */
+            screen: string;
+            /** @example 1.4.0 */
+            app_version: string;
+        };
+        FeedbackReceipt: {
+            /** Format: uuid */
+            id: string;
+        };
+        FeatureFlagList: {
+            items: components["schemas"]["FeatureFlag"][];
+        };
+        FeatureFlag: {
+            /** @example feedback */
+            key: string;
+            description: string;
+            /** @description El valor global, para las empresas sin excepción. */
+            enabled: boolean;
+            exceptions: components["schemas"]["FeatureFlagException"][];
+        };
+        FeatureFlagException: {
+            /** Format: uuid */
+            tenant_id: string;
+            tenant_name: string;
+            enabled: boolean;
+        };
+        FeatureFlagValue: {
+            key: string;
+            description: string;
+            enabled: boolean;
+        };
+        FeatureFlagUpdate: {
+            enabled: boolean;
         };
         ModuleList: {
             items: components["schemas"]["Module"][];
@@ -4157,6 +4319,8 @@ export interface components {
         Offset: number;
         ImportId: string;
         ProductId: string;
+        /** @example feedback */
+        FlagKey: string;
         /** @example variants */
         ModuleId: string;
         StockCountId: string;
@@ -4642,6 +4806,186 @@ export interface operations {
              *     él (`module_required_by`). El módulo que bloquea el cambio va en `details.module`.
              */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listFlags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las flags, en el orden en que se declaran. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    setFlagGlobal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example feedback */
+                flagKey: components["parameters"]["FlagKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeatureFlagUpdate"];
+            };
+        };
+        responses: {
+            /** @description La flag con su valor global nuevo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagValue"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description La flag no existe (`unknown_flag`) o el usuario no es operador (`not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    setFlagException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example feedback */
+                flagKey: components["parameters"]["FlagKey"];
+                /**
+                 * @description La empresa de la excepción. Es la única ruta en la que la empresa no sale del token: el operador de la
+                 *     plataforma elige a qué empresa le cambia la flag.
+                 */
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeatureFlagUpdate"];
+            };
+        };
+        responses: {
+            /** @description La excepción quedó guardada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /**
+             * @description La flag no existe (`unknown_flag`), la empresa no existe (`unknown_tenant`) o el usuario no es operador
+             *     (`not_found`).
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    clearFlagException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example feedback */
+                flagKey: components["parameters"]["FlagKey"];
+                /**
+                 * @description La empresa de la excepción. Es la única ruta en la que la empresa no sale del token: el operador de la
+                 *     plataforma elige a qué empresa le cambia la flag.
+                 */
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La empresa ya no tiene excepción. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description La flag no existe (`unknown_flag`) o el usuario no es operador (`not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    sendFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackInput"];
+            };
+        };
+        responses: {
+            /** @description El comentario quedó guardado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackReceipt"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description El comentario está vacío (`invalid_feedback`), o la pantalla o la versión no son válidas. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
