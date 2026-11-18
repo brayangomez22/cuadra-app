@@ -35,6 +35,9 @@ type Actor struct {
 	// ManagesCash is whether their role closes the sessions other users left
 	// open.
 	ManagesCash bool
+	// SeesAllSales is whether their role sees every user's sales; without
+	// it a user sees only the sales they made.
+	SeesAllSales bool
 }
 
 // VariantInfo is what a sale needs of a variant: its product, the

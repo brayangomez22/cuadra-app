@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form';
 import type { CustomerSegment } from '@/features/customers';
 import { Field, Input } from '@/shared/ui';
 import { useSaveCustomerSegment } from '../../../../api/customerSegments';
-import { FormDialog } from '../../../../components/FormDialog/FormDialog';
-import { useSaveDialog } from '../../../../hooks/useSaveDialog';
+import { FormDialog } from '@/shared/forms/FormDialog/FormDialog';
+import { useSaveDialog } from '@/shared/forms/useSaveDialog';
 import { segmentErrorFields, segmentSchema, type SegmentValues } from '../../../../model/segmentSchema';
 
 type Props = {

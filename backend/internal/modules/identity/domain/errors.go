@@ -54,6 +54,25 @@ var (
 	ErrRefreshTokenNotFound = errors.New("identity: refresh token not found")
 	ErrRefreshTokenExpired  = errors.New("identity: refresh token expired")
 	ErrRefreshTokenReused   = errors.New("identity: refresh token reused")
+	// ErrOwnerOnly means an action on the owner role (assigning it, or
+	// changing, deactivating or resetting an owner) by someone who is not
+	// an owner.
+	ErrOwnerOnly = errors.New("identity: only an owner may manage owners")
+	// ErrLastOwner means the change would leave the tenant without an
+	// active owner.
+	ErrLastOwner = errors.New("identity: the tenant needs an active owner")
+	// ErrSelfDeactivation means a user tried to deactivate themselves.
+	ErrSelfDeactivation = errors.New("identity: a user cannot deactivate themselves")
+	// ErrInvalidLink is a link token (invitation or password reset) that is
+	// malformed; ErrLinkNotFound, a well-formed one nobody issued.
+	ErrInvalidLink  = errors.New("identity: invalid link")
+	ErrLinkNotFound = errors.New("identity: link not found")
+	// ErrLinkExpired and ErrLinkUsed: the link was issued but cannot be
+	// used anymore (it expired, or it was used or revoked).
+	ErrLinkExpired        = errors.New("identity: link expired")
+	ErrLinkUsed           = errors.New("identity: link already used or revoked")
+	ErrInvitationNotFound = errors.New("identity: invitation not found")
+	ErrWrongPassword      = errors.New("identity: wrong current password")
 	// ErrDemoUnavailable means there is no demo to enter: it is off, the
 	// business template has none or it has no active user of the role.
 	ErrDemoUnavailable = errors.New("identity: demo unavailable")

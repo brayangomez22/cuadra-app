@@ -1,3 +1,5 @@
+@use '@/styles/abstracts' as *;
+
 .loading {
   align-self: center;
   padding-block: var(--space-8);
@@ -5,6 +7,18 @@
 
 .actions {
   align-items: flex-end;
+}
+
+// The receipt, with the sale's facts under it on a phone and beside it from
+// xl, where the receipt alone would leave the page empty (P150).
+.body {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+
+  @include respond-to(xl) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
 }
 
 // The receipt as it prints, on a sheet of paper.

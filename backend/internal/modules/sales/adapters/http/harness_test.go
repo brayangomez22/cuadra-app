@@ -28,11 +28,13 @@ func newID() uuid.UUID { return uuid.Must(uuid.NewV7()) }
 
 // stubUseCases records the last call and answers with what each test sets.
 type stubUseCases struct {
-	actor   app.Actor
-	confirm app.ConfirmSaleInput
-	id      uuid.UUID
-	reason  string
-	list    app.ListSalesInput
+	// cashierName is the name GetSaleDetail answers.
+	cashierName string
+	actor       app.Actor
+	confirm     app.ConfirmSaleInput
+	id          uuid.UUID
+	reason      string
+	list        app.ListSalesInput
 
 	openCash  app.OpenCashSessionInput
 	movement  app.CashMovementRequest
@@ -67,9 +69,9 @@ func (s *stubUseCases) VoidSale(_ context.Context, a app.Actor, id uuid.UUID, re
 	return s.sale, s.err
 }
 
-func (s *stubUseCases) GetSale(_ context.Context, a app.Actor, id uuid.UUID) (*domain.Sale, error) {
+func (s *stubUseCases) GetSaleDetail(_ context.Context, a app.Actor, id uuid.UUID) (app.SaleDetail, error) {
 	s.actor, s.id = a, id
-	return s.sale, s.err
+	return app.SaleDetail{Sale: s.sale, CashierName: s.cashierName}, s.err
 }
 
 func (s *stubUseCases) ListSales(_ context.Context, a app.Actor, in app.ListSalesInput) (domain.SalePage, error) {
@@ -77,9 +79,10 @@ func (s *stubUseCases) ListSales(_ context.Context, a app.Actor, in app.ListSale
 	return s.page, s.err
 }
 
-// discountOnlyOwner grants sales:discount and cash:manage only to owners.
+// discountOnlyOwner grants sales:discount, cash:manage and sales:read_all
+// only to owners.
 func discountOnlyOwner(role, permission string) bool {
-	return role == "owner" || (permission != "sales:discount" && permission != "cash:manage")
+	return role == "owner" || (permission != "sales:discount" && permission != "cash:manage" && permission != "sales:read_all")
 }
 
 var owner = auth.Principal{TenantID: newID(), UserID: newID(), Role: "owner"}

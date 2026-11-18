@@ -92,6 +92,7 @@ func build(cfg Config) (http.Handler, *wiring, error) {
 		DB:             cfg.DB,
 		Docs:           cfg.Docs,
 		Verifier:       cfg.Tokens,
+		Sessions:       w.identityModule,
 		Permissions:    w.permissions,
 		Modules:        w.moduleService,
 		Routes:         routes,

@@ -2,10 +2,13 @@ package identity
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/app"
+	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 )
 
 // DemoTenantInput describes a demonstration tenant (see
@@ -62,4 +65,19 @@ func (m *Module) TenantProfile(ctx context.Context, tenantID uuid.UUID) (TenantP
 		Name: t.Name(), NIT: t.NIT().String(), Address: c.Address(), City: c.City(),
 		MunicipalityCode: c.MunicipalityCode(), Phone: c.Phone(), Demo: t.IsDemo(),
 	}, nil
+}
+
+// Current checks, on every request, that the token's user is still active
+// and returns the principal with their current role (auth.Sessions): a
+// deactivation or a role change applies at once.
+func (m *Module) Current(ctx context.Context, p auth.Principal) (auth.Principal, error) {
+	role, err := m.service.CurrentRole(ctx, p.TenantID, p.UserID)
+	switch {
+	case errors.Is(err, domain.ErrUserNotFound):
+		return auth.Principal{}, auth.ErrSessionEnded
+	case err != nil:
+		return auth.Principal{}, err
+	}
+	p.Role = role.String()
+	return p, nil
 }

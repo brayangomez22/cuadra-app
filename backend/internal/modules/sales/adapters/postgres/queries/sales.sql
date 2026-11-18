@@ -49,12 +49,14 @@ UPDATE sales
 SET status = 'voided', voided_at = sqlc.arg(voided_at), voided_by = sqlc.arg(voided_by), void_reason = sqlc.arg(void_reason)
 WHERE id = sqlc.arg(id) AND status = 'confirmed';
 
--- ListSales pages the sales confirmed in [from, to), newest first.
+-- ListSales pages the sales confirmed in [from, to), newest first; with
+-- cashier_id, only that user's.
 -- name: ListSales :many
 SELECT id, number, location_id, user_id, status, total, confirmed_at, voided_at
 FROM sales
 WHERE confirmed_at >= sqlc.arg(from_time) AND confirmed_at < sqlc.arg(to_time)
   AND (sqlc.narg(location_id)::uuid IS NULL OR location_id = sqlc.narg(location_id))
+  AND (sqlc.narg(cashier_id)::uuid IS NULL OR user_id = sqlc.narg(cashier_id))
 ORDER BY confirmed_at DESC, id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -66,4 +68,5 @@ SELECT count(*) AS total,
        COALESCE(sum(total) FILTER (WHERE status = 'confirmed'), 0)::numeric AS sold
 FROM sales
 WHERE confirmed_at >= sqlc.arg(from_time) AND confirmed_at < sqlc.arg(to_time)
-  AND (sqlc.narg(location_id)::uuid IS NULL OR location_id = sqlc.narg(location_id));
+  AND (sqlc.narg(location_id)::uuid IS NULL OR location_id = sqlc.narg(location_id))
+  AND (sqlc.narg(cashier_id)::uuid IS NULL OR user_id = sqlc.narg(cashier_id));

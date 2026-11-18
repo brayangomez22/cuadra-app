@@ -202,8 +202,7 @@ func TestSalesFlow(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 		// Another cashier does not close it; the owner could (cash:manage, TestCashHistory).
-		otherCashier, _, err := f.tokens.Issue(f.tenantID, uuid.Must(uuid.NewV7()), "cashier")
-		require.NoError(t, err)
+		otherCashier := joinStaff(t, do, ownerToken, "cashier").Token
 		rec = do(t, http.MethodPost, "/api/v1/cash-sessions/"+sessionID+"/close",
 			`{"counts":[{"denomination":"100000","quantity":1}]}`, otherCashier)
 		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())

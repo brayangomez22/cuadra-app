@@ -23,14 +23,27 @@ import (
 
 // UseCases are the identity use cases the handlers call (*app.Service).
 type UseCases interface {
+	SessionUseCases
+	TenantUseCases
+	DemoUseCases
+	UserUseCases
+	InvitationUseCases
+	PasswordUseCases
+}
+
+// SessionUseCases sign businesses up and users in and out.
+type SessionUseCases interface {
 	SignUp(ctx context.Context, in app.SignUpInput) (app.Session, error)
 	Login(ctx context.Context, in app.LoginInput) (app.Session, error)
 	Refresh(ctx context.Context, raw string) (app.Session, error)
 	Logout(ctx context.Context, raw string) error
 	Me(ctx context.Context, tenantID, userID uuid.UUID) (app.Profile, error)
+}
+
+// TenantUseCases read and change the company.
+type TenantUseCases interface {
 	BusinessTemplates() []app.BusinessTemplate
 	UpdateTenant(ctx context.Context, tenantID, userID uuid.UUID, in app.TenantUpdate) (*domain.Tenant, error)
-	DemoUseCases
 }
 
 // Handler implements identityapi.StrictServerInterface.

@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -62,16 +61,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 }
 
 func (r *UserRepository) get(ctx context.Context, tenantID uuid.UUID, query func(*sqlcgen.Queries) (sqlcgen.User, error)) (*domain.User, error) {
-	row, err := db.Read(ctx, r.db, tenantID, func(tx pgx.Tx) (sqlcgen.User, error) {
-		return query(sqlcgen.New(tx))
-	})
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return nil, domain.ErrUserNotFound
-	case err != nil:
-		return nil, fmt.Errorf("identity: get user: %w", err)
-	}
-	return userFromRow(row)
+	return readOne(ctx, r.db, tenantID, "get user", domain.ErrUserNotFound, query, userFromRow)
 }
 
 // Update stores the name, password hash, role and active flag;

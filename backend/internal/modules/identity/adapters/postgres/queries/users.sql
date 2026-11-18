@@ -26,3 +26,16 @@ LIMIT 1;
 
 -- name: UserNames :many
 SELECT id, name FROM users WHERE tenant_id = sqlc.arg(tenant_id) AND id = ANY(sqlc.arg(ids)::uuid[]);
+
+-- name: ListUsers :many
+SELECT id, tenant_id, email, name, password_hash, role, active, created_at
+FROM users
+WHERE tenant_id = $1
+ORDER BY name, id;
+
+-- LockActiveOwners locks the active owners until the transaction ends, so
+-- two concurrent changes cannot both leave the tenant without one.
+-- name: LockActiveOwners :many
+SELECT id FROM users
+WHERE tenant_id = $1 AND role = 'owner' AND active
+FOR UPDATE;

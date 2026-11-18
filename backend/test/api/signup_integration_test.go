@@ -21,7 +21,7 @@ import (
 // through the whole stack and checks that the tenant starts with exactly
 // what its template declares.
 func TestSignUpTemplates(t *testing.T) {
-	handler, tokens := newAPI(t)
+	handler, _ := newAPI(t)
 
 	do := func(t *testing.T, method, path, body, bearer string) *httptest.ResponseRecorder {
 		t.Helper()
@@ -209,8 +209,7 @@ func TestSignUpTemplates(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &session))
 		// An admin of the same tenant: user management arrives in T41, so the
 		// token is issued directly.
-		adminToken, _, err := tokens.Issue(session.User.TenantID, uuid.Must(uuid.NewV7()), "admin")
-		require.NoError(t, err)
+		adminToken := joinStaff(t, do, session.AccessToken, "admin").Token
 
 		rec = do(t, http.MethodPatch, "/api/v1/tenant", `{"default_tax_rate":"0"}`, adminToken)
 		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())

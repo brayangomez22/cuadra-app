@@ -173,6 +173,15 @@ func TestGetSale(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		require.Equal(t, sale.ID(), uc.id)
 		require.Contains(t, rec.Body.String(), `"number":15`)
+		require.NotContains(t, rec.Body.String(), `"user_name"`, "a user that no longer exists has no name")
+	})
+
+	t.Run("trae el nombre de quien vendió", func(t *testing.T) {
+		sale := aSale(t)
+		uc := &stubUseCases{sale: sale, cashierName: "Ana Cajera"}
+		rec := serve(t, uc, &owner, http.MethodGet, "/api/v1/sales/"+sale.ID().String(), "")
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Contains(t, rec.Body.String(), `"user_name":"Ana Cajera"`)
 	})
 }
 

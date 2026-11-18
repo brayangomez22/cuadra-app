@@ -43,6 +43,12 @@ type UserRepository interface {
 	// Names returns the name of each user of tenantID among ids; a missing
 	// one is not the tenant's.
 	Names(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]string, error)
+	// List returns every user of tenantID, active or not, by name.
+	List(ctx context.Context, tenantID uuid.UUID) ([]*User, error)
+	// LockActiveOwners counts the active owners of tenantID and locks them
+	// until the transaction of ctx ends, so two concurrent changes cannot
+	// both leave the tenant without an owner.
+	LockActiveOwners(ctx context.Context, tenantID uuid.UUID) (int, error)
 }
 
 // LoginCandidate is a user registered with a given email, in some tenant.
@@ -100,4 +106,7 @@ type RefreshTokenRepository interface {
 	// RevokeFamily revokes every unrevoked token of the family and returns
 	// how many it revoked. Idempotent.
 	RevokeFamily(ctx context.Context, tenantID, familyID uuid.UUID, now time.Time) (int64, error)
+	// RevokeUser revokes every unrevoked token of the user and returns how
+	// many it revoked: all their sessions end. Idempotent.
+	RevokeUser(ctx context.Context, tenantID, userID uuid.UUID, now time.Time) (int64, error)
 }

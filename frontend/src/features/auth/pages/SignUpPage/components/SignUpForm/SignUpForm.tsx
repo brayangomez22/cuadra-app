@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { Alert, Button, Field, Input } from '@/shared/ui';
+import { Alert, Button, Field, Input, PasswordInput } from '@/shared/ui';
 import { signUpSchema, type SignUpValues } from '../../../../model/schemas';
 import { useSignUp } from '../../hooks/useSignUp';
 import { BusinessTypeField } from '../BusinessTypeField/BusinessTypeField';
@@ -44,7 +44,7 @@ export function SignUpForm() {
         <Input type="email" autoComplete="username" inputMode="email" {...register('email')} />
       </Field>
       <Field label="Contraseña" hint="Mínimo 8 caracteres" error={errors.password?.message}>
-        <Input type="password" autoComplete="new-password" {...register('password')} />
+        <PasswordInput autoComplete="new-password" {...register('password')} />
       </Field>
       <BusinessTypeField
         className={styles.wide}

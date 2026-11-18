@@ -12,6 +12,7 @@ import (
 	identityapp "github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/app"
 	inventoryapp "github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory/app"
 	purchasesapp "github.com/brayangomez22/cuadra-app/backend/internal/modules/purchases/app"
+	receivablesapp "github.com/brayangomez22/cuadra-app/backend/internal/modules/receivables/app"
 	salesapp "github.com/brayangomez22/cuadra-app/backend/internal/modules/sales/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
@@ -89,6 +90,14 @@ type IdentityAudit struct{ *Auditor }
 
 // Record appends the identity module's event.
 func (a IdentityAudit) Record(ctx context.Context, tenantID, userID uuid.UUID, e identityapp.AuditEntry) error {
+	return a.record(ctx, tenantID, userID, audit.Entry{Action: audit.Action(e.Action), EntityID: &e.EntityID, Details: e.Details})
+}
+
+// ReceivablesAudit satisfies receivablesapp.AuditLog with the audit module.
+type ReceivablesAudit struct{ *Auditor }
+
+// Record appends the receivables module's event.
+func (a ReceivablesAudit) Record(ctx context.Context, tenantID, userID uuid.UUID, e receivablesapp.AuditEntry) error {
 	return a.record(ctx, tenantID, userID, audit.Entry{Action: audit.Action(e.Action), EntityID: &e.EntityID, Details: e.Details})
 }
 

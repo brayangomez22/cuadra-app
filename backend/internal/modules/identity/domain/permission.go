@@ -36,6 +36,7 @@ const (
 	PermSalesCreate          Permission = "sales:create"
 	PermSalesDiscount        Permission = "sales:discount" // discount without the tenant's limit
 	PermSalesRead            Permission = "sales:read"
+	PermSalesReadAll         Permission = "sales:read_all" // every user's sales; without it, only one's own
 	PermSalesVoid            Permission = "sales:void"
 	PermCashManage           Permission = "cash:manage" // see every cash session and close one another user left open
 	PermUsersManage          Permission = "users:manage"
@@ -78,7 +79,7 @@ var coreRoles = []struct {
 		PermInvoicingRead, PermInvoicingManage,
 		PermPurchasesRead, PermPurchasesWrite,
 		PermReceivablesRead, PermReceivablesManage, PermReceivablesCollect, PermReceivablesOverride,
-		PermSalesCreate, PermSalesDiscount, PermSalesRead, PermSalesVoid, PermCashManage,
+		PermSalesCreate, PermSalesDiscount, PermSalesRead, PermSalesReadAll, PermSalesVoid, PermCashManage,
 		PermUsersManage,
 	}},
 	{RoleCashier, []Permission{
@@ -121,6 +122,7 @@ var corePermissions = []Permission{
 	PermSalesCreate,
 	PermSalesDiscount,
 	PermSalesRead,
+	PermSalesReadAll,
 	PermSalesVoid,
 	PermCashManage,
 	PermUsersManage,

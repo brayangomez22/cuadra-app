@@ -26,11 +26,15 @@ type Deps struct {
 	Tokens  domain.RefreshTokenRepository
 	// ExpiredTokens purges the expired refresh tokens of every tenant.
 	ExpiredTokens domain.ExpiredRefreshTokens
-	Directory     domain.LoginDirectory
-	Demo          domain.DemoTenantRepository
-	Hasher        domain.PasswordHasher
-	Issuer        AccessTokenIssuer
-	Setup         TenantSetup
+	// Invitations and Resets are the links to join the tenant and to
+	// choose a new password.
+	Invitations domain.InvitationRepository
+	Resets      domain.PasswordResetRepository
+	Directory   domain.LoginDirectory
+	Demo        domain.DemoTenantRepository
+	Hasher      domain.PasswordHasher
+	Issuer      AccessTokenIssuer
+	Setup       TenantSetup
 	// Permissions is the role → permission matrix; Modules, the active
 	// modules of each tenant.
 	Permissions *domain.PermissionMatrix
@@ -73,12 +77,16 @@ type Service struct {
 	reuseAlerts    metric.Int64Counter
 	demoLogins     metric.Int64Counter
 	tokensPurged   metric.Int64Counter
+	userChanges    metric.Int64Counter
+	invitations    metric.Int64Counter
+	passwordResets metric.Int64Counter
+	rejected       metric.Int64Counter
 }
 
 // NewService builds a Service. It fails if a required dependency is missing
 // or a metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Tenants, d.Users, d.Tokens, d.ExpiredTokens, d.Directory, d.Demo, d.Hasher, d.Issuer, d.Setup,
+	if usecase.AnyNil(d.Tenants, d.Users, d.Tokens, d.ExpiredTokens, d.Invitations, d.Resets, d.Directory, d.Demo, d.Hasher, d.Issuer, d.Setup,
 		d.Permissions, d.Modules, d.Flags, d.Pseudonyms, d.IPLimiter, d.EmailLimiter, d.DemoLimiter, d.SignupLimiter, d.Audit, d.Tx) {
 		return nil, errors.New("identity: missing service dependency")
 	}
@@ -101,6 +109,14 @@ func NewService(d Deps) (*Service, error) {
 			"Entries to the public demo, by result, role and business template.", "{session}"),
 		usecase.Counter(&s.tokensPurged, "cuadra.identity.refresh_tokens_purged",
 			"Expired refresh tokens deleted by the nightly purge.", "{token}"),
+		usecase.Counter(&s.userChanges, "cuadra.identity.user_changes",
+			"Changes to a user by an owner or admin, by action (role_changed, deactivated, activated).", "{change}"),
+		usecase.Counter(&s.invitations, "cuadra.identity.invitations",
+			"Invitations to join a tenant, by result (sent, accepted, revoked).", "{invitation}"),
+		usecase.Counter(&s.passwordResets, "cuadra.identity.password_resets",
+			"Password reset links, by result (issued, completed).", "{reset}"),
+		usecase.Counter(&s.rejected, "cuadra.identity.sessions_rejected",
+			"Requests with a valid access token of a user that is no longer active, by reason.", "{request}"),
 	)
 	if err != nil {
 		return nil, err

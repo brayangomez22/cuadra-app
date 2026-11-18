@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
 	"github.com/brayangomez22/cuadra-app/backend/internal/server"
 )
 
@@ -20,8 +21,10 @@ import (
 // see it in /me, and the screen does not exist for anyone else.
 func TestFlagsFlow(t *testing.T) {
 	operatorID := uuid.Must(uuid.NewV7())
+	var database *db.DB
 	handler, tokens, _ := newAPIWith(t, func(cfg *server.Config) {
 		cfg.PlatformOperators = []uuid.UUID{operatorID}
+		database = cfg.DB
 	})
 	do := func(t *testing.T, method, path, body, bearer string) *httptest.ResponseRecorder {
 		t.Helper()
@@ -62,6 +65,7 @@ func TestFlagsFlow(t *testing.T) {
 
 	pilotToken, pilot := signUp(t, "Ferretería La Tuerca", "ana@latuerca.co", "ferreteria")
 	otherToken, _ := signUp(t, "Calzado Andino", "ana@andino.co", "ropa_calzado")
+	addOperator(t, database, pilot.TenantID, operatorID)
 	operator, _, err := tokens.Issue(pilot.TenantID, operatorID, "owner")
 	require.NoError(t, err)
 	// The global values live in the database the API tests share: leave it as found.

@@ -8,10 +8,12 @@ import {
   IconCashStack,
   IconClipboardCheck,
   IconFlag,
+  IconHistory,
   IconHome,
   IconSettings,
   IconTag,
   IconTruck,
+  IconUserKey,
   IconUsers,
   IconWallet,
 } from '@/shared/ui';
@@ -49,6 +51,9 @@ export const navItems: NavItem[] = [
   { to: paths.purchases.list(), label: 'Compras', icon: IconTruck, permission: 'purchases:read' },
   { to: paths.inventory.stock(), label: 'Inventario', icon: IconBox, permission: 'inventory:read' },
   { to: paths.inventory.counts(), label: 'Toma física', icon: IconClipboardCheck, permission: 'inventory:count' },
+  { to: paths.users.list(), label: 'Usuarios', icon: IconUserKey, permission: 'users:manage' },
+  // Only the owner reads who did what (audit:read).
+  { to: paths.audit.list(), label: 'Auditoría', icon: IconHistory, permission: 'audit:read' },
   // Owners and admins configure the catalog; the owner also the business.
   { to: paths.settings.home(), label: 'Configuración', icon: IconSettings, permission: 'catalog:write' },
   // Only for the Cuadra team (PLATFORM_OPERATORS).

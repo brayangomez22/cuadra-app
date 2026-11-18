@@ -24,6 +24,7 @@ type env struct {
 	store     *store
 	customers *fakeCustomers
 	drawer    *fakeDrawer
+	audit     *fakeAudit
 	actor     app.Actor
 	now       time.Time
 	spans     *tracetest.SpanRecorder
@@ -42,6 +43,7 @@ func newEnv(t *testing.T) *env {
 	e := &env{
 		store:     newStore(),
 		customers: &fakeCustomers{names: map[uuid.UUID]string{}},
+		audit:     &fakeAudit{},
 		actor:     app.Actor{TenantID: newID(), UserID: newID()},
 		now:       testNow,
 		spans:     tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
@@ -57,6 +59,8 @@ func newEnv(t *testing.T) *env {
 		Credit:         fakeCredit{e.store},
 		Customers:      e.customers,
 		Cash:           e.drawer,
+		Audit:          e.audit,
+		Tx:             fakeTx{},
 		Now:            func() time.Time { return e.now },
 		TracerProvider: tp,
 		MeterProvider:  mp,

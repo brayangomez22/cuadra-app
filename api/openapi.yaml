@@ -37,6 +37,10 @@ tags:
   - name: tenant
     description: |
       Los datos y la configuración de la empresa: por ahora, el IVA que se propone a un producto nuevo.
+  - name: users
+    description: |
+      Los usuarios de la empresa: invitaciones por enlace, rol, desactivación y enlaces para restablecer la
+      contraseña. Solo dueño y administrador (`users:manage`); solo un dueño gestiona a otros dueños.
   - name: catalog
     description: |
       Productos y categorías de la empresa. El dinero viaja como string decimal y el precio no incluye IVA.
@@ -416,6 +420,386 @@ paths:
                 $ref: "#/components/schemas/Me"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/me/password:
+    post:
+      tags: [auth]
+      operationId: changeMyPassword
+      summary: Cambiar mi contraseña
+      description: Cambia la contraseña del usuario autenticado; pide la actual. Sus sesiones siguen abiertas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordChange"
+      responses:
+        "204":
+          description: Contraseña cambiada.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          description: |
+            La contraseña actual no coincide (`wrong_password`) o la nueva no sirve (`password_too_short`,
+            `password_too_long`, `password_too_common`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/auth/invitations/lookup:
+    post:
+      tags: [auth]
+      operationId: lookupInvitation
+      summary: Ver una invitación
+      description: |
+        Lo que muestra el enlace de una invitación antes de aceptarla. El token viaja en el cuerpo (el frontend lo
+        lee del fragmento de la URL), nunca en la ruta, para que no quede en los logs.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LinkToken"
+      responses:
+        "200":
+          description: La invitación vigente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationPreview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/LinkNotFound"
+        "410":
+          $ref: "#/components/responses/LinkGone"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/auth/invitations/accept:
+    post:
+      tags: [auth]
+      operationId: acceptInvitation
+      summary: Aceptar una invitación
+      description: Crea el usuario invitado con la contraseña que elige y abre su sesión. El enlace sirve una vez.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptInvitationRequest"
+      responses:
+        "200":
+          description: Usuario creado y sesión iniciada.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SetRefreshCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          description: La empresa está suspendida (`code` = `tenant_suspended`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/LinkNotFound"
+        "409":
+          description: El correo ya es de un usuario de la empresa (`email_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "410":
+          $ref: "#/components/responses/LinkGone"
+        "422":
+          description: El nombre o la contraseña no sirven (`invalid_user_name`, `password_too_short`...).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/auth/password-reset:
+    post:
+      tags: [auth]
+      operationId: resetPassword
+      summary: Restablecer la contraseña
+      description: |
+        Pone la contraseña nueva con el enlace que generó el dueño o un administrador, y cierra todas las sesiones
+        del usuario. El enlace sirve una vez.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "204":
+          description: Contraseña cambiada; el usuario inicia sesión con ella.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/LinkNotFound"
+        "410":
+          $ref: "#/components/responses/LinkGone"
+        "422":
+          description: La contraseña no sirve (`password_too_short`, `password_too_long`, `password_too_common`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/users:
+    get:
+      tags: [users]
+      operationId: listUsers
+      summary: Usuarios de la empresa
+      description: Todos los usuarios, activos o no, por nombre.
+      x-permission: users:manage
+      responses:
+        "200":
+          description: Los usuarios.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/users/{userId}:
+    patch:
+      tags: [users]
+      operationId: updateUser
+      summary: Cambiar el rol de un usuario
+      description: |
+        Solo un dueño da o quita el rol `owner` o cambia a otro dueño (`owner_only`), y la empresa siempre conserva
+        un dueño activo (`last_owner`). El cambio aplica desde la siguiente request del usuario.
+      x-permission: users:manage
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: El usuario con su rol nuevo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/UserForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/LastOwner"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/users/{userId}/deactivate:
+    post:
+      tags: [users]
+      operationId: deactivateUser
+      summary: Desactivar un usuario
+      description: |
+        El usuario pierde el acceso en su siguiente request y se cierran sus sesiones. Nadie se desactiva a sí mismo
+        (`self_deactivation`) y la empresa conserva un dueño activo (`last_owner`).
+      x-permission: users:manage
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: El usuario desactivado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/UserForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/LastOwner"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/users/{userId}/activate:
+    post:
+      tags: [users]
+      operationId: activateUser
+      summary: Reactivar un usuario
+      x-permission: users:manage
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: El usuario activo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/UserForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/users/{userId}/password-reset:
+    post:
+      tags: [users]
+      operationId: issuePasswordReset
+      summary: Generar un enlace para restablecer la contraseña
+      description: |
+        Devuelve el enlace (su token) para que el usuario elija una contraseña nueva; vence en 24 horas y solo sirve
+        el último generado. Quien lo genera lo comparte con el usuario. El token se muestra una sola vez.
+      x-permission: users:manage
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "201":
+          description: El enlace generado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssuedLink"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/UserForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/invitations:
+    get:
+      tags: [users]
+      operationId: listInvitations
+      summary: Invitaciones abiertas
+      description: Las invitaciones sin aceptar ni revocar (pendientes o vencidas), de la más reciente a la más antigua.
+      x-permission: users:manage
+      responses:
+        "200":
+          description: Las invitaciones abiertas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invitation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [users]
+      operationId: inviteUser
+      summary: Invitar a un usuario
+      description: |
+        Crea una invitación con el rol indicado y devuelve su enlace (el token se muestra una sola vez); vence en 7
+        días. Invitar otra vez el mismo correo revoca los enlaces anteriores. Solo un dueño invita con rol `owner`.
+      x-permission: users:manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationRequest"
+      responses:
+        "201":
+          description: La invitación creada y su enlace.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationCreated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/UserForbidden"
+        "409":
+          description: El correo ya es de un usuario de la empresa (`email_taken`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: El correo o el nombre no sirven (`invalid_email`, `invalid_user_name`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/invitations/{invitationId}:
+    delete:
+      tags: [users]
+      operationId: revokeInvitation
+      summary: Revocar una invitación
+      description: Su enlace deja de servir.
+      x-permission: users:manage
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Invitación revocada.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: La invitación ya fue aceptada o revocada (`link_used`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -3415,7 +3799,7 @@ paths:
       summary: Ventas del día
       description: |
         Las ventas confirmadas (y las anuladas) de un día en hora de Colombia (`America/Bogota`), de la más reciente
-        a la más antigua. Sin `date`, el día de hoy.
+        a la más antigua. Sin `date`, el día de hoy. Quien no tiene `sales:read_all` (el cajero) ve solo sus ventas.
       x-permission: sales:read
       parameters:
         - name: date
@@ -3607,6 +3991,9 @@ paths:
       tags: [sales]
       operationId: getSale
       summary: Detalle de una venta
+      description: |
+        Con el nombre de quien vendió y de quien anuló. Quien no tiene `sales:read_all` (el cajero) solo abre sus
+        ventas: la de otro usuario responde 404 `sale_not_found`.
       x-permission: sales:read
       responses:
         "200":
@@ -4572,6 +4959,13 @@ components:
       bearerFormat: JWT
 
   parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     Limit:
       name: limit
       in: query
@@ -4785,6 +5179,34 @@ components:
         Algún dato del proveedor no cumple las reglas: el NIT no es válido (`invalid_nit`) o su dígito de verificación
         no coincide (`invalid_nit_check_digit`), el nombre (`invalid_supplier_name`), un dato de contacto
         (`invalid_supplier_contact`) o el plazo de pago no está entre 0 y 365 días (`invalid_payment_term`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    LinkNotFound:
+      description: El enlace no existe o está mal copiado (`code` = `link_not_found`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    LinkGone:
+      description: El enlace venció (`link_expired`) o ya se usó o se revocó (`link_used`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    UserForbidden:
+      description: |
+        Falta el permiso (`forbidden`) o la acción es sobre un dueño o el rol `owner` y quien la hace no es dueño
+        (`owner_only`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    LastOwner:
+      description: |
+        La empresa quedaría sin dueño activo (`last_owner`) o el usuario intenta desactivarse a sí mismo
+        (`self_deactivation`).
       content:
         application/json:
           schema:
@@ -5070,6 +5492,170 @@ components:
         demo:
           type: boolean
           description: La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso.
+    UserRole:
+      type: string
+      enum: [owner, admin, cashier, warehouse]
+      description: Dueño, administrador, cajero o bodeguero.
+    User:
+      type: object
+      required: [id, name, email, role, active, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
+        active:
+          type: boolean
+          description: Un usuario inactivo no puede entrar.
+        created_at:
+          type: string
+          format: date-time
+    UserUpdate:
+      type: object
+      required: [role]
+      additionalProperties: false
+      properties:
+        role:
+          $ref: "#/components/schemas/UserRole"
+    PasswordChange:
+      type: object
+      required: [current_password, new_password]
+      additionalProperties: false
+      properties:
+        current_password:
+          type: string
+          format: password
+          minLength: 1
+          maxLength: 72
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+    LinkToken:
+      type: object
+      required: [token]
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: El token del enlace (`<empresa>.<secreto>`).
+    IssuedLink:
+      type: object
+      required: [token, expires_at]
+      properties:
+        token:
+          type: string
+          description: |
+            El token del enlace, que se muestra una sola vez. El frontend arma la URL con el token en el fragmento
+            (`/restablecer#<token>` o `/invitacion#<token>`).
+        expires_at:
+          type: string
+          format: date-time
+    InvitationRequest:
+      type: object
+      required: [email, name, role]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        role:
+          $ref: "#/components/schemas/UserRole"
+    Invitation:
+      type: object
+      required: [id, email, name, role, status, invited_by, expires_at, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
+        status:
+          type: string
+          enum: [pending, expired]
+          description: Una invitación abierta está pendiente o vencida.
+        invited_by:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    InvitationCreated:
+      type: object
+      required: [invitation, link]
+      properties:
+        invitation:
+          $ref: "#/components/schemas/Invitation"
+        link:
+          $ref: "#/components/schemas/IssuedLink"
+    InvitationPreview:
+      type: object
+      required: [tenant_name, email, name, role, expires_at]
+      properties:
+        tenant_name:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+          description: El nombre que escribió quien invita; el invitado puede cambiarlo.
+        role:
+          $ref: "#/components/schemas/UserRole"
+        expires_at:
+          type: string
+          format: date-time
+    AcceptInvitationRequest:
+      type: object
+      required: [token, name, password]
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 100
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 100
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
     Tenant:
       type: object
       required: [id, name, nit, business_template, default_tax_rate, address, city, municipality_code, phone, analytics_consent]
@@ -6457,9 +7043,10 @@ components:
             $ref: "#/components/schemas/Municipality"
     AuditAction:
       type: string
-      description: Acción del catálogo de auditoría (versión 1, `docs/auditoria.md`).
+      description: Acción del catálogo de auditoría (versión 2, `docs/auditoria.md`).
       enum:
         - cash.closed_with_difference
+        - credit.terms_changed
         - module.disabled
         - module.enabled
         - purchase.voided
@@ -6467,6 +7054,11 @@ components:
         - sale.voided
         - stock.adjusted
         - tenant.settings_changed
+        - user.activated
+        - user.deactivated
+        - user.invited
+        - user.password_reset
+        - user.role_changed
         - variant.price_changed
     AuditEvent:
       type: object
@@ -6487,7 +7079,9 @@ components:
           example: cashier
         entity_type:
           type: string
-          description: Sobre qué tipo de entidad (`sale`, `variant`, `cash_session`, `purchase`, `module`, `tenant`).
+          description: |
+            Sobre qué tipo de entidad (`sale`, `variant`, `cash_session`, `purchase`, `module`, `tenant`, `user`,
+            `invitation`, `customer`).
           example: sale
         entity_id:
           type: string
@@ -7452,6 +8046,9 @@ components:
           type: string
           format: uuid
           description: Quién anuló.
+        user_name:
+          type: string
+          description: Su nombre, en el detalle de la venta (`GET /sales/{saleId}`); no viene si el usuario ya no existe.
         reason:
           type: string
         voided_at:
@@ -7478,6 +8075,11 @@ components:
           type: string
           format: uuid
           description: Quién vendió.
+        user_name:
+          type: string
+          description: |
+            Su nombre, en el detalle de la venta (`GET /sales/{saleId}`), para la tirilla reimpresa; no viene si el
+            usuario ya no existe.
         customer_id:
           type: string
           format: uuid

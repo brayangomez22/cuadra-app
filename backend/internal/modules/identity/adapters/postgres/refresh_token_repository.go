@@ -130,3 +130,17 @@ func (r *RefreshTokenRepository) RevokeFamily(ctx context.Context, tenantID, fam
 	}
 	return revoked, nil
 }
+
+// RevokeUser revokes every unrevoked token of the user.
+func (r *RefreshTokenRepository) RevokeUser(ctx context.Context, tenantID, userID uuid.UUID, now time.Time) (int64, error) {
+	revoked, err := db.Affected(ctx, r.db, tenantID, func(tx pgx.Tx) (int64, error) {
+		revokedAt := now.UTC()
+		return sqlcgen.New(tx).RevokeUserRefreshTokens(ctx, sqlcgen.RevokeUserRefreshTokensParams{
+			TenantID: tenantID, UserID: userID, RevokedAt: &revokedAt,
+		})
+	})
+	if err != nil {
+		return 0, fmt.Errorf("identity: revoke user refresh tokens: %w", err)
+	}
+	return revoked, nil
+}

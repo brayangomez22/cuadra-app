@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { formatMoney } from '@/shared/format';
-import { Alert, Button, Field, Input } from '@/shared/ui';
+import { Alert, Button, Field, Input, PasswordInput } from '@/shared/ui';
 import {
   creditAuthorizationSchema,
   type CreditAuthorizationValues,
@@ -43,7 +43,7 @@ export function CreditAuthorizationForm({ available, onAuthorize, onBack, pendin
         <Input type="email" autoComplete="off" autoFocus {...form.register('email')} />
       </Field>
       <Field label="Contraseña" error={errors.password?.message}>
-        <Input type="password" autoComplete="off" {...form.register('password')} />
+        <PasswordInput autoComplete="off" {...form.register('password')} />
       </Field>
       {sent && error && !pending && <Alert tone="danger">{error}</Alert>}
       <div className={styles.footer}>

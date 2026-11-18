@@ -42,12 +42,13 @@ func (r *reached) handler(log *slog.Logger) http.Handler {
 }
 
 type harness struct {
-	jwt   *auth.JWT
-	clock *clock
-	log   *slog.Logger
-	logs  *bytes.Buffer
-	spans *tracetest.SpanRecorder
-	tp    *sdktrace.TracerProvider
+	jwt      *auth.JWT
+	sessions *fakeSessions
+	clock    *clock
+	log      *slog.Logger
+	logs     *bytes.Buffer
+	spans    *tracetest.SpanRecorder
+	tp       *sdktrace.TracerProvider
 }
 
 func newHarness(t *testing.T) *harness {
@@ -58,7 +59,7 @@ func newHarness(t *testing.T) *harness {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spans))
 	t.Cleanup(func() { _ = tp.Shutdown(t.Context()) })
 	return &harness{
-		jwt: j, clock: c, logs: &buf, spans: spans, tp: tp,
+		jwt: j, clock: c, sessions: &fakeSessions{}, logs: &buf, spans: spans, tp: tp,
 		log: slog.New(logger.NewContextHandler(slog.NewJSONHandler(&buf, nil), auth.PrincipalAttrs)),
 	}
 }
@@ -106,7 +107,7 @@ func TestRequireAuth(t *testing.T) {
 		h := newHarness(t)
 		var r reached
 
-		rec := h.serve(auth.RequireAuth(h.jwt, h.log)(r.handler(h.log)), request(""))
+		rec := h.serve(auth.RequireAuth(h.jwt, h.sessions, h.log)(r.handler(h.log)), request(""))
 
 		requireError(t, rec, http.StatusUnauthorized, "unauthorized")
 		require.Equal(t, "Bearer", rec.Header().Get("WWW-Authenticate"))
@@ -119,7 +120,7 @@ func TestRequireAuth(t *testing.T) {
 		req := request("")
 		req.Header.Set("Authorization", "Basic "+h.token(t, tenantID, userID, "admin"))
 
-		rec := h.serve(auth.RequireAuth(h.jwt, h.log)(r.handler(h.log)), req)
+		rec := h.serve(auth.RequireAuth(h.jwt, h.sessions, h.log)(r.handler(h.log)), req)
 
 		requireError(t, rec, http.StatusUnauthorized, "unauthorized")
 		require.False(t, r.called)
@@ -131,7 +132,7 @@ func TestRequireAuth(t *testing.T) {
 		token := h.token(t, tenantID, userID, "admin")
 		h.clock.now = h.clock.now.Add(16 * time.Minute)
 
-		rec := h.serve(auth.RequireAuth(h.jwt, h.log)(r.handler(h.log)), request(token))
+		rec := h.serve(auth.RequireAuth(h.jwt, h.sessions, h.log)(r.handler(h.log)), request(token))
 
 		requireError(t, rec, http.StatusUnauthorized, "unauthorized")
 		require.False(t, r.called)
@@ -142,7 +143,7 @@ func TestRequireAuth(t *testing.T) {
 		var r reached
 		token := h.token(t, tenantID, userID, "admin") + "x"
 
-		rec := h.serve(auth.RequireAuth(h.jwt, h.log)(r.handler(h.log)), request(token))
+		rec := h.serve(auth.RequireAuth(h.jwt, h.sessions, h.log)(r.handler(h.log)), request(token))
 
 		requireError(t, rec, http.StatusUnauthorized, "unauthorized")
 		require.False(t, r.called)
@@ -153,7 +154,7 @@ func TestRequireAuth(t *testing.T) {
 		h := newHarness(t)
 		var r reached
 
-		rec := h.serve(auth.RequireAuth(h.jwt, h.log)(r.handler(h.log)), request(h.token(t, tenantID, userID, "admin")))
+		rec := h.serve(auth.RequireAuth(h.jwt, h.sessions, h.log)(r.handler(h.log)), request(h.token(t, tenantID, userID, "admin")))
 
 		require.Equal(t, http.StatusNoContent, rec.Code)
 		require.True(t, r.ok)
@@ -171,7 +172,7 @@ func TestRequireAuth(t *testing.T) {
 		h := newHarness(t)
 		var r reached
 
-		h.serve(auth.RequireAuth(h.jwt, h.log)(r.handler(h.log)), request(h.token(t, tenantID, userID, "admin")))
+		h.serve(auth.RequireAuth(h.jwt, h.sessions, h.log)(r.handler(h.log)), request(h.token(t, tenantID, userID, "admin")))
 
 		var entry map[string]any
 		require.NoError(t, json.Unmarshal(h.logs.Bytes(), &entry))
@@ -188,7 +189,7 @@ func TestRequirePermission(t *testing.T) {
 	t.Run("responde 403 si el rol no tiene el permiso", func(t *testing.T) {
 		h := newHarness(t)
 		var r reached
-		handler := auth.RequireAuth(h.jwt, h.log)(auth.RequirePermission(can, "catalog:write", h.log)(r.handler(h.log)))
+		handler := auth.RequireAuth(h.jwt, h.sessions, h.log)(auth.RequirePermission(can, "catalog:write", h.log)(r.handler(h.log)))
 
 		rec := h.serve(handler, request(h.token(t, tenantID, userID, "cashier")))
 
@@ -199,7 +200,7 @@ func TestRequirePermission(t *testing.T) {
 	t.Run("deja pasar si el rol tiene el permiso", func(t *testing.T) {
 		h := newHarness(t)
 		var r reached
-		handler := auth.RequireAuth(h.jwt, h.log)(auth.RequirePermission(can, "catalog:write", h.log)(r.handler(h.log)))
+		handler := auth.RequireAuth(h.jwt, h.sessions, h.log)(auth.RequirePermission(can, "catalog:write", h.log)(r.handler(h.log)))
 
 		rec := h.serve(handler, request(h.token(t, tenantID, userID, "admin")))
 
@@ -240,7 +241,7 @@ func TestEnforce(t *testing.T) {
 		if token != "" {
 			req.Header.Set("Authorization", "Bearer "+token)
 		}
-		return h.serve(auth.Enforce(policy, h.jwt, can, h.log)(r.handler(h.log)), req), &r
+		return h.serve(auth.Enforce(policy, h.jwt, h.sessions, can, h.log)(r.handler(h.log)), req), &r
 	}
 
 	t.Run("una operación pública no pide token", func(t *testing.T) {

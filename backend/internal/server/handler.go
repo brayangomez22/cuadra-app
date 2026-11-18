@@ -31,6 +31,9 @@ type handlerConfig struct {
 	// matrix (*identity.Permissions).
 	Verifier    auth.Verifier
 	Permissions permissionMatrix
+	// Sessions checks that each token's user is still active, with their
+	// current role (*identity.Module).
+	Sessions auth.Sessions
 	// Modules tells which modules each tenant has active (*modules.Service).
 	Modules moduleGate
 	// Routes mount each module's operations on the API mux.
@@ -88,7 +91,7 @@ func newHandler(cfg handlerConfig) (http.Handler, error) {
 		register(api)
 	}
 
-	enforce := auth.Enforce(contractPolicy(api, security), cfg.Verifier, cfg.Permissions.Authorize, cfg.Log)
+	enforce := auth.Enforce(contractPolicy(api, security), cfg.Verifier, cfg.Sessions, cfg.Permissions.Authorize, cfg.Log)
 
 	gate := requireModules(api, security, cfg.Modules, cfg.Log)
 

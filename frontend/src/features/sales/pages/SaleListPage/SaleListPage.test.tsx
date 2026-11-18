@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { todayInBogota } from '@/shared/format';
-import { json } from '@/test/fakeApi';
+import { aUser, fakeApi, json, signedIn } from '@/test/fakeApi';
 import { aLocation, plain, query } from '@/test/fixtures';
 import { preloadPages } from '@/test/preloadPages';
 import { renderApp } from '@/test/renderApp';
@@ -90,5 +90,16 @@ describe('SaleListPage', () => {
 
     await screen.findByRole('table', { name: 'Ventas' });
     expect(screen.queryByRole('combobox', { name: 'Sede' })).not.toBeInTheDocument();
+  });
+
+  it('al cajero le dice que ve solo sus ventas (P10)', async () => {
+    fakeApi({
+      ...signedIn(aUser('cashier')),
+      'GET /api/v1/locations': json(200, { items: [aLocation()] }),
+      'GET /api/v1/sales': json(200, aSalePage([])),
+    });
+    renderApp('/ventas');
+
+    expect(await screen.findByText(/Usted ve solo las ventas que hizo/)).toBeInTheDocument();
   });
 });

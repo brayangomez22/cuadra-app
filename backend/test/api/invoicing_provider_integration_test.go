@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,8 +34,7 @@ func TestInvoicingProvider(t *testing.T) {
 	})
 
 	t.Run("solo el dueño ve y cambia la cuenta en el proveedor", func(t *testing.T) {
-		admin, _, err := f.tokens.Issue(f.tenantID, uuid.Must(uuid.NewV7()), "admin")
-		require.NoError(t, err)
+		admin := joinStaff(t, do, owner, "admin").Token
 		require.Equal(t, http.StatusForbidden, do(t, http.MethodGet, "/api/v1/invoicing/provider", "", admin).Code)
 		require.Equal(t, http.StatusForbidden, do(t, http.MethodPut, "/api/v1/invoicing/provider", `{"mode":"test"}`, admin).Code)
 	})

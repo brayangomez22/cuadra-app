@@ -35,9 +35,13 @@ type Actor struct {
 // Deps are the Service's dependencies. Now defaults to time.Now, the
 // providers to no-ops and Logger to a discarding logger.
 type Deps struct {
-	Credit         domain.CreditRepository
-	Customers      CustomerDirectory
-	Cash           CashDrawer
+	Credit    domain.CreditRepository
+	Customers CustomerDirectory
+	Cash      CashDrawer
+	// Audit records the changes of a customer's terms, stored together
+	// through Tx.
+	Audit          AuditLog
+	Tx             Transactor
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -59,7 +63,7 @@ type Service struct {
 // NewService builds a Service. It fails if a dependency is missing or a
 // metric instrument cannot be created.
 func NewService(d Deps) (*Service, error) {
-	if usecase.AnyNil(d.Credit, d.Customers, d.Cash) {
+	if usecase.AnyNil(d.Credit, d.Customers, d.Cash, d.Audit, d.Tx) {
 		return nil, errors.New("receivables: missing service dependency")
 	}
 	if d.Now == nil {

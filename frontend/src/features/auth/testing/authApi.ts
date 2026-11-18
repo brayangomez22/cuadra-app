@@ -13,3 +13,15 @@ export const businessTemplates = {
 export function signUpApi(routes: Parameters<typeof fakeApi>[0] = {}) {
   return fakeApi({ ...signedOut(), 'GET /api/v1/business-templates': json(200, businessTemplates), ...routes });
 }
+
+// A link token as the API issues it: "<tenant>.<secret>".
+export const linkToken = '01920000-0000-7000-8000-0000000000aa.c2VjcmV0by1kZS1wcnVlYmEtcGFyYS1lbC1lbmxhY2U';
+
+/** What POST /auth/invitations/lookup answers for a cashier invited to a hardware store. */
+export const invitationPreview = {
+  tenant_name: 'Ferretería El Tornillo',
+  email: 'luis@eltornillo.co',
+  name: 'Luis Pérez',
+  role: 'cashier' as const,
+  expires_at: '2026-11-25T15:00:00Z',
+};

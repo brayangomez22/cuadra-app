@@ -1,5 +1,6 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
 import { RequireAuth } from '@/features/auth';
+import { auditRoutes } from '@/features/audit/routes';
 import { authRoutes } from '@/features/auth/routes';
 import { catalogRoutes } from '@/features/catalog/routes';
 import { customersRoutes } from '@/features/customers/routes';
@@ -11,6 +12,7 @@ import { importRoutes } from '@/features/imports/routes';
 import { inventoryRoutes } from '@/features/inventory/routes';
 import { salesRoutes } from '@/features/sales/routes';
 import { settingsRoutes } from '@/features/settings/routes';
+import { usersRoutes } from '@/features/users/routes';
 import { AppLayout } from './layout/AppLayout';
 import { HomePage } from './pages/HomePage';
 import { paths } from './routes/paths';
@@ -44,6 +46,8 @@ export const routes: RouteObject[] = [
               ...inventoryRoutes,
               ...salesRoutes,
               ...settingsRoutes,
+              ...usersRoutes,
+              ...auditRoutes,
               ...platformRoutes,
             ],
           },

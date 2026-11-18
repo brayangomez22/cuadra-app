@@ -7,6 +7,7 @@ import { Button, ButtonLink, IconPrinter, Inline, Page, Spinner, Stack } from '@
 import { PaperSelect } from '../../components/PaperSelect/PaperSelect';
 import { PrintableReceipt } from '../../components/PrintableReceipt/PrintableReceipt';
 import { Receipt } from '../../components/Receipt/Receipt';
+import { SaleFacts } from './components/SaleFacts/SaleFacts';
 import { VoidedNotice } from './components/VoidedNotice/VoidedNotice';
 import { VoidSaleDialog } from './components/VoidSaleDialog/VoidSaleDialog';
 import { useSaleReceipt } from './hooks/useSaleReceipt';
@@ -57,8 +58,11 @@ function LoadedSale({ receipt, onPaperChange }: LoadedProps) {
           </Button>
         )}
       </Inline>
-      <div className={styles.paper}>
-        <Receipt {...receipt} />
+      <div className={styles.body}>
+        <div className={styles.paper}>
+          <Receipt {...receipt} />
+        </div>
+        <SaleFacts sale={sale} cashier={receipt.cashier} location={receipt.location} />
       </div>
       <PrintableReceipt {...receipt} />
       {voiding && <VoidSaleDialog sale={sale} onClose={() => setVoiding(false)} />}

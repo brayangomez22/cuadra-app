@@ -31,6 +31,7 @@ type stubUseCases struct {
 	demos   func() ([]app.BusinessTemplate, error)
 	// templates is what BusinessTemplates answers.
 	templates []app.BusinessTemplate
+	stubUserUseCases
 }
 
 func (s *stubUseCases) BusinessTemplates() []app.BusinessTemplate { return s.templates }

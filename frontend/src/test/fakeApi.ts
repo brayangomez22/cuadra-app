@@ -93,6 +93,8 @@ const permissionsByRole: Record<Me['role'], string[]> = {
     'cash:manage',
     'users:manage',
     'tenant:manage',
+    'audit:read',
+    'sales:read_all',
   ],
   admin: [
     'catalog:read',
@@ -117,6 +119,7 @@ const permissionsByRole: Record<Me['role'], string[]> = {
     'sales:void',
     'cash:manage',
     'users:manage',
+    'sales:read_all',
   ],
   cashier: [
     'catalog:read',

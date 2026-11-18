@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form';
 import type { UnitOfMeasure } from '@/features/catalog';
 import { Field, Input } from '@/shared/ui';
 import { useSaveUnit } from '../../../../api/units';
-import { FormDialog } from '../../../../components/FormDialog/FormDialog';
-import { useSaveDialog } from '../../../../hooks/useSaveDialog';
+import { FormDialog } from '@/shared/forms/FormDialog/FormDialog';
+import { useSaveDialog } from '@/shared/forms/useSaveDialog';
 import { toUnitInput, unitErrorFields, unitSchema, unitValues } from '../../../../model/unitSchema';
 
 type Props = {

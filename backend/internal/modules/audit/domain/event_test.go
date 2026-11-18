@@ -48,6 +48,13 @@ func TestNewEventAcceptsEveryActionOfTheCatalog(t *testing.T) {
 		{"desactiva un módulo", domain.ActionModuleDisabled, map[string]string{"module": "lots_expiry"}},
 		{"cambia el IVA por defecto", domain.ActionTenantSettingsChanged,
 			map[string]string{"setting": "default_tax_rate", "old": "0.19", "new": "0.05"}},
+		{"invita a un bodeguero", domain.ActionUserInvited, map[string]string{"role": "warehouse"}},
+		{"cambia el rol de un cajero", domain.ActionUserRoleChanged, map[string]string{"old_role": "cashier", "new_role": "admin"}},
+		{"desactiva un usuario", domain.ActionUserDeactivated, map[string]string{}},
+		{"reactiva un usuario", domain.ActionUserActivated, map[string]string{}},
+		{"genera un enlace de contraseña", domain.ActionUserPasswordReset, map[string]string{}},
+		{"ferretería: sube el cupo de un cliente", domain.ActionCreditTermsChanged,
+			map[string]string{"old_limit": "100000.00", "new_limit": "500000.00", "old_term_days": "15", "new_term_days": "30"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -136,6 +143,6 @@ func TestParseAction(t *testing.T) {
 
 func TestActionsListsTheCatalogInOrder(t *testing.T) {
 	actions := domain.Actions()
-	require.Len(t, actions, 9)
+	require.Len(t, actions, 15)
 	require.IsNonDecreasing(t, actions)
 }

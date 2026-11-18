@@ -24,8 +24,11 @@ type Config struct {
 	DB *db.DB
 	// Customers and Cash are the customers module and the sales module's
 	// cash sessions, adapted by internal/server.
-	Customers      app.CustomerDirectory
-	Cash           app.CashDrawer
+	Customers app.CustomerDirectory
+	Cash      app.CashDrawer
+	// Audit records the changes of a customer's credit terms (the audit
+	// module, adapted by internal/server).
+	Audit          app.AuditLog
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -49,6 +52,8 @@ func New(cfg Config) (*Module, error) {
 		Credit:         postgres.NewCreditRepository(cfg.DB),
 		Customers:      cfg.Customers,
 		Cash:           cfg.Cash,
+		Audit:          cfg.Audit,
+		Tx:             db.NewTransactor(cfg.DB),
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Now:            cfg.Now,

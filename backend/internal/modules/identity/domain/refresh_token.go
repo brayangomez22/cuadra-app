@@ -1,10 +1,7 @@
 package domain
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,9 +16,6 @@ const RefreshTokenTTL = 7 * 24 * time.Hour
 // (P06): then the user logs in again, which checks the password and the
 // user's state once more.
 const SessionMaxAge = 30 * 24 * time.Hour
-
-// refreshSecretBytes is the entropy of a refresh token's secret.
-const refreshSecretBytes = 32
 
 // RefreshToken is a long-lived, single-use credential to obtain new access
 // tokens. Only the SHA-256 of its secret is stored: the secret has 256 bits
@@ -63,16 +57,14 @@ func issueRefreshToken(tenantID, userID, familyID uuid.UUID, familyStartedAt, no
 	if err != nil {
 		return nil, "", err
 	}
-	secret := make([]byte, refreshSecretBytes)
-	_, _ = rand.Read(secret) // crypto/rand.Read never returns an error.
-
+	hash, text := newSecret(tenantID)
 	now = now.UTC()
 	t, err := newRefreshToken(RefreshTokenSnapshot{
 		ID:        id,
 		TenantID:  tenantID,
 		UserID:    userID,
 		FamilyID:  familyID,
-		Hash:      hashSecret(secret),
+		Hash:      hash,
 		ExpiresAt: minTime(now.Add(RefreshTokenTTL), familyStartedAt.Add(SessionMaxAge)),
 		CreatedAt: now,
 
@@ -81,30 +73,13 @@ func issueRefreshToken(tenantID, userID, familyID uuid.UUID, familyStartedAt, no
 	if err != nil {
 		return nil, "", err
 	}
-	return t, tenantID.String() + "." + base64.RawURLEncoding.EncodeToString(secret), nil
+	return t, text, nil
 }
 
 // ParseRefreshToken splits a token's text form into its tenant and the hash
 // to look it up by. It checks the format only, not that the token exists.
 func ParseRefreshToken(raw string) (tenantID uuid.UUID, hash []byte, err error) {
-	tenantPart, secretPart, ok := strings.Cut(raw, ".")
-	if !ok {
-		return uuid.Nil, nil, ErrInvalidRefreshToken
-	}
-	tenantID, err = uuid.Parse(tenantPart)
-	if err != nil || tenantID == uuid.Nil || tenantPart != tenantID.String() {
-		return uuid.Nil, nil, ErrInvalidRefreshToken
-	}
-	secret, err := base64.RawURLEncoding.Strict().DecodeString(secretPart)
-	if err != nil || len(secret) != refreshSecretBytes {
-		return uuid.Nil, nil, ErrInvalidRefreshToken
-	}
-	return tenantID, hashSecret(secret), nil
-}
-
-func hashSecret(secret []byte) []byte {
-	sum := sha256.Sum256(secret)
-	return sum[:]
+	return parseSecret(raw, ErrInvalidRefreshToken)
 }
 
 // ID returns the token ID (UUID v7).

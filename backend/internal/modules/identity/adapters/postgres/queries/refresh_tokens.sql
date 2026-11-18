@@ -27,3 +27,8 @@ SELECT tenant_id::uuid FROM tenants_with_expired_refresh_tokens(sqlc.arg(before)
 -- name: DeleteExpiredRefreshTokens :execrows
 DELETE FROM refresh_tokens
 WHERE expires_at < sqlc.arg(before);
+
+-- name: RevokeUserRefreshTokens :execrows
+UPDATE refresh_tokens
+SET revoked_at = sqlc.arg(revoked_at)
+WHERE tenant_id = sqlc.arg(tenant_id) AND user_id = sqlc.arg(user_id) AND revoked_at IS NULL;

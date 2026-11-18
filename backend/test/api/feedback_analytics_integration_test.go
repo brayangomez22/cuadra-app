@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
 	"github.com/brayangomez22/cuadra-app/backend/internal/server"
 )
 
@@ -20,8 +21,10 @@ import (
 // consented and the team turned the "analytics" flag on.
 func TestFeedbackAndAnalyticsFlow(t *testing.T) {
 	operatorID := uuid.Must(uuid.NewV7())
+	var database *db.DB
 	handler, tokens, _ := newAPIWith(t, func(cfg *server.Config) {
 		cfg.PlatformOperators = []uuid.UUID{operatorID}
+		database = cfg.DB
 		cfg.AnalyticsSecret = []byte("analytics-key-only-for-tests-0123456789")
 	})
 	do := func(t *testing.T, method, path, body, bearer string) *httptest.ResponseRecorder {
@@ -60,8 +63,8 @@ func TestFeedbackAndAnalyticsFlow(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(signup.Body.Bytes(), &session))
 	owner := session.AccessToken
-	cashier, _, err := tokens.Issue(session.User.TenantID, session.User.ID, "cashier")
-	require.NoError(t, err)
+	cashier := joinStaff(t, do, owner, "cashier").Token
+	addOperator(t, database, session.User.TenantID, operatorID)
 	operator, _, err := tokens.Issue(session.User.TenantID, operatorID, "owner")
 	require.NoError(t, err)
 

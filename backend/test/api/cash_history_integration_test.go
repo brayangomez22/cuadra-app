@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,8 +15,7 @@ import (
 func TestCashHistory(t *testing.T) {
 	f := newSalesFlow(t)
 	do := f.do
-	admin, _, err := f.tokens.Issue(f.tenantID, uuid.Must(uuid.NewV7()), "admin")
-	require.NoError(t, err)
+	admin := joinStaff(t, f.do, f.ownerToken, "admin").Token
 
 	// The owner (Ana Gómez, from the sign-up) opens a drawer and leaves it open.
 	rec := do(t, http.MethodPost, "/api/v1/cash-sessions", `{"location_id":"`+f.locationID+`","opening_float":"50000"}`, f.ownerToken)

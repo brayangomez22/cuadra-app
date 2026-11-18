@@ -5,3 +5,5 @@ export const meQueryKey = ['me'] as const;
 export const businessTemplatesQueryKey = ['auth', 'business-templates'] as const;
 
 export const demosQueryKey = ['auth', 'demos'] as const;
+
+export const invitationQueryKey = (token: string) => ['auth', 'invitation', token] as const;

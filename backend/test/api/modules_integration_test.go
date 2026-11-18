@@ -17,7 +17,7 @@ import (
 // variants on and off, the contract's x-module hides the operation, and the
 // tenant's data stays.
 func TestModulesFlow(t *testing.T) {
-	handler, tokens := newAPI(t)
+	handler, _ := newAPI(t)
 
 	do := func(t *testing.T, method, path, body, bearer string) *httptest.ResponseRecorder {
 		t.Helper()
@@ -63,8 +63,7 @@ func TestModulesFlow(t *testing.T) {
 	ownerToken := session.AccessToken
 	// An admin of the same tenant: user management arrives in T41, so the
 	// token is issued directly.
-	adminToken, _, err := tokens.Issue(session.User.TenantID, uuid.Must(uuid.NewV7()), "admin")
-	require.NoError(t, err)
+	adminToken := joinStaff(t, do, ownerToken, "admin").Token
 
 	rec := do(t, http.MethodPost, "/api/v1/products",
 		`{"sku":"cam-s","name":"Camiseta básica","base_unit_id":"`+unitID(t, do, ownerToken, "und")+

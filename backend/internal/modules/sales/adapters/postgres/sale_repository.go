@@ -215,11 +215,11 @@ func (r *SaleRepository) List(ctx context.Context, tenantID uuid.UUID, f domain.
 		q := sqlcgen.New(tx)
 		var err error
 		if rows, err = q.ListSales(ctx, sqlcgen.ListSalesParams{
-			FromTime: f.From, ToTime: f.To, LocationID: f.LocationID, RowLimit: limit, RowOffset: offset,
+			FromTime: f.From, ToTime: f.To, LocationID: f.LocationID, CashierID: f.CashierID, RowLimit: limit, RowOffset: offset,
 		}); err != nil {
 			return err
 		}
-		sum, err = q.SummarizeSales(ctx, sqlcgen.SummarizeSalesParams{FromTime: f.From, ToTime: f.To, LocationID: f.LocationID})
+		sum, err = q.SummarizeSales(ctx, sqlcgen.SummarizeSalesParams{FromTime: f.From, ToTime: f.To, LocationID: f.LocationID, CashierID: f.CashierID})
 		return err
 	})
 	if err != nil {

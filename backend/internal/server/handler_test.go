@@ -76,6 +76,13 @@ func testPermissions(tb testing.TB) *identity.Permissions {
 	return p
 }
 
+// tokenSessions trusts every token: the handler tests have no users.
+type tokenSessions struct{}
+
+func (tokenSessions) Current(_ context.Context, p auth.Principal) (auth.Principal, error) {
+	return p, nil
+}
+
 // testConfig builds a handler without modules: tests register stub routes.
 // Every module is active.
 func testConfig(t *testing.T) handlerConfig {
@@ -87,6 +94,7 @@ func testConfig(t *testing.T) handlerConfig {
 		TracerProvider: noop.NewTracerProvider(),
 		DB:             readyDB{},
 		Verifier:       verifier,
+		Sessions:       tokenSessions{},
 		Permissions:    testPermissions(t),
 		Modules:        newFakeModules(t, modules.Variants),
 	}

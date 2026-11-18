@@ -9,8 +9,8 @@ import { loadPaper, savePaper } from '../../../model/storage';
 
 /**
  * A sale and what its receipt names: the business, the location, the customer
- * and the cashier when known (users have no endpoint yet, so only for one's
- * own sale). A sale with a customer waits for it: without its name the receipt
+ * and the cashier (the API names who sold; a user that no longer exists has no
+ * name). A sale with a customer waits for it: without its name the receipt
  * would read as a final consumer.
  */
 export function useSaleReceipt(saleId: string) {
@@ -27,7 +27,7 @@ export function useSaleReceipt(saleId: string) {
     sale: data,
     business: businessOf(user),
     location: locationName(locations.data, data.location_id),
-    cashier: user?.id === data.user_id ? user.name : undefined,
+    cashier: cashierName(data, user),
     customer: customer.data && { name: customer.data.name, document: documentLabel(customer.data) },
     paper,
   };
@@ -43,4 +43,11 @@ export function useSaleReceipt(saleId: string) {
 
 function locationName(locations: { id: string; name: string }[] | undefined, id: string): string {
   return locations?.find((l) => l.id === id)?.name ?? '';
+}
+
+// cashierName is who sold, as the API names them; one's own sale is named
+// from the session even if the answer came without it.
+function cashierName(sale: { user_id: string; user_name?: string }, user?: { id: string; name: string }) {
+  if (sale.user_name) return sale.user_name;
+  return user?.id === sale.user_id ? user.name : undefined;
 }
