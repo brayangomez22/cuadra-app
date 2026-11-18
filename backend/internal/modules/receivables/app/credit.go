@@ -55,12 +55,22 @@ func (s *Service) SetCreditTerms(ctx context.Context, a Actor, customerID uuid.U
 	if err := s.Customers.CheckCustomer(ctx, a.TenantID, a.UserID, customerID); err != nil {
 		return nil, err
 	}
-	account, err := s.Credit.Account(ctx, a.TenantID, customerID)
+	var account *domain.Account
+	err = s.Tx.InTx(ctx, a.TenantID, func(ctx context.Context) error {
+		if account, err = s.Credit.Account(ctx, a.TenantID, customerID); err != nil {
+			return err
+		}
+		entry, changed := termsChange(customerID, account.Terms(), terms)
+		account.SetTerms(terms)
+		if err := s.Credit.SaveTerms(ctx, account, s.Now()); err != nil {
+			return err
+		}
+		if !changed {
+			return nil
+		}
+		return s.Audit.Record(ctx, a.TenantID, a.UserID, entry)
+	})
 	if err != nil {
-		return nil, err
-	}
-	account.SetTerms(terms)
-	if err := s.Credit.SaveTerms(ctx, account, s.Now()); err != nil {
 		return nil, err
 	}
 	return account, nil

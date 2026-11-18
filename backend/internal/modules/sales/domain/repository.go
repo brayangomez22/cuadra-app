@@ -36,8 +36,10 @@ type SaleFilter struct {
 	From       time.Time
 	To         time.Time
 	LocationID *uuid.UUID
-	Limit      int
-	Offset     int
+	// CashierID, when set, keeps only the sales of that user.
+	CashierID *uuid.UUID
+	Limit     int
+	Offset    int
 }
 
 // SaleSummary is a sale as the day's list shows it, without lines.

@@ -21,6 +21,7 @@ import (
 // Defines values for AuditAction.
 const (
 	CashClosedWithDifference AuditAction = "cash.closed_with_difference"
+	CreditTermsChanged       AuditAction = "credit.terms_changed"
 	ModuleDisabled           AuditAction = "module.disabled"
 	ModuleEnabled            AuditAction = "module.enabled"
 	PurchaseVoided           AuditAction = "purchase.voided"
@@ -28,6 +29,11 @@ const (
 	SaleVoided               AuditAction = "sale.voided"
 	StockAdjusted            AuditAction = "stock.adjusted"
 	TenantSettingsChanged    AuditAction = "tenant.settings_changed"
+	UserActivated            AuditAction = "user.activated"
+	UserDeactivated          AuditAction = "user.deactivated"
+	UserInvited              AuditAction = "user.invited"
+	UserPasswordReset        AuditAction = "user.password_reset"
+	UserRoleChanged          AuditAction = "user.role_changed"
 	VariantPriceChanged      AuditAction = "variant.price_changed"
 )
 
@@ -35,6 +41,8 @@ const (
 func (e AuditAction) Valid() bool {
 	switch e {
 	case CashClosedWithDifference:
+		return true
+	case CreditTermsChanged:
 		return true
 	case ModuleDisabled:
 		return true
@@ -50,6 +58,16 @@ func (e AuditAction) Valid() bool {
 		return true
 	case TenantSettingsChanged:
 		return true
+	case UserActivated:
+		return true
+	case UserDeactivated:
+		return true
+	case UserInvited:
+		return true
+	case UserPasswordReset:
+		return true
+	case UserRoleChanged:
+		return true
 	case VariantPriceChanged:
 		return true
 	default:
@@ -57,12 +75,12 @@ func (e AuditAction) Valid() bool {
 	}
 }
 
-// AuditAction Acción del catálogo de auditoría (versión 1, `docs/auditoria.md`).
+// AuditAction Acción del catálogo de auditoría (versión 2, `docs/auditoria.md`).
 type AuditAction string
 
 // AuditEvent defines model for AuditEvent.
 type AuditEvent struct {
-	// Action Acción del catálogo de auditoría (versión 1, `docs/auditoria.md`).
+	// Action Acción del catálogo de auditoría (versión 2, `docs/auditoria.md`).
 	Action AuditAction `json:"action"`
 
 	// Details El dato que se agrega, según la acción (montos y cantidades como strings decimales).
@@ -73,7 +91,9 @@ type AuditEvent struct {
 	// EntityId La entidad; no viene en las acciones sobre un módulo.
 	EntityId *openapi_types.UUID `json:"entity_id,omitempty"`
 
-	// EntityType Sobre qué tipo de entidad (`sale`, `variant`, `cash_session`, `purchase`, `module`, `tenant`).
+	// EntityType Sobre qué tipo de entidad (`sale`, `variant`, `cash_session`, `purchase`, `module`, `tenant`, `user`,
+	// `invitation`, `customer`).
+	//
 	//
 	// Example: sale
 	EntityType string             `json:"entity_type"`

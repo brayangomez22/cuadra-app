@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form';
 import type { VariantAxis } from '@/features/catalog';
 import { Field, Input, Textarea } from '@/shared/ui';
 import { useSaveVariantAxis } from '../../../../api/variantAxes';
-import { FormDialog } from '../../../../components/FormDialog/FormDialog';
-import { useSaveDialog } from '../../../../hooks/useSaveDialog';
+import { FormDialog } from '@/shared/forms/FormDialog/FormDialog';
+import { useSaveDialog } from '@/shared/forms/useSaveDialog';
 import { axisErrorFields, axisSchema, type AxisValues } from '../../../../model/axisSchema';
 import { joinLines, parseLines } from '../../../../model/lines';
 

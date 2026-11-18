@@ -38,5 +38,15 @@ var errorRules = []httpx.ErrorRule{
 	// A token whose tenant no longer exists is an invalid session, as for its user.
 	{Err: domain.ErrTenantNotFound, Status: http.StatusUnauthorized, Code: "unauthorized", Message: unauthorizedMessage},
 	{Err: domain.ErrDemoUnavailable, Status: http.StatusNotFound, Code: "demo_unavailable", Message: "La demostración no está disponible en este momento. Intente más tarde."},
+	{Err: domain.ErrOwnerOnly, Status: http.StatusForbidden, Code: "owner_only", Message: "Solo un dueño puede dar el rol de dueño o cambiar a otro dueño."},
+	{Err: domain.ErrLastOwner, Status: http.StatusConflict, Code: "last_owner", Message: "La empresa necesita al menos un dueño activo. Nombre otro dueño antes de hacer este cambio."},
+	{Err: domain.ErrSelfDeactivation, Status: http.StatusConflict, Code: "self_deactivation", Message: "No puede desactivar su propio usuario."},
+	{Err: domain.ErrEmailTaken, Status: http.StatusConflict, Code: "email_taken", Message: "Ese correo ya es de un usuario de la empresa."},
+	{Err: domain.ErrInvalidRole, Status: http.StatusUnprocessableEntity, Code: "invalid_role", Message: "Elija uno de los roles disponibles."},
+	{Err: domain.ErrInvitationNotFound, Status: http.StatusNotFound, Code: "not_found", Message: "La invitación no existe."},
+	{Err: domain.ErrLinkNotFound, Status: http.StatusNotFound, Code: "link_not_found", Message: "El enlace no existe o está incompleto. Pida uno nuevo a quien se lo envió."},
+	{Err: domain.ErrLinkExpired, Status: http.StatusGone, Code: "link_expired", Message: "El enlace venció. Pida uno nuevo a quien se lo envió."},
+	{Err: domain.ErrLinkUsed, Status: http.StatusGone, Code: "link_used", Message: "El enlace ya se usó o fue anulado. Pida uno nuevo a quien se lo envió."},
+	{Err: domain.ErrWrongPassword, Status: http.StatusUnprocessableEntity, Code: "wrong_password", Message: "La contraseña actual no es correcta."},
 	{Err: domain.ErrInvalidUserName, Status: http.StatusUnprocessableEntity, Code: "invalid_user_name", Message: "Escriba su nombre (máximo 200 caracteres)."},
 }

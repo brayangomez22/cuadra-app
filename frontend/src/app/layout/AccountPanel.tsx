@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { useState } from 'react';
-import { roleLabels, type Me } from '@/features/auth';
+import { ChangePasswordDialog, roleLabels, type Me } from '@/features/auth';
 import { FeedbackButton } from '@/features/feedback';
 import { Button, IconButton, IconLogout } from '@/shared/ui';
 import { ThemeSwitch } from './ThemeSwitch/ThemeSwitch';
@@ -47,6 +47,7 @@ export function AccountPanel({ user, onLogout, className, compact = false }: Pro
         <span className={styles.role}>{roleLabels[user.role]}</span>
       </p>
       <ThemeSwitch />
+      <ChangePasswordDialog className={styles.action} />
       <FeedbackButton className={styles.action} />
       <Button variant="ghost" icon={<IconLogout />} className={styles.logout} loading={leaving} onClick={logout}>
         Cerrar sesión

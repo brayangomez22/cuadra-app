@@ -46,6 +46,7 @@ func (e AttributeType) Valid() bool {
 // Defines values for AuditAction.
 const (
 	CashClosedWithDifference AuditAction = "cash.closed_with_difference"
+	CreditTermsChanged       AuditAction = "credit.terms_changed"
 	ModuleDisabled           AuditAction = "module.disabled"
 	ModuleEnabled            AuditAction = "module.enabled"
 	PurchaseVoided           AuditAction = "purchase.voided"
@@ -53,6 +54,11 @@ const (
 	SaleVoided               AuditAction = "sale.voided"
 	StockAdjusted            AuditAction = "stock.adjusted"
 	TenantSettingsChanged    AuditAction = "tenant.settings_changed"
+	UserActivated            AuditAction = "user.activated"
+	UserDeactivated          AuditAction = "user.deactivated"
+	UserInvited              AuditAction = "user.invited"
+	UserPasswordReset        AuditAction = "user.password_reset"
+	UserRoleChanged          AuditAction = "user.role_changed"
 	VariantPriceChanged      AuditAction = "variant.price_changed"
 )
 
@@ -60,6 +66,8 @@ const (
 func (e AuditAction) Valid() bool {
 	switch e {
 	case CashClosedWithDifference:
+		return true
+	case CreditTermsChanged:
 		return true
 	case ModuleDisabled:
 		return true
@@ -74,6 +82,16 @@ func (e AuditAction) Valid() bool {
 	case StockAdjusted:
 		return true
 	case TenantSettingsChanged:
+		return true
+	case UserActivated:
+		return true
+	case UserDeactivated:
+		return true
+	case UserInvited:
+		return true
+	case UserPasswordReset:
+		return true
+	case UserRoleChanged:
 		return true
 	case VariantPriceChanged:
 		return true
@@ -466,6 +484,24 @@ func (e ImportUploadOnExistingSku) Valid() bool {
 	}
 }
 
+// Defines values for InvitationStatus.
+const (
+	InvitationStatusExpired InvitationStatus = "expired"
+	InvitationStatusPending InvitationStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the InvitationStatus enum.
+func (e InvitationStatus) Valid() bool {
+	switch e {
+	case InvitationStatusExpired:
+		return true
+	case InvitationStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InvoicingProviderMode.
 const (
 	Habilitation InvoicingProviderMode = "habilitation"
@@ -826,6 +862,30 @@ func (e TaxTreatment) Valid() bool {
 	}
 }
 
+// Defines values for UserRole.
+const (
+	UserRoleAdmin     UserRole = "admin"
+	UserRoleCashier   UserRole = "cashier"
+	UserRoleOwner     UserRole = "owner"
+	UserRoleWarehouse UserRole = "warehouse"
+)
+
+// Valid indicates whether the value is a known member of the UserRole enum.
+func (e UserRole) Valid() bool {
+	switch e {
+	case UserRoleAdmin:
+		return true
+	case UserRoleCashier:
+		return true
+	case UserRoleOwner:
+		return true
+	case UserRoleWarehouse:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListCashSessionsParamsStatus.
 const (
 	ListCashSessionsParamsStatusAll    ListCashSessionsParamsStatus = "all"
@@ -932,6 +992,13 @@ func (e ListSuppliersParamsStatus) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// AcceptInvitationRequest defines model for AcceptInvitationRequest.
+type AcceptInvitationRequest struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
+	Token    string `json:"token"`
 }
 
 // AdjustmentInput defines model for AdjustmentInput.
@@ -1060,12 +1127,12 @@ type AttributeType string
 // número JSON) o un booleano para los de sí/no.
 type AttributeValue = interface{}
 
-// AuditAction Acción del catálogo de auditoría (versión 1, `docs/auditoria.md`).
+// AuditAction Acción del catálogo de auditoría (versión 2, `docs/auditoria.md`).
 type AuditAction string
 
 // AuditEvent defines model for AuditEvent.
 type AuditEvent struct {
-	// Action Acción del catálogo de auditoría (versión 1, `docs/auditoria.md`).
+	// Action Acción del catálogo de auditoría (versión 2, `docs/auditoria.md`).
 	Action AuditAction `json:"action"`
 
 	// Details El dato que se agrega, según la acción (montos y cantidades como strings decimales).
@@ -1076,7 +1143,9 @@ type AuditEvent struct {
 	// EntityId La entidad; no viene en las acciones sobre un módulo.
 	EntityId *openapi_types.UUID `json:"entity_id,omitempty"`
 
-	// EntityType Sobre qué tipo de entidad (`sale`, `variant`, `cash_session`, `purchase`, `module`, `tenant`).
+	// EntityType Sobre qué tipo de entidad (`sale`, `variant`, `cash_session`, `purchase`, `module`, `tenant`, `user`,
+	// `invitation`, `customer`).
+	//
 	//
 	// Example: sale
 	EntityType string             `json:"entity_type"`
@@ -1950,6 +2019,53 @@ type InventorySettingsUpdate struct {
 	AllowNegativeStock *bool `json:"allow_negative_stock,omitempty"`
 }
 
+// Invitation defines model for Invitation.
+type Invitation struct {
+	CreatedAt time.Time          `json:"created_at"`
+	Email     string             `json:"email"`
+	ExpiresAt time.Time          `json:"expires_at"`
+	Id        openapi_types.UUID `json:"id"`
+	InvitedBy openapi_types.UUID `json:"invited_by"`
+	Name      string             `json:"name"`
+
+	// Role Dueño, administrador, cajero o bodeguero.
+	Role UserRole `json:"role"`
+
+	// Status Una invitación abierta está pendiente o vencida.
+	Status InvitationStatus `json:"status"`
+}
+
+// InvitationStatus Una invitación abierta está pendiente o vencida.
+type InvitationStatus string
+
+// InvitationCreated defines model for InvitationCreated.
+type InvitationCreated struct {
+	Invitation Invitation `json:"invitation"`
+	Link       IssuedLink `json:"link"`
+}
+
+// InvitationPreview defines model for InvitationPreview.
+type InvitationPreview struct {
+	Email     string    `json:"email"`
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// Name El nombre que escribió quien invita; el invitado puede cambiarlo.
+	Name string `json:"name"`
+
+	// Role Dueño, administrador, cajero o bodeguero.
+	Role       UserRole `json:"role"`
+	TenantName string   `json:"tenant_name"`
+}
+
+// InvitationRequest defines model for InvitationRequest.
+type InvitationRequest struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
+
+	// Role Dueño, administrador, cajero o bodeguero.
+	Role UserRole `json:"role"`
+}
+
 // InvoicingProvider defines model for InvoicingProvider.
 type InvoicingProvider struct {
 	// HasToken Si la empresa registró el token de su organización en el proveedor.
@@ -1988,6 +2104,21 @@ type InvoicingSettings struct {
 
 	// Enabled Si las ventas confirmadas reciben un documento electrónico.
 	Enabled bool `json:"enabled"`
+}
+
+// IssuedLink defines model for IssuedLink.
+type IssuedLink struct {
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// Token El token del enlace, que se muestra una sola vez. El frontend arma la URL con el token en el fragmento
+	// (`/restablecer#<token>` o `/invitacion#<token>`).
+	Token string `json:"token"`
+}
+
+// LinkToken defines model for LinkToken.
+type LinkToken struct {
+	// Token El token del enlace (`<empresa>.<secreto>`).
+	Token string `json:"token"`
 }
 
 // Location defines model for Location.
@@ -2204,6 +2335,12 @@ type OpenCashSessionInput struct {
 	//
 	// Example: 12500.00
 	OpeningFloat Money `json:"opening_float"`
+}
+
+// PasswordChange defines model for PasswordChange.
+type PasswordChange struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
 }
 
 // PayablesPage defines model for PayablesPage.
@@ -2887,6 +3024,12 @@ type ReorderRuleInput struct {
 	MinQuantity Quantity `json:"min_quantity"`
 }
 
+// ResetPasswordRequest defines model for ResetPasswordRequest.
+type ResetPasswordRequest struct {
+	Password string `json:"password"`
+	Token    string `json:"token"`
+}
+
 // Sale Una venta confirmada o anulada. `change` es el cambio entregado en efectivo. `void` solo aparece en una
 // venta anulada.
 type Sale struct {
@@ -2921,7 +3064,11 @@ type Sale struct {
 
 	// UserId Quién vendió.
 	UserId openapi_types.UUID `json:"user_id"`
-	Void   *SaleVoid          `json:"void,omitempty"`
+
+	// UserName Su nombre, en el detalle de la venta (`GET /sales/{saleId}`), para la tirilla reimpresa; no viene si el
+	// usuario ya no existe.
+	UserName *string   `json:"user_name,omitempty"`
+	Void     *SaleVoid `json:"void,omitempty"`
 }
 
 // SaleLine Una línea vendida: una variante de un producto. `unit_price` es sin IVA, en el momento de la venta, y
@@ -3130,8 +3277,11 @@ type SaleVoid struct {
 	Reason string `json:"reason"`
 
 	// UserId Quién anuló.
-	UserId   openapi_types.UUID `json:"user_id"`
-	VoidedAt time.Time          `json:"voided_at"`
+	UserId openapi_types.UUID `json:"user_id"`
+
+	// UserName Su nombre, en el detalle de la venta (`GET /sales/{saleId}`); no viene si el usuario ya no existe.
+	UserName *string   `json:"user_name,omitempty"`
+	VoidedAt time.Time `json:"voided_at"`
 }
 
 // SalesSettings Las reglas de venta de la empresa.
@@ -3727,6 +3877,28 @@ type UnitOfMeasure struct {
 	Name string `json:"name"`
 }
 
+// User defines model for User.
+type User struct {
+	// Active Un usuario inactivo no puede entrar.
+	Active    bool               `json:"active"`
+	CreatedAt time.Time          `json:"created_at"`
+	Email     string             `json:"email"`
+	Id        openapi_types.UUID `json:"id"`
+	Name      string             `json:"name"`
+
+	// Role Dueño, administrador, cajero o bodeguero.
+	Role UserRole `json:"role"`
+}
+
+// UserRole Dueño, administrador, cajero o bodeguero.
+type UserRole string
+
+// UserUpdate defines model for UserUpdate.
+type UserUpdate struct {
+	// Role Dueño, administrador, cajero o bodeguero.
+	Role UserRole `json:"role"`
+}
+
 // VariantAxis Un eje en el que varían las variantes de la empresa (color, tamaño, presentación...) y sus valores.
 type VariantAxis struct {
 	Id openapi_types.UUID `json:"id"`
@@ -3886,6 +4058,9 @@ type SupplierId = openapi_types.UUID
 // UnitId defines model for UnitId.
 type UnitId = openapi_types.UUID
 
+// UserId defines model for UserId.
+type UserId = openapi_types.UUID
+
 // VariantId defines model for VariantId.
 type VariantId = openapi_types.UUID
 
@@ -3904,6 +4079,15 @@ type InvalidCustomer = Error
 // InvalidSupplier Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type InvalidSupplier = Error
 
+// LastOwner Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
+type LastOwner = Error
+
+// LinkGone Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
+type LinkGone = Error
+
+// LinkNotFound Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
+type LinkNotFound = Error
+
 // NotFound Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type NotFound = Error
 
@@ -3912,6 +4096,9 @@ type StockCountNotFound = Error
 
 // Unauthorized Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type Unauthorized = Error
+
+// UserForbidden Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
+type UserForbidden = Error
 
 // ListAuditEventsParams defines parameters for ListAuditEvents.
 type ListAuditEventsParams struct {
@@ -4209,8 +4396,17 @@ type GetVariantKardexParams struct {
 // StartDemoJSONRequestBody defines body for StartDemo for application/json ContentType.
 type StartDemoJSONRequestBody = DemoRequest
 
+// AcceptInvitationJSONRequestBody defines body for AcceptInvitation for application/json ContentType.
+type AcceptInvitationJSONRequestBody = AcceptInvitationRequest
+
+// LookupInvitationJSONRequestBody defines body for LookupInvitation for application/json ContentType.
+type LookupInvitationJSONRequestBody = LinkToken
+
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
+
+// ResetPasswordJSONRequestBody defines body for ResetPassword for application/json ContentType.
+type ResetPasswordJSONRequestBody = ResetPasswordRequest
 
 // SignUpJSONRequestBody defines body for SignUp for application/json ContentType.
 type SignUpJSONRequestBody = SignUpRequest
@@ -4266,6 +4462,9 @@ type UpdateInventorySettingsJSONRequestBody = InventorySettingsUpdate
 // TransferStockJSONRequestBody defines body for TransferStock for application/json ContentType.
 type TransferStockJSONRequestBody = TransferInput
 
+// InviteUserJSONRequestBody defines body for InviteUser for application/json ContentType.
+type InviteUserJSONRequestBody = InvitationRequest
+
 // UpdateInvoicingProviderJSONRequestBody defines body for UpdateInvoicingProvider for application/json ContentType.
 type UpdateInvoicingProviderJSONRequestBody = InvoicingProviderUpdate
 
@@ -4280,6 +4479,9 @@ type CreateLocationJSONRequestBody = LocationInput
 
 // SetReorderRuleJSONRequestBody defines body for SetReorderRule for application/json ContentType.
 type SetReorderRuleJSONRequestBody = ReorderRuleInput
+
+// ChangeMyPasswordJSONRequestBody defines body for ChangeMyPassword for application/json ContentType.
+type ChangeMyPasswordJSONRequestBody = PasswordChange
 
 // SetModuleActiveJSONRequestBody defines body for SetModuleActive for application/json ContentType.
 type SetModuleActiveJSONRequestBody = ModuleUpdate
@@ -4355,6 +4557,9 @@ type CreateUnitJSONRequestBody = UnitInput
 
 // UpdateUnitJSONRequestBody defines body for UpdateUnit for application/json ContentType.
 type UpdateUnitJSONRequestBody = UnitInput
+
+// UpdateUserJSONRequestBody defines body for UpdateUser for application/json ContentType.
+type UpdateUserJSONRequestBody = UserUpdate
 
 // CreateVariantAxisJSONRequestBody defines body for CreateVariantAxis for application/json ContentType.
 type CreateVariantAxisJSONRequestBody = VariantAxisInput
@@ -4472,6 +4677,44 @@ type ClientInterface interface {
 	// Corresponds with POST /api/v1/auth/demo (the `StartDemo` operationId).
 	StartDemo(ctx context.Context, body StartDemoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// AcceptInvitationWithBody Aceptar una invitación
+	//
+	// Crea el usuario invitado con la contraseña que elige y abre su sesión. El enlace sirve una vez.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /api/v1/auth/invitations/accept (the `AcceptInvitation` operationId).
+	AcceptInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AcceptInvitation Aceptar una invitación
+	//
+	// Crea el usuario invitado con la contraseña que elige y abre su sesión. El enlace sirve una vez.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /api/v1/auth/invitations/accept (the `AcceptInvitation` operationId).
+	AcceptInvitation(ctx context.Context, body AcceptInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// LookupInvitationWithBody Ver una invitación
+	//
+	// Lo que muestra el enlace de una invitación antes de aceptarla. El token viaja en el cuerpo (el frontend lo
+	// lee del fragmento de la URL), nunca en la ruta, para que no quede en los logs.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /api/v1/auth/invitations/lookup (the `LookupInvitation` operationId).
+	LookupInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// LookupInvitation Ver una invitación
+	//
+	// Lo que muestra el enlace de una invitación antes de aceptarla. El token viaja en el cuerpo (el frontend lo
+	// lee del fragmento de la URL), nunca en la ruta, para que no quede en los logs.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /api/v1/auth/invitations/lookup (the `LookupInvitation` operationId).
+	LookupInvitation(ctx context.Context, body LookupInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// LoginWithBody Iniciar sesión
 	//
 	// Si el correo y la contraseña coinciden en varias empresas, responde 409 con la lista de
@@ -4498,6 +4741,26 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /api/v1/auth/logout (the `Logout` operationId).
 	Logout(ctx context.Context, params *LogoutParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResetPasswordWithBody Restablecer la contraseña
+	//
+	// Pone la contraseña nueva con el enlace que generó el dueño o un administrador, y cierra todas las sesiones
+	// del usuario. El enlace sirve una vez.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /api/v1/auth/password-reset (the `ResetPassword` operationId).
+	ResetPasswordWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResetPassword Restablecer la contraseña
+	//
+	// Pone la contraseña nueva con el enlace que generó el dueño o un administrador, y cierra todas las sesiones
+	// del usuario. El enlace sirve una vez.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /api/v1/auth/password-reset (the `ResetPassword` operationId).
+	ResetPassword(ctx context.Context, body ResetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RefreshSession Renovar la sesión
 	//
@@ -4981,6 +5244,40 @@ type ClientInterface interface {
 	// Corresponds with POST /api/v1/inventory/transfers (the `TransferStock` operationId).
 	TransferStock(ctx context.Context, body TransferStockJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListInvitations Invitaciones abiertas
+	//
+	// Las invitaciones sin aceptar ni revocar (pendientes o vencidas), de la más reciente a la más antigua.
+	//
+	// Corresponds with GET /api/v1/invitations (the `ListInvitations` operationId).
+	ListInvitations(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// InviteUserWithBody Invitar a un usuario
+	//
+	// Crea una invitación con el rol indicado y devuelve su enlace (el token se muestra una sola vez); vence en 7
+	// días. Invitar otra vez el mismo correo revoca los enlaces anteriores. Solo un dueño invita con rol `owner`.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /api/v1/invitations (the `InviteUser` operationId).
+	InviteUserWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// InviteUser Invitar a un usuario
+	//
+	// Crea una invitación con el rol indicado y devuelve su enlace (el token se muestra una sola vez); vence en 7
+	// días. Invitar otra vez el mismo correo revoca los enlaces anteriores. Solo un dueño invita con rol `owner`.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /api/v1/invitations (the `InviteUser` operationId).
+	InviteUser(ctx context.Context, body InviteUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RevokeInvitation Revocar una invitación
+	//
+	// Su enlace deja de servir.
+	//
+	// Corresponds with DELETE /api/v1/invitations/{invitationId} (the `RevokeInvitation` operationId).
+	RevokeInvitation(ctx context.Context, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListElectronicDocuments Documentos electrónicos
 	//
 	// Los documentos electrónicos de la empresa, del más reciente al más antiguo.
@@ -5164,6 +5461,24 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /api/v1/me (the `GetMe` operationId).
 	GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ChangeMyPasswordWithBody Cambiar mi contraseña
+	//
+	// Cambia la contraseña del usuario autenticado; pide la actual. Sus sesiones siguen abiertas.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /api/v1/me/password (the `ChangeMyPassword` operationId).
+	ChangeMyPasswordWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ChangeMyPassword Cambiar mi contraseña
+	//
+	// Cambia la contraseña del usuario autenticado; pide la actual. Sus sesiones siguen abiertas.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /api/v1/me/password (the `ChangeMyPassword` operationId).
+	ChangeMyPassword(ctx context.Context, body ChangeMyPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListModules Listar los módulos
 	//
@@ -5579,7 +5894,7 @@ type ClientInterface interface {
 	// ListSales Ventas del día
 	//
 	// Las ventas confirmadas (y las anuladas) de un día en hora de Colombia (`America/Bogota`), de la más reciente
-	// a la más antigua. Sin `date`, el día de hoy.
+	// a la más antigua. Sin `date`, el día de hoy. Quien no tiene `sales:read_all` (el cajero) ve solo sus ventas.
 	//
 	// Corresponds with GET /api/v1/sales (the `ListSales` operationId).
 	ListSales(ctx context.Context, params *ListSalesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5648,6 +5963,9 @@ type ClientInterface interface {
 	UpdateSalesSettings(ctx context.Context, body UpdateSalesSettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetSale Detalle de una venta
+	//
+	// Con el nombre de quien vendió y de quien anuló. Quien no tiene `sales:read_all` (el cajero) solo abre sus
+	// ventas: la de otro usuario responde 404 `sale_not_found`.
 	//
 	// Corresponds with GET /api/v1/sales/{saleId} (the `GetSale` operationId).
 	GetSale(ctx context.Context, saleId SaleId, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5906,6 +6224,54 @@ type ClientInterface interface {
 	// Corresponds with PUT /api/v1/units/{unitId} (the `UpdateUnit` operationId).
 	UpdateUnit(ctx context.Context, unitId UnitId, body UpdateUnitJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListUsers Usuarios de la empresa
+	//
+	// Todos los usuarios, activos o no, por nombre.
+	//
+	// Corresponds with GET /api/v1/users (the `ListUsers` operationId).
+	ListUsers(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateUserWithBody Cambiar el rol de un usuario
+	//
+	// Solo un dueño da o quita el rol `owner` o cambia a otro dueño (`owner_only`), y la empresa siempre conserva
+	// un dueño activo (`last_owner`). El cambio aplica desde la siguiente request del usuario.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /api/v1/users/{userId} (the `UpdateUser` operationId).
+	UpdateUserWithBody(ctx context.Context, userId UserId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateUser Cambiar el rol de un usuario
+	//
+	// Solo un dueño da o quita el rol `owner` o cambia a otro dueño (`owner_only`), y la empresa siempre conserva
+	// un dueño activo (`last_owner`). El cambio aplica desde la siguiente request del usuario.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /api/v1/users/{userId} (the `UpdateUser` operationId).
+	UpdateUser(ctx context.Context, userId UserId, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ActivateUser Reactivar un usuario
+	//
+	// Corresponds with POST /api/v1/users/{userId}/activate (the `ActivateUser` operationId).
+	ActivateUser(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeactivateUser Desactivar un usuario
+	//
+	// El usuario pierde el acceso en su siguiente request y se cierran sus sesiones. Nadie se desactiva a sí mismo
+	// (`self_deactivation`) y la empresa conserva un dueño activo (`last_owner`).
+	//
+	// Corresponds with POST /api/v1/users/{userId}/deactivate (the `DeactivateUser` operationId).
+	DeactivateUser(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// IssuePasswordReset Generar un enlace para restablecer la contraseña
+	//
+	// Devuelve el enlace (su token) para que el usuario elija una contraseña nueva; vence en 24 horas y solo sirve
+	// el último generado. Quien lo genera lo comparte con el usuario. El token se muestra una sola vez.
+	//
+	// Corresponds with POST /api/v1/users/{userId}/password-reset (the `IssuePasswordReset` operationId).
+	IssuePasswordReset(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListVariantAxes Listar los ejes de variante
 	//
 	// Los ejes en los que varían las variantes de la empresa (color, tamaño...), ordenados por nombre.
@@ -6053,6 +6419,84 @@ func (c *Client) StartDemo(ctx context.Context, body StartDemoJSONRequestBody, r
 	return c.Client.Do(req)
 }
 
+// AcceptInvitationWithBody Aceptar una invitación
+//
+// Crea el usuario invitado con la contraseña que elige y abre su sesión. El enlace sirve una vez.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /api/v1/auth/invitations/accept (the `AcceptInvitation` operationId).
+func (c *Client) AcceptInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAcceptInvitationRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AcceptInvitation Aceptar una invitación
+//
+// Crea el usuario invitado con la contraseña que elige y abre su sesión. El enlace sirve una vez.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /api/v1/auth/invitations/accept (the `AcceptInvitation` operationId).
+func (c *Client) AcceptInvitation(ctx context.Context, body AcceptInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAcceptInvitationRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// LookupInvitationWithBody Ver una invitación
+//
+// Lo que muestra el enlace de una invitación antes de aceptarla. El token viaja en el cuerpo (el frontend lo
+// lee del fragmento de la URL), nunca en la ruta, para que no quede en los logs.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /api/v1/auth/invitations/lookup (the `LookupInvitation` operationId).
+func (c *Client) LookupInvitationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewLookupInvitationRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// LookupInvitation Ver una invitación
+//
+// Lo que muestra el enlace de una invitación antes de aceptarla. El token viaja en el cuerpo (el frontend lo
+// lee del fragmento de la URL), nunca en la ruta, para que no quede en los logs.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /api/v1/auth/invitations/lookup (the `LookupInvitation` operationId).
+func (c *Client) LookupInvitation(ctx context.Context, body LookupInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewLookupInvitationRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // LoginWithBody Iniciar sesión
 //
 // Si el correo y la contraseña coinciden en varias empresas, responde 409 con la lista de
@@ -6100,6 +6544,46 @@ func (c *Client) Login(ctx context.Context, body LoginJSONRequestBody, reqEditor
 // Corresponds with POST /api/v1/auth/logout (the `Logout` operationId).
 func (c *Client) Logout(ctx context.Context, params *LogoutParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewLogoutRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ResetPasswordWithBody Restablecer la contraseña
+//
+// Pone la contraseña nueva con el enlace que generó el dueño o un administrador, y cierra todas las sesiones
+// del usuario. El enlace sirve una vez.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /api/v1/auth/password-reset (the `ResetPassword` operationId).
+func (c *Client) ResetPasswordWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResetPasswordRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ResetPassword Restablecer la contraseña
+//
+// Pone la contraseña nueva con el enlace que generó el dueño o un administrador, y cierra todas las sesiones
+// del usuario. El enlace sirve una vez.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /api/v1/auth/password-reset (the `ResetPassword` operationId).
+func (c *Client) ResetPassword(ctx context.Context, body ResetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResetPasswordRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -7132,6 +7616,80 @@ func (c *Client) TransferStock(ctx context.Context, body TransferStockJSONReques
 	return c.Client.Do(req)
 }
 
+// ListInvitations Invitaciones abiertas
+//
+// Las invitaciones sin aceptar ni revocar (pendientes o vencidas), de la más reciente a la más antigua.
+//
+// Corresponds with GET /api/v1/invitations (the `ListInvitations` operationId).
+func (c *Client) ListInvitations(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListInvitationsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// InviteUserWithBody Invitar a un usuario
+//
+// Crea una invitación con el rol indicado y devuelve su enlace (el token se muestra una sola vez); vence en 7
+// días. Invitar otra vez el mismo correo revoca los enlaces anteriores. Solo un dueño invita con rol `owner`.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /api/v1/invitations (the `InviteUser` operationId).
+func (c *Client) InviteUserWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewInviteUserRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// InviteUser Invitar a un usuario
+//
+// Crea una invitación con el rol indicado y devuelve su enlace (el token se muestra una sola vez); vence en 7
+// días. Invitar otra vez el mismo correo revoca los enlaces anteriores. Solo un dueño invita con rol `owner`.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /api/v1/invitations (the `InviteUser` operationId).
+func (c *Client) InviteUser(ctx context.Context, body InviteUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewInviteUserRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RevokeInvitation Revocar una invitación
+//
+// Su enlace deja de servir.
+//
+// Corresponds with DELETE /api/v1/invitations/{invitationId} (the `RevokeInvitation` operationId).
+func (c *Client) RevokeInvitation(ctx context.Context, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRevokeInvitationRequest(c.Server, invitationId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ListElectronicDocuments Documentos electrónicos
 //
 // Los documentos electrónicos de la empresa, del más reciente al más antiguo.
@@ -7526,6 +8084,44 @@ func (c *Client) ListStock(ctx context.Context, locationId LocationId, params *L
 // Corresponds with GET /api/v1/me (the `GetMe` operationId).
 func (c *Client) GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetMeRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ChangeMyPasswordWithBody Cambiar mi contraseña
+//
+// Cambia la contraseña del usuario autenticado; pide la actual. Sus sesiones siguen abiertas.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /api/v1/me/password (the `ChangeMyPassword` operationId).
+func (c *Client) ChangeMyPasswordWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewChangeMyPasswordRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ChangeMyPassword Cambiar mi contraseña
+//
+// Cambia la contraseña del usuario autenticado; pide la actual. Sus sesiones siguen abiertas.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /api/v1/me/password (the `ChangeMyPassword` operationId).
+func (c *Client) ChangeMyPassword(ctx context.Context, body ChangeMyPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewChangeMyPasswordRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -8390,7 +8986,7 @@ func (c *Client) GetReceivablesAging(ctx context.Context, params *GetReceivables
 // ListSales Ventas del día
 //
 // Las ventas confirmadas (y las anuladas) de un día en hora de Colombia (`America/Bogota`), de la más reciente
-// a la más antigua. Sin `date`, el día de hoy.
+// a la más antigua. Sin `date`, el día de hoy. Quien no tiene `sales:read_all` (el cajero) ve solo sus ventas.
 //
 // Corresponds with GET /api/v1/sales (the `ListSales` operationId).
 func (c *Client) ListSales(ctx context.Context, params *ListSalesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -8529,6 +9125,9 @@ func (c *Client) UpdateSalesSettings(ctx context.Context, body UpdateSalesSettin
 }
 
 // GetSale Detalle de una venta
+//
+// Con el nombre de quien vendió y de quien anuló. Quien no tiene `sales:read_all` (el cajero) solo abre sus
+// ventas: la de otro usuario responde 404 `sale_not_found`.
 //
 // Corresponds with GET /api/v1/sales/{saleId} (the `GetSale` operationId).
 func (c *Client) GetSale(ctx context.Context, saleId SaleId, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -9087,6 +9686,114 @@ func (c *Client) UpdateUnit(ctx context.Context, unitId UnitId, body UpdateUnitJ
 	return c.Client.Do(req)
 }
 
+// ListUsers Usuarios de la empresa
+//
+// Todos los usuarios, activos o no, por nombre.
+//
+// Corresponds with GET /api/v1/users (the `ListUsers` operationId).
+func (c *Client) ListUsers(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListUsersRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateUserWithBody Cambiar el rol de un usuario
+//
+// Solo un dueño da o quita el rol `owner` o cambia a otro dueño (`owner_only`), y la empresa siempre conserva
+// un dueño activo (`last_owner`). El cambio aplica desde la siguiente request del usuario.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /api/v1/users/{userId} (the `UpdateUser` operationId).
+func (c *Client) UpdateUserWithBody(ctx context.Context, userId UserId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateUserRequestWithBody(c.Server, userId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateUser Cambiar el rol de un usuario
+//
+// Solo un dueño da o quita el rol `owner` o cambia a otro dueño (`owner_only`), y la empresa siempre conserva
+// un dueño activo (`last_owner`). El cambio aplica desde la siguiente request del usuario.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /api/v1/users/{userId} (the `UpdateUser` operationId).
+func (c *Client) UpdateUser(ctx context.Context, userId UserId, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateUserRequest(c.Server, userId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ActivateUser Reactivar un usuario
+//
+// Corresponds with POST /api/v1/users/{userId}/activate (the `ActivateUser` operationId).
+func (c *Client) ActivateUser(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewActivateUserRequest(c.Server, userId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeactivateUser Desactivar un usuario
+//
+// El usuario pierde el acceso en su siguiente request y se cierran sus sesiones. Nadie se desactiva a sí mismo
+// (`self_deactivation`) y la empresa conserva un dueño activo (`last_owner`).
+//
+// Corresponds with POST /api/v1/users/{userId}/deactivate (the `DeactivateUser` operationId).
+func (c *Client) DeactivateUser(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeactivateUserRequest(c.Server, userId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// IssuePasswordReset Generar un enlace para restablecer la contraseña
+//
+// Devuelve el enlace (su token) para que el usuario elija una contraseña nueva; vence en 24 horas y solo sirve
+// el último generado. Quien lo genera lo comparte con el usuario. El token se muestra una sola vez.
+//
+// Corresponds with POST /api/v1/users/{userId}/password-reset (the `IssuePasswordReset` operationId).
+func (c *Client) IssuePasswordReset(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewIssuePasswordResetRequest(c.Server, userId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // ListVariantAxes Listar los ejes de variante
 //
 // Los ejes en los que varían las variantes de la empresa (color, tamaño...), ordenados por nombre.
@@ -9440,6 +10147,86 @@ func NewStartDemoRequestWithBody(server string, contentType string, body io.Read
 	return req, nil
 }
 
+// NewAcceptInvitationRequest calls the generic AcceptInvitation builder with application/json body
+func NewAcceptInvitationRequest(server string, body AcceptInvitationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAcceptInvitationRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewAcceptInvitationRequestWithBody constructs an http.Request for the AcceptInvitation method, with any body, and a specified content type
+func NewAcceptInvitationRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/auth/invitations/accept")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewLookupInvitationRequest calls the generic LookupInvitation builder with application/json body
+func NewLookupInvitationRequest(server string, body LookupInvitationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewLookupInvitationRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewLookupInvitationRequestWithBody constructs an http.Request for the LookupInvitation method, with any body, and a specified content type
+func NewLookupInvitationRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/auth/invitations/lookup")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewLoginRequest calls the generic Login builder with application/json body
 func NewLoginRequest(server string, body LoginJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -9521,6 +10308,46 @@ func NewLogoutRequest(server string, params *LogoutParams) (*http.Request, error
 			req.AddCookie(cookie0)
 		}
 	}
+	return req, nil
+}
+
+// NewResetPasswordRequest calls the generic ResetPassword builder with application/json body
+func NewResetPasswordRequest(server string, body ResetPasswordJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewResetPasswordRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewResetPasswordRequestWithBody constructs an http.Request for the ResetPassword method, with any body, and a specified content type
+func NewResetPasswordRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/auth/password-reset")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -11193,6 +12020,107 @@ func NewTransferStockRequestWithBody(server string, contentType string, body io.
 	return req, nil
 }
 
+// NewListInvitationsRequest constructs an http.Request for the ListInvitations method
+func NewListInvitationsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invitations")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewInviteUserRequest calls the generic InviteUser builder with application/json body
+func NewInviteUserRequest(server string, body InviteUserJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewInviteUserRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewInviteUserRequestWithBody constructs an http.Request for the InviteUser method, with any body, and a specified content type
+func NewInviteUserRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invitations")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRevokeInvitationRequest constructs an http.Request for the RevokeInvitation method
+func NewRevokeInvitationRequest(server string, invitationId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "invitationId", invitationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/invitations/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListElectronicDocumentsRequest constructs an http.Request for the ListElectronicDocuments method
 func NewListElectronicDocumentsRequest(server string, params *ListElectronicDocumentsParams) (*http.Request, error) {
 	var err error
@@ -11909,6 +12837,46 @@ func NewGetMeRequest(server string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewChangeMyPasswordRequest calls the generic ChangeMyPassword builder with application/json body
+func NewChangeMyPasswordRequest(server string, body ChangeMyPasswordJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewChangeMyPasswordRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewChangeMyPasswordRequestWithBody constructs an http.Request for the ChangeMyPassword method, with any body, and a specified content type
+func NewChangeMyPasswordRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/me/password")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -14573,6 +15541,182 @@ func NewUpdateUnitRequestWithBody(server string, unitId UnitId, contentType stri
 	return req, nil
 }
 
+// NewListUsersRequest constructs an http.Request for the ListUsers method
+func NewListUsersRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/users")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateUserRequest calls the generic UpdateUser builder with application/json body
+func NewUpdateUserRequest(server string, userId UserId, body UpdateUserJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateUserRequestWithBody(server, userId, "application/json", bodyReader)
+}
+
+// NewUpdateUserRequestWithBody constructs an http.Request for the UpdateUser method, with any body, and a specified content type
+func NewUpdateUserRequestWithBody(server string, userId UserId, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/users/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewActivateUserRequest constructs an http.Request for the ActivateUser method
+func NewActivateUserRequest(server string, userId UserId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/users/%s/activate", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDeactivateUserRequest constructs an http.Request for the DeactivateUser method
+func NewDeactivateUserRequest(server string, userId UserId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/users/%s/deactivate", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewIssuePasswordResetRequest constructs an http.Request for the IssuePasswordReset method
+func NewIssuePasswordResetRequest(server string, userId UserId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/users/%s/password-reset", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListVariantAxesRequest constructs an http.Request for the ListVariantAxes method
 func NewListVariantAxesRequest(server string) (*http.Request, error) {
 	var err error
@@ -14944,6 +16088,44 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /api/v1/auth/demo (the `StartDemo` operationId).
 	StartDemoWithResponse(ctx context.Context, body StartDemoJSONRequestBody, reqEditors ...RequestEditorFn) (*StartDemoResponse, error)
 
+	// AcceptInvitationWithBodyWithResponse Aceptar una invitación
+	//
+	// Crea el usuario invitado con la contraseña que elige y abre su sesión. El enlace sirve una vez.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/auth/invitations/accept (the `AcceptInvitation` operationId).
+	AcceptInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AcceptInvitationResponse, error)
+
+	// AcceptInvitationWithResponse Aceptar una invitación
+	//
+	// Crea el usuario invitado con la contraseña que elige y abre su sesión. El enlace sirve una vez.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/auth/invitations/accept (the `AcceptInvitation` operationId).
+	AcceptInvitationWithResponse(ctx context.Context, body AcceptInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*AcceptInvitationResponse, error)
+
+	// LookupInvitationWithBodyWithResponse Ver una invitación
+	//
+	// Lo que muestra el enlace de una invitación antes de aceptarla. El token viaja en el cuerpo (el frontend lo
+	// lee del fragmento de la URL), nunca en la ruta, para que no quede en los logs.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/auth/invitations/lookup (the `LookupInvitation` operationId).
+	LookupInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LookupInvitationResponse, error)
+
+	// LookupInvitationWithResponse Ver una invitación
+	//
+	// Lo que muestra el enlace de una invitación antes de aceptarla. El token viaja en el cuerpo (el frontend lo
+	// lee del fragmento de la URL), nunca en la ruta, para que no quede en los logs.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/auth/invitations/lookup (the `LookupInvitation` operationId).
+	LookupInvitationWithResponse(ctx context.Context, body LookupInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*LookupInvitationResponse, error)
+
 	// LoginWithBodyWithResponse Iniciar sesión
 	//
 	// Si el correo y la contraseña coinciden en varias empresas, responde 409 con la lista de
@@ -14972,6 +16154,26 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /api/v1/auth/logout (the `Logout` operationId).
 	LogoutWithResponse(ctx context.Context, params *LogoutParams, reqEditors ...RequestEditorFn) (*LogoutResponse, error)
+
+	// ResetPasswordWithBodyWithResponse Restablecer la contraseña
+	//
+	// Pone la contraseña nueva con el enlace que generó el dueño o un administrador, y cierra todas las sesiones
+	// del usuario. El enlace sirve una vez.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/auth/password-reset (the `ResetPassword` operationId).
+	ResetPasswordWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResetPasswordResponse, error)
+
+	// ResetPasswordWithResponse Restablecer la contraseña
+	//
+	// Pone la contraseña nueva con el enlace que generó el dueño o un administrador, y cierra todas las sesiones
+	// del usuario. El enlace sirve una vez.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/auth/password-reset (the `ResetPassword` operationId).
+	ResetPasswordWithResponse(ctx context.Context, body ResetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*ResetPasswordResponse, error)
 
 	// RefreshSessionWithResponse Renovar la sesión
 	//
@@ -15493,6 +16695,44 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /api/v1/inventory/transfers (the `TransferStock` operationId).
 	TransferStockWithResponse(ctx context.Context, body TransferStockJSONRequestBody, reqEditors ...RequestEditorFn) (*TransferStockResponse, error)
 
+	// ListInvitationsWithResponse Invitaciones abiertas
+	//
+	// Las invitaciones sin aceptar ni revocar (pendientes o vencidas), de la más reciente a la más antigua.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/invitations (the `ListInvitations` operationId).
+	ListInvitationsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListInvitationsResponse, error)
+
+	// InviteUserWithBodyWithResponse Invitar a un usuario
+	//
+	// Crea una invitación con el rol indicado y devuelve su enlace (el token se muestra una sola vez); vence en 7
+	// días. Invitar otra vez el mismo correo revoca los enlaces anteriores. Solo un dueño invita con rol `owner`.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/invitations (the `InviteUser` operationId).
+	InviteUserWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*InviteUserResponse, error)
+
+	// InviteUserWithResponse Invitar a un usuario
+	//
+	// Crea una invitación con el rol indicado y devuelve su enlace (el token se muestra una sola vez); vence en 7
+	// días. Invitar otra vez el mismo correo revoca los enlaces anteriores. Solo un dueño invita con rol `owner`.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/invitations (the `InviteUser` operationId).
+	InviteUserWithResponse(ctx context.Context, body InviteUserJSONRequestBody, reqEditors ...RequestEditorFn) (*InviteUserResponse, error)
+
+	// RevokeInvitationWithResponse Revocar una invitación
+	//
+	// Su enlace deja de servir.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /api/v1/invitations/{invitationId} (the `RevokeInvitation` operationId).
+	RevokeInvitationWithResponse(ctx context.Context, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RevokeInvitationResponse, error)
+
 	// ListElectronicDocumentsWithResponse Documentos electrónicos
 	//
 	// Los documentos electrónicos de la empresa, del más reciente al más antiguo.
@@ -15700,6 +16940,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /api/v1/me (the `GetMe` operationId).
 	GetMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMeResponse, error)
+
+	// ChangeMyPasswordWithBodyWithResponse Cambiar mi contraseña
+	//
+	// Cambia la contraseña del usuario autenticado; pide la actual. Sus sesiones siguen abiertas.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/me/password (the `ChangeMyPassword` operationId).
+	ChangeMyPasswordWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ChangeMyPasswordResponse, error)
+
+	// ChangeMyPasswordWithResponse Cambiar mi contraseña
+	//
+	// Cambia la contraseña del usuario autenticado; pide la actual. Sus sesiones siguen abiertas.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/me/password (the `ChangeMyPassword` operationId).
+	ChangeMyPasswordWithResponse(ctx context.Context, body ChangeMyPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*ChangeMyPasswordResponse, error)
 
 	// ListModulesWithResponse Listar los módulos
 	//
@@ -16147,7 +17405,7 @@ type ClientWithResponsesInterface interface {
 	// ListSalesWithResponse Ventas del día
 	//
 	// Las ventas confirmadas (y las anuladas) de un día en hora de Colombia (`America/Bogota`), de la más reciente
-	// a la más antigua. Sin `date`, el día de hoy.
+	// a la más antigua. Sin `date`, el día de hoy. Quien no tiene `sales:read_all` (el cajero) ve solo sus ventas.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -16222,6 +17480,9 @@ type ClientWithResponsesInterface interface {
 	UpdateSalesSettingsWithResponse(ctx context.Context, body UpdateSalesSettingsJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSalesSettingsResponse, error)
 
 	// GetSaleWithResponse Detalle de una venta
+	//
+	// Con el nombre de quien vendió y de quien anuló. Quien no tiene `sales:read_all` (el cajero) solo abre sus
+	// ventas: la de otro usuario responde 404 `sale_not_found`.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -16503,6 +17764,62 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with PUT /api/v1/units/{unitId} (the `UpdateUnit` operationId).
 	UpdateUnitWithResponse(ctx context.Context, unitId UnitId, body UpdateUnitJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateUnitResponse, error)
+
+	// ListUsersWithResponse Usuarios de la empresa
+	//
+	// Todos los usuarios, activos o no, por nombre.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/users (the `ListUsers` operationId).
+	ListUsersWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListUsersResponse, error)
+
+	// UpdateUserWithBodyWithResponse Cambiar el rol de un usuario
+	//
+	// Solo un dueño da o quita el rol `owner` o cambia a otro dueño (`owner_only`), y la empresa siempre conserva
+	// un dueño activo (`last_owner`). El cambio aplica desde la siguiente request del usuario.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /api/v1/users/{userId} (the `UpdateUser` operationId).
+	UpdateUserWithBodyWithResponse(ctx context.Context, userId UserId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error)
+
+	// UpdateUserWithResponse Cambiar el rol de un usuario
+	//
+	// Solo un dueño da o quita el rol `owner` o cambia a otro dueño (`owner_only`), y la empresa siempre conserva
+	// un dueño activo (`last_owner`). El cambio aplica desde la siguiente request del usuario.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /api/v1/users/{userId} (the `UpdateUser` operationId).
+	UpdateUserWithResponse(ctx context.Context, userId UserId, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error)
+
+	// ActivateUserWithResponse Reactivar un usuario
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/users/{userId}/activate (the `ActivateUser` operationId).
+	ActivateUserWithResponse(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*ActivateUserResponse, error)
+
+	// DeactivateUserWithResponse Desactivar un usuario
+	//
+	// El usuario pierde el acceso en su siguiente request y se cierran sus sesiones. Nadie se desactiva a sí mismo
+	// (`self_deactivation`) y la empresa conserva un dueño activo (`last_owner`).
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/users/{userId}/deactivate (the `DeactivateUser` operationId).
+	DeactivateUserWithResponse(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*DeactivateUserResponse, error)
+
+	// IssuePasswordResetWithResponse Generar un enlace para restablecer la contraseña
+	//
+	// Devuelve el enlace (su token) para que el usuario elija una contraseña nueva; vence en 24 horas y solo sirve
+	// el último generado. Quien lo genera lo comparte con el usuario. El token se muestra una sola vez.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/v1/users/{userId}/password-reset (the `IssuePasswordReset` operationId).
+	IssuePasswordResetWithResponse(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*IssuePasswordResetResponse, error)
 
 	// ListVariantAxesWithResponse Listar los ejes de variante
 	//
@@ -16799,6 +18116,172 @@ func (r StartDemoResponse) ContentType() string {
 	return ""
 }
 
+// AcceptInvitationResponse200Headers the declared response headers of an HTTP 200 response for AcceptInvitation
+type AcceptInvitationResponse200Headers struct {
+	SetCookie *string
+}
+
+type AcceptInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *AuthSession
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Error
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *LinkNotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Error
+	// JSON410 the response for an HTTP 410 `application/json` response
+	JSON410 *LinkGone
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *AcceptInvitationResponse200Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r AcceptInvitationResponse) GetJSON200() *AuthSession {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r AcceptInvitationResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r AcceptInvitationResponse) GetJSON403() *Error {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r AcceptInvitationResponse) GetJSON404() *LinkNotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r AcceptInvitationResponse) GetJSON409() *Error {
+	return r.JSON409
+}
+
+// GetJSON410 returns the response for an HTTP 410 `application/json` response
+func (r AcceptInvitationResponse) GetJSON410() *LinkGone {
+	return r.JSON410
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r AcceptInvitationResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r AcceptInvitationResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r AcceptInvitationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AcceptInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AcceptInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AcceptInvitationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type LookupInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *InvitationPreview
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *LinkNotFound
+	// JSON410 the response for an HTTP 410 `application/json` response
+	JSON410 *LinkGone
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r LookupInvitationResponse) GetJSON200() *InvitationPreview {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r LookupInvitationResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r LookupInvitationResponse) GetJSON404() *LinkNotFound {
+	return r.JSON404
+}
+
+// GetJSON410 returns the response for an HTTP 410 `application/json` response
+func (r LookupInvitationResponse) GetJSON410() *LinkGone {
+	return r.JSON410
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r LookupInvitationResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r LookupInvitationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r LookupInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r LookupInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r LookupInvitationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // LoginResponse200Headers the declared response headers of an HTTP 200 response for Login
 type LoginResponse200Headers struct {
 	SetCookie *string
@@ -16938,6 +18421,75 @@ func (r LogoutResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r LogoutResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ResetPasswordResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *LinkNotFound
+	// JSON410 the response for an HTTP 410 `application/json` response
+	JSON410 *LinkGone
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ResetPasswordResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ResetPasswordResponse) GetJSON404() *LinkNotFound {
+	return r.JSON404
+}
+
+// GetJSON410 returns the response for an HTTP 410 `application/json` response
+func (r ResetPasswordResponse) GetJSON410() *LinkGone {
+	return r.JSON410
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r ResetPasswordResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ResetPasswordResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ResetPasswordResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ResetPasswordResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ResetPasswordResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ResetPasswordResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -19763,6 +21315,220 @@ func (r TransferStockResponse) ContentType() string {
 	return ""
 }
 
+type ListInvitationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]Invitation
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListInvitationsResponse) GetJSON200() *[]Invitation {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListInvitationsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListInvitationsResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListInvitationsResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListInvitationsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListInvitationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListInvitationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListInvitationsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type InviteUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *InvitationCreated
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *UserForbidden
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Error
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r InviteUserResponse) GetJSON201() *InvitationCreated {
+	return r.JSON201
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r InviteUserResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r InviteUserResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r InviteUserResponse) GetJSON403() *UserForbidden {
+	return r.JSON403
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r InviteUserResponse) GetJSON409() *Error {
+	return r.JSON409
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r InviteUserResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r InviteUserResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r InviteUserResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r InviteUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r InviteUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r InviteUserResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RevokeInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RevokeInvitationResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RevokeInvitationResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r RevokeInvitationResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r RevokeInvitationResponse) GetJSON409() *Error {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r RevokeInvitationResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r RevokeInvitationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RevokeInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RevokeInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RevokeInvitationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListElectronicDocumentsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -20958,6 +22724,68 @@ func (r GetMeResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetMeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ChangeMyPasswordResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ChangeMyPasswordResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ChangeMyPasswordResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r ChangeMyPasswordResponse) GetJSON422() *Error {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ChangeMyPasswordResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ChangeMyPasswordResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ChangeMyPasswordResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ChangeMyPasswordResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ChangeMyPasswordResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -25248,6 +27076,365 @@ func (r UpdateUnitResponse) ContentType() string {
 	return ""
 }
 
+type ListUsersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]User
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListUsersResponse) GetJSON200() *[]User {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ListUsersResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ListUsersResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ListUsersResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ListUsersResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListUsersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListUsersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListUsersResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *User
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *UserForbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *LastOwner
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r UpdateUserResponse) GetJSON200() *User {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdateUserResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdateUserResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r UpdateUserResponse) GetJSON403() *UserForbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UpdateUserResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r UpdateUserResponse) GetJSON409() *LastOwner {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdateUserResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateUserResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateUserResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ActivateUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *User
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *UserForbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ActivateUserResponse) GetJSON200() *User {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ActivateUserResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ActivateUserResponse) GetJSON403() *UserForbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r ActivateUserResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ActivateUserResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ActivateUserResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ActivateUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ActivateUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ActivateUserResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeactivateUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *User
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *UserForbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *LastOwner
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeactivateUserResponse) GetJSON200() *User {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeactivateUserResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r DeactivateUserResponse) GetJSON403() *UserForbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeactivateUserResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DeactivateUserResponse) GetJSON409() *LastOwner {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeactivateUserResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r DeactivateUserResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeactivateUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeactivateUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeactivateUserResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type IssuePasswordResetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *IssuedLink
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *UserForbidden
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *NotFound
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r IssuePasswordResetResponse) GetJSON201() *IssuedLink {
+	return r.JSON201
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r IssuePasswordResetResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r IssuePasswordResetResponse) GetJSON403() *UserForbidden {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r IssuePasswordResetResponse) GetJSON404() *NotFound {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r IssuePasswordResetResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r IssuePasswordResetResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r IssuePasswordResetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r IssuePasswordResetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r IssuePasswordResetResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListVariantAxesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -25781,6 +27968,68 @@ func (c *ClientWithResponses) StartDemoWithResponse(ctx context.Context, body St
 	return ParseStartDemoResponse(rsp)
 }
 
+// AcceptInvitationWithBodyWithResponse Aceptar una invitación
+//
+// Crea el usuario invitado con la contraseña que elige y abre su sesión. El enlace sirve una vez.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/auth/invitations/accept (the `AcceptInvitation` operationId).
+func (c *ClientWithResponses) AcceptInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AcceptInvitationResponse, error) {
+	rsp, err := c.AcceptInvitationWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAcceptInvitationResponse(rsp)
+}
+
+// AcceptInvitationWithResponse Aceptar una invitación
+//
+// Crea el usuario invitado con la contraseña que elige y abre su sesión. El enlace sirve una vez.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/auth/invitations/accept (the `AcceptInvitation` operationId).
+func (c *ClientWithResponses) AcceptInvitationWithResponse(ctx context.Context, body AcceptInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*AcceptInvitationResponse, error) {
+	rsp, err := c.AcceptInvitation(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAcceptInvitationResponse(rsp)
+}
+
+// LookupInvitationWithBodyWithResponse Ver una invitación
+//
+// Lo que muestra el enlace de una invitación antes de aceptarla. El token viaja en el cuerpo (el frontend lo
+// lee del fragmento de la URL), nunca en la ruta, para que no quede en los logs.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/auth/invitations/lookup (the `LookupInvitation` operationId).
+func (c *ClientWithResponses) LookupInvitationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LookupInvitationResponse, error) {
+	rsp, err := c.LookupInvitationWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseLookupInvitationResponse(rsp)
+}
+
+// LookupInvitationWithResponse Ver una invitación
+//
+// Lo que muestra el enlace de una invitación antes de aceptarla. El token viaja en el cuerpo (el frontend lo
+// lee del fragmento de la URL), nunca en la ruta, para que no quede en los logs.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/auth/invitations/lookup (the `LookupInvitation` operationId).
+func (c *ClientWithResponses) LookupInvitationWithResponse(ctx context.Context, body LookupInvitationJSONRequestBody, reqEditors ...RequestEditorFn) (*LookupInvitationResponse, error) {
+	rsp, err := c.LookupInvitation(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseLookupInvitationResponse(rsp)
+}
+
 // LoginWithBodyWithResponse Iniciar sesión
 //
 // Si el correo y la contraseña coinciden en varias empresas, responde 409 con la lista de
@@ -25826,6 +28075,38 @@ func (c *ClientWithResponses) LogoutWithResponse(ctx context.Context, params *Lo
 		return nil, err
 	}
 	return ParseLogoutResponse(rsp)
+}
+
+// ResetPasswordWithBodyWithResponse Restablecer la contraseña
+//
+// Pone la contraseña nueva con el enlace que generó el dueño o un administrador, y cierra todas las sesiones
+// del usuario. El enlace sirve una vez.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/auth/password-reset (the `ResetPassword` operationId).
+func (c *ClientWithResponses) ResetPasswordWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResetPasswordResponse, error) {
+	rsp, err := c.ResetPasswordWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResetPasswordResponse(rsp)
+}
+
+// ResetPasswordWithResponse Restablecer la contraseña
+//
+// Pone la contraseña nueva con el enlace que generó el dueño o un administrador, y cierra todas las sesiones
+// del usuario. El enlace sirve una vez.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/auth/password-reset (the `ResetPassword` operationId).
+func (c *ClientWithResponses) ResetPasswordWithResponse(ctx context.Context, body ResetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*ResetPasswordResponse, error) {
+	rsp, err := c.ResetPassword(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResetPasswordResponse(rsp)
 }
 
 // RefreshSessionWithResponse Renovar la sesión
@@ -26672,6 +28953,68 @@ func (c *ClientWithResponses) TransferStockWithResponse(ctx context.Context, bod
 	return ParseTransferStockResponse(rsp)
 }
 
+// ListInvitationsWithResponse Invitaciones abiertas
+//
+// Las invitaciones sin aceptar ni revocar (pendientes o vencidas), de la más reciente a la más antigua.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/invitations (the `ListInvitations` operationId).
+func (c *ClientWithResponses) ListInvitationsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListInvitationsResponse, error) {
+	rsp, err := c.ListInvitations(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListInvitationsResponse(rsp)
+}
+
+// InviteUserWithBodyWithResponse Invitar a un usuario
+//
+// Crea una invitación con el rol indicado y devuelve su enlace (el token se muestra una sola vez); vence en 7
+// días. Invitar otra vez el mismo correo revoca los enlaces anteriores. Solo un dueño invita con rol `owner`.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/invitations (the `InviteUser` operationId).
+func (c *ClientWithResponses) InviteUserWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*InviteUserResponse, error) {
+	rsp, err := c.InviteUserWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseInviteUserResponse(rsp)
+}
+
+// InviteUserWithResponse Invitar a un usuario
+//
+// Crea una invitación con el rol indicado y devuelve su enlace (el token se muestra una sola vez); vence en 7
+// días. Invitar otra vez el mismo correo revoca los enlaces anteriores. Solo un dueño invita con rol `owner`.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/invitations (the `InviteUser` operationId).
+func (c *ClientWithResponses) InviteUserWithResponse(ctx context.Context, body InviteUserJSONRequestBody, reqEditors ...RequestEditorFn) (*InviteUserResponse, error) {
+	rsp, err := c.InviteUser(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseInviteUserResponse(rsp)
+}
+
+// RevokeInvitationWithResponse Revocar una invitación
+//
+// Su enlace deja de servir.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /api/v1/invitations/{invitationId} (the `RevokeInvitation` operationId).
+func (c *ClientWithResponses) RevokeInvitationWithResponse(ctx context.Context, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RevokeInvitationResponse, error) {
+	rsp, err := c.RevokeInvitation(ctx, invitationId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRevokeInvitationResponse(rsp)
+}
+
 // ListElectronicDocumentsWithResponse Documentos electrónicos
 //
 // Los documentos electrónicos de la empresa, del más reciente al más antiguo.
@@ -27010,6 +29353,36 @@ func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, reqEditors 
 		return nil, err
 	}
 	return ParseGetMeResponse(rsp)
+}
+
+// ChangeMyPasswordWithBodyWithResponse Cambiar mi contraseña
+//
+// Cambia la contraseña del usuario autenticado; pide la actual. Sus sesiones siguen abiertas.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/me/password (the `ChangeMyPassword` operationId).
+func (c *ClientWithResponses) ChangeMyPasswordWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ChangeMyPasswordResponse, error) {
+	rsp, err := c.ChangeMyPasswordWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseChangeMyPasswordResponse(rsp)
+}
+
+// ChangeMyPasswordWithResponse Cambiar mi contraseña
+//
+// Cambia la contraseña del usuario autenticado; pide la actual. Sus sesiones siguen abiertas.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/me/password (the `ChangeMyPassword` operationId).
+func (c *ClientWithResponses) ChangeMyPasswordWithResponse(ctx context.Context, body ChangeMyPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*ChangeMyPasswordResponse, error) {
+	rsp, err := c.ChangeMyPassword(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseChangeMyPasswordResponse(rsp)
 }
 
 // ListModulesWithResponse Listar los módulos
@@ -27722,7 +30095,7 @@ func (c *ClientWithResponses) GetReceivablesAgingWithResponse(ctx context.Contex
 // ListSalesWithResponse Ventas del día
 //
 // Las ventas confirmadas (y las anuladas) de un día en hora de Colombia (`America/Bogota`), de la más reciente
-// a la más antigua. Sin `date`, el día de hoy.
+// a la más antigua. Sin `date`, el día de hoy. Quien no tiene `sales:read_all` (el cajero) ve solo sus ventas.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -27839,6 +30212,9 @@ func (c *ClientWithResponses) UpdateSalesSettingsWithResponse(ctx context.Contex
 }
 
 // GetSaleWithResponse Detalle de una venta
+//
+// Con el nombre de quien vendió y de quien anuló. Quien no tiene `sales:read_all` (el cajero) solo abre sus
+// ventas: la de otro usuario responde 404 `sale_not_found`.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -28301,6 +30677,98 @@ func (c *ClientWithResponses) UpdateUnitWithResponse(ctx context.Context, unitId
 	return ParseUpdateUnitResponse(rsp)
 }
 
+// ListUsersWithResponse Usuarios de la empresa
+//
+// Todos los usuarios, activos o no, por nombre.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/users (the `ListUsers` operationId).
+func (c *ClientWithResponses) ListUsersWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListUsersResponse, error) {
+	rsp, err := c.ListUsers(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListUsersResponse(rsp)
+}
+
+// UpdateUserWithBodyWithResponse Cambiar el rol de un usuario
+//
+// Solo un dueño da o quita el rol `owner` o cambia a otro dueño (`owner_only`), y la empresa siempre conserva
+// un dueño activo (`last_owner`). El cambio aplica desde la siguiente request del usuario.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /api/v1/users/{userId} (the `UpdateUser` operationId).
+func (c *ClientWithResponses) UpdateUserWithBodyWithResponse(ctx context.Context, userId UserId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error) {
+	rsp, err := c.UpdateUserWithBody(ctx, userId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateUserResponse(rsp)
+}
+
+// UpdateUserWithResponse Cambiar el rol de un usuario
+//
+// Solo un dueño da o quita el rol `owner` o cambia a otro dueño (`owner_only`), y la empresa siempre conserva
+// un dueño activo (`last_owner`). El cambio aplica desde la siguiente request del usuario.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /api/v1/users/{userId} (the `UpdateUser` operationId).
+func (c *ClientWithResponses) UpdateUserWithResponse(ctx context.Context, userId UserId, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error) {
+	rsp, err := c.UpdateUser(ctx, userId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateUserResponse(rsp)
+}
+
+// ActivateUserWithResponse Reactivar un usuario
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/users/{userId}/activate (the `ActivateUser` operationId).
+func (c *ClientWithResponses) ActivateUserWithResponse(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*ActivateUserResponse, error) {
+	rsp, err := c.ActivateUser(ctx, userId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseActivateUserResponse(rsp)
+}
+
+// DeactivateUserWithResponse Desactivar un usuario
+//
+// El usuario pierde el acceso en su siguiente request y se cierran sus sesiones. Nadie se desactiva a sí mismo
+// (`self_deactivation`) y la empresa conserva un dueño activo (`last_owner`).
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/users/{userId}/deactivate (the `DeactivateUser` operationId).
+func (c *ClientWithResponses) DeactivateUserWithResponse(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*DeactivateUserResponse, error) {
+	rsp, err := c.DeactivateUser(ctx, userId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeactivateUserResponse(rsp)
+}
+
+// IssuePasswordResetWithResponse Generar un enlace para restablecer la contraseña
+//
+// Devuelve el enlace (su token) para que el usuario elija una contraseña nueva; vence en 24 horas y solo sirve
+// el último generado. Quien lo genera lo comparte con el usuario. El token se muestra una sola vez.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/v1/users/{userId}/password-reset (the `IssuePasswordReset` operationId).
+func (c *ClientWithResponses) IssuePasswordResetWithResponse(ctx context.Context, userId UserId, reqEditors ...RequestEditorFn) (*IssuePasswordResetResponse, error) {
+	rsp, err := c.IssuePasswordReset(ctx, userId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseIssuePasswordResetResponse(rsp)
+}
+
 // ListVariantAxesWithResponse Listar los ejes de variante
 //
 // Los ejes en los que varían las variantes de la empresa (color, tamaño...), ordenados por nombre.
@@ -28613,6 +31081,148 @@ func ParseStartDemoResponse(rsp *http.Response) (*StartDemoResponse, error) {
 	return response, nil
 }
 
+// ParseAcceptInvitationResponse parses an HTTP response from a AcceptInvitationWithResponse call
+func ParseAcceptInvitationResponse(rsp *http.Response) (*AcceptInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AcceptInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AuthSession
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest LinkNotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 410:
+		var dest LinkGone
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON410 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers AcceptInvitationResponse200Headers
+		if values := rsp.Header.Values("Set-Cookie"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Set-Cookie", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.SetCookie = &value
+		}
+		response.Headers200 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseLookupInvitationResponse parses an HTTP response from a LookupInvitationWithResponse call
+func ParseLookupInvitationResponse(rsp *http.Response) (*LookupInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &LookupInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InvitationPreview
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest LinkNotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 410:
+		var dest LinkGone
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON410 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseLoginResponse parses an HTTP response from a LoginWithResponse call
 func ParseLoginResponse(rsp *http.Response) (*LoginResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -28741,6 +31351,63 @@ func ParseLogoutResponse(rsp *http.Response) (*LogoutResponse, error) {
 			headers.SetCookie = &value
 		}
 		response.Headers204 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseResetPasswordResponse parses an HTTP response from a ResetPasswordWithResponse call
+func ParseResetPasswordResponse(rsp *http.Response) (*ResetPasswordResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ResetPasswordResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest LinkNotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 410:
+		var dest LinkGone
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON410 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
 	}
 
 	return response, nil
@@ -31034,6 +33701,178 @@ func ParseTransferStockResponse(rsp *http.Response) (*TransferStockResponse, err
 	return response, nil
 }
 
+// ParseListInvitationsResponse parses an HTTP response from a ListInvitationsWithResponse call
+func ParseListInvitationsResponse(rsp *http.Response) (*ListInvitationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListInvitationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []Invitation
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseInviteUserResponse parses an HTTP response from a InviteUserWithResponse call
+func ParseInviteUserResponse(rsp *http.Response) (*InviteUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &InviteUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest InvitationCreated
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest UserForbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRevokeInvitationResponse parses an HTTP response from a RevokeInvitationWithResponse call
+func ParseRevokeInvitationResponse(rsp *http.Response) (*RevokeInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RevokeInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListElectronicDocumentsResponse parses an HTTP response from a ListElectronicDocumentsWithResponse call
 func ParseListElectronicDocumentsResponse(rsp *http.Response) (*ListElectronicDocumentsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -31976,6 +34815,56 @@ func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseChangeMyPasswordResponse parses an HTTP response from a ChangeMyPasswordWithResponse call
+func ParseChangeMyPasswordResponse(rsp *http.Response) (*ChangeMyPasswordResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ChangeMyPasswordResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalError
@@ -35438,6 +38327,290 @@ func ParseUpdateUnitResponse(rsp *http.Response) (*UpdateUnitResponse, error) {
 			return nil, err
 		}
 		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListUsersResponse parses an HTTP response from a ListUsersWithResponse call
+func ParseListUsersResponse(rsp *http.Response) (*ListUsersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListUsersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []User
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateUserResponse parses an HTTP response from a UpdateUserWithResponse call
+func ParseUpdateUserResponse(rsp *http.Response) (*UpdateUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest User
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest UserForbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest LastOwner
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseActivateUserResponse parses an HTTP response from a ActivateUserWithResponse call
+func ParseActivateUserResponse(rsp *http.Response) (*ActivateUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ActivateUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest User
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest UserForbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeactivateUserResponse parses an HTTP response from a DeactivateUserWithResponse call
+func ParseDeactivateUserResponse(rsp *http.Response) (*DeactivateUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeactivateUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest User
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest UserForbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest LastOwner
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseIssuePasswordResetResponse parses an HTTP response from a IssuePasswordResetWithResponse call
+func ParseIssuePasswordResetResponse(rsp *http.Response) (*IssuePasswordResetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &IssuePasswordResetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest IssuedLink
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest UserForbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalError

@@ -25,6 +25,8 @@ type env struct {
 	tenants       *fakeTenants
 	users         *fakeUsers
 	tokens        *fakeTokens
+	invitations   *fakeInvitations
+	resets        *fakeResets
 	demo          *fakeDemo
 	hasher        *fakeHasher
 	setup         *fakeSetup
@@ -51,6 +53,8 @@ func newEnv(t *testing.T, opts ...func(*app.Deps)) *env {
 		users:         users,
 		tenants:       &fakeTenants{byID: map[uuid.UUID]*domain.Tenant{}, users: users},
 		tokens:        &fakeTokens{byID: map[uuid.UUID]*domain.RefreshToken{}},
+		invitations:   &fakeInvitations{byID: map[uuid.UUID]domain.InvitationSnapshot{}},
+		resets:        &fakeResets{byID: map[uuid.UUID]domain.PasswordResetSnapshot{}},
 		hasher:        &fakeHasher{},
 		setup:         &fakeSetup{},
 		modules:       &fakeModules{active: map[uuid.UUID][]string{}},
@@ -79,6 +83,8 @@ func newEnv(t *testing.T, opts ...func(*app.Deps)) *env {
 		Users:          users,
 		Tokens:         e.tokens,
 		ExpiredTokens:  e.tokens,
+		Invitations:    e.invitations,
+		Resets:         e.resets,
 		Demo:           e.demo,
 		Directory:      users,
 		Hasher:         e.hasher,

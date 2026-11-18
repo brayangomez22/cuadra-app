@@ -16,6 +16,7 @@ Módulo `price_lists`: listas por segmento de cliente (configurables por tenant)
 
 ### Épica V2-4 · Multi-sede completo
 El modelo ya soporta sedes (`Location`) y traslados desde la fase 1. Falta: administración de sedes, usuarios y cajas por sede, permisos limitados a una sede, flujo de traslado con envío y recepción (en tránsito), reportes y tablero comparativos por sede y numeración DIAN por sede.
+**Pendientes que entran a esta épica:** P181 (`docs/plan/pendientes.md`).
 
 ### Épica V2-5 · Modo sin internet del POS
 PWA instalable; catálogo, precios y clientes en caché local (IndexedDB); ventas guardadas localmente con cola de sincronización idempotente (ID generado en el cliente); resolución de conflictos de stock al reconectar; indicador claro de estado de conexión; emisión DIAN diferida al sincronizar. **Épica de alto riesgo técnico:** empezar con un spike y un ADR. Pendiente que entra aquí: P14 (`docs/plan/pendientes.md`).

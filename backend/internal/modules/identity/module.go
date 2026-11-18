@@ -94,6 +94,8 @@ func New(cfg Config) (*Module, error) {
 		Users:          users,
 		Tokens:         tokens,
 		ExpiredTokens:  tokens,
+		Invitations:    postgres.NewInvitationRepository(cfg.DB),
+		Resets:         postgres.NewPasswordResetRepository(cfg.DB),
 		Directory:      postgres.NewLoginDirectory(cfg.DB),
 		Demo:           postgres.NewDemoTenantRepository(cfg.DB),
 		Hasher:         argon2id.New(argon2id.DefaultParams),

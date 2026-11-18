@@ -17,7 +17,7 @@ import (
 // validation, permissions from x-permission, use cases and PostgreSQL with
 // Row-Level Security.
 func TestInventoryFlow(t *testing.T) {
-	handler, tokens := newAPI(t)
+	handler, _ := newAPI(t)
 
 	do := func(t *testing.T, method, path, body, bearer string) *httptest.ResponseRecorder {
 		t.Helper()
@@ -50,10 +50,8 @@ func TestInventoryFlow(t *testing.T) {
 	ownerToken := session.AccessToken
 	// Other roles of the same tenant: user management arrives in T41, so the
 	// tokens are issued directly.
-	cashierToken, _, err := tokens.Issue(session.User.TenantID, uuid.Must(uuid.NewV7()), "cashier")
-	require.NoError(t, err)
-	warehouseToken, _, err := tokens.Issue(session.User.TenantID, uuid.Must(uuid.NewV7()), "warehouse")
-	require.NoError(t, err)
+	cashierToken := joinStaff(t, do, ownerToken, "cashier").Token
+	warehouseToken := joinStaff(t, do, ownerToken, "warehouse").Token
 
 	product := do(t, http.MethodPost, "/api/v1/products",
 		`{"sku":"cem-50","name":"Cemento gris 50kg","base_unit_id":"`+unitID(t, do, ownerToken, "bulto")+

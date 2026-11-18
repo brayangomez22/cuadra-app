@@ -2,12 +2,16 @@ package app_test
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/google/uuid"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/app"
 )
+
+// errAudit is the failure of a fakeAudit made to fail.
+var errAudit = errors.New("audit down")
 
 // fakeAudit records the audit entries in memory.
 type fakeAudit struct {

@@ -9,6 +9,8 @@ export { canSee, useAccess, visibleItems, type Access, type Gated } from './sess
 export { AuthProvider } from './session/AuthProvider';
 export { useAuth } from './session/useAuth';
 export { useCan } from './session/useCan';
+export { useCurrentUser } from './session/useCurrentUser';
 export { useFlag } from './session/useFlag';
 export { useModule } from './session/useModule';
 export { roleLabels } from './model/roles';
+export { ChangePasswordDialog } from './components/ChangePasswordDialog/ChangePasswordDialog';

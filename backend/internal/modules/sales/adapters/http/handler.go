@@ -26,6 +26,9 @@ const permissionSalesDiscount = "sales:discount"
 // permissionCashManage lets a role close the cash sessions others left open.
 const permissionCashManage = "cash:manage"
 
+// permissionSalesReadAll lets a role see every user's sales (P10).
+const permissionSalesReadAll = "sales:read_all"
+
 // defaultPageSize is the contract's default limit.
 const defaultPageSize = 20
 
@@ -40,7 +43,7 @@ type UseCases interface {
 type SaleUseCases interface {
 	ConfirmSale(ctx context.Context, a app.Actor, in app.ConfirmSaleInput) (*domain.Sale, error)
 	VoidSale(ctx context.Context, a app.Actor, id uuid.UUID, reason string) (*domain.Sale, error)
-	GetSale(ctx context.Context, a app.Actor, id uuid.UUID) (*domain.Sale, error)
+	GetSaleDetail(ctx context.Context, a app.Actor, id uuid.UUID) (app.SaleDetail, error)
 	ListSales(ctx context.Context, a app.Actor, in app.ListSalesInput) (domain.SalePage, error)
 	GetDiscountLimit(ctx context.Context, a app.Actor) (domain.DiscountLimit, error)
 }
@@ -84,6 +87,7 @@ func (h *Handler) actor(ctx context.Context) app.Actor {
 	return app.Actor{
 		TenantID: p.TenantID, UserID: p.UserID,
 		UnlimitedDiscount: h.can(p.Role, permissionSalesDiscount), ManagesCash: h.can(p.Role, permissionCashManage),
+		SeesAllSales: h.can(p.Role, permissionSalesReadAll),
 	}
 }
 
@@ -138,11 +142,24 @@ func (h *Handler) VoidSale(ctx context.Context, req salesapi.VoidSaleRequestObje
 
 // GetSale returns a sale with its lines, payments and totals.
 func (h *Handler) GetSale(ctx context.Context, req salesapi.GetSaleRequestObject) (salesapi.GetSaleResponseObject, error) {
-	sale, err := h.uc.GetSale(ctx, h.actor(ctx), req.SaleId)
+	detail, err := h.uc.GetSaleDetail(ctx, h.actor(ctx), req.SaleId)
 	if err != nil {
 		return nil, err
 	}
-	return salesapi.GetSale200JSONResponse(saleBody(sale)), nil
+	body := saleBody(detail.Sale)
+	body.UserName = optionalName(detail.CashierName)
+	if body.Void != nil {
+		body.Void.UserName = optionalName(detail.VoidedByName)
+	}
+	return salesapi.GetSale200JSONResponse(body), nil
+}
+
+// optionalName is name, or nil for a user that no longer exists.
+func optionalName(name string) *string {
+	if name == "" {
+		return nil
+	}
+	return &name
 }
 
 // ListSales returns the sales of a day in Colombia.

@@ -3,3 +3,5 @@
 export { DemoPage } from './pages/DemoPage/DemoPage';
 export { LoginPage } from './pages/LoginPage/LoginPage';
 export { SignUpPage } from './pages/SignUpPage/SignUpPage';
+export { AcceptInvitationPage } from './pages/AcceptInvitationPage/AcceptInvitationPage';
+export { ResetPasswordPage } from './pages/ResetPasswordPage/ResetPasswordPage';

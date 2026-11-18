@@ -17,7 +17,7 @@ import (
 // validation, permissions from x-permission, use cases and PostgreSQL with
 // Row-Level Security.
 func TestCatalogFlow(t *testing.T) {
-	handler, tokens := newAPI(t)
+	handler, _ := newAPI(t)
 
 	do := func(t *testing.T, method, path, body, bearer string) *httptest.ResponseRecorder {
 		t.Helper()
@@ -42,10 +42,7 @@ func TestCatalogFlow(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(signup.Body.Bytes(), &session))
 	ownerToken := session.AccessToken
-	// A cashier of the same tenant: user management arrives in T41, so the
-	// token is issued directly.
-	cashierToken, _, err := tokens.Issue(session.User.TenantID, uuid.Must(uuid.NewV7()), "cashier")
-	require.NoError(t, err)
+	cashierToken := joinStaff(t, do, ownerToken, "cashier").Token
 
 	var units struct {
 		Items []struct {

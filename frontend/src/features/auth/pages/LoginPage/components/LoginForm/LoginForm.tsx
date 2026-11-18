@@ -1,5 +1,5 @@
 import type { UseFormReturn } from 'react-hook-form';
-import { Alert, Button, Field, Input, Stack } from '@/shared/ui';
+import { Alert, Button, Field, Input, PasswordInput, Stack } from '@/shared/ui';
 import type { LoginValues } from '../../../../model/schemas';
 import styles from './LoginForm.module.scss';
 
@@ -24,7 +24,7 @@ export function LoginForm({ form, formError, onSubmit }: Props) {
           <Input type="email" autoComplete="username" inputMode="email" autoFocus {...register('email')} />
         </Field>
         <Field label="Contraseña" error={errors.password?.message}>
-          <Input type="password" autoComplete="current-password" {...register('password')} />
+          <PasswordInput autoComplete="current-password" {...register('password')} />
         </Field>
         <Button type="submit" size="lg" className={styles.submit} loading={isSubmitting}>
           Ingresar

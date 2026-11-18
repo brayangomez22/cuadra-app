@@ -12,7 +12,7 @@ type Action string
 
 // CatalogVersion is the version of the catalog in docs/auditoria.md. A new
 // action, or a change to the details of one, raises it.
-const CatalogVersion = 1
+const CatalogVersion = 2
 
 // MaxDetailLen is the longest value of details, in characters: they hold
 // figures, codes and settings, not prose.
@@ -29,6 +29,12 @@ const (
 	ActionModuleEnabled            Action = "module.enabled"
 	ActionModuleDisabled           Action = "module.disabled"
 	ActionTenantSettingsChanged    Action = "tenant.settings_changed"
+	ActionUserInvited              Action = "user.invited"
+	ActionUserRoleChanged          Action = "user.role_changed"
+	ActionUserDeactivated          Action = "user.deactivated"
+	ActionUserActivated            Action = "user.activated"
+	ActionUserPasswordReset        Action = "user.password_reset"
+	ActionCreditTermsChanged       Action = "credit.terms_changed"
 )
 
 // actionSpec is what an action is about and the details it carries: every
@@ -50,6 +56,12 @@ var catalog = map[Action]actionSpec{
 	ActionModuleEnabled:            {"module", false, []string{"module"}},
 	ActionModuleDisabled:           {"module", false, []string{"module"}},
 	ActionTenantSettingsChanged:    {"tenant", true, []string{"new", "old", "setting"}},
+	ActionUserInvited:              {"invitation", true, []string{"role"}},
+	ActionUserRoleChanged:          {"user", true, []string{"new_role", "old_role"}},
+	ActionUserDeactivated:          {"user", true, nil},
+	ActionUserActivated:            {"user", true, nil},
+	ActionUserPasswordReset:        {"user", true, nil},
+	ActionCreditTermsChanged:       {"customer", true, []string{"new_limit", "new_term_days", "old_limit", "old_term_days"}},
 }
 
 // ParseAction returns the catalog's action named s, or ErrUnknownAction.

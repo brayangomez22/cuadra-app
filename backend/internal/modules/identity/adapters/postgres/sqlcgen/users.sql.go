@@ -125,6 +125,70 @@ func (q *Queries) GetUserByEmail(ctx context.Context, arg GetUserByEmailParams) 
 	return i, err
 }
 
+const listUsers = `-- name: ListUsers :many
+SELECT id, tenant_id, email, name, password_hash, role, active, created_at
+FROM users
+WHERE tenant_id = $1
+ORDER BY name, id
+`
+
+func (q *Queries) ListUsers(ctx context.Context, tenantID uuid.UUID) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsers, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.Email,
+			&i.Name,
+			&i.PasswordHash,
+			&i.Role,
+			&i.Active,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockActiveOwners = `-- name: LockActiveOwners :many
+SELECT id FROM users
+WHERE tenant_id = $1 AND role = 'owner' AND active
+FOR UPDATE
+`
+
+// LockActiveOwners locks the active owners until the transaction ends, so
+// two concurrent changes cannot both leave the tenant without one.
+func (q *Queries) LockActiveOwners(ctx context.Context, tenantID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, lockActiveOwners, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateUser = `-- name: UpdateUser :execrows
 UPDATE users
 SET name = $3, password_hash = $4, role = $5, active = $6

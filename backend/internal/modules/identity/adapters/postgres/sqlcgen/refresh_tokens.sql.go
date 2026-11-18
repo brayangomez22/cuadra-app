@@ -127,6 +127,26 @@ func (q *Queries) RevokeRefreshTokenFamily(ctx context.Context, arg RevokeRefres
 	return result.RowsAffected(), nil
 }
 
+const revokeUserRefreshTokens = `-- name: RevokeUserRefreshTokens :execrows
+UPDATE refresh_tokens
+SET revoked_at = $1
+WHERE tenant_id = $2 AND user_id = $3 AND revoked_at IS NULL
+`
+
+type RevokeUserRefreshTokensParams struct {
+	RevokedAt *time.Time
+	TenantID  uuid.UUID
+	UserID    uuid.UUID
+}
+
+func (q *Queries) RevokeUserRefreshTokens(ctx context.Context, arg RevokeUserRefreshTokensParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeUserRefreshTokens, arg.RevokedAt, arg.TenantID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const tenantsWithExpiredRefreshTokens = `-- name: TenantsWithExpiredRefreshTokens :many
 SELECT tenant_id::uuid FROM tenants_with_expired_refresh_tokens($1::timestamptz, $2::int)
 `

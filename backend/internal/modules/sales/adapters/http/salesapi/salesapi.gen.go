@@ -560,7 +560,11 @@ type Sale struct {
 
 	// UserId Quién vendió.
 	UserId openapi_types.UUID `json:"user_id"`
-	Void   *SaleVoid          `json:"void,omitempty"`
+
+	// UserName Su nombre, en el detalle de la venta (`GET /sales/{saleId}`), para la tirilla reimpresa; no viene si el
+	// usuario ya no existe.
+	UserName *string   `json:"user_name,omitempty"`
+	Void     *SaleVoid `json:"void,omitempty"`
 }
 
 // SaleLine Una línea vendida: una variante de un producto. `unit_price` es sin IVA, en el momento de la venta, y
@@ -769,8 +773,11 @@ type SaleVoid struct {
 	Reason string `json:"reason"`
 
 	// UserId Quién anuló.
-	UserId   openapi_types.UUID `json:"user_id"`
-	VoidedAt time.Time          `json:"voided_at"`
+	UserId openapi_types.UUID `json:"user_id"`
+
+	// UserName Su nombre, en el detalle de la venta (`GET /sales/{saleId}`); no viene si el usuario ya no existe.
+	UserName *string   `json:"user_name,omitempty"`
+	VoidedAt time.Time `json:"voided_at"`
 }
 
 // SalesSettings Las reglas de venta de la empresa.

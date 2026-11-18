@@ -67,7 +67,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Alcance:** analítica de producto (propuesta: **PostHog**; confirmar antes de agregar la dependencia) con eventos definidos en un catálogo versionado (`docs/eventos.md`: venta confirmada, búsqueda sin resultados, importación completada, error mostrado al usuario...). Identificadores seudónimos: `tenant_id` y un hash del usuario, **nunca** nombres, correos ni datos de los clientes del negocio. Embudos clave: registro → importación → primera venta. Botón "Danos tu opinión" en la app que guarda el comentario con contexto (pantalla, versión) y te avisa.
 **Tests primero:** ningún evento contiene campos fuera de la lista permitida del catálogo; con la analítica desactivada (variable de entorno o tenant que no consintió) no se envía nada.
 
-### [ ] T41 · Gestión de usuarios y auditoría
+### [x] T41 · Gestión de usuarios y auditoría
 **Depende de:** T38 (registro de auditoría).
 **Alcance:** UI para invitar usuarios por correo, asignar rol y sede, desactivar y restablecer contraseña. Límites por rol configurables (por ejemplo, el descuento máximo del cajero). Pantalla de **auditoría** para el dueño: quién anuló ventas, cambió precios, ajustó inventario o modificó cupos, y cuándo (consume el registro de auditoría de T38).
 **Pendientes que entran a esta tarea:** P08–P10, P172 y P176 (`docs/plan/pendientes.md`).

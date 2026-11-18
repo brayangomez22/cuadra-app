@@ -1,3 +1,4 @@
+import { useCan } from '@/features/auth';
 import { useLocations } from '@/features/inventory';
 import { QueryState } from '@/shared/query';
 import { Page, Pagination, Spinner } from '@/shared/ui';
@@ -15,8 +16,13 @@ export function SaleListPage() {
   const sales = useSales(params.query);
   const locations = useLocations().data ?? [];
   const locationName = (id: string) => locations.find((l) => l.id === id)?.name ?? '';
+  // A cashier sees only their own sales (P10): the API filters them.
+  const own = !useCan()('sales:read_all');
+  const description = own
+    ? 'Usted ve solo las ventas que hizo: abra una para reimprimir la tirilla.'
+    : 'Lo que se vendió cada día: abra una venta para reimprimir la tirilla o anularla.';
   return (
-    <Page title="Ventas" description="Lo que se vendió cada día: abra una venta para reimprimir la tirilla o anularla.">
+    <Page title="Ventas" description={description}>
       <SaleFilters params={params} locations={locations} />
       <QueryState
         queries={[sales]}

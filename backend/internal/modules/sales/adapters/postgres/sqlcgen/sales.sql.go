@@ -257,14 +257,16 @@ SELECT id, number, location_id, user_id, status, total, confirmed_at, voided_at
 FROM sales
 WHERE confirmed_at >= $1 AND confirmed_at < $2
   AND ($3::uuid IS NULL OR location_id = $3)
+  AND ($4::uuid IS NULL OR user_id = $4)
 ORDER BY confirmed_at DESC, id DESC
-LIMIT $5 OFFSET $4
+LIMIT $6 OFFSET $5
 `
 
 type ListSalesParams struct {
 	FromTime   time.Time
 	ToTime     time.Time
 	LocationID *uuid.UUID
+	CashierID  *uuid.UUID
 	RowOffset  int32
 	RowLimit   int32
 }
@@ -280,12 +282,14 @@ type ListSalesRow struct {
 	VoidedAt    *time.Time
 }
 
-// ListSales pages the sales confirmed in [from, to), newest first.
+// ListSales pages the sales confirmed in [from, to), newest first; with
+// cashier_id, only that user's.
 func (q *Queries) ListSales(ctx context.Context, arg ListSalesParams) ([]ListSalesRow, error) {
 	rows, err := q.db.Query(ctx, listSales,
 		arg.FromTime,
 		arg.ToTime,
 		arg.LocationID,
+		arg.CashierID,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -378,12 +382,14 @@ SELECT count(*) AS total,
 FROM sales
 WHERE confirmed_at >= $1 AND confirmed_at < $2
   AND ($3::uuid IS NULL OR location_id = $3)
+  AND ($4::uuid IS NULL OR user_id = $4)
 `
 
 type SummarizeSalesParams struct {
 	FromTime   time.Time
 	ToTime     time.Time
 	LocationID *uuid.UUID
+	CashierID  *uuid.UUID
 }
 
 type SummarizeSalesRow struct {
@@ -395,7 +401,12 @@ type SummarizeSalesRow struct {
 // SummarizeSales counts the sales confirmed in [from, to), how many of them
 // were voided and what the ones still confirmed add up to.
 func (q *Queries) SummarizeSales(ctx context.Context, arg SummarizeSalesParams) (SummarizeSalesRow, error) {
-	row := q.db.QueryRow(ctx, summarizeSales, arg.FromTime, arg.ToTime, arg.LocationID)
+	row := q.db.QueryRow(ctx, summarizeSales,
+		arg.FromTime,
+		arg.ToTime,
+		arg.LocationID,
+		arg.CashierID,
+	)
 	var i SummarizeSalesRow
 	err := row.Scan(&i.Total, &i.Voided, &i.Sold)
 	return i, err

@@ -40,12 +40,9 @@ func newSalesFlow(t *testing.T) *salesFlow {
 // location, and tokens of its cashier and its warehouse keeper.
 func (f *salesFlow) setUp(t *testing.T) *salesFlow {
 	t.Helper()
-	var err error
 	f.ownerToken, f.tenantID = f.signup(t, "ana@ventas.co")
-	f.cashierToken, _, err = f.tokens.Issue(f.tenantID, uuid.Must(uuid.NewV7()), "cashier")
-	require.NoError(t, err)
-	f.warehouseToken, _, err = f.tokens.Issue(f.tenantID, uuid.Must(uuid.NewV7()), "warehouse")
-	require.NoError(t, err)
+	f.cashierToken = joinStaff(t, f.do, f.ownerToken, "cashier").Token
+	f.warehouseToken = joinStaff(t, f.do, f.ownerToken, "warehouse").Token
 
 	rec := f.do(t, http.MethodPost, "/api/v1/products",
 		`{"sku":"cem-50","name":"Cemento gris 50kg","base_unit_id":"`+unitID(t, f.do, f.ownerToken, "bulto")+

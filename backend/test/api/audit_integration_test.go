@@ -104,7 +104,8 @@ func TestAuditLog(t *testing.T) {
 		require.Equal(t, 1, tax.Total)
 		require.Equal(t, map[string]string{"setting": "default_tax_rate", "old": "0.19", "new": "0.05"}, tax.Items[0].Details)
 
-		require.Equal(t, 6, events(t, "").Total)
+		require.Equal(t, 2, events(t, "?action=user.invited").Total, "el cajero y el bodeguero del flujo entraron por invitación")
+		require.Equal(t, 8, events(t, "").Total)
 	})
 
 	t.Run("solo el dueño consulta el registro", func(t *testing.T) {

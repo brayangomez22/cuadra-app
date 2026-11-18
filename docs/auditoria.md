@@ -27,7 +27,18 @@ Decisión: `docs/decisiones.md`, 2026-10-18 (diseño) y 2026-11-15 (T38).
 | `module.enabled` / `module.disabled` | `module` (sin `entity_id`) | no | `module`: el ID del módulo. Activar los módulos de la plantilla al registrarse no deja eventos | `PUT /api/v1/modules/{id}` |
 | `tenant.settings_changed` | `tenant` | no | `setting` (`address`, `analytics_consent`, `city`, `default_tax_rate`, `municipality_code`, `phone`), `old`, `new`. Un evento por dato que cambia | `identity.UpdateTenant` |
 
-## Lo que viene
+## Versión 2 (T41)
 
-- **T41** (usuarios): `user.created`, `user.role_changed`, `user.deactivated`... y `credit.terms_changed` (cupo y plazo de un cliente, P176) en la versión 2, con la pantalla de auditoría.
+| Acción | Entidad (`entity_type`) | Sede | `details` | La emite |
+|---|---|---|---|---|
+| `user.invited` | `invitation` | no | `role`: el rol con que se invita. Ni el correo ni el nombre del invitado (datos personales) | `identity.InviteUser` |
+| `user.role_changed` | `user` | no | `old_role`, `new_role` | `identity.ChangeUserRole` |
+| `user.deactivated` | `user` | no | ninguno | `identity.DeactivateUser` |
+| `user.activated` | `user` | no | ninguno | `identity.ActivateUser` |
+| `user.password_reset` | `user` | no | ninguno: se generó un enlace para que el usuario elija contraseña (nunca el enlace) | `identity.IssuePasswordReset` |
+| `credit.terms_changed` | `customer` | no | `old_limit`, `new_limit` (COP con dos decimales), `old_term_days`, `new_term_days`. Solo si algo cambia | `receivables.SetCreditTerms` |
+
+Aceptar una invitación no se audita aparte: el usuario nuevo ya queda en `user.invited` (quién lo invitó y con qué rol) y en la lista de usuarios.
+
+## Lo que viene
 - **T37** (notas crédito): la nota crédito de una venta facturada.

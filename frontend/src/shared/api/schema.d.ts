@@ -193,6 +193,233 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cambiar mi contraseña
+         * @description Cambia la contraseña del usuario autenticado; pide la actual. Sus sesiones siguen abiertas.
+         */
+        post: operations["changeMyPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/invitations/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ver una invitación
+         * @description Lo que muestra el enlace de una invitación antes de aceptarla. El token viaja en el cuerpo (el frontend lo
+         *     lee del fragmento de la URL), nunca en la ruta, para que no quede en los logs.
+         */
+        post: operations["lookupInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aceptar una invitación
+         * @description Crea el usuario invitado con la contraseña que elige y abre su sesión. El enlace sirve una vez.
+         */
+        post: operations["acceptInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restablecer la contraseña
+         * @description Pone la contraseña nueva con el enlace que generó el dueño o un administrador, y cierra todas las sesiones
+         *     del usuario. El enlace sirve una vez.
+         */
+        post: operations["resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usuarios de la empresa
+         * @description Todos los usuarios, activos o no, por nombre.
+         */
+        get: operations["listUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar el rol de un usuario
+         * @description Solo un dueño da o quita el rol `owner` o cambia a otro dueño (`owner_only`), y la empresa siempre conserva
+         *     un dueño activo (`last_owner`). El cambio aplica desde la siguiente request del usuario.
+         */
+        patch: operations["updateUser"];
+        trace?: never;
+    };
+    "/api/v1/users/{userId}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desactivar un usuario
+         * @description El usuario pierde el acceso en su siguiente request y se cierran sus sesiones. Nadie se desactiva a sí mismo
+         *     (`self_deactivation`) y la empresa conserva un dueño activo (`last_owner`).
+         */
+        post: operations["deactivateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{userId}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivar un usuario */
+        post: operations["activateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{userId}/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generar un enlace para restablecer la contraseña
+         * @description Devuelve el enlace (su token) para que el usuario elija una contraseña nueva; vence en 24 horas y solo sirve
+         *     el último generado. Quien lo genera lo comparte con el usuario. El token se muestra una sola vez.
+         */
+        post: operations["issuePasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Invitaciones abiertas
+         * @description Las invitaciones sin aceptar ni revocar (pendientes o vencidas), de la más reciente a la más antigua.
+         */
+        get: operations["listInvitations"];
+        put?: never;
+        /**
+         * Invitar a un usuario
+         * @description Crea una invitación con el rol indicado y devuelve su enlace (el token se muestra una sola vez); vence en 7
+         *     días. Invitar otra vez el mismo correo revoca los enlaces anteriores. Solo un dueño invita con rol `owner`.
+         */
+        post: operations["inviteUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/{invitationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revocar una invitación
+         * @description Su enlace deja de servir.
+         */
+        delete: operations["revokeInvitation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant": {
         parameters: {
             query?: never;
@@ -1542,7 +1769,7 @@ export interface paths {
         /**
          * Ventas del día
          * @description Las ventas confirmadas (y las anuladas) de un día en hora de Colombia (`America/Bogota`), de la más reciente
-         *     a la más antigua. Sin `date`, el día de hoy.
+         *     a la más antigua. Sin `date`, el día de hoy. Quien no tiene `sales:read_all` (el cajero) ve solo sus ventas.
          */
         get: operations["listSales"];
         put?: never;
@@ -1618,7 +1845,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Detalle de una venta */
+        /**
+         * Detalle de una venta
+         * @description Con el nombre de quien vendió y de quien anuló. Quien no tiene `sales:read_all` (el cajero) solo abre sus
+         *     ventas: la de otro usuario responde 404 `sale_not_found`.
+         */
         get: operations["getSale"];
         put?: never;
         post?: never;
@@ -2277,6 +2508,91 @@ export interface components {
             analytics_id?: string;
             /** @description La empresa es de demostración (sus datos se reinician cada noche); la UI muestra un aviso. */
             demo: boolean;
+        };
+        /**
+         * @description Dueño, administrador, cajero o bodeguero.
+         * @enum {string}
+         */
+        UserRole: "owner" | "admin" | "cashier" | "warehouse";
+        User: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            email: string;
+            role: components["schemas"]["UserRole"];
+            /** @description Un usuario inactivo no puede entrar. */
+            active: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        UserUpdate: {
+            role: components["schemas"]["UserRole"];
+        };
+        PasswordChange: {
+            /** Format: password */
+            current_password: string;
+            /** Format: password */
+            new_password: string;
+        };
+        LinkToken: {
+            /** @description El token del enlace (`<empresa>.<secreto>`). */
+            token: string;
+        };
+        IssuedLink: {
+            /**
+             * @description El token del enlace, que se muestra una sola vez. El frontend arma la URL con el token en el fragmento
+             *     (`/restablecer#<token>` o `/invitacion#<token>`).
+             */
+            token: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
+        InvitationRequest: {
+            email: string;
+            name: string;
+            role: components["schemas"]["UserRole"];
+        };
+        Invitation: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            name: string;
+            role: components["schemas"]["UserRole"];
+            /**
+             * @description Una invitación abierta está pendiente o vencida.
+             * @enum {string}
+             */
+            status: "pending" | "expired";
+            /** Format: uuid */
+            invited_by: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        InvitationCreated: {
+            invitation: components["schemas"]["Invitation"];
+            link: components["schemas"]["IssuedLink"];
+        };
+        InvitationPreview: {
+            tenant_name: string;
+            email: string;
+            /** @description El nombre que escribió quien invita; el invitado puede cambiarlo. */
+            name: string;
+            role: components["schemas"]["UserRole"];
+            /** Format: date-time */
+            expires_at: string;
+        };
+        AcceptInvitationRequest: {
+            token: string;
+            name: string;
+            /** Format: password */
+            password: string;
+        };
+        ResetPasswordRequest: {
+            token: string;
+            /** Format: password */
+            password: string;
         };
         /** @description La empresa (tenant) y su configuración. */
         Tenant: {
@@ -3149,10 +3465,10 @@ export interface components {
             items: components["schemas"]["Municipality"][];
         };
         /**
-         * @description Acción del catálogo de auditoría (versión 1, `docs/auditoria.md`).
+         * @description Acción del catálogo de auditoría (versión 2, `docs/auditoria.md`).
          * @enum {string}
          */
-        AuditAction: "cash.closed_with_difference" | "module.disabled" | "module.enabled" | "purchase.voided" | "sale.discount_applied" | "sale.voided" | "stock.adjusted" | "tenant.settings_changed" | "variant.price_changed";
+        AuditAction: "cash.closed_with_difference" | "credit.terms_changed" | "module.disabled" | "module.enabled" | "purchase.voided" | "sale.discount_applied" | "sale.voided" | "stock.adjusted" | "tenant.settings_changed" | "user.activated" | "user.deactivated" | "user.invited" | "user.password_reset" | "user.role_changed" | "variant.price_changed";
         AuditEvent: {
             /** Format: uuid */
             id: string;
@@ -3168,7 +3484,8 @@ export interface components {
              */
             role: string;
             /**
-             * @description Sobre qué tipo de entidad (`sale`, `variant`, `cash_session`, `purchase`, `module`, `tenant`).
+             * @description Sobre qué tipo de entidad (`sale`, `variant`, `cash_session`, `purchase`, `module`, `tenant`, `user`,
+             *     `invitation`, `customer`).
              * @example sale
              */
             entity_type: string;
@@ -3791,6 +4108,8 @@ export interface components {
              * @description Quién anuló.
              */
             user_id: string;
+            /** @description Su nombre, en el detalle de la venta (`GET /sales/{saleId}`); no viene si el usuario ya no existe. */
+            user_name?: string;
             reason: string;
             /** Format: date-time */
             voided_at: string;
@@ -3814,6 +4133,11 @@ export interface components {
              * @description Quién vendió.
              */
             user_id: string;
+            /**
+             * @description Su nombre, en el detalle de la venta (`GET /sales/{saleId}`), para la tirilla reimpresa; no viene si el
+             *     usuario ya no existe.
+             */
+            user_name?: string;
             /**
              * Format: uuid
              * @description El cliente; no viene si la venta fue a consumidor final.
@@ -4272,6 +4596,48 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description El enlace no existe o está mal copiado (`code` = `link_not_found`). */
+        LinkNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description El enlace venció (`link_expired`) o ya se usó o se revocó (`link_used`). */
+        LinkGone: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /**
+         * @description Falta el permiso (`forbidden`) o la acción es sobre un dueño o el rol `owner` y quien la hace no es dueño
+         *     (`owner_only`).
+         */
+        UserForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /**
+         * @description La empresa quedaría sin dueño activo (`last_owner`) o el usuario intenta desactivarse a sí mismo
+         *     (`self_deactivation`).
+         */
+        LastOwner: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description El recurso no existe (`code` = `not_found` u otro más específico). */
         NotFound: {
             headers: {
@@ -4313,6 +4679,7 @@ export interface components {
         };
     };
     parameters: {
+        UserId: string;
         /** @description Cantidad máxima de resultados. */
         Limit: number;
         /** @description Cantidad de resultados a saltar. */
@@ -4697,6 +5064,398 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    changeMyPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChange"];
+            };
+        };
+        responses: {
+            /** @description Contraseña cambiada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /**
+             * @description La contraseña actual no coincide (`wrong_password`) o la nueva no sirve (`password_too_short`,
+             *     `password_too_long`, `password_too_common`).
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    lookupInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkToken"];
+            };
+        };
+        responses: {
+            /** @description La invitación vigente. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationPreview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["LinkNotFound"];
+            410: components["responses"]["LinkGone"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    acceptInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptInvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description Usuario creado y sesión iniciada. */
+            200: {
+                headers: {
+                    "Set-Cookie": components["headers"]["SetRefreshCookie"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSession"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description La empresa está suspendida (`code` = `tenant_suspended`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["LinkNotFound"];
+            /** @description El correo ya es de un usuario de la empresa (`email_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            410: components["responses"]["LinkGone"];
+            /** @description El nombre o la contraseña no sirven (`invalid_user_name`, `password_too_short`...). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Contraseña cambiada; el usuario inicia sesión con ella. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["LinkNotFound"];
+            410: components["responses"]["LinkGone"];
+            /** @description La contraseña no sirve (`password_too_short`, `password_too_long`, `password_too_common`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Los usuarios. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdate"];
+            };
+        };
+        responses: {
+            /** @description El usuario con su rol nuevo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["UserForbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["LastOwner"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deactivateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El usuario desactivado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["UserForbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["LastOwner"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    activateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El usuario activo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["UserForbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    issuePasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El enlace generado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedLink"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["UserForbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listInvitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las invitaciones abiertas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invitation"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    inviteUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description La invitación creada y su enlace. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationCreated"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["UserForbidden"];
+            /** @description El correo ya es de un usuario de la empresa (`email_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description El correo o el nombre no sirven (`invalid_email`, `invalid_user_name`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    revokeInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invitación revocada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description La invitación ya fue aceptada o revocada (`link_used`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             500: components["responses"]["InternalError"];
         };
     };

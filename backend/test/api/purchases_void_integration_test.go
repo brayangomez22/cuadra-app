@@ -18,7 +18,7 @@ import (
 // is refused once that stock is gone; a payment lowers what is owed, which
 // the payables add up by supplier.
 func TestPurchaseVoidAndPayments(t *testing.T) {
-	handler, tokens := newAPI(t)
+	handler, _ := newAPI(t)
 	do := func(t *testing.T, method, path, body, bearer string) *httptest.ResponseRecorder {
 		t.Helper()
 		req := httptest.NewRequest(method, path, strings.NewReader(body))
@@ -41,8 +41,7 @@ func TestPurchaseVoidAndPayments(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &session))
 	owner := session.AccessToken
-	warehouse, _, err := tokens.Issue(session.User.TenantID, uuid.Must(uuid.NewV7()), "warehouse")
-	require.NoError(t, err)
+	warehouse := joinStaff(t, do, owner, "warehouse").Token
 
 	rec = do(t, http.MethodPost, "/api/v1/products",
 		`{"sku":"med-01","name":"Medias deportivas","base_unit_id":"`+unitID(t, do, owner, "par")+

@@ -41,6 +41,10 @@ export const paths = {
   login: route('/ingresar'),
   signUp: route('/registro'),
   demo: route('/demo'),
+  /** The link of an invitation; its token travels in the fragment (#), which the browser never sends. */
+  acceptInvitation: route('/invitacion'),
+  /** The link to choose a new password; its token travels in the fragment, like the invitation's. */
+  resetPassword: route('/restablecer'),
   products: {
     list: route('/productos'),
     new: route('/productos/nuevo'),
@@ -97,6 +101,12 @@ export const paths = {
     variantAxes: route('/configuracion/ejes'),
     customerSegments: route('/configuracion/segmentos'),
     modules: route('/configuracion/modulos'),
+  },
+  users: {
+    list: route('/usuarios'),
+  },
+  audit: {
+    list: route('/auditoria', ['accion', 'usuario', 'desde', 'hasta', 'pagina']),
   },
   platform: {
     flags: route('/interno/flags'),

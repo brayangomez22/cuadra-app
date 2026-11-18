@@ -81,6 +81,7 @@ func (w *wiring) receivables(cu *customers.Module, s *sales.Module) (*receivable
 		DB:             w.DB,
 		Customers:      ports.ReceivablesCustomers{Customers: cu},
 		Cash:           ports.ReceivablesCash{Sales: s},
+		Audit:          ports.ReceivablesAudit{Auditor: w.auditor},
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,

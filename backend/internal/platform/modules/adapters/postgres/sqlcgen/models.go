@@ -332,6 +332,17 @@ type NumberingResolution struct {
 	CreatedAt    time.Time
 }
 
+type PasswordReset struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	UserID    uuid.UUID
+	IssuedBy  uuid.UUID
+	TokenHash []byte
+	ExpiresAt time.Time
+	CreatedAt time.Time
+	UsedAt    pgtype.Timestamptz
+}
+
 type Product struct {
 	ID           uuid.UUID
 	TenantID     uuid.UUID
@@ -713,6 +724,20 @@ type User struct {
 	Role         string
 	Active       bool
 	CreatedAt    time.Time
+}
+
+type UserInvitation struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	Email      string
+	Name       string
+	Role       string
+	InvitedBy  uuid.UUID
+	TokenHash  []byte
+	ExpiresAt  time.Time
+	CreatedAt  time.Time
+	AcceptedAt pgtype.Timestamptz
+	RevokedAt  pgtype.Timestamptz
 }
 
 type VariantAx struct {
