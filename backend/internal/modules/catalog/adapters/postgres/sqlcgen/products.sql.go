@@ -162,17 +162,25 @@ SELECT p.id, p.tenant_id, p.name, p.description, p.category_id, p.base_unit_id, 
        u.dian_code AS unit_dian_code, p.tax_rate, p.tax_treatment, p.attributes, p.active, p.created_at
 FROM products p
 JOIN units_of_measure u ON u.tenant_id = p.tenant_id AND u.id = p.base_unit_id
+CROSS JOIN LATERAL (
+    SELECT min(v.price) AS price, min((v.price - v.cost) / v.price) AS margin
+    FROM product_variants v
+    WHERE v.tenant_id = p.tenant_id AND v.product_id = p.id AND v.active
+) pricing
 WHERE ($1::boolean IS NULL OR p.active = $1)
   AND ($2::uuid IS NULL OR p.category_id = $2)
   AND ($3::uuid[] IS NULL OR p.id = ANY($3::uuid[]))
-ORDER BY p.name, p.id
-LIMIT $5 OFFSET $4
+ORDER BY CASE WHEN $4::text = 'price' THEN pricing.price END,
+         CASE WHEN $4::text = 'margin' THEN pricing.margin END,
+         p.name, p.id
+LIMIT $6 OFFSET $5
 `
 
 type ListProductsParams struct {
 	Active     *bool
 	CategoryID *uuid.UUID
 	Ids        []uuid.UUID
+	Sort       string
 	RowOffset  int32
 	RowLimit   int32
 }
@@ -194,12 +202,15 @@ type ListProductsRow struct {
 	CreatedAt    time.Time
 }
 
-// ListProducts pages the products without a search text, by name.
+// ListProducts pages the products without a search text: by name, or by
+// the lowest price or the lowest margin of their active variants (lowest
+// first, then by name).
 func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error) {
 	rows, err := q.db.Query(ctx, listProducts,
 		arg.Active,
 		arg.CategoryID,
 		arg.Ids,
+		arg.Sort,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

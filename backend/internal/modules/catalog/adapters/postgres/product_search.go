@@ -66,7 +66,7 @@ func list(ctx context.Context, q *sqlcgen.Queries, f domain.ProductFilter) ([]sq
 		return nil, 0, err
 	}
 	found, err := q.ListProducts(ctx, sqlcgen.ListProductsParams{
-		Active: f.Active, CategoryID: f.CategoryID, Ids: f.IDs,
+		Active: f.Active, CategoryID: f.CategoryID, Ids: f.IDs, Sort: string(f.Sort),
 		RowLimit: limit, RowOffset: offset,
 	})
 	if err != nil {

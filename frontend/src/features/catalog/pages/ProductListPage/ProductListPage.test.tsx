@@ -117,7 +117,7 @@ describe('ProductListPage', () => {
     expect(plain(row.textContent)).toContain('Desde $ 29.750');
     // All its variants cost the same and have the same margin.
     expect(plain(row.textContent)).toContain('$ 15.000');
-    expect(plain(row.textContent)).toContain('40 %');
+    expect(plain(row.textContent)).toContain('40,0 %');
     expect(within(row).queryByText('CAM-S-ROJO')).not.toBeInTheDocument();
   });
 
@@ -129,7 +129,7 @@ describe('ProductListPage', () => {
 
     expect(table.getByRole('columnheader', { name: 'Costo' })).toBeInTheDocument();
     expect(table.getByRole('columnheader', { name: 'Margen' })).toBeInTheDocument();
-    expect(plain(table.getByRole('row', { name: /Tubo PVC/ }).textContent)).toContain('16,67 %');
+    expect(plain(table.getByRole('row', { name: /Tubo PVC/ }).textContent)).toContain('16,7 %');
     expect(table.getByRole('link', { name: 'Editar Tubo PVC presión 1/2 pulgada' })).toHaveAttribute(
       'href',
       '/productos/01920000-0000-7000-8000-000000000101/editar',

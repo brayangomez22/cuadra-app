@@ -8,6 +8,8 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers/adapters/http/customersapi"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 )
 
 // defaultPageSize is the contract's default limit.
@@ -21,8 +23,15 @@ type CustomerUseCases interface {
 	ListCustomers(ctx context.Context, a app.Actor, q app.CustomerQuery) (app.CustomerPage, error)
 }
 
-// customerHandlers are the operations on customers.
-type customerHandlers struct{ uc CustomerUseCases }
+// receivablesRead is the permission to see what the customers owe.
+const receivablesRead = "receivables:read"
+
+// customerHandlers are the operations on customers. can decides who sees
+// what each customer owes.
+type customerHandlers struct {
+	uc  CustomerUseCases
+	can auth.Authorizer
+}
 
 // ListCustomers searches the tenant's customers.
 func (h *customerHandlers) ListCustomers(ctx context.Context, req customersapi.ListCustomersRequestObject) (customersapi.ListCustomersResponseObject, error) {
@@ -39,13 +48,21 @@ func (h *customerHandlers) ListCustomers(ctx context.Context, req customersapi.L
 	if req.Params.Offset != nil {
 		q.Offset = *req.Params.Offset
 	}
+	p, _ := auth.PrincipalFrom(ctx)
+	q.WithBalances = h.can != nil && h.can(p.Role, receivablesRead)
 	page, err := h.uc.ListCustomers(ctx, actor(ctx), q)
 	if err != nil {
 		return nil, err
 	}
 	items := make([]customersapi.Customer, 0, len(page.Items))
 	for _, c := range page.Items {
-		items = append(items, customerBody(c))
+		body := customerBody(c)
+		if q.WithBalances {
+			b := page.Balances[c.ID()]
+			balance, overdue := httpx.FormatMoney(b.Balance), httpx.FormatMoney(b.Overdue)
+			body.Balance, body.Overdue = &balance, &overdue
+		}
+		items = append(items, body)
 	}
 	return customersapi.ListCustomers200JSONResponse{Items: items, Total: page.Total}, nil
 }

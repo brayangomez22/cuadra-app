@@ -1,0 +1,24 @@
+@use '@/styles/abstracts' as *;
+
+// The name of the report and its export: one above the other on a phone,
+// side by side when they fit.
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.heading {
+  min-inline-size: 0;
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.description {
+  color: var(--color-text-muted);
+}

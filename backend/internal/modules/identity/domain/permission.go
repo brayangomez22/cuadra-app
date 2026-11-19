@@ -28,6 +28,7 @@ const (
 	PermInvoicingProvider    Permission = "invoicing:provider"     // the account and token at the technology provider (owner only)
 	PermAuditRead            Permission = "audit:read"             // the audit log (owner only)
 	PermPurchasesRead        Permission = "purchases:read"         // suppliers and purchases, with their costs
+	PermReportsRead          Permission = "reports:read"           // the business reports and their exports
 	PermPurchasesWrite       Permission = "purchases:write"        // create suppliers and register purchases
 	PermReceivablesRead      Permission = "receivables:read"       // customers' credit, statements and aging
 	PermReceivablesManage    Permission = "receivables:manage"     // set customers' credit limit and term
@@ -80,7 +81,7 @@ var coreRoles = []struct {
 		PermPurchasesRead, PermPurchasesWrite,
 		PermReceivablesRead, PermReceivablesManage, PermReceivablesCollect, PermReceivablesOverride,
 		PermSalesCreate, PermSalesDiscount, PermSalesRead, PermSalesReadAll, PermSalesVoid, PermCashManage,
-		PermUsersManage,
+		PermUsersManage, PermReportsRead,
 	}},
 	{RoleCashier, []Permission{
 		PermCatalogRead,
@@ -115,6 +116,7 @@ var corePermissions = []Permission{
 	PermInvoicingProvider,
 	PermPurchasesRead,
 	PermPurchasesWrite,
+	PermReportsRead,
 	PermReceivablesRead,
 	PermReceivablesManage,
 	PermReceivablesCollect,

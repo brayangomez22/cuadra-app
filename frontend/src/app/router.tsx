@@ -12,6 +12,7 @@ import { importRoutes } from '@/features/imports/routes';
 import { inventoryRoutes } from '@/features/inventory/routes';
 import { salesRoutes } from '@/features/sales/routes';
 import { settingsRoutes } from '@/features/settings/routes';
+import { reportsRoutes } from '@/features/reports/routes';
 import { usersRoutes } from '@/features/users/routes';
 import { AppLayout } from './layout/AppLayout';
 import { HomePage } from './pages/HomePage';
@@ -48,6 +49,7 @@ export const routes: RouteObject[] = [
               ...settingsRoutes,
               ...usersRoutes,
               ...auditRoutes,
+              ...reportsRoutes,
               ...platformRoutes,
             ],
           },

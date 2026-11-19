@@ -81,7 +81,7 @@ export const paths = {
   },
   receivables: {
     account: route('/clientes/:customerId/cuenta', ['pagina']),
-    aging: route('/cartera', ['pagina']),
+    aging: route('/cartera', ['orden', 'pagina']),
   },
   sales: {
     pos: route('/vender'),
@@ -107,6 +107,25 @@ export const paths = {
   },
   audit: {
     list: route('/auditoria', ['accion', 'usuario', 'desde', 'hasta', 'pagina']),
+  },
+  reports: {
+    home: route('/reportes'),
+    sales: route('/reportes/ventas', ['desde', 'hasta', 'sede', 'agrupar']),
+    products: route('/reportes/productos', [
+      'desde',
+      'hasta',
+      'sede',
+      'categoria',
+      'atributo',
+      'valor',
+      'orden',
+      'pagina',
+    ]),
+    profits: route('/reportes/utilidad', ['desde', 'hasta', 'sede', 'pagina']),
+    idle: route('/reportes/sin-movimiento', ['dias', 'sede', 'categoria', 'pagina']),
+    cash: route('/reportes/cierres', ['desde', 'hasta', 'sede', 'agrupar']),
+    team: route('/reportes/equipo', ['desde', 'hasta', 'sede', 'cada', 'cifra']),
+    adjustments: route('/reportes/ajustes', ['desde', 'hasta', 'sede', 'agrupar']),
   },
   platform: {
     flags: route('/interno/flags'),

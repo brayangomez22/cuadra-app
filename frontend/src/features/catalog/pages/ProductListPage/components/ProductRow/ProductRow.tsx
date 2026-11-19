@@ -1,5 +1,5 @@
 import { paths } from '@/app/routes/paths';
-import { formatMoney, formatPercent } from '@/shared/format';
+import { formatMargin, formatMoney } from '@/shared/format';
 import { Badge, TableCell, TableRow, TextLink } from '@/shared/ui';
 import type { Product } from '../../../../api/types';
 import { variantAmount } from '../../../../model/variants/variantAmount';
@@ -9,7 +9,7 @@ import styles from './ProductRow.module.scss';
 
 type Props = { product: Product; canWrite: boolean; canSeeStock: boolean };
 
-const asPercent = (margin: string) => formatPercent(margin, 'percent');
+const asPercent = (margin: string) => formatMargin(margin, 'percent');
 
 /** A product of the list: its name, price with IVA and, for who may, its cost, margin and links. */
 export function ProductRow({ product, canWrite, canSeeStock }: Props) {

@@ -18,6 +18,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AgingSort.
+const (
+	Over90  AgingSort = "over_90"
+	Overdue AgingSort = "overdue"
+	Total   AgingSort = "total"
+)
+
+// Valid indicates whether the value is a known member of the AgingSort enum.
+func (e AgingSort) Valid() bool {
+	switch e {
+	case Over90:
+		return true
+	case Overdue:
+		return true
+	case Total:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreditMovementKind.
 const (
 	Cancellation CreditMovementKind = "cancellation"
@@ -131,6 +152,9 @@ type AgingRow struct {
 	CustomerId openapi_types.UUID `json:"customer_id"`
 	Name       string             `json:"name"`
 }
+
+// AgingSort defines model for AgingSort.
+type AgingSort string
 
 // CreditMovement Una línea del estado de cuenta: una venta a crédito (`charge`, con su vencimiento), un abono (`payment`, con su
 // medio de pago) o una venta a crédito anulada (`cancellation`), y el saldo que dejó.
@@ -402,6 +426,9 @@ type ListCustomerCreditMovementsParams struct {
 
 // GetReceivablesAgingParams defines parameters for GetReceivablesAging.
 type GetReceivablesAgingParams struct {
+	// Sort Primero los que más deben vencido (por defecto), en total o a más de 90 días.
+	Sort *AgingSort `form:"sort,omitempty" json:"sort,omitempty"`
+
 	// Limit Cantidad máxima de resultados.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
@@ -584,6 +611,19 @@ func (siw *ServerInterfaceWrapper) GetReceivablesAging(w http.ResponseWriter, r 
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetReceivablesAgingParams
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
 
 	// ------------- Optional query parameter "limit" -------------
 

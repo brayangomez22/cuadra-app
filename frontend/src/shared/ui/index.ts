@@ -18,6 +18,7 @@ export { Input } from './Input';
 export { Page } from './Page';
 export { Pagination } from './Pagination';
 export { PasswordInput } from './PasswordInput';
+export { SectionLayout, type Section } from './SectionLayout';
 export { SegmentedControl } from './SegmentedControl';
 export { Select, type SelectOption } from './Select';
 export { Skeleton } from './Skeleton';

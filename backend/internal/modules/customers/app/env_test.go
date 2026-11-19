@@ -19,11 +19,12 @@ import (
 
 // env is a Service wired to fakes, with recorders for spans and metrics.
 type env struct {
-	svc     *app.Service
-	store   *store
-	actor   app.Actor
-	spans   *tracetest.SpanRecorder
-	metrics *sdkmetric.ManualReader
+	svc      *app.Service
+	store    *store
+	balances *fakeBalances
+	actor    app.Actor
+	spans    *tracetest.SpanRecorder
+	metrics  *sdkmetric.ManualReader
 }
 
 var testNow = time.Date(2026, 10, 28, 15, 0, 0, 0, time.UTC)
@@ -37,8 +38,9 @@ func newEnv(t *testing.T) *env {
 			customers: map[uuid.UUID]domain.CustomerSnapshot{},
 			segments:  map[uuid.UUID]domain.SegmentSnapshot{},
 		},
-		actor: app.Actor{TenantID: newID(), UserID: newID()},
-		spans: tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
+		actor:    app.Actor{TenantID: newID(), UserID: newID()},
+		balances: &fakeBalances{owed: map[uuid.UUID]app.Balance{}},
+		spans:    tracetest.NewSpanRecorder(), metrics: sdkmetric.NewManualReader(),
 	}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(e.spans))
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(e.metrics))
@@ -50,6 +52,7 @@ func newEnv(t *testing.T) *env {
 		Customers:      fakeCustomers{e.store},
 		Segments:       fakeSegments{e.store},
 		Municipalities: fakeMunicipalities{},
+		Balances:       e.balances,
 		Now:            func() time.Time { return testNow },
 		TracerProvider: tp,
 		MeterProvider:  mp,

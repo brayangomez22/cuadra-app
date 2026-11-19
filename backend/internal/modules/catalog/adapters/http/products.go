@@ -39,14 +39,32 @@ const opPOSSearch = "pos.search"
 
 // ListProducts searches the tenant's products.
 func (h *productHandlers) ListProducts(ctx context.Context, req catalogapi.ListProductsRequestObject) (catalogapi.ListProductsResponseObject, error) {
-	params := req.Params
-	f := domain.ProductFilter{CategoryID: params.CategoryId, Limit: defaultPageSize}
-	if params.Q != nil {
-		f.Query = *params.Q
-	}
+	f := productFilter(req.Params)
 	if strings.TrimSpace(f.Query) != "" {
 		// A typed text or a scanned code: the cashier is waiting for it.
 		httpx.SetOperation(ctx, opPOSSearch)
+	}
+	seesCost := h.seesCost(ctx)
+	if f.Sort == domain.SortByMargin && !seesCost {
+		return nil, errCostsHidden
+	}
+	page, err := h.uc.SearchProducts(ctx, actor(ctx), f)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]catalogapi.Product, 0, len(page.Items))
+	for _, p := range page.Items {
+		items = append(items, productBody(p, seesCost))
+	}
+	return catalogapi.ListProducts200JSONResponse{Items: items, Total: page.Total}, nil
+}
+
+// productFilter is the search of a request, with the contract's defaults:
+// the first page of the active products, by name.
+func productFilter(params catalogapi.ListProductsParams) domain.ProductFilter {
+	f := domain.ProductFilter{CategoryID: params.CategoryId, Limit: defaultPageSize}
+	if params.Q != nil {
+		f.Query = *params.Q
 	}
 	if params.Ids != nil {
 		f.IDs = *params.Ids
@@ -57,6 +75,9 @@ func (h *productHandlers) ListProducts(ctx context.Context, req catalogapi.ListP
 	if params.Offset != nil {
 		f.Offset = *params.Offset
 	}
+	if params.Sort != nil {
+		f.Sort = domain.ProductSort(*params.Sort)
+	}
 	status := catalogapi.Active
 	if params.Status != nil {
 		status = *params.Status
@@ -65,17 +86,7 @@ func (h *productHandlers) ListProducts(ctx context.Context, req catalogapi.ListP
 		active := status == catalogapi.Active
 		f.Active = &active
 	}
-
-	page, err := h.uc.SearchProducts(ctx, actor(ctx), f)
-	if err != nil {
-		return nil, err
-	}
-	seesCost := h.seesCost(ctx)
-	items := make([]catalogapi.Product, 0, len(page.Items))
-	for _, p := range page.Items {
-		items = append(items, productBody(p, seesCost))
-	}
-	return catalogapi.ListProducts200JSONResponse{Items: items, Total: page.Total}, nil
+	return f
 }
 
 // CreateProduct adds a product to the catalog.

@@ -3,6 +3,7 @@ import {
   formatDateTime,
   formatTime,
   formatMoney,
+  formatMargin,
   formatPercent,
   formatQuantity,
   parseDecimalInput,
@@ -40,6 +41,18 @@ describe('formatQuantity', () => {
   it('agrega el signo + a una entrada cuando se pide', () => {
     expect(formatQuantity('10', { signed: true })).toBe('+10');
     expect(formatQuantity('-3', { signed: true })).toBe('-3');
+  });
+});
+
+describe('formatMargin', () => {
+  it.each([
+    ['0.4', 'rate', '40,0 %'],
+    ['0.1667', 'rate', '16,7 %'],
+    ['-0.25', 'rate', '-25,0 %'],
+    ['16.6667', 'percent', '16,7 %'],
+    ['40', 'percent', '40,0 %'],
+  ] as const)('el margen %s (%s) siempre con un decimal: %s', (value, kind, expected) => {
+    expect(plain(formatMargin(value, kind))).toBe(expected);
   });
 });
 

@@ -57,20 +57,32 @@ func (s *Service) Statement(ctx context.Context, a Actor, customerID uuid.UUID, 
 	return StatementPage{Account: account, Movements: page, Total: len(all)}, nil
 }
 
+// AgingQuery asks for a page of the aging in an order (domain.AgingSort;
+// empty is by overdue).
+type AgingQuery struct {
+	Sort          string
+	Limit, Offset int
+}
+
 // Aging returns a page of what the tenant's customers owe by bucket, as of
-// today in America/Bogota: the customers with the most overdue first (then
-// the most owed), with the totals of every customer.
-func (s *Service) Aging(ctx context.Context, a Actor, limit, offset int) (_ AgingReport, err error) {
+// today in America/Bogota, in q's order (then the most owed), with the
+// totals of every customer.
+func (s *Service) Aging(ctx context.Context, a Actor, q AgingQuery) (_ AgingReport, err error) {
 	ctx, span := s.startSpan(ctx, "Aging", a)
 	defer func() { usecase.End(span, err) }()
 
+	sort, err := domain.ParseAgingSort(q.Sort)
+	if err != nil {
+		return AgingReport{}, err
+	}
+	limit, offset := q.Limit, q.Offset
 	balances, err := s.Credit.OpenBalances(ctx, a.TenantID)
 	if err != nil {
 		return AgingReport{}, err
 	}
 	report := AgingReport{AsOf: domain.DateIn(s.Now())}
 	report.Totals = domain.NewAging(report.AsOf)
-	rows := agingRows(report.AsOf, balances, report.Totals)
+	rows := agingRows(report.AsOf, balances, report.Totals, sort)
 	report.Total = len(rows)
 	page := rows[min(offset, len(rows)):min(offset+limit, len(rows))]
 	if len(page) == 0 {
@@ -92,8 +104,8 @@ func (s *Service) Aging(ctx context.Context, a Actor, limit, offset int) (_ Agin
 }
 
 // agingRows adds up the balances by customer and into totals, and orders
-// the customers by what they owe overdue, then by what they owe, then by id.
-func agingRows(asOf domain.Date, balances []domain.OpenBalance, totals *domain.Aging) []AgingRow {
+// the customers by sort's figure, then by what they owe, then by id.
+func agingRows(asOf domain.Date, balances []domain.OpenBalance, totals *domain.Aging, sort domain.AgingSort) []AgingRow {
 	byCustomer := map[uuid.UUID]*domain.Aging{}
 	for _, b := range balances {
 		g, ok := byCustomer[b.CustomerID]
@@ -109,7 +121,7 @@ func agingRows(asOf domain.Date, balances []domain.OpenBalance, totals *domain.A
 		rows = append(rows, AgingRow{CustomerID: id, Aging: g})
 	}
 	slices.SortFunc(rows, func(x, y AgingRow) int {
-		if c := y.Aging.Overdue().Cmp(x.Aging.Overdue()); c != 0 {
+		if c := y.Aging.SortKey(sort).Cmp(x.Aging.SortKey(sort)); c != 0 {
 			return c
 		}
 		if c := y.Aging.Total().Cmp(x.Aging.Total()); c != 0 {

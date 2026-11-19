@@ -5,6 +5,7 @@ import {
   IconCart,
   IconReceipt,
   IconCash,
+  IconChart,
   IconCashStack,
   IconClipboardCheck,
   IconFlag,
@@ -51,6 +52,8 @@ export const navItems: NavItem[] = [
   { to: paths.purchases.list(), label: 'Compras', icon: IconTruck, permission: 'purchases:read' },
   { to: paths.inventory.stock(), label: 'Inventario', icon: IconBox, permission: 'inventory:read' },
   { to: paths.inventory.counts(), label: 'Toma física', icon: IconClipboardCheck, permission: 'inventory:count' },
+  // Owners and admins read the business reports.
+  { to: paths.reports.home(), label: 'Reportes', icon: IconChart, permission: 'reports:read' },
   { to: paths.users.list(), label: 'Usuarios', icon: IconUserKey, permission: 'users:manage' },
   // Only the owner reads who did what (audit:read).
   { to: paths.audit.list(), label: 'Auditoría', icon: IconHistory, permission: 'audit:read' },

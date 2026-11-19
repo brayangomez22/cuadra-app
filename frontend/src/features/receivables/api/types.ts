@@ -10,3 +10,4 @@ export type CustomerPayment = components['schemas']['CustomerPayment'];
 export type AgingBuckets = components['schemas']['AgingBuckets'];
 export type AgingRow = components['schemas']['AgingRow'];
 export type PageQuery = NonNullable<operations['getReceivablesAging']['parameters']['query']>;
+export type AgingSort = components['schemas']['AgingSort'];

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers/app"
@@ -128,5 +130,28 @@ func TestListCustomers(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		require.Equal(t, app.CustomerQuery{Status: domain.StatusActive, Limit: 20}, uc.query)
 		require.Contains(t, rec.Body.String(), `"items":[]`)
+	})
+
+	t.Run("a quien ve la cartera le dice lo que debe cada cliente, cero si no debe", func(t *testing.T) {
+		owes, clean := aPerson(t), aCompany(t)
+		uc := &stubUseCases{page: app.CustomerPage{Items: []*domain.Customer{owes, clean}, Total: 2,
+			Balances: map[uuid.UUID]app.Balance{owes.ID(): {Balance: decimal.RequireFromString("800000"), Overdue: decimal.RequireFromString("120000")}}}}
+		rec := serve(t, uc, &admin, http.MethodGet, "/api/v1/customers", "")
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.True(t, uc.query.WithBalances)
+		var page struct {
+			Items []struct{ Balance, Overdue string }
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
+		require.Equal(t, "800000.00", page.Items[0].Balance)
+		require.Equal(t, "120000.00", page.Items[0].Overdue)
+		require.Equal(t, "0.00", page.Items[1].Balance)
+		require.Equal(t, "0.00", page.Items[1].Overdue)
+	})
+	t.Run("a quien no ve la cartera no le pide ni le manda lo que deben", func(t *testing.T) {
+		uc := &stubUseCases{page: app.CustomerPage{Items: []*domain.Customer{aPerson(t)}, Total: 1}}
+		rec := serve(t, uc, &owner, http.MethodGet, "/api/v1/customers", "")
+		require.False(t, uc.query.WithBalances)
+		require.NotContains(t, rec.Body.String(), `"balance"`)
 	})
 }

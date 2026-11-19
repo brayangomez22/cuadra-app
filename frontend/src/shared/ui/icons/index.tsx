@@ -1,6 +1,7 @@
 import { createIcon } from './createIcon';
 
 export { IconDownload, IconUpload } from './fileIcons';
+export { IconChart } from './reportIcons';
 export { IconCamera, IconFlashlight } from './scannerIcons';
 export { IconClipboardCheck } from './countIcons';
 export { IconHistory, IconUserKey, IconUsers } from './peopleIcons';
