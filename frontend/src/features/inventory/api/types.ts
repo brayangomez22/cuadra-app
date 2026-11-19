@@ -3,6 +3,8 @@ import type { components } from '@/shared/api/schema';
 export type Location = components['schemas']['Location'];
 export type StockLevel = components['schemas']['StockLevel'];
 export type ReorderAlert = components['schemas']['ReorderAlert'];
+/** The order of the reorder alerts: by urgency (the API's default) or by what is most to order. */
+export type ReorderSort = 'urgency' | 'to_order';
 export type StockMovement = components['schemas']['StockMovement'];
 export type StockCount = components['schemas']['StockCount'];
 export type StockCountLine = components['schemas']['StockCountLine'];

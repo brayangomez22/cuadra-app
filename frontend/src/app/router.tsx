@@ -15,7 +15,7 @@ import { settingsRoutes } from '@/features/settings/routes';
 import { reportsRoutes } from '@/features/reports/routes';
 import { usersRoutes } from '@/features/users/routes';
 import { AppLayout } from './layout/AppLayout';
-import { HomePage } from './pages/HomePage';
+import { HomePage } from './pages/HomePage/HomePage';
 import { paths } from './routes/paths';
 import { RouteError } from './RouteError';
 

@@ -1,0 +1,60 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  min-height: 100%;
+}
+
+.loading {
+  min-height: var(--space-16);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+// The figure of the screen: what was sold today.
+.total {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  font-variant-numeric: tabular-nums;
+
+  @include respond-to(md) {
+    font-size: var(--font-size-display);
+  }
+}
+
+// The words say up or down; the color only repeats them.
+.change {
+  margin: 0;
+  color: var(--color-text-muted);
+
+  &[data-change='up'] span {
+    color: var(--color-feedback-success);
+  }
+
+  &[data-change='down'] span {
+    color: var(--color-feedback-danger);
+  }
+}
+
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  margin: var(--space-2) 0 0;
+
+  dt {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-variant-numeric: tabular-nums;
+  }
+}

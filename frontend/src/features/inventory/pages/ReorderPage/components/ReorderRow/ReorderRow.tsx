@@ -6,14 +6,19 @@ import type { ReorderAlert } from '../../../../api/types';
 import { VariantLabel } from '../../../../components/VariantLabel/VariantLabel';
 import styles from './ReorderRow.module.scss';
 
-type Props = { alert: ReorderAlert; product?: Product; loading: boolean };
+type Props = {
+  alert: ReorderAlert;
+  product?: Product;
+  loading: boolean;
+  /** Its location, with every location. */ location?: string;
+};
 
 /**
  * A variant to reorder: its stock, its minimum and maximum and how much to
  * order, in the product's unit; what ran out says so. On a phone the stock and
  * the minimum go under the product, next to how much to order.
  */
-export function ReorderRow({ alert, product, loading }: Props) {
+export function ReorderRow({ alert, product, loading, location }: Props) {
   const kardex = paths.inventory.kardex(alert.product_id, { variante: alert.variant_id, sede: alert.location_id });
   const unit = product?.unit.code;
   const amount = (value: string) => [formatQuantity(value), unit].filter(Boolean).join(' ');
@@ -25,8 +30,13 @@ export function ReorderRow({ alert, product, loading }: Props) {
           <VariantLabel product={product} variantId={alert.variant_id} to={kardex} loading={loading} />
           {out && <Badge tone="danger">Agotado</Badge>}
         </span>
-        <TableNarrow>{`Hay ${amount(alert.quantity)} · mínimo ${amount(alert.min_quantity)}`}</TableNarrow>
+        <TableNarrow>
+          {[location, `Hay ${amount(alert.quantity)} · mínimo ${amount(alert.min_quantity)}`]
+            .filter(Boolean)
+            .join(' · ')}
+        </TableNarrow>
       </TableCell>
+      {location !== undefined && <TableCell wide>{location}</TableCell>}
       <TableCell numeric wide>
         {amount(alert.quantity)}
       </TableCell>

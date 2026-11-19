@@ -16,6 +16,7 @@ El crédito de los clientes y la cartera (`/customers/{id}/credit`, `/customers/
 
 - `useCustomerCredit`: el crédito del cliente de la venta, con el que el POS ofrece «Crédito».
 - `receivablesKeys`: una venta confirmada refresca el crédito de su cliente y la cartera.
+- `OverdueSummary`: la tarjeta «Cartera vencida» del inicio (los totales de `/cartera`, leídos de nuevo cada 5 minutos).
 
 ## Reglas
 

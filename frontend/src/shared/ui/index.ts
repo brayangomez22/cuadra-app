@@ -3,6 +3,7 @@ export { Alert, type AlertTone } from './Alert';
 export { BarcodeScanner } from './BarcodeScanner';
 export { Badge } from './Badge';
 export { Button, ButtonLink, type ButtonProps } from './Button';
+export { Card } from './Card';
 export { Checkbox } from './Checkbox';
 export { Dialog, DialogClose } from './Dialog';
 export { Drawer, DrawerClose } from './Drawer';

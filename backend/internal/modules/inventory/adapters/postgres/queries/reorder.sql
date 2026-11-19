@@ -15,7 +15,9 @@ WHERE location_id = sqlc.arg(location_id) AND variant_id = ANY(sqlc.arg(variant_
 
 -- ListReorderAlerts pages the rules whose stock at their location (of every
 -- lot, zero without a level) is at or below their minimum: what ran out first,
--- then the furthest below its minimum in proportion (1 of 5 before 40 of 50).
+-- then the furthest below its minimum in proportion (1 of 5 before 40 of 50);
+-- sort 'to_order' puts first the most to order (max − stock), with the
+-- urgency to break ties.
 -- excluded_variants are the ones the catalog no longer sells.
 -- The condition is the one of domain.ReorderRule.NeedsReorder; the
 -- integration tests check both agree.
@@ -31,7 +33,8 @@ LEFT JOIN LATERAL (
 WHERE (sqlc.narg(location_id)::uuid IS NULL OR r.location_id = sqlc.narg(location_id))
   AND r.variant_id <> ALL(sqlc.arg(excluded_variants)::uuid[])
   AND COALESCE(s.quantity, 0) <= r.min_quantity
-ORDER BY COALESCE(s.quantity, 0) > 0,
+ORDER BY CASE WHEN sqlc.arg(sort)::text = 'to_order' THEN COALESCE(s.quantity, 0) - r.max_quantity END,
+         COALESCE(s.quantity, 0) > 0,
          COALESCE(s.quantity, 0) / NULLIF(r.min_quantity, 0),
          r.location_id, r.variant_id
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);

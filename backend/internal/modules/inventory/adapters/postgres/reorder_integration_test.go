@@ -133,6 +133,23 @@ func TestReorderAlerts(t *testing.T) {
 		require.Equal(t, 4, f.alerts(t, tenant, nil).Total)
 	})
 
+	t.Run("por lo que falta pedir pone primero la que más unidades necesita para llegar a su máximo", func(t *testing.T) {
+		tenant := f.createTenant(t)
+		loc := f.createLocation(t, tenant, "Bodega")
+		few, many, empty := f.createVariant(t, tenant), f.createVariant(t, tenant), f.createVariant(t, tenant)
+		f.receive(t, tenant, few, loc.ID(), "1", "100")   // pedir 9
+		f.receive(t, tenant, many, loc.ID(), "40", "100") // pedir 40
+		f.saveRule(t, tenant, few, loc.ID(), "5", "10")
+		f.saveRule(t, tenant, many, loc.ID(), "50", "80")
+		f.saveRule(t, tenant, empty, loc.ID(), "2", "4") // pedir 4
+
+		page, err := f.reorder.Alerts(t.Context(), tenant,
+			domain.ReorderFilter{LocationID: new(loc.ID()), Sort: domain.ReorderByToOrder, Limit: 100})
+		require.NoError(t, err)
+		got := []uuid.UUID{page.Items[0].Rule.VariantID(), page.Items[1].Rule.VariantID(), page.Items[2].Rule.VariantID()}
+		require.Equal(t, []uuid.UUID{many, few, empty}, got)
+	})
+
 	t.Run("deja fuera de la página y del total las variantes excluidas", func(t *testing.T) {
 		tenant := f.createTenant(t)
 		north, south := f.createLocation(t, tenant, "Norte"), f.createLocation(t, tenant, "Sur")

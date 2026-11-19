@@ -33,6 +33,7 @@ var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrVariantNotFound, Status: http.StatusUnprocessableEntity, Code: variantNotFoundCode, Message: variantNotFoundMessage},
 	{Err: domain.ErrLocationNotFound, Status: http.StatusUnprocessableEntity, Code: locationNotFoundCode, Message: locationNotFoundMessage},
 	{Err: domain.ErrInvalidReorderRange, Status: http.StatusUnprocessableEntity, Code: "invalid_reorder_range", Message: "El stock mínimo no puede ser negativo ni mayor que el máximo, y cada uno tiene máximo 4 decimales."},
+	{Err: domain.ErrInvalidReorderSort, Status: http.StatusUnprocessableEntity, Code: "invalid_sort", Message: "Ese orden no existe: elija por urgencia o por lo que más hay que pedir."},
 	{Err: domain.ErrReorderRuleNotFound, Status: http.StatusNotFound, Code: "reorder_rule_not_found", Message: "La variante no tiene stock mínimo en esta sede."},
 	{Err: domain.ErrCountNotFound, Status: http.StatusNotFound, Code: "stock_count_not_found", Message: "El conteo no existe."},
 	{Err: domain.ErrCountEntryNotFound, Status: http.StatusNotFound, Code: "count_entry_not_found", Message: "Ese conteo no existe o ya se borró."},

@@ -1,23 +1,32 @@
 import { paths } from '@/app/routes/paths';
 import { QueryState } from '@/shared/query';
 import { Alert, ButtonLink, EmptyState, IconBox, Pagination, Spinner } from '@/shared/ui';
-import { PAGE_SIZE, type Location } from '../../../../api/types';
+import { PAGE_SIZE, type Location, type ReorderSort } from '../../../../api/types';
 import { useReorderRows } from '../../hooks/useReorderRows';
 import { ReorderTable } from '../ReorderTable/ReorderTable';
 import styles from './LocationReorder.module.scss';
 
-type Props = { location: Location; offset: number; onOffsetChange: (offset: number) => void };
+type Props = {
+  /** The location; undefined lists every one. */
+  location: Location | undefined;
+  /** With every location, the name of each row's location. */
+  locationName?: (id: string) => string;
+  sort: ReorderSort;
+  offset: number;
+  onOffsetChange: (offset: number) => void;
+};
 
-/** A page of what to reorder at a location, or that there is nothing to. */
-export function LocationReorder({ location, offset, onOffsetChange }: Props) {
-  const { alerts, rows, products, productsById } = useReorderRows(location.id, offset);
+/** A page of what to reorder at a location (or at all of them), or that there is nothing to. */
+export function LocationReorder({ location, locationName, sort, offset, onOffsetChange }: Props) {
+  const { alerts, rows, products, productsById } = useReorderRows({ locationId: location?.id, offset, sort });
+  const where = location ? `en ${location.name}` : 'en todas las sedes';
   const empty = (
     <EmptyState
       icon={<IconBox />}
-      title={`Nada por reponer en ${location.name}`}
+      title={`Nada por reponer ${where}`}
       description="Aquí aparece cada producto que llegue a su stock mínimo. El mínimo y el máximo se definen en el inventario."
       action={
-        <ButtonLink to={paths.inventory.stock({ sede: location.id })} variant="secondary">
+        <ButtonLink to={paths.inventory.stock({ sede: location?.id })} variant="secondary">
           Ver inventario
         </ButtonLink>
       }
@@ -40,7 +49,8 @@ export function LocationReorder({ location, offset, onOffsetChange }: Props) {
             </Alert>
           )}
           <ReorderTable
-            caption={`Por reponer en ${location.name}`}
+            caption={`Por reponer ${where}`}
+            locationName={locationName}
             alerts={rows}
             productsById={productsById}
             loadingProducts={products.isPending}

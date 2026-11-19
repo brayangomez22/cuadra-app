@@ -37,6 +37,18 @@ func TestSalesReport(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, domain.SalesByDay, e.readers.salesFilter.Group)
 	})
+	t.Run("con hora de corte, el último día del periodo termina a esa hora", func(t *testing.T) {
+		e := newEnv(t)
+		_, err := e.svc.SalesReport(t.Context(), e.actor, app.SalesQuery{Range: nov(12, 12), Until: "09:15"})
+		require.NoError(t, err)
+		require.Equal(t, time.Date(2026, 11, 12, 14, 15, 0, 0, time.UTC), e.readers.salesFilter.Period.End().UTC())
+	})
+	t.Run("rechaza una hora de corte inválida sin leer las ventas", func(t *testing.T) {
+		e := newEnv(t)
+		_, err := e.svc.SalesReport(t.Context(), e.actor, app.SalesQuery{Range: nov(12, 12), Until: "25:00"})
+		require.ErrorIs(t, err, domain.ErrInvalidPeriod)
+		require.Zero(t, e.readers.reads)
+	})
 	t.Run("rechaza un periodo invertido sin leer las ventas", func(t *testing.T) {
 		e := newEnv(t)
 		_, err := e.svc.SalesReport(t.Context(), e.actor, app.SalesQuery{Range: nov(4, 3)})

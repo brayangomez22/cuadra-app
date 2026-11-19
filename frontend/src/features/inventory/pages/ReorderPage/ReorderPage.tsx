@@ -1,16 +1,17 @@
 import { QueryState } from '@/shared/query';
-import { EmptyState, Field, IconBox, Page, Select, Spinner } from '@/shared/ui';
+import { EmptyState, IconBox, Page, Spinner } from '@/shared/ui';
 import { useLocations } from '../../api/locations';
-import { useStockLocation } from '../../hooks/useStockLocation';
-import { locationOptions } from '../../model/shownLocation';
 import { LocationReorder } from './components/LocationReorder/LocationReorder';
+import { ReorderFilters } from './components/ReorderFilters/ReorderFilters';
+import { useReorderParams } from './hooks/useReorderParams';
 import styles from './ReorderPage.module.scss';
 
-/** /inventario/reponer: what reached its minimum at one location (?sede=), with how much to order. */
+/** /inventario/reponer: what reached its minimum at one location or at all (?sede=todas), with how much to order. */
 export function ReorderPage() {
   const locations = useLocations();
   const list = locations.data ?? [];
-  const { location, chooseLocation, offset, setOffset } = useStockLocation(list);
+  const params = useReorderParams(list);
+  const locationName = (id: string) => list.find((l) => l.id === id)?.name ?? '';
 
   return (
     <Page title="Por reponer" description="Lo que llegó a su stock mínimo, con cuánto pedir para llegar al máximo.">
@@ -18,7 +19,7 @@ export function ReorderPage() {
         queries={[locations]}
         errorTitle="No pudimos cargar las sedes"
         loading={<Spinner label="Cargando sedes…" className={styles.loading} />}
-        isEmpty={!location}
+        isEmpty={list.length === 0}
         empty={
           <EmptyState
             icon={<IconBox />}
@@ -27,16 +28,14 @@ export function ReorderPage() {
           />
         }
       >
-        {() =>
-          location && (
-            <>
-              <Field label="Sede" className={styles.location}>
-                <Select options={locationOptions(list)} value={location.id} onValueChange={chooseLocation} />
-              </Field>
-              <LocationReorder location={location} offset={offset} onOffsetChange={setOffset} />
-            </>
-          )
-        }
+        <ReorderFilters locations={list} params={params} />
+        <LocationReorder
+          location={params.location}
+          locationName={params.all ? locationName : undefined}
+          sort={params.sort}
+          offset={params.offset}
+          onOffsetChange={params.setOffset}
+        />
       </QueryState>
     </Page>
   );

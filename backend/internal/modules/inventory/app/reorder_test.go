@@ -164,6 +164,27 @@ func TestListReorderAlerts(t *testing.T) {
 		require.Empty(t, e.store.reorderFilters[0].ExcludedVariants)
 	})
 
+	t.Run("pide al repositorio el orden por lo que falta pedir", func(t *testing.T) {
+		e := newEnv(t)
+		_, err := e.svc.ListReorderAlerts(t.Context(), e.actor, app.ReorderQuery{Sort: "to_order"})
+		require.NoError(t, err)
+		require.Equal(t, domain.ReorderByToOrder, e.store.reorderFilters[0].Sort)
+	})
+
+	t.Run("sin orden pide el de urgencia", func(t *testing.T) {
+		e := newEnv(t)
+		_, err := e.svc.ListReorderAlerts(t.Context(), e.actor, app.ReorderQuery{})
+		require.NoError(t, err)
+		require.Equal(t, domain.ReorderByUrgency, e.store.reorderFilters[0].Sort)
+	})
+
+	t.Run("rechaza un orden desconocido sin leer las alertas", func(t *testing.T) {
+		e := newEnv(t)
+		_, err := e.svc.ListReorderAlerts(t.Context(), e.actor, app.ReorderQuery{Sort: "name"})
+		require.ErrorIs(t, err, domain.ErrInvalidReorderSort)
+		require.Empty(t, e.store.reorderFilters)
+	})
+
 	t.Run("las alertas de una sede inexistente fallan con ErrLocationNotFound", func(t *testing.T) {
 		e := newEnv(t)
 		_, err := e.svc.ListReorderAlerts(t.Context(), e.actor, app.ReorderQuery{LocationID: new(newID())})

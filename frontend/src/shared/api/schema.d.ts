@@ -1097,8 +1097,9 @@ export interface paths {
         /**
          * Variantes por reponer
          * @description Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
-         *     (máximo − existencia, nunca negativa). Primero las agotadas y después de la que está más por debajo de su
-         *     mínimo en proporción a la que menos (1 de 5 antes que 40 de 50). Sin `location_id`, las de todas las sedes.
+         *     (máximo − existencia, nunca negativa). Por urgencia (por defecto), primero las agotadas y después de la que
+         *     está más por debajo de su mínimo en proporción a la que menos (1 de 5 antes que 40 de 50); con
+         *     `sort=to_order`, primero la que más unidades hay que pedir. Sin `location_id`, las de todas las sedes.
          */
         get: operations["listReorderAlerts"];
         put?: never;
@@ -4945,8 +4946,8 @@ export interface components {
     };
     responses: {
         /**
-         * @description El periodo no es válido (`invalid_period`: el último día es anterior al primero o pasa de 366 días) o falta un
-         *     filtro que el reporte exige (`invalid_filter`).
+         * @description El periodo no es válido (`invalid_period`: el último día es anterior al primero, pasa de 366 días o la hora de
+         *     corte no es `HH:MM`) o falta un filtro que el reporte exige (`invalid_filter`).
          */
         InvalidPeriod: {
             headers: {
@@ -7568,6 +7569,8 @@ export interface operations {
             query?: {
                 /** @description Solo las alertas de esta sede. */
                 location_id?: string;
+                /** @description Por urgencia (`urgency`, por defecto) o por lo que más hay que pedir (`to_order`). */
+                sort?: "urgency" | "to_order";
                 /** @description Cantidad máxima de resultados. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Cantidad de resultados a saltar. */
@@ -7591,7 +7594,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description La sede no existe (`location_not_found`). */
+            /** @description La sede no existe (`location_not_found`) o el orden no es válido (`invalid_sort`). */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -10246,6 +10249,12 @@ export interface operations {
                 /** @description Solo esta sede. Sin ella, todas. */
                 location_id?: components["parameters"]["ReportLocation"];
                 group_by?: components["schemas"]["SalesReportGroup"];
+                /**
+                 * @description Hora de Colombia (`HH:MM`, de `00:00` a `23:59`) en que termina el último día del periodo: las ventas de
+                 *     ese día después de esa hora no cuentan. Sirve para comparar el día en curso con otro día hasta la misma
+                 *     hora. Sin ella, el último día cuenta completo.
+                 */
+                until?: string;
             };
             header?: never;
             path?: never;

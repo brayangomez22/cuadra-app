@@ -49,6 +49,16 @@ export function mulTrunc2(a: bigint, b: bigint): bigint {
   return divide(a * b, ONE * CENT, 'truncate') * CENT;
 }
 
+/** An amount split in count equal parts, rounded half-up to cents: (1000000n, 3n) → 3333330000n. */
+export function divRound2(units: bigint, count: bigint): bigint {
+  return divide(units, count * CENT, 'halfUp') * CENT;
+}
+
+/** a over b as a whole percent, rounded half-up: (1005000n, 1000000n) → 1n (0.5 % rounds up to 1). */
+export function percentOf(a: bigint, b: bigint): bigint {
+  return divide(a * 100n, b, 'halfUp');
+}
+
 function divide(n: bigint, d: bigint, mode: 'halfUp' | 'truncate'): bigint {
   const negative = n < 0n;
   const abs = negative ? -n : n;

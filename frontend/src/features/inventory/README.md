@@ -14,7 +14,7 @@ Las existencias por sede, el kardex de cada variante, las entradas de mercancía
 - `CountingPage` (`/inventario/conteos/:countId`): contar desde el celular, sin ver lo esperado: `CountEntryForm` (`useCountEntryForm`, buscar o `ScanToCount` con la cámara) y `CountedEntries` (lo contado, que se puede borrar mientras está abierto).
 - `CountReviewPage` (`/inventario/conteos/:countId/diferencias`, `inventory:count_manage`): `ReviewSummary`, el filtro por estado en la URL (`useCountReview`), `LinesTable` con `RecountButton`, y aprobar o cancelar (`CloseCountActions`, `useCloseCount`).
 
-`index.ts` es la API pública: `useLocations` y `Location` (los usan el POS y la caja), `inventoryKeys` (la venta invalida el inventario) y `ReorderSummary` (el aviso de «productos por reponer» del inicio).
+`index.ts` es la API pública: `useLocations` y `Location` (los usan el POS y la caja), `inventoryKeys` (la venta invalida el inventario) y `ReorderSummary` (la tarjeta «Por reponer» del inicio, que enlaza a `/inventario/reponer?sede=todas`). `/inventario/reponer` lista una sede o todas (`?sede=todas`) y ordena por urgencia o por lo que más hay que pedir (`?orden=pedir`).
 
 ## Carpetas
 

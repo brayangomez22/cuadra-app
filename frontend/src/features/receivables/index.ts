@@ -3,3 +3,6 @@
 // router takes the routes from routes.tsx, which loads pages.ts lazily.
 export { useCustomerCredit } from './api/credit';
 export { receivablesKeys } from './api/keys';
+
+/** What the customers owe past its due date, for the owner's home screen. */
+export { OverdueSummary } from './components/OverdueSummary/OverdueSummary';

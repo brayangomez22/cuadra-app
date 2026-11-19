@@ -1022,6 +1022,11 @@ type GetSalesReportParams struct {
 	// LocationId Solo esta sede. Sin ella, todas.
 	LocationId *ReportLocation   `form:"location_id,omitempty" json:"location_id,omitempty"`
 	GroupBy    *SalesReportGroup `form:"group_by,omitempty" json:"group_by,omitempty"`
+
+	// Until Hora de Colombia (`HH:MM`, de `00:00` a `23:59`) en que termina el último día del periodo: las ventas de
+	// ese día después de esa hora no cuentan. Sirve para comparar el día en curso con otro día hasta la misma
+	// hora. Sin ella, el último día cuenta completo.
+	Until *string `form:"until,omitempty" json:"until,omitempty"`
 }
 
 // GetStockAdjustmentsReportParams defines parameters for GetStockAdjustmentsReport.
@@ -1725,6 +1730,19 @@ func (siw *ServerInterfaceWrapper) GetSalesReport(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "group_by"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group_by", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "until" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "until", r.URL.Query(), &params.Until, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "until"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "until", Err: err})
 		}
 		return
 	}

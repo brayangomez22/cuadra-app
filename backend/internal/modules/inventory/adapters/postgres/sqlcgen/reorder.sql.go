@@ -68,15 +68,17 @@ LEFT JOIN LATERAL (
 WHERE ($1::uuid IS NULL OR r.location_id = $1)
   AND r.variant_id <> ALL($2::uuid[])
   AND COALESCE(s.quantity, 0) <= r.min_quantity
-ORDER BY COALESCE(s.quantity, 0) > 0,
+ORDER BY CASE WHEN $3::text = 'to_order' THEN COALESCE(s.quantity, 0) - r.max_quantity END,
+         COALESCE(s.quantity, 0) > 0,
          COALESCE(s.quantity, 0) / NULLIF(r.min_quantity, 0),
          r.location_id, r.variant_id
-LIMIT $4 OFFSET $3
+LIMIT $5 OFFSET $4
 `
 
 type ListReorderAlertsParams struct {
 	LocationID       *uuid.UUID
 	ExcludedVariants []uuid.UUID
+	Sort             string
 	RowOffset        int32
 	RowLimit         int32
 }
@@ -92,7 +94,9 @@ type ListReorderAlertsRow struct {
 
 // ListReorderAlerts pages the rules whose stock at their location (of every
 // lot, zero without a level) is at or below their minimum: what ran out first,
-// then the furthest below its minimum in proportion (1 of 5 before 40 of 50).
+// then the furthest below its minimum in proportion (1 of 5 before 40 of 50);
+// sort 'to_order' puts first the most to order (max − stock), with the
+// urgency to break ties.
 // excluded_variants are the ones the catalog no longer sells.
 // The condition is the one of domain.ReorderRule.NeedsReorder; the
 // integration tests check both agree.
@@ -100,6 +104,7 @@ func (q *Queries) ListReorderAlerts(ctx context.Context, arg ListReorderAlertsPa
 	rows, err := q.db.Query(ctx, listReorderAlerts,
 		arg.LocationID,
 		arg.ExcludedVariants,
+		arg.Sort,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

@@ -113,6 +113,19 @@ func TestListReorderAlerts(t *testing.T) {
 		require.Equal(t, app.ReorderQuery{Limit: 20}, uc.alertsQuery)
 	})
 
+	t.Run("pasa el orden pedido", func(t *testing.T) {
+		uc := &stubUseCases{}
+		rec := serve(t, uc, &owner, http.MethodGet, "/api/v1/inventory/reorder-alerts?sort=to_order", "")
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.Equal(t, app.ReorderQuery{Sort: "to_order", Limit: 20}, uc.alertsQuery)
+	})
+
+	t.Run("un orden desconocido responde 422 invalid_sort", func(t *testing.T) {
+		rec := serve(t, &stubUseCases{err: domain.ErrInvalidReorderSort}, &owner, http.MethodGet,
+			"/api/v1/inventory/reorder-alerts?sort=to_order", "")
+		requireError(t, rec, http.StatusUnprocessableEntity, "invalid_sort")
+	})
+
 	t.Run("sede inexistente responde 422 location_not_found", func(t *testing.T) {
 		rec := serve(t, &stubUseCases{err: domain.ErrLocationNotFound}, &owner, http.MethodGet,
 			"/api/v1/inventory/reorder-alerts?location_id="+newID().String(), "")
