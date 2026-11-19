@@ -1,0 +1,26 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.loading {
+  min-height: var(--space-12);
+}
+
+// Overdue money is a figure to act on: in the danger color, with its words.
+.figure {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-feedback-danger);
+}
+
+.quiet {
+  margin: 0;
+  color: var(--color-text-muted);
+}

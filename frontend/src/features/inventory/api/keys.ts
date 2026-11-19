@@ -1,3 +1,5 @@
+import type { ReorderSort } from './types';
+
 // Every query of inventory starts with "inventory" so a movement invalidates them all.
 export const inventoryKeys = {
   all: ['inventory'] as const,
@@ -6,8 +8,8 @@ export const inventoryKeys = {
     ['inventory', 'stock', locationId, offset, variantIds ?? 'all'] as const,
   variantStock: (variantId: string, locationId: string) =>
     ['inventory', 'stock', locationId, 'variant', variantId] as const,
-  reorderAlerts: (locationId: string | undefined, offset: number, limit: number) =>
-    ['inventory', 'reorder-alerts', locationId ?? 'all', offset, limit] as const,
+  reorderAlerts: (query: { locationId?: string; offset: number; limit: number; sort: ReorderSort }) =>
+    ['inventory', 'reorder-alerts', query] as const,
   kardex: (variantId: string, locationId: string | undefined, offset: number) =>
     ['inventory', 'kardex', variantId, locationId ?? 'all', offset] as const,
   // Everything of the stock counts, which a change of one of them reads again.

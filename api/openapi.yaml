@@ -2337,8 +2337,9 @@ paths:
       summary: Variantes por reponer
       description: |
         Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
-        (máximo − existencia, nunca negativa). Primero las agotadas y después de la que está más por debajo de su
-        mínimo en proporción a la que menos (1 de 5 antes que 40 de 50). Sin `location_id`, las de todas las sedes.
+        (máximo − existencia, nunca negativa). Por urgencia (por defecto), primero las agotadas y después de la que
+        está más por debajo de su mínimo en proporción a la que menos (1 de 5 antes que 40 de 50); con
+        `sort=to_order`, primero la que más unidades hay que pedir. Sin `location_id`, las de todas las sedes.
       x-permission: inventory:read
       parameters:
         - name: location_id
@@ -2348,6 +2349,14 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: sort
+          in: query
+          description: Por urgencia (`urgency`, por defecto) o por lo que más hay que pedir (`to_order`).
+          required: false
+          schema:
+            type: string
+            enum: [urgency, to_order]
+            default: urgency
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -2364,7 +2373,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
         "422":
-          description: La sede no existe (`location_not_found`).
+          description: La sede no existe (`location_not_found`) o el orden no es válido (`invalid_sort`).
           content:
             application/json:
               schema:
@@ -4986,6 +4995,16 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/SalesReportGroup"
+        - name: until
+          in: query
+          description: |
+            Hora de Colombia (`HH:MM`, de `00:00` a `23:59`) en que termina el último día del periodo: las ventas de
+            ese día después de esa hora no cuentan. Sirve para comparar el día en curso con otro día hasta la misma
+            hora. Sin ella, el último día cuenta completo.
+          required: false
+          schema:
+            type: string
+            example: "10:30"
       responses:
         "200":
           description: El reporte.
@@ -5576,8 +5595,8 @@ components:
   responses:
     InvalidPeriod:
       description: |
-        El periodo no es válido (`invalid_period`: el último día es anterior al primero o pasa de 366 días) o falta un
-        filtro que el reporte exige (`invalid_filter`).
+        El periodo no es válido (`invalid_period`: el último día es anterior al primero, pasa de 366 días o la hora de
+        corte no es `HH:MM`) o falta un filtro que el reporte exige (`invalid_filter`).
       content:
         application/json:
           schema:

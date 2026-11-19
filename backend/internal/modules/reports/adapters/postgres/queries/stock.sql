@@ -3,7 +3,8 @@
 -- IdleVariants returns the variants with stock (at the location, or adding
 -- up every location) not sold there since since_start, or never: their
 -- quantity in the base unit, its value at the average cost and their last
--- sale. Inactive products count too: their stock is idle money as well.
+-- sale. Inactive products count too: their stock is idle money as well. The
+-- exit of a sale voided afterwards is not a sale: the goods came back.
 -- name: IdleVariants :many
 SELECT p.id AS product_id, p.name AS product_name, u.code AS unit_code, v.id AS variant_id,
        axes.label::text AS label, v.sku,
@@ -17,10 +18,14 @@ JOIN units_of_measure u ON u.tenant_id = p.tenant_id AND u.id = p.base_unit_id
 CROSS JOIN LATERAL (SELECT coalesce(string_agg(a.value, ' · ' ORDER BY a.key COLLATE "C"), '') AS label
                     FROM jsonb_each_text(v.axis_values) AS a) axes
 CROSS JOIN LATERAL (SELECT max(m.occurred_at) AS at FROM stock_movements m
-                    WHERE m.tenant_id = sl.tenant_id AND m.variant_id = sl.variant_id AND m.type = 'sale_out') sold_any
+                    WHERE m.tenant_id = sl.tenant_id AND m.variant_id = sl.variant_id AND m.type = 'sale_out'
+                      AND NOT EXISTS (SELECT 1 FROM sales s WHERE s.tenant_id = m.tenant_id AND s.id = m.reference_id
+                                        AND m.reference_kind = 'sale' AND s.status = 'voided')) sold_any
 CROSS JOIN LATERAL (SELECT max(m.occurred_at) AS at FROM stock_movements m
                     WHERE m.tenant_id = sl.tenant_id AND m.variant_id = sl.variant_id AND m.type = 'sale_out'
-                      AND m.location_id = sl.location_id) sold_here
+                      AND m.location_id = sl.location_id
+                      AND NOT EXISTS (SELECT 1 FROM sales s WHERE s.tenant_id = m.tenant_id AND s.id = m.reference_id
+                                        AND m.reference_kind = 'sale' AND s.status = 'voided')) sold_here
 WHERE sl.quantity > 0
   AND (sqlc.narg(location_id)::uuid IS NULL OR sl.location_id = sqlc.narg(location_id))
   AND (sqlc.narg(category_id)::uuid IS NULL OR p.category_id = sqlc.narg(category_id))

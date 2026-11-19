@@ -1,4 +1,13 @@
-import { roundToWhole, fromUnits, fromUnitsTrimmed, mulRound2, mulTrunc2, toUnits } from './decimal';
+import {
+  divRound2,
+  percentOf,
+  roundToWhole,
+  fromUnits,
+  fromUnitsTrimmed,
+  mulRound2,
+  mulTrunc2,
+  toUnits,
+} from './decimal';
 
 describe('decimal', () => {
   it('lee y escribe decimales de la API sin pasar por float', () => {
@@ -52,5 +61,20 @@ describe('roundToWhole', () => {
     ['-12500.5', '-12501.00'],
   ])('%s queda en %s, como la muestra formatMoney', (value, expected) => {
     expect(fromUnits(roundToWhole(toUnits(value)))).toBe(expected);
+  });
+});
+
+describe('divRound2', () => {
+  it('reparte un monto en partes iguales y redondea a centavos desde la mitad', () => {
+    expect(fromUnits(divRound2(toUnits('100000'), 3n))).toBe('33333.33');
+    expect(fromUnits(divRound2(toUnits('0.05'), 2n))).toBe('0.03');
+  });
+});
+
+describe('percentOf', () => {
+  it('es el porcentaje entero, redondeado desde la mitad', () => {
+    expect(percentOf(toUnits('200000'), toUnits('1000000'))).toBe(20n);
+    expect(percentOf(toUnits('4999'), toUnits('1000000'))).toBe(0n);
+    expect(percentOf(toUnits('5000'), toUnits('1000000'))).toBe(1n);
   });
 });

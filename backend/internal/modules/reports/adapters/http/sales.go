@@ -24,7 +24,7 @@ type salesHandlers struct {
 func (h *salesHandlers) GetSalesReport(ctx context.Context, req reportsapi.GetSalesReportRequestObject) (reportsapi.GetSalesReportResponseObject, error) {
 	p := req.Params
 	r, err := h.uc.SalesReport(ctx, h.actor(ctx), app.SalesQuery{
-		Range: days(p.From, p.To), LocationID: p.LocationId, Group: str(p.GroupBy),
+		Range: days(p.From, p.To), LocationID: p.LocationId, Group: str(p.GroupBy), Until: str(p.Until),
 	})
 	if err != nil {
 		return nil, err

@@ -107,6 +107,7 @@ type ReorderRuleRepository interface {
 type ReorderFilter struct {
 	LocationID       *uuid.UUID
 	ExcludedVariants []uuid.UUID
+	Sort             ReorderSort
 	Limit            int
 	Offset           int
 }

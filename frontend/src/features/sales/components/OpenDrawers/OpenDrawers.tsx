@@ -1,7 +1,7 @@
 import { paths } from '@/app/routes/paths';
 import { formatDateTime } from '@/shared/format';
-import { ButtonLink } from '@/shared/ui';
-import type { CashSessionSummary } from '../../../../api/types';
+import { ButtonLink, Card } from '@/shared/ui';
+import type { CashSessionSummary } from '../../api/types';
 import styles from './OpenDrawers.module.scss';
 
 type Props = { sessions: CashSessionSummary[]; locationName: (id: string) => string; myId: string | undefined };
@@ -11,18 +11,23 @@ type Props = { sessions: CashSessionSummary[]; locationName: (id: string) => str
  * with a real button to close each one. Closing a forgotten drawer from a phone
  * at night is why the owner comes here. The user's own drawer closes from /caja.
  */
-export function OpenDrawers({ sessions, locationName, myId }: Props) {
-  if (sessions.length === 0) return null;
-  const title = sessions.length === 1 ? '1 caja abierta' : `${String(sessions.length)} cajas abiertas`;
+export function OpenDrawers(props: Props) {
+  if (props.sessions.length === 0) return null;
   return (
-    <section className={styles.root} aria-label="Cajas abiertas">
-      <h2 className={styles.title}>{title}</h2>
-      <ul className={styles.list}>
-        {sessions.map((s) => (
-          <OpenDrawer key={s.id} session={s} location={locationName(s.location_id)} mine={s.user_id === myId} />
-        ))}
-      </ul>
-    </section>
+    <Card title="Cajas abiertas">
+      <OpenDrawerList {...props} />
+    </Card>
+  );
+}
+
+/** The list of open drawers alone, for a screen that frames it in its own card. */
+export function OpenDrawerList({ sessions, locationName, myId }: Props) {
+  return (
+    <ul className={styles.list}>
+      {sessions.map((s) => (
+        <OpenDrawer key={s.id} session={s} location={locationName(s.location_id)} mine={s.user_id === myId} />
+      ))}
+    </ul>
   );
 }
 

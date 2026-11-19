@@ -12,7 +12,7 @@ El punto de venta y la caja: vender desde el teclado o el lector, cobrar con pag
 - `SaleListPage` (`/ventas`): las ventas de un día (`useSaleListParams`: `fecha`, `sede`, `pagina`), con `SaleFilters`, el resumen del día (`SaleDaySummary`), `SaleTable` y, sin ventas, el día anterior (`NoSalesThatDay`).
 - `SaleDetailPage` (`/ventas/:saleId`): `useSaleReceipt` arma la tirilla para leerla y reimprimirla; `VoidedNotice` dice por qué se anuló y `VoidSaleDialog` (`useVoidSaleForm`, con `sales:void`) pide el motivo, avisa qué hacer con el dinero y, si la caja de la venta ya cerró, ofrece sacar el efectivo de la caja abierta del usuario (`useVoidCashOut`).
 
-`index.ts` es la API pública: `useCashOut` y `CashOutOption` (sacar de la caja abierta del usuario el efectivo que sale por algo que no es una venta), que usa el pago a proveedores de `purchases`. El router toma las rutas de `routes.tsx`.
+`index.ts` es la API pública: `useCashOut` y `CashOutOption` (sacar de la caja abierta del usuario el efectivo que sale por algo que no es una venta), que usa el pago a proveedores de `purchases`, y `OpenCashSessions` (la tarjeta «Cajas abiertas» del inicio, con `OpenDrawers`, que también usa `/caja/cierres`). El router toma las rutas de `routes.tsx`.
 
 ## Carpetas
 

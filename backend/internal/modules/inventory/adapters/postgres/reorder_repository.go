@@ -101,7 +101,7 @@ func (r *ReorderRepository) Alerts(ctx context.Context, tenantID uuid.UUID, f do
 		q := sqlcgen.New(tx)
 		var err error
 		if rows, err = q.ListReorderAlerts(ctx, sqlcgen.ListReorderAlertsParams{
-			LocationID: f.LocationID, ExcludedVariants: excluded, RowLimit: limit, RowOffset: offset,
+			LocationID: f.LocationID, ExcludedVariants: excluded, Sort: string(f.Sort), RowLimit: limit, RowOffset: offset,
 		}); err != nil {
 			return err
 		}

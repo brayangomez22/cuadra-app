@@ -27,9 +27,10 @@ type ReorderInput struct {
 }
 
 // ReorderQuery selects the alerts of one location, or of every location
-// when LocationID is nil.
+// when LocationID is nil, in the order of Sort (urgency when empty).
 type ReorderQuery struct {
 	LocationID *uuid.UUID
+	Sort       string
 	Limit      int
 	Offset     int
 }
@@ -84,18 +85,23 @@ func (s *Service) DeleteReorderRule(ctx context.Context, a Actor, variantID, loc
 }
 
 // ListReorderAlerts returns one page of the variants at or below their
-// minimum, with how much to order, the furthest below it first;
-// ErrLocationNotFound if the location given is not of the actor's tenant.
+// minimum, with how much to order, the furthest below it first (or the most
+// to order, by Sort); ErrLocationNotFound if the location given is not of the
+// actor's tenant, ErrInvalidReorderSort if the order is not one it takes.
 // The variants the catalog no longer sells (inactive, or of an archived
 // product) keep their rules but raise no alert.
 func (s *Service) ListReorderAlerts(ctx context.Context, a Actor, q ReorderQuery) (_ AlertPage, err error) {
-	var attrs []attribute.KeyValue
+	attrs := []attribute.KeyValue{attribute.String("sort", q.Sort)}
 	if q.LocationID != nil {
 		attrs = append(attrs, locationAttr(*q.LocationID))
 	}
 	ctx, span := s.startSpan(ctx, "ListReorderAlerts", a, attrs...)
 	defer func() { usecase.End(span, err) }()
 
+	sort, err := domain.ParseReorderSort(q.Sort)
+	if err != nil {
+		return AlertPage{}, err
+	}
 	if q.LocationID != nil {
 		if _, err := s.Locations.GetByID(ctx, a.TenantID, *q.LocationID); err != nil {
 			return AlertPage{}, err
@@ -105,7 +111,7 @@ func (s *Service) ListReorderAlerts(ctx context.Context, a Actor, q ReorderQuery
 	if err != nil {
 		return AlertPage{}, err
 	}
-	f := domain.ReorderFilter{LocationID: q.LocationID, ExcludedVariants: excluded}
+	f := domain.ReorderFilter{LocationID: q.LocationID, ExcludedVariants: excluded, Sort: sort}
 	f.Limit, f.Offset = pageBounds(q.Limit, q.Offset)
 	page, err := s.Reorder.Alerts(ctx, a.TenantID, f)
 	if err != nil {

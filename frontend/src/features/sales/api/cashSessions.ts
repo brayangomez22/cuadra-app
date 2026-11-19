@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
 import { unwrap } from '@/shared/api/errors';
+import { DASHBOARD_REFRESH_MS } from '@/shared/query';
 import { salesKeys } from './keys';
 import type { CashMovementInput, CashSessionQuery, CloseCashSessionInput, OpenCashSessionInput } from './types';
 
@@ -88,7 +89,20 @@ export function useCashSessions(query: CashSessionQuery, { enabled = true } = {}
   });
 }
 
+const openQuery: CashSessionQuery = { status: 'open', limit: 100, offset: 0 };
+
 /** Every drawer open right now, in every location: the history puts them first to close the forgotten ones. */
 export function useOpenCashSessions({ enabled = true } = {}) {
-  return useCashSessions({ status: 'open', limit: 100, offset: 0 }, { enabled });
+  return useCashSessions(openQuery, { enabled });
+}
+
+/** The drawers open right now, for the home screen: read again every few minutes. */
+export function useOpenCashSessionsLive({ enabled = true } = {}) {
+  return useQuery({
+    enabled,
+    queryKey: salesKeys.cashHistory(openQuery),
+    queryFn: async () => unwrap(await api.GET('/api/v1/cash-sessions', { params: { query: openQuery } })),
+    select: (page) => page.items.filter((session) => session.status === 'open'),
+    refetchInterval: DASHBOARD_REFRESH_MS,
+  });
 }

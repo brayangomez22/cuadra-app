@@ -1,0 +1,12 @@
+@use '@/styles/abstracts' as *;
+
+// One filter per row on a phone; side by side from sm.
+.root {
+  display: grid;
+  gap: var(--space-4);
+  max-inline-size: var(--size-form-wide);
+
+  @include respond-to(sm) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -8,15 +8,18 @@ type Props = {
   alerts: ReorderAlert[];
   productsById: Map<string, Product>;
   loadingProducts: boolean;
+  /** With every location, the name of each row's location, in its own column. */
+  locationName?: (id: string) => string;
 };
 
-/** One row per variant at or below its minimum: what ran out first, then the furthest below it (the API's order). */
-export function ReorderTable({ caption, alerts, productsById, loadingProducts }: Props) {
+/** One row per variant (and location) at or below its minimum, in the API's order. */
+export function ReorderTable({ caption, alerts, productsById, loadingProducts, locationName }: Props) {
   return (
     <Table caption={caption}>
       <TableHead>
         <TableRow>
           <TableHeaderCell>Producto</TableHeaderCell>
+          {locationName && <TableHeaderCell wide>Sede</TableHeaderCell>}
           <TableHeaderCell numeric wide>
             Existencia
           </TableHeaderCell>
@@ -32,8 +35,9 @@ export function ReorderTable({ caption, alerts, productsById, loadingProducts }:
       <TableBody>
         {alerts.map((alert) => (
           <ReorderRow
-            key={alert.variant_id}
+            key={`${alert.location_id}|${alert.variant_id}`}
             alert={alert}
+            location={locationName?.(alert.location_id)}
             product={productsById.get(alert.product_id)}
             loading={loadingProducts}
           />

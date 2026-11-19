@@ -5,7 +5,7 @@ import { EmptyState, IconCash, Page, Pagination, Spinner, Stack } from '@/shared
 import { CASH_HISTORY_PAGE_SIZE, useCashSessions, useOpenCashSessions } from '../../api/cashSessions';
 import { CashHistoryFilters } from './components/CashHistoryFilters/CashHistoryFilters';
 import { CashHistoryTable } from './components/CashHistoryTable/CashHistoryTable';
-import { OpenDrawers } from './components/OpenDrawers/OpenDrawers';
+import { OpenDrawers } from '../../components/OpenDrawers/OpenDrawers';
 import { useCashHistoryParams } from './hooks/useCashHistoryParams';
 
 /** /caja/cierres: the drawers open now, then every drawer of the business with its cashier, what it sold and how its count came out. */

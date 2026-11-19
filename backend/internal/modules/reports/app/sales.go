@@ -10,11 +10,13 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/usecase"
 )
 
-// SalesQuery asks for the sales report.
+// SalesQuery asks for the sales report; Until (HH:MM) ends its last day at
+// that time.
 type SalesQuery struct {
 	Range
 	LocationID *uuid.UUID
 	Group      string
+	Until      string
 }
 
 // SalesReport returns the period's confirmed sales by group. The
@@ -25,6 +27,9 @@ func (s *Service) SalesReport(ctx context.Context, a Actor, q SalesQuery) (_ dom
 	defer s.observe(ctx, "sales", time.Now())
 
 	period, err := q.period()
+	if err == nil {
+		period, err = period.Until(q.Until)
+	}
 	if err != nil {
 		return domain.SalesReport{}, err
 	}

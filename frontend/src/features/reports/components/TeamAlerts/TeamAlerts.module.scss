@@ -1,0 +1,46 @@
+@use '@/styles/abstracts' as *;
+
+.root {
+  min-height: 100%;
+}
+
+.loading {
+  min-height: var(--space-12);
+}
+
+.quiet {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// Who, what stood out and the audit link: stacked on a phone, in a row from md.
+.user {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block: var(--space-3);
+
+  & + & {
+    border-block-start: 1px solid var(--color-border-default);
+  }
+
+  @include respond-to(md) {
+    flex-flow: row wrap;
+    align-items: baseline;
+    gap: var(--space-2) var(--space-4);
+  }
+}
+
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+}

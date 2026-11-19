@@ -6,3 +6,14 @@
   text-align: end;
   white-space: nowrap;
 }
+
+// On a phone "Vencido" and its amount may take two lines, so the column of
+// what is owed does not push the table past the screen; one line from md.
+.overdue {
+  white-space: normal;
+  text-align: end;
+
+  @include respond-to(md) {
+    white-space: nowrap;
+  }
+}

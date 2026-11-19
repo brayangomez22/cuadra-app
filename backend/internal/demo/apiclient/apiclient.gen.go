@@ -1111,6 +1111,24 @@ func (e ListCustomersParamsStatus) Valid() bool {
 	}
 }
 
+// Defines values for ListReorderAlertsParamsSort.
+const (
+	ToOrder ListReorderAlertsParamsSort = "to_order"
+	Urgency ListReorderAlertsParamsSort = "urgency"
+)
+
+// Valid indicates whether the value is a known member of the ListReorderAlertsParamsSort enum.
+func (e ListReorderAlertsParamsSort) Valid() bool {
+	switch e {
+	case ToOrder:
+		return true
+	case Urgency:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListProductsParamsStatus.
 const (
 	ListProductsParamsStatusActive   ListProductsParamsStatus = "active"
@@ -5023,12 +5041,18 @@ type ListReorderAlertsParams struct {
 	// LocationId Solo las alertas de esta sede.
 	LocationId *openapi_types.UUID `form:"location_id,omitempty" json:"location_id,omitempty"`
 
+	// Sort Por urgencia (`urgency`, por defecto) o por lo que más hay que pedir (`to_order`).
+	Sort *ListReorderAlertsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+
 	// Limit Cantidad máxima de resultados.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Offset Cantidad de resultados a saltar.
 	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
 }
+
+// ListReorderAlertsParamsSort defines parameters for ListReorderAlerts.
+type ListReorderAlertsParamsSort string
 
 // ListElectronicDocumentsParams defines parameters for ListElectronicDocuments.
 type ListElectronicDocumentsParams struct {
@@ -5264,6 +5288,11 @@ type GetSalesReportParams struct {
 	// LocationId Solo esta sede. Sin ella, todas.
 	LocationId *ReportLocation   `form:"location_id,omitempty" json:"location_id,omitempty"`
 	GroupBy    *SalesReportGroup `form:"group_by,omitempty" json:"group_by,omitempty"`
+
+	// Until Hora de Colombia (`HH:MM`, de `00:00` a `23:59`) en que termina el último día del periodo: las ventas de
+	// ese día después de esa hora no cuentan. Sirve para comparar el día en curso con otro día hasta la misma
+	// hora. Sin ella, el último día cuenta completo.
+	Until *string `form:"until,omitempty" json:"until,omitempty"`
 }
 
 // GetStockAdjustmentsReportParams defines parameters for GetStockAdjustmentsReport.
@@ -6177,8 +6206,9 @@ type ClientInterface interface {
 	// ListReorderAlerts Variantes por reponer
 	//
 	// Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
-	// (máximo − existencia, nunca negativa). Primero las agotadas y después de la que está más por debajo de su
-	// mínimo en proporción a la que menos (1 de 5 antes que 40 de 50). Sin `location_id`, las de todas las sedes.
+	// (máximo − existencia, nunca negativa). Por urgencia (por defecto), primero las agotadas y después de la que
+	// está más por debajo de su mínimo en proporción a la que menos (1 de 5 antes que 40 de 50); con
+	// `sort=to_order`, primero la que más unidades hay que pedir. Sin `location_id`, las de todas las sedes.
 	//
 	// Corresponds with GET /api/v1/inventory/reorder-alerts (the `ListReorderAlerts` operationId).
 	ListReorderAlerts(ctx context.Context, params *ListReorderAlertsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -8566,8 +8596,9 @@ func (c *Client) ReceiveStock(ctx context.Context, body ReceiveStockJSONRequestB
 // ListReorderAlerts Variantes por reponer
 //
 // Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
-// (máximo − existencia, nunca negativa). Primero las agotadas y después de la que está más por debajo de su
-// mínimo en proporción a la que menos (1 de 5 antes que 40 de 50). Sin `location_id`, las de todas las sedes.
+// (máximo − existencia, nunca negativa). Por urgencia (por defecto), primero las agotadas y después de la que
+// está más por debajo de su mínimo en proporción a la que menos (1 de 5 antes que 40 de 50); con
+// `sort=to_order`, primero la que más unidades hay que pedir. Sin `location_id`, las de todas las sedes.
 //
 // Corresponds with GET /api/v1/inventory/reorder-alerts (the `ListReorderAlerts` operationId).
 func (c *Client) ListReorderAlerts(ctx context.Context, params *ListReorderAlertsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -13092,6 +13123,18 @@ func NewListReorderAlertsRequest(server string, params *ListReorderAlertsParams)
 
 		}
 
+		if params.Sort != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sort", *params.Sort, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.Limit != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
@@ -16235,6 +16278,18 @@ func NewGetSalesReportRequest(server string, params *GetSalesReportParams) (*htt
 
 		}
 
+		if params.Until != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "until", *params.Until, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if encoded := queryValues.Encode(); encoded != "" {
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
@@ -18754,8 +18809,9 @@ type ClientWithResponsesInterface interface {
 	// ListReorderAlertsWithResponse Variantes por reponer
 	//
 	// Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
-	// (máximo − existencia, nunca negativa). Primero las agotadas y después de la que está más por debajo de su
-	// mínimo en proporción a la que menos (1 de 5 antes que 40 de 50). Sin `location_id`, las de todas las sedes.
+	// (máximo − existencia, nunca negativa). Por urgencia (por defecto), primero las agotadas y después de la que
+	// está más por debajo de su mínimo en proporción a la que menos (1 de 5 antes que 40 de 50); con
+	// `sort=to_order`, primero la que más unidades hay que pedir. Sin `location_id`, las de todas las sedes.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -31663,8 +31719,9 @@ func (c *ClientWithResponses) ReceiveStockWithResponse(ctx context.Context, body
 // ListReorderAlertsWithResponse Variantes por reponer
 //
 // Las variantes cuya existencia en una sede está en su mínimo o por debajo, con la cantidad sugerida a pedir
-// (máximo − existencia, nunca negativa). Primero las agotadas y después de la que está más por debajo de su
-// mínimo en proporción a la que menos (1 de 5 antes que 40 de 50). Sin `location_id`, las de todas las sedes.
+// (máximo − existencia, nunca negativa). Por urgencia (por defecto), primero las agotadas y después de la que
+// está más por debajo de su mínimo en proporción a la que menos (1 de 5 antes que 40 de 50); con
+// `sort=to_order`, primero la que más unidades hay que pedir. Sin `location_id`, las de todas las sedes.
 //
 // Returns a wrapper object for the known response body format(s).
 //

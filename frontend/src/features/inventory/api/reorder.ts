@@ -1,23 +1,41 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
 import { unwrap, unwrapEmpty } from '@/shared/api/errors';
+import { DASHBOARD_REFRESH_MS } from '@/shared/query';
 import { inventoryKeys } from './keys';
-import { PAGE_SIZE } from './types';
+import { PAGE_SIZE, type ReorderSort } from './types';
 
-type AlertsQuery = { locationId?: string; offset?: number; limit?: number; enabled?: boolean };
+type AlertsQuery = {
+  locationId?: string;
+  offset?: number;
+  limit?: number;
+  sort?: ReorderSort;
+  enabled?: boolean;
+  /** Read again every few minutes, for the home screen. */
+  live?: boolean;
+};
 
 /** The variants at or below their minimum: of one location, or of all without locationId. */
-export function useReorderAlerts({ locationId, offset = 0, limit = PAGE_SIZE, enabled = true }: AlertsQuery) {
+export function useReorderAlerts({ enabled = true, live = false, ...rest }: AlertsQuery) {
+  const query = { offset: 0, limit: PAGE_SIZE, sort: 'urgency' as const, ...rest };
   return useQuery({
-    queryKey: inventoryKeys.reorderAlerts(locationId, offset, limit),
+    queryKey: inventoryKeys.reorderAlerts(query),
     queryFn: async () =>
       unwrap(
         await api.GET('/api/v1/inventory/reorder-alerts', {
-          params: { query: { location_id: locationId, limit, offset } },
+          params: {
+            query: {
+              location_id: query.locationId,
+              limit: query.limit,
+              offset: query.offset,
+              sort: query.sort === 'urgency' ? undefined : query.sort,
+            },
+          },
         }),
       ),
     enabled,
     placeholderData: keepPreviousData,
+    refetchInterval: live ? DASHBOARD_REFRESH_MS : false,
   });
 }
 

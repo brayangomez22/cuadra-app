@@ -17,7 +17,7 @@ export function CreditCells({ customer }: { customer: Customer }) {
         {owes ? formatMoney(customer.balance ?? '0') : '—'}
         {overdue && (
           <div>
-            <Badge tone="danger">{`Vencido ${formatMoney(customer.overdue ?? '0')}`}</Badge>
+            <Badge tone="danger" className={styles.overdue}>{`Vencido ${formatMoney(customer.overdue ?? '0')}`}</Badge>
           </div>
         )}
       </TableCell>

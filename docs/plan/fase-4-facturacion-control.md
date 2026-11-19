@@ -43,7 +43,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T36c · Pantallas de la facturación electrónica
 **Depende de:** T36, T36b, T36d.
 **Alcance:** en el frontend, sobre el contrato de T36 (`/invoicing/*`): activar la emisión y el tipo por defecto, registrar y borrar resoluciones con el aviso de fin de rango, el **panel de documentos** por estado con sus motivos y el reintento manual, el estado, el CUDE y el QR del documento en `/ventas/:id` y en la tirilla (`docs/dian.md` §5, regla 6: esperar unos segundos o imprimir "pendiente de validación"), y pedir factura en el POS (`document_kind`). Después, `/impeccable critique`.
-**Pendientes que entran a esta tarea:** P158, P163 y P165 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P158, P163, P165 y P185 (la tarjeta de documentos con problemas en el tablero del dueño de T43) (`docs/plan/pendientes.md`).
 **Tests primero:** el cajero ve el documento de la venta pero no reenvía; un documento rechazado muestra sus motivos y el botón de reenviar; pedir factura sin cliente muestra el error junto al cliente; responsive de 360 a 1920 px.
 
 ### [ ] T37 · Notas crédito y anulaciones
@@ -78,7 +78,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Alcance:** reportes para el negocio (no confundir con Grafana): ventas por día, vendedor, medio de pago, categoría y sede; productos más vendidos; productos **sin movimiento** en N días (plata quieta); utilidad por producto y por venta (precio − costo promedio al momento de la venta); cartera por cobrar; cierres de caja. **Control del equipo** (agrega el registro de auditoría de T38): anulaciones por usuario y por sede, descuentos dados (cantidad, monto y porcentaje promedio por usuario), cambios de precio, ajustes de inventario por usuario y por variante (valorizados a costo) y diferencias de caja por usuario y por turno. Se muestran como tendencia en el tiempo y comparando usuarios, para que el dueño vea lo que se sale de lo normal. Filtros por rango de fechas y exportación a Excel/CSV. Las consultas pesadas usan índices o vistas materializadas justificadas con `EXPLAIN ANALYZE`. Los reportes de productos agregan por producto con detalle por variante (por ejemplo, ventas de una camiseta y su desglose por talla y color), y permiten filtrar por atributos del tenant.
 **Tests primero (integración):** la utilidad usa el costo vigente al momento de la venta, no el actual; los totales del reporte de ventas cuadran con la suma de los cierres de caja del mismo periodo; las anulaciones y diferencias de caja del reporte de control cuadran con los eventos de auditoría del mismo periodo y con las ventas anuladas y los cierres reales; los casos cubren al menos dos tipos de negocio.
 
-### [ ] T43 · Tablero del dueño
+### [x] T43 · Tablero del dueño
 **Depende de:** T28, T32, T42.
 **Alcance:** pantalla de inicio para `owner` y `admin`: ventas de hoy contra el mismo día de la semana anterior, ticket promedio, variantes por agotarse, cartera vencida, documentos DIAN con problemas, cajas abiertas y **alertas de control** de la semana (anulaciones, descuentos o diferencias de caja por encima de lo habitual de ese usuario), con enlace al detalle de T42 y a la auditoría de T41. Se actualiza solo cada pocos minutos.
 **Pendientes que entran a esta tarea:** P11, P77, P127, P182 y P183 (`docs/plan/pendientes.md`).

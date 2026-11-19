@@ -49,6 +49,9 @@ func (h *Handler) DeleteReorderRule(ctx context.Context, req inventoryapi.Delete
 // ListReorderAlerts returns the variants at or below their minimum.
 func (h *Handler) ListReorderAlerts(ctx context.Context, req inventoryapi.ListReorderAlertsRequestObject) (inventoryapi.ListReorderAlertsResponseObject, error) {
 	q := app.ReorderQuery{LocationID: req.Params.LocationId}
+	if req.Params.Sort != nil {
+		q.Sort = string(*req.Params.Sort)
+	}
 	q.Limit, q.Offset = page(req.Params.Limit, req.Params.Offset)
 	result, err := h.uc.ListReorderAlerts(ctx, actor(ctx), q)
 	if err != nil {

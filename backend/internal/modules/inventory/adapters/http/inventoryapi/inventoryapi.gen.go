@@ -141,6 +141,24 @@ func (e StockMovementType) Valid() bool {
 	}
 }
 
+// Defines values for ListReorderAlertsParamsSort.
+const (
+	ToOrder ListReorderAlertsParamsSort = "to_order"
+	Urgency ListReorderAlertsParamsSort = "urgency"
+)
+
+// Valid indicates whether the value is a known member of the ListReorderAlertsParamsSort enum.
+func (e ListReorderAlertsParamsSort) Valid() bool {
+	switch e {
+	case ToOrder:
+		return true
+	case Urgency:
+		return true
+	default:
+		return false
+	}
+}
+
 // AdjustmentInput defines model for AdjustmentInput.
 type AdjustmentInput struct {
 	LocationId openapi_types.UUID `json:"location_id"`
@@ -726,12 +744,18 @@ type ListReorderAlertsParams struct {
 	// LocationId Solo las alertas de esta sede.
 	LocationId *openapi_types.UUID `form:"location_id,omitempty" json:"location_id,omitempty"`
 
+	// Sort Por urgencia (`urgency`, por defecto) o por lo que más hay que pedir (`to_order`).
+	Sort *ListReorderAlertsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+
 	// Limit Cantidad máxima de resultados.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Offset Cantidad de resultados a saltar.
 	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
 }
+
+// ListReorderAlertsParamsSort defines parameters for ListReorderAlerts.
+type ListReorderAlertsParamsSort string
 
 // ListStockParams defines parameters for ListStock.
 type ListStockParams struct {
@@ -952,6 +976,19 @@ func (siw *ServerInterfaceWrapper) ListReorderAlerts(w http.ResponseWriter, r *h
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "location_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "location_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
 		}
 		return
 	}
