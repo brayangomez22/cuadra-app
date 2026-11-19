@@ -48,6 +48,8 @@ type runner struct {
 	ids      ids
 	sessions []uuid.UUID
 	expected []expectedCash
+	// toVoid are the ids of the day's sales that are voided later that day.
+	toVoid map[*Sale]uuid.UUID
 }
 
 // Generate signs up the demo tenant of s with its staff (all with
@@ -99,7 +101,7 @@ func (g Generator) newRunner(s *Scenario) (*runner, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &runner{api: api, demo: d, clock: clock, s: s, tokens: map[string]string{}}, nil
+	return &runner{api: api, demo: d, clock: clock, s: s, tokens: map[string]string{}, toVoid: map[*Sale]uuid.UUID{}}, nil
 }
 
 // newAPI builds an API on clock with a signing key of its own: its tokens

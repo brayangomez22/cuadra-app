@@ -123,6 +123,14 @@ type Sale struct {
 	Lines    []Line
 	Method   string
 	Credit   bool
+	// Void is set when the sale is voided later that day.
+	Void *Void
+}
+
+// Void is a sale voided by the administrator: when and why.
+type Void struct {
+	At     time.Time
+	Reason string
 }
 
 // Line is a sale or purchase line of a product's variant. Quantity is in
@@ -159,9 +167,11 @@ type Event struct {
 	Purchase *Purchase
 	Sale     *Sale
 	Payment  *Payment
+	// Void is a sale of the day being voided.
+	Void *Sale
 }
 
-// Events returns the day's purchases, sales and payments in time order.
+// Events returns the day's purchases, sales, voids and payments in time order.
 func (d *Day) Events() []Event {
 	out := make([]Event, 0, len(d.Purchases)+len(d.Sales)+len(d.Payments))
 	for i := range d.Purchases {
@@ -169,6 +179,9 @@ func (d *Day) Events() []Event {
 	}
 	for i := range d.Sales {
 		out = append(out, Event{At: d.Sales[i].At, Sale: &d.Sales[i]})
+		if v := d.Sales[i].Void; v != nil {
+			out = append(out, Event{At: v.At, Void: &d.Sales[i]})
+		}
 	}
 	for i := range d.Payments {
 		out = append(out, Event{At: d.Payments[i].At, Payment: &d.Payments[i]})
