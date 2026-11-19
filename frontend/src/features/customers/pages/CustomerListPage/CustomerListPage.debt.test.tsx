@@ -23,6 +23,16 @@ describe('CustomerListPage: lo que debe cada cliente', () => {
     expect(screen.getByRole('link', { name: 'Quién debe más' })).toHaveAttribute('href', '/cartera?orden=total');
   });
 
+  it('la cuenta va en la celda de lo que debe, sin una columna aparte que ensanche la tabla en el celular', async () => {
+    customersApi({ customers: [{ ...aBuilder(), balance: '800000.00', overdue: '0.00' }] });
+    renderApp('/clientes');
+
+    const builder = await rowOf('Carlos Pérez');
+    const account = builder.getByRole('link', { name: 'Cuenta de Carlos Pérez' });
+    expect(account.closest('td')).toHaveTextContent('$ 800.000');
+    expect(screen.getAllByRole('columnheader').at(-1)).toHaveAccessibleName('Debe');
+  });
+
   it('el bodeguero, sin la cartera, no ve lo que deben', async () => {
     customersApi({ user: aUser('warehouse') });
     renderApp('/clientes');

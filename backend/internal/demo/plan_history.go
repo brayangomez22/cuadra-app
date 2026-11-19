@@ -68,7 +68,8 @@ func newHistory(rng *rand.Rand, s *Scenario, o Options) *history {
 }
 
 // plan returns the days: the first one receives the initial stock; then
-// each supplier restocks once a week what runs low.
+// each supplier restocks once a week what runs low. Some sales are voided
+// and some drawers close short (plan_control.go).
 func (h *history) plan() []Day {
 	days := make([]Day, h.o.Days)
 	for i := range days {
@@ -80,8 +81,10 @@ func (h *history) plan() []Day {
 			d.Purchases = h.restock(date)
 		}
 		h.drawers(&d)
+		h.shortCashier(&d)
 		d.Payments = h.payments(d.Opening)
 		d.Sales = h.sales(date)
+		h.voids(&d)
 		days[i] = d
 	}
 	return days

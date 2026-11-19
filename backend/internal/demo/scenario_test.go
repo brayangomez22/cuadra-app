@@ -83,21 +83,25 @@ func TestScenarioCalendar(t *testing.T) {
 
 func TestScenarioStock(t *testing.T) {
 	for _, template := range demoTemplates {
-		t.Run("ningún día vende más de lo que hay en stock: "+template, func(t *testing.T) {
+		t.Run("ningún día vende más de lo que hay en stock, con lo que devuelven las anulaciones: "+template, func(t *testing.T) {
 			s := small(t, template, 5)
 			stock := map[[3]int]decimal.Decimal{}
-			for _, d := range s.Days {
-				for _, p := range d.Purchases {
-					for _, l := range p.Lines {
-						k := [3]int{p.Location, l.Product, l.Variant}
-						stock[k] = stock[k].Add(l.Quantity)
-					}
+			move := func(location int, lines []demo.Line, sign int64) {
+				for _, l := range lines {
+					k := [3]int{location, l.Product, l.Variant}
+					stock[k] = stock[k].Add(l.Quantity.Mul(decimal.NewFromInt(sign)))
+					require.False(t, stock[k].IsNegative(), "%s: %v leaves %s", template, k, stock[k])
 				}
-				for _, sale := range d.Sales {
-					for _, l := range sale.Lines {
-						k := [3]int{sale.Location, l.Product, l.Variant}
-						stock[k] = stock[k].Sub(l.Quantity)
-						require.False(t, stock[k].IsNegative(), "%s: sale at %s leaves %s of %v", template, sale.At, stock[k], k)
+			}
+			for _, d := range s.Days {
+				for _, e := range d.Events() {
+					switch {
+					case e.Purchase != nil:
+						move(e.Purchase.Location, e.Purchase.Lines, 1)
+					case e.Sale != nil:
+						move(e.Sale.Location, e.Sale.Lines, -1)
+					case e.Void != nil:
+						move(e.Void.Location, e.Void.Lines, 1)
 					}
 				}
 			}

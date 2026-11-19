@@ -89,6 +89,13 @@ Quedaron cinco candidatos con API para integradores. **Catálogo DIAN** quiere d
 
 Una tienda que vende 50 veces al día (1.500 documentos al mes) cuesta un 38 % menos. Es un estimado con los precios públicos: un PT suele dar precio de revendedor, y eso es lo primero que se pregunta (P153).
 
+**Respuesta de Muisca (correo, 2026-11-19), a las preguntas de P152 y P153:**
+- **Precio para integradores:** no ofrecieron descuento. Para tener webhooks y subcuentas hay que tomar **Executive o un plan superior** ($ 1.599.900 al año por 40.000 documentos, ≈ $ 40 cada uno), el mismo precio público de la tabla. Con 28.800 documentos al año por ferretería, un Executive alcanza para un tenant y medio: el piloto de 3 a 5 tenants necesita Enterprise o varios paquetes.
+- **Conservación:** el XML y el PDF se conservan **5 años**. El Código de Comercio (art. 60) pide 10 para los soportes contables: Cuadra guarda su propia copia en el `FileStore` de T36b, y falta preguntar si el plazo se puede extender o si hay descarga masiva.
+- **Límite de peticiones:** 120 por minuto en Executive. Alcanza de sobra para el piloto.
+- **Sin respuesta todavía:** el acceso al sandbox y el token de organización, el OpenAPI descargable, el SLA, si las subcuentas se crean por API (preguntaron de vuelta) y si envían la FE y el DE POS por correo al comprador (preguntaron "¿qué documento?"). Pidieron una llamada para verlo en detalle.
+- **Consecuencia:** el precio de revendedor era lo que más pesaba en §4 y no llegó. Se mantiene la alternativa de cotizar a Dataico y comparar con MATIAS API (P153) antes de firmar.
+
 **Conclusión para el precio de Cuadra (`docs/negocio.md`):** con el precio público, la DIAN cuesta entre **$ 70.000 y $ 135.000 al mes** por cada negocio del tamaño de la ferretería de demostración. Es demasiado para regalarlo dentro de un plan barato. Propuesta: cada plan incluye una **cuota de documentos** (por ejemplo, 1.500 al mes en Básico) y el excedente se cobra por paquete, como hacen los POS del mercado. La decisión es de Brayan.
 
 ## 5. Flujo de emisión

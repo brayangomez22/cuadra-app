@@ -3,7 +3,7 @@ import { Badge, TableCell, TableNarrow, TableRow, TextLink } from '@/shared/ui';
 import type { Customer } from '../../../../api/types';
 import { documentLabel } from '../../../../model/documentLabel';
 import { phoneLabel } from '../../../../model/phoneLabel';
-import { CreditCells } from '../CreditCells/CreditCells';
+import { CreditCell } from '../CreditCell/CreditCell';
 import styles from './CustomerTable.module.scss';
 
 type Props = {
@@ -51,7 +51,7 @@ export function CustomerRow({ customer, segment, canWrite, canReadCredit }: Prop
               </span>
             ))}
       </TableCell>
-      {canReadCredit && <CreditCells customer={customer} />}
+      {canReadCredit && <CreditCell customer={customer} />}
     </TableRow>
   );
 }

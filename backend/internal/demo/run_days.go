@@ -71,8 +71,10 @@ func (r *runner) write(ctx context.Context, d *Day, e Event) error {
 		return r.purchase(ctx, d, *e.Purchase)
 	case e.Payment != nil:
 		return r.payment(ctx, *e.Payment)
+	case e.Void != nil:
+		return r.void(ctx, e.Void)
 	default:
-		return r.sale(ctx, *e.Sale)
+		return r.sale(ctx, e.Sale)
 	}
 }
 
@@ -129,9 +131,10 @@ func count(amount decimal.Decimal) []apiclient.DenominationCount {
 }
 
 // sale confirms a sale with what pays it: its total on credit or by card
-// and transfers, or rounded up to a thousand in cash (with change).
-func (r *runner) sale(ctx context.Context, s Sale) error {
-	total := r.s.Total(s)
+// and transfers, or rounded up to a thousand in cash (with change). It
+// keeps the id of a sale that is voided later.
+func (r *runner) sale(ctx context.Context, s *Sale) error {
+	total := r.s.Total(*s)
 	paid := total
 	if s.Method == "cash" {
 		paid = total.Div(decimal.NewFromInt(1000)).Ceil().Mul(decimal.NewFromInt(1000))
@@ -150,7 +153,24 @@ func (r *runner) sale(ctx context.Context, s Sale) error {
 		})
 	}
 	res, err := r.api.ConfirmSaleWithResponse(ctx, in, r.as(r.seller(s.Location)))
-	return expect("confirm sale", res, err)
+	if err := expect("confirm sale", res, err); err != nil {
+		return err
+	}
+	if s.Void != nil {
+		r.toVoid[s] = res.JSON201.Id
+	}
+	return nil
+}
+
+// void voids a sale of the day as the administrator, who may void sales.
+func (r *runner) void(ctx context.Context, s *Sale) error {
+	id, ok := r.toVoid[s]
+	if !ok {
+		return fmt.Errorf("demo: void of a sale at %s that was not confirmed", s.At)
+	}
+	delete(r.toVoid, s)
+	res, err := r.api.VoidSaleWithResponse(ctx, id, apiclient.VoidSaleInput{Reason: s.Void.Reason}, r.as(r.s.Profile.Staff()[0].Email))
+	return expect("void sale", res, err)
 }
 
 // purchase registers a supplier's invoice at its cost, due by the

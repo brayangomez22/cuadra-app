@@ -18,11 +18,6 @@ export function CustomerTable({ customers, segments, canWrite }: Props) {
           <TableHeaderCell wide>Segmento</TableHeaderCell>
           <TableHeaderCell wide>Contacto</TableHeaderCell>
           {canReadCredit && <TableHeaderCell numeric>Debe</TableHeaderCell>}
-          {canReadCredit && (
-            <TableHeaderCell>
-              <span className="srOnly">Crédito</span>
-            </TableHeaderCell>
-          )}
         </TableRow>
       </TableHead>
       <TableBody>
