@@ -84,6 +84,27 @@ func (e ListProductsParamsStatus) Valid() bool {
 	}
 }
 
+// Defines values for ListProductsParamsSort.
+const (
+	Margin ListProductsParamsSort = "margin"
+	Name   ListProductsParamsSort = "name"
+	Price  ListProductsParamsSort = "price"
+)
+
+// Valid indicates whether the value is a known member of the ListProductsParamsSort enum.
+func (e ListProductsParamsSort) Valid() bool {
+	switch e {
+	case Margin:
+		return true
+	case Name:
+		return true
+	case Price:
+		return true
+	default:
+		return false
+	}
+}
+
 // AttributeDefinition Un atributo que la empresa define para sus productos (marca, material, principio activo...).
 type AttributeDefinition struct {
 	Id openapi_types.UUID `json:"id"`
@@ -674,6 +695,10 @@ type ListProductsParams struct {
 	// Status Productos activos (por defecto), inactivos o todos.
 	Status *ListProductsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
+	// Sort El orden sin `q` (con `q`, por coincidencia): por nombre (por defecto), por el menor precio de sus
+	// variantes o por su menor margen. Ordenar por margen exige ver costos (`costs_hidden`).
+	Sort *ListProductsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+
 	// Ids Solo estos productos (hasta 100), por ejemplo los de una página de existencias. Se combina con los demás
 	// filtros: para traer también los inactivos, use `status=all`.
 	Ids *[]openapi_types.UUID `form:"ids,omitempty" json:"ids,omitempty"`
@@ -687,6 +712,9 @@ type ListProductsParams struct {
 
 // ListProductsParamsStatus defines parameters for ListProducts.
 type ListProductsParamsStatus string
+
+// ListProductsParamsSort defines parameters for ListProducts.
+type ListProductsParamsSort string
 
 // CreateCategoryJSONRequestBody defines body for CreateCategory for application/json ContentType.
 type CreateCategoryJSONRequestBody = CategoryInput
@@ -1028,6 +1056,19 @@ func (siw *ServerInterfaceWrapper) ListProducts(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
 		}
 		return
 	}

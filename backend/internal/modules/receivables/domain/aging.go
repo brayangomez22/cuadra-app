@@ -69,3 +69,38 @@ func (g *Aging) Overdue() decimal.Decimal {
 
 // Total returns the whole balance.
 func (g *Aging) Total() decimal.Decimal { return g.Current.Add(g.Overdue()) }
+
+// AgingSort orders the customers of an aging, most first.
+type AgingSort string
+
+// The aging's orders: by what is overdue (the default), by the whole
+// balance or by what is more than 90 days overdue.
+const (
+	SortByOverdue AgingSort = "overdue"
+	SortByTotal   AgingSort = "total"
+	SortByOver90  AgingSort = "over_90"
+)
+
+// ParseAgingSort checks s; empty is by overdue.
+func ParseAgingSort(s string) (AgingSort, error) {
+	switch sort := AgingSort(s); sort {
+	case "":
+		return SortByOverdue, nil
+	case SortByOverdue, SortByTotal, SortByOver90:
+		return sort, nil
+	default:
+		return "", ErrInvalidAgingSort
+	}
+}
+
+// SortKey is the figure the aging is ordered by under sort.
+func (g *Aging) SortKey(sort AgingSort) decimal.Decimal {
+	switch sort {
+	case SortByTotal:
+		return g.Total()
+	case SortByOver90:
+		return g.Over90
+	default:
+		return g.Overdue()
+	}
+}

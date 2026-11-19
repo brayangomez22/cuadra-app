@@ -18,6 +18,7 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers/adapters/postgres"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers/app"
 	"github.com/brayangomez22/cuadra-app/backend/internal/modules/customers/domain"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/auth"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/db"
 )
 
@@ -27,6 +28,10 @@ type Config struct {
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
+	// Authorize decides who sees what each customer owes.
+	Authorize auth.Authorizer
+	// Balances is what the customers owe, from the receivables module.
+	Balances app.CustomerBalances
 	// Now is the clock of the use cases; nil is time.Now (the demo
 	// generator simulates one).
 	Now func() time.Time
@@ -36,6 +41,7 @@ type Config struct {
 type Module struct {
 	service *app.Service
 	log     *slog.Logger
+	can     auth.Authorizer
 }
 
 // New builds the module on PostgreSQL.
@@ -47,6 +53,7 @@ func New(cfg Config) (*Module, error) {
 		Customers:      postgres.NewCustomerRepository(cfg.DB),
 		Segments:       postgres.NewSegmentRepository(cfg.DB),
 		Municipalities: postgres.NewMunicipalityCatalog(cfg.DB),
+		Balances:       cfg.Balances,
 		TracerProvider: cfg.TracerProvider,
 		MeterProvider:  cfg.MeterProvider,
 		Now:            cfg.Now,
@@ -55,12 +62,12 @@ func New(cfg Config) (*Module, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Module{service: svc, log: cfg.Logger}, nil
+	return &Module{service: svc, log: cfg.Logger, can: cfg.Authorize}, nil
 }
 
 // RegisterRoutes mounts the module's operations (tag "customers") on mux.
 func (m *Module) RegisterRoutes(mux *http.ServeMux) {
-	httpadapter.Register(mux, m.service, m.log)
+	httpadapter.Register(mux, m.service, m.can, m.log)
 }
 
 // SeedSegments gives a new tenant the customer segments of its business

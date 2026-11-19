@@ -64,12 +64,12 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 	// The catalog asks the inventory whether a product has stock movements,
 	// and the inventory reads the catalog's variants: the history is joined
 	// once the inventory exists.
-	history := &ports.CatalogHistory{}
+	history, balances := &ports.CatalogHistory{}, &ports.CustomerBalances{}
 	catalogModule, err := w.catalog(history)
 	if err != nil {
 		return nil, err
 	}
-	customersModule, err := w.customers()
+	customersModule, err := w.customers(balances)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +85,11 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 	}
 	history.Inventory = inventoryModule
 	sell, err := w.selling(catalogModule, inventoryModule, customersModule, identityModule)
+	if err != nil {
+		return nil, err
+	}
+	balances.Receivables = sell.receivables
+	reportsModule, err := w.reports(sell.receivables)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +110,7 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 		inventoryModule.RegisterRoutes, sell.sales.RegisterRoutes, sell.receivables.RegisterRoutes,
 		sell.invoicing.RegisterRoutes, importsModule.RegisterRoutes, purchasesModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
 		w.auditor.Audit.RegisterRoutes, flagRoutes(w.flagService, w.Log), feedbackModule.RegisterRoutes,
+		reportsModule.RegisterRoutes,
 	}, nil
 }
 
@@ -139,9 +145,13 @@ func (w *wiring) signupLimiter() identity.RateLimiter {
 	return nil
 }
 
-func (w *wiring) customers() (*customers.Module, error) {
+// customers keeps the customers, and lists what each one owes from the
+// receivables module (joined once it exists).
+func (w *wiring) customers(balances *ports.CustomerBalances) (*customers.Module, error) {
 	return customers.New(customers.Config{
 		DB:             w.DB,
+		Authorize:      w.permissions.Authorize,
+		Balances:       balances,
 		Logger:         w.Log,
 		TracerProvider: w.TracerProvider,
 		MeterProvider:  w.MeterProvider,

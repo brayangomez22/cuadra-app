@@ -50,7 +50,7 @@ func TestAging(t *testing.T) {
 		e.charge(t, clothing, "5000") // vence hoy en Bogotá
 		e.charge(t, upToDate, "70000")
 
-		report, err := e.svc.Aging(t.Context(), e.actor, 10, 0)
+		report, err := e.svc.Aging(t.Context(), e.actor, app.AgingQuery{Limit: 10})
 		require.NoError(t, err)
 		require.Equal(t, domain.NewDate(2026, 10, 28), report.AsOf)
 		require.Equal(t, 3, report.Total)
@@ -76,7 +76,7 @@ func TestAging(t *testing.T) {
 		for _, name := range []string{"A", "B", "C"} {
 			e.charge(t, e.creditCustomer(t, name, "100000", 30), "1000")
 		}
-		report, err := e.svc.Aging(t.Context(), e.actor, 2, 2)
+		report, err := e.svc.Aging(t.Context(), e.actor, app.AgingQuery{Limit: 2, Offset: 2})
 		require.NoError(t, err)
 		require.Equal(t, 3, report.Total)
 		require.Len(t, report.Rows, 1)
@@ -86,7 +86,7 @@ func TestAging(t *testing.T) {
 	t.Run("sin cartera el informe sale vacío", func(t *testing.T) {
 		e := newEnv(t)
 		e.now = time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
-		report, err := e.svc.Aging(t.Context(), e.actor, 10, 0)
+		report, err := e.svc.Aging(t.Context(), e.actor, app.AgingQuery{Limit: 10})
 		require.NoError(t, err)
 		require.Zero(t, report.Total)
 		require.Empty(t, report.Rows)

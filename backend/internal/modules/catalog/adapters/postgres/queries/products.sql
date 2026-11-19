@@ -18,16 +18,25 @@ SET name = $2, description = $3, category_id = $4, base_unit_id = $5, tax_rate =
     active = $9
 WHERE id = $1;
 
--- ListProducts pages the products without a search text, by name.
+-- ListProducts pages the products without a search text: by name, or by
+-- the lowest price or the lowest margin of their active variants (lowest
+-- first, then by name).
 -- name: ListProducts :many
 SELECT p.id, p.tenant_id, p.name, p.description, p.category_id, p.base_unit_id, u.code AS unit_code, u.name AS unit_name,
        u.dian_code AS unit_dian_code, p.tax_rate, p.tax_treatment, p.attributes, p.active, p.created_at
 FROM products p
 JOIN units_of_measure u ON u.tenant_id = p.tenant_id AND u.id = p.base_unit_id
+CROSS JOIN LATERAL (
+    SELECT min(v.price) AS price, min((v.price - v.cost) / v.price) AS margin
+    FROM product_variants v
+    WHERE v.tenant_id = p.tenant_id AND v.product_id = p.id AND v.active
+) pricing
 WHERE (sqlc.narg(active)::boolean IS NULL OR p.active = sqlc.narg(active))
   AND (sqlc.narg(category_id)::uuid IS NULL OR p.category_id = sqlc.narg(category_id))
   AND (sqlc.narg(ids)::uuid[] IS NULL OR p.id = ANY(sqlc.narg(ids)::uuid[]))
-ORDER BY p.name, p.id
+ORDER BY CASE WHEN sqlc.arg(sort)::text = 'price' THEN pricing.price END,
+         CASE WHEN sqlc.arg(sort)::text = 'margin' THEN pricing.margin END,
+         p.name, p.id
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: CountProducts :one

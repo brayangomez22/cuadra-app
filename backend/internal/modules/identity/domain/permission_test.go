@@ -157,7 +157,7 @@ func TestPermissionMatrix(t *testing.T) {
 
 	t.Run("un permiso que no está en el registro se rechaza", func(t *testing.T) {
 		m := moduleMatrix(t)
-		for _, p := range []domain.Permission{"lots:delete", "reports:read", ""} {
+		for _, p := range []domain.Permission{"lots:delete", "reports:delete", ""} {
 			require.False(t, m.Known(p), p)
 			require.False(t, m.Can(domain.RoleOwner, p), p)
 		}

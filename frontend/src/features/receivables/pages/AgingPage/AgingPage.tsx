@@ -1,17 +1,22 @@
 import { formatDay } from '@/shared/format';
-import { pageParam, useSearchParamsState } from '@/shared/hooks/useSearchParamsState';
+import { enumParam, pageParam, useSearchParamsState } from '@/shared/hooks/useSearchParamsState';
 import { QueryState } from '@/shared/query';
 import { EmptyState, IconSuccess, Page, Pagination } from '@/shared/ui';
 import { PAGE_SIZE, useAging } from '../../api/aging';
+import type { AgingSort } from '../../api/types';
 import { AgingTable } from './components/AgingTable/AgingTable';
+import { AgingToolbar } from './components/AgingToolbar/AgingToolbar';
 import { AgingTotals } from './components/AgingTotals/AgingTotals';
 import styles from './AgingPage.module.scss';
 
-/** The receivables by age at /cartera: what each customer owes, due and overdue, most overdue first. */
+const sortParam = enumParam<AgingSort>(['overdue', 'total', 'over_90'], 'overdue');
+
+/** The receivables by age at /cartera: what each customer owes, due and overdue, most overdue first or as chosen. */
 export function AgingPage() {
   const [page, setPage] = useSearchParamsState('pagina', pageParam);
+  const [sort, setSort] = useSearchParamsState('orden', sortParam, { reset: ['pagina'] });
   const offset = (page - 1) * PAGE_SIZE;
-  const aging = useAging({ limit: PAGE_SIZE, offset });
+  const aging = useAging({ limit: PAGE_SIZE, offset, sort });
   return (
     <Page
       title="Cartera"
@@ -37,6 +42,7 @@ export function AgingPage() {
           aging.data && (
             <div className={styles.root} aria-busy={aging.isPlaceholderData || undefined}>
               <AgingTotals totals={aging.data.totals} />
+              <AgingToolbar sort={sort} onSortChange={(next) => setSort(sortParam.parse(next) ?? 'overdue')} />
               <AgingTable rows={aging.data.items} totals={aging.data.totals} customers={aging.data.total} />
               <Pagination
                 label="Páginas de la cartera"

@@ -1,0 +1,9 @@
+@use '@/styles/abstracts' as *;
+
+// A variant goes indented under its product, in the muted text: the detail
+// of the row above, not another product.
+.root {
+  display: block;
+  padding-inline-start: var(--space-4);
+  color: var(--color-text-muted);
+}

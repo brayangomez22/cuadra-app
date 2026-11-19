@@ -8,8 +8,13 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/httpx"
 )
 
+// errCostsHidden is a list ordered by margin asked by a role that does not
+// see costs: the order would tell the margins.
+var errCostsHidden = errors.New("catalog: costs hidden")
+
 // errorRules maps the catalog domain errors to HTTP.
 var errorRules = []httpx.ErrorRule{
+	{Err: errCostsHidden, Status: http.StatusForbidden, Code: "costs_hidden", Message: "Su rol no ve los márgenes: no puede ordenar por margen."},
 	{Err: domain.ErrProductNotFound, Status: http.StatusNotFound, Code: "product_not_found", Message: "El producto no existe."},
 	{Err: domain.ErrVariantNotFound, Status: http.StatusNotFound, Code: "variant_not_found", Message: "La variante no existe en este producto."},
 	{Err: domain.ErrSKUTaken, Status: http.StatusConflict, Code: "sku_taken",

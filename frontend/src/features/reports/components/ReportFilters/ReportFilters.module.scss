@@ -1,0 +1,14 @@
+@use '@/styles/abstracts' as *;
+
+// Two per row on a phone so the report starts on the first screen; as many
+// as fit side by side from md.
+.root {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+
+  @include respond-to(md) {
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  }
+}

@@ -32,10 +32,10 @@ type Handler struct {
 var _ customersapi.StrictServerInterface = (*Handler)(nil)
 
 // Register mounts the customers operations on mux, with the module's error
-// mapping.
-func Register(mux *http.ServeMux, uc UseCases, log *slog.Logger) {
+// mapping. can decides who sees what each customer owes.
+func Register(mux *http.ServeMux, uc UseCases, can auth.Authorizer, log *slog.Logger) {
 	h := &Handler{
-		customerHandlers: customerHandlers{uc: uc}, segmentHandlers: segmentHandlers{uc: uc},
+		customerHandlers: customerHandlers{uc: uc, can: can}, segmentHandlers: segmentHandlers{uc: uc},
 		municipalityHandlers: municipalityHandlers{uc: uc},
 	}
 	errs := httpx.NewErrorMapper(log, errorRules...)

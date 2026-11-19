@@ -23,6 +23,14 @@ var now = time.Date(2026, 10, 28, 15, 0, 0, 0, time.UTC)
 
 var owner = auth.Principal{TenantID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7()), Role: "owner"}
 
+var admin = auth.Principal{TenantID: owner.TenantID, UserID: uuid.Must(uuid.NewV7()), Role: "admin"}
+
+// onlyAdminSeesReceivables is the permission matrix of the tests: only the
+// admin sees what the customers owe.
+func onlyAdminSeesReceivables(role, permission string) bool {
+	return role == "admin" && permission == "receivables:read"
+}
+
 func newID() uuid.UUID { return uuid.Must(uuid.NewV7()) }
 
 // stubUseCases records the last call and answers with what each test sets.
@@ -113,7 +121,7 @@ func aPerson(t *testing.T) *domain.Customer {
 func serve(t *testing.T, uc *stubUseCases, p *auth.Principal, method, path, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	mux := http.NewServeMux()
-	httpadapter.Register(mux, uc, slog.New(slog.DiscardHandler))
+	httpadapter.Register(mux, uc, onlyAdminSeesReceivables, slog.New(slog.DiscardHandler))
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")

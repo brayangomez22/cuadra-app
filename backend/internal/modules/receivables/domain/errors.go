@@ -26,6 +26,7 @@ var (
 	ErrPaymentExceedsBalance = errors.New("receivables: the payment exceeds what the customer owes")
 	ErrReceivableHasPayments = errors.New("receivables: the receivable has payments")
 	ErrReceivableNotOpen     = errors.New("receivables: the receivable is not open")
+	ErrInvalidAgingSort      = errors.New("receivables: invalid aging sort")
 	// ErrBalanceMismatch means the account's balance does not match its open
 	// receivables: a broken invariant, never a user's mistake.
 	ErrBalanceMismatch = errors.New("receivables: account balance does not match its receivables")

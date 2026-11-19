@@ -10,6 +10,7 @@ import (
 // errorRules maps the receivables domain errors to HTTP.
 var errorRules = []httpx.ErrorRule{
 	{Err: domain.ErrCustomerNotFound, Status: http.StatusNotFound, Code: "customer_not_found", Message: "El cliente no existe."},
+	{Err: domain.ErrInvalidAgingSort, Status: http.StatusUnprocessableEntity, Code: "invalid_filter", Message: "El orden de la cartera no es válido."},
 	{Err: domain.ErrCashSessionRequired, Status: http.StatusConflict, Code: "cash_session_required", Message: "Abra la caja para recibir abonos en efectivo."},
 	{Err: domain.ErrInvalidCreditLimit, Status: http.StatusUnprocessableEntity, Code: "invalid_credit_limit", Message: "El cupo debe ser un monto en pesos, de cero en adelante."},
 	{Err: domain.ErrInvalidCreditTerm, Status: http.StatusUnprocessableEntity, Code: "invalid_credit_term", Message: "El plazo debe estar entre 0 y 365 días."},

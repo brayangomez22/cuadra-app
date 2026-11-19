@@ -19,6 +19,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AgingSort.
+const (
+	AgingSortOver90  AgingSort = "over_90"
+	AgingSortOverdue AgingSort = "overdue"
+	AgingSortTotal   AgingSort = "total"
+)
+
+// Valid indicates whether the value is a known member of the AgingSort enum.
+func (e AgingSort) Valid() bool {
+	switch e {
+	case AgingSortOver90:
+		return true
+	case AgingSortOverdue:
+		return true
+	case AgingSortTotal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttributeType.
 const (
 	Boolean AttributeType = "boolean"
@@ -130,6 +151,27 @@ func (e CashClosingResult) Valid() bool {
 	case CashClosingResultOverage:
 		return true
 	case CashClosingResultShortage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CashClosingsReportGroup.
+const (
+	CashClosingsReportGroupDay      CashClosingsReportGroup = "day"
+	CashClosingsReportGroupLocation CashClosingsReportGroup = "location"
+	CashClosingsReportGroupUser     CashClosingsReportGroup = "user"
+)
+
+// Valid indicates whether the value is a known member of the CashClosingsReportGroup enum.
+func (e CashClosingsReportGroup) Valid() bool {
+	switch e {
+	case CashClosingsReportGroupDay:
+		return true
+	case CashClosingsReportGroupLocation:
+		return true
+	case CashClosingsReportGroupUser:
 		return true
 	default:
 		return false
@@ -420,16 +462,16 @@ func (e HealthStatusStatus) Valid() bool {
 
 // Defines values for ImportFormat.
 const (
-	Csv  ImportFormat = "csv"
-	Xlsx ImportFormat = "xlsx"
+	ImportFormatCsv  ImportFormat = "csv"
+	ImportFormatXlsx ImportFormat = "xlsx"
 )
 
 // Valid indicates whether the value is a known member of the ImportFormat enum.
 func (e ImportFormat) Valid() bool {
 	switch e {
-	case Csv:
+	case ImportFormatCsv:
 		return true
-	case Xlsx:
+	case ImportFormatXlsx:
 		return true
 	default:
 		return false
@@ -595,6 +637,27 @@ func (e PersonType) Valid() bool {
 	}
 }
 
+// Defines values for ProductsReportSort.
+const (
+	ProductsReportSortProfit   ProductsReportSort = "profit"
+	ProductsReportSortQuantity ProductsReportSort = "quantity"
+	ProductsReportSortRevenue  ProductsReportSort = "revenue"
+)
+
+// Valid indicates whether the value is a known member of the ProductsReportSort enum.
+func (e ProductsReportSort) Valid() bool {
+	switch e {
+	case ProductsReportSortProfit:
+		return true
+	case ProductsReportSortQuantity:
+		return true
+	case ProductsReportSortRevenue:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PurchasePayment.
 const (
 	PurchasePaymentCash   PurchasePayment = "cash"
@@ -670,6 +733,81 @@ func (e ReceivableStatus) Valid() bool {
 	}
 }
 
+// Defines values for ReportBucket.
+const (
+	ReportBucketDay   ReportBucket = "day"
+	ReportBucketMonth ReportBucket = "month"
+	ReportBucketWeek  ReportBucket = "week"
+)
+
+// Valid indicates whether the value is a known member of the ReportBucket enum.
+func (e ReportBucket) Valid() bool {
+	switch e {
+	case ReportBucketDay:
+		return true
+	case ReportBucketMonth:
+		return true
+	case ReportBucketWeek:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportFormat.
+const (
+	ReportFormatCsv  ReportFormat = "csv"
+	ReportFormatXlsx ReportFormat = "xlsx"
+)
+
+// Valid indicates whether the value is a known member of the ReportFormat enum.
+func (e ReportFormat) Valid() bool {
+	switch e {
+	case ReportFormatCsv:
+		return true
+	case ReportFormatXlsx:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportKind.
+const (
+	CashClosings     ReportKind = "cash_closings"
+	IdleStock        ReportKind = "idle_stock"
+	Products         ReportKind = "products"
+	Receivables      ReportKind = "receivables"
+	SaleProfits      ReportKind = "sale_profits"
+	Sales            ReportKind = "sales"
+	StockAdjustments ReportKind = "stock_adjustments"
+	TeamControl      ReportKind = "team_control"
+)
+
+// Valid indicates whether the value is a known member of the ReportKind enum.
+func (e ReportKind) Valid() bool {
+	switch e {
+	case CashClosings:
+		return true
+	case IdleStock:
+		return true
+	case Products:
+		return true
+	case Receivables:
+		return true
+	case SaleProfits:
+		return true
+	case Sales:
+		return true
+	case StockAdjustments:
+		return true
+	case TeamControl:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SaleStatus.
 const (
 	SaleStatusConfirmed SaleStatus = "confirmed"
@@ -682,6 +820,51 @@ func (e SaleStatus) Valid() bool {
 	case SaleStatusConfirmed:
 		return true
 	case SaleStatusVoided:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesReportGroup.
+const (
+	SalesReportGroupCategory      SalesReportGroup = "category"
+	SalesReportGroupDay           SalesReportGroup = "day"
+	SalesReportGroupLocation      SalesReportGroup = "location"
+	SalesReportGroupPaymentMethod SalesReportGroup = "payment_method"
+	SalesReportGroupUser          SalesReportGroup = "user"
+)
+
+// Valid indicates whether the value is a known member of the SalesReportGroup enum.
+func (e SalesReportGroup) Valid() bool {
+	switch e {
+	case SalesReportGroupCategory:
+		return true
+	case SalesReportGroupDay:
+		return true
+	case SalesReportGroupLocation:
+		return true
+	case SalesReportGroupPaymentMethod:
+		return true
+	case SalesReportGroupUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StockAdjustmentsReportGroup.
+const (
+	StockAdjustmentsReportGroupUser    StockAdjustmentsReportGroup = "user"
+	StockAdjustmentsReportGroupVariant StockAdjustmentsReportGroup = "variant"
+)
+
+// Valid indicates whether the value is a known member of the StockAdjustmentsReportGroup enum.
+func (e StockAdjustmentsReportGroup) Valid() bool {
+	switch e {
+	case StockAdjustmentsReportGroupUser:
+		return true
+	case StockAdjustmentsReportGroupVariant:
 		return true
 	default:
 		return false
@@ -949,6 +1132,27 @@ func (e ListProductsParamsStatus) Valid() bool {
 	}
 }
 
+// Defines values for ListProductsParamsSort.
+const (
+	ListProductsParamsSortMargin ListProductsParamsSort = "margin"
+	ListProductsParamsSortName   ListProductsParamsSort = "name"
+	ListProductsParamsSortPrice  ListProductsParamsSort = "price"
+)
+
+// Valid indicates whether the value is a known member of the ListProductsParamsSort enum.
+func (e ListProductsParamsSort) Valid() bool {
+	switch e {
+	case ListProductsParamsSortMargin:
+		return true
+	case ListProductsParamsSortName:
+		return true
+	case ListProductsParamsSortPrice:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListPurchasesParamsStatus.
 const (
 	ListPurchasesParamsStatusAll    ListPurchasesParamsStatus = "all"
@@ -967,6 +1171,66 @@ func (e ListPurchasesParamsStatus) Valid() bool {
 	case ListPurchasesParamsStatusPaid:
 		return true
 	case ListPurchasesParamsStatusVoided:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExportReportParamsGroupBy.
+const (
+	ExportReportParamsGroupByCategory      ExportReportParamsGroupBy = "category"
+	ExportReportParamsGroupByDay           ExportReportParamsGroupBy = "day"
+	ExportReportParamsGroupByLocation      ExportReportParamsGroupBy = "location"
+	ExportReportParamsGroupByPaymentMethod ExportReportParamsGroupBy = "payment_method"
+	ExportReportParamsGroupByUser          ExportReportParamsGroupBy = "user"
+	ExportReportParamsGroupByVariant       ExportReportParamsGroupBy = "variant"
+)
+
+// Valid indicates whether the value is a known member of the ExportReportParamsGroupBy enum.
+func (e ExportReportParamsGroupBy) Valid() bool {
+	switch e {
+	case ExportReportParamsGroupByCategory:
+		return true
+	case ExportReportParamsGroupByDay:
+		return true
+	case ExportReportParamsGroupByLocation:
+		return true
+	case ExportReportParamsGroupByPaymentMethod:
+		return true
+	case ExportReportParamsGroupByUser:
+		return true
+	case ExportReportParamsGroupByVariant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExportReportParamsSort.
+const (
+	ExportReportParamsSortOver90   ExportReportParamsSort = "over_90"
+	ExportReportParamsSortOverdue  ExportReportParamsSort = "overdue"
+	ExportReportParamsSortProfit   ExportReportParamsSort = "profit"
+	ExportReportParamsSortQuantity ExportReportParamsSort = "quantity"
+	ExportReportParamsSortRevenue  ExportReportParamsSort = "revenue"
+	ExportReportParamsSortTotal    ExportReportParamsSort = "total"
+)
+
+// Valid indicates whether the value is a known member of the ExportReportParamsSort enum.
+func (e ExportReportParamsSort) Valid() bool {
+	switch e {
+	case ExportReportParamsSortOver90:
+		return true
+	case ExportReportParamsSortOverdue:
+		return true
+	case ExportReportParamsSortProfit:
+		return true
+	case ExportReportParamsSortQuantity:
+		return true
+	case ExportReportParamsSortRevenue:
+		return true
+	case ExportReportParamsSortTotal:
 		return true
 	default:
 		return false
@@ -1059,6 +1323,9 @@ type AgingRow struct {
 	CustomerId openapi_types.UUID `json:"customer_id"`
 	Name       string             `json:"name"`
 }
+
+// AgingSort defines model for AgingSort.
+type AgingSort string
 
 // AttributeDefinition Un atributo que la empresa define para sus productos (marca, material, principio activo...).
 type AttributeDefinition struct {
@@ -1269,6 +1536,75 @@ type CashClosing struct {
 
 // CashClosingResult defines model for CashClosing.Result.
 type CashClosingResult string
+
+// CashClosingFigures defines model for CashClosingFigures.
+type CashClosingFigures struct {
+	Closings int `json:"closings"`
+
+	// Difference Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Difference SignedMoney `json:"difference"`
+
+	// Overage Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Overage Money `json:"overage"`
+
+	// SalesTotal Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	SalesTotal Money `json:"sales_total"`
+
+	// Shortage Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Shortage Money `json:"shortage"`
+
+	// WithDifference Cierres con faltante o sobrante.
+	WithDifference int `json:"with_difference"`
+}
+
+// CashClosingsReport defines model for CashClosingsReport.
+type CashClosingsReport struct {
+	GroupBy CashClosingsReportGroup `json:"group_by"`
+	Items   []CashClosingsReportRow `json:"items"`
+	Period  ReportPeriod            `json:"period"`
+	Totals  CashClosingFigures      `json:"totals"`
+}
+
+// CashClosingsReportGroup defines model for CashClosingsReportGroup.
+type CashClosingsReportGroup string
+
+// CashClosingsReportRow defines model for CashClosingsReportRow.
+type CashClosingsReportRow struct {
+	Closings int `json:"closings"`
+
+	// Difference Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Difference SignedMoney `json:"difference"`
+	Key        string      `json:"key"`
+	Label      string      `json:"label"`
+
+	// Overage Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Overage Money `json:"overage"`
+
+	// SalesTotal Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	SalesTotal Money `json:"sales_total"`
+
+	// Shortage Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Shortage Money `json:"shortage"`
+
+	// WithDifference Cierres con faltante o sobrante.
+	WithDifference int `json:"with_difference"`
+}
 
 // CashMethodTotal Lo que cobraron las ventas de la caja con un medio de pago; el efectivo es neto del cambio.
 type CashMethodTotal struct {
@@ -1545,8 +1881,13 @@ type CurrentCashSession struct {
 // Customer Un cliente de la empresa. `document_number` está en su forma canónica: el NIT con su dígito de verificación
 // (`900123456-8`), la cédula solo con dígitos y el pasaporte en mayúsculas.
 type Customer struct {
-	Active    bool      `json:"active"`
-	Address   *string   `json:"address,omitempty"`
+	Active  bool    `json:"active"`
+	Address *string `json:"address,omitempty"`
+
+	// Balance Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Balance   *Money    `json:"balance,omitempty"`
 	City      *string   `json:"city,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 
@@ -1568,6 +1909,11 @@ type Customer struct {
 
 	// Name Nombre completo o razón social.
 	Name string `json:"name"`
+
+	// Overdue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Overdue *Money `json:"overdue,omitempty"`
 
 	// PersonType Persona natural (`natural`) o jurídica (`legal`). Una persona jurídica se identifica con NIT.
 	PersonType          PersonType          `json:"person_type"`
@@ -1901,6 +2247,64 @@ type HealthStatus struct {
 // HealthStatusStatus defines model for HealthStatus.Status.
 type HealthStatusStatus string
 
+// IdleStockReport defines model for IdleStockReport.
+type IdleStockReport struct {
+	Days  int            `json:"days"`
+	Items []IdleStockRow `json:"items"`
+
+	// Since Desde este día (incluido) no se han vendido.
+	Since openapi_types.Date `json:"since"`
+	Total int                `json:"total"`
+
+	// Value Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Value *Money `json:"value,omitempty"`
+}
+
+// IdleStockRow defines model for IdleStockRow.
+type IdleStockRow struct {
+	LastSoldAt *time.Time         `json:"last_sold_at,omitempty"`
+	Name       string             `json:"name"`
+	ProductId  openapi_types.UUID `json:"product_id"`
+
+	// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	Quantity Quantity `json:"quantity"`
+	UnitCode string   `json:"unit_code"`
+
+	// Value Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Value    *Money             `json:"value,omitempty"`
+	Variants []IdleStockVariant `json:"variants"`
+}
+
+// IdleStockVariant defines model for IdleStockVariant.
+type IdleStockVariant struct {
+	Label string `json:"label"`
+
+	// LastSoldAt La última venta de la variante; sin ella, nunca se ha vendido.
+	LastSoldAt *time.Time `json:"last_sold_at,omitempty"`
+
+	// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	Quantity Quantity `json:"quantity"`
+	Sku      string   `json:"sku"`
+
+	// Value Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Value     *Money             `json:"value,omitempty"`
+	VariantId openapi_types.UUID `json:"variant_id"`
+}
+
 // Import defines model for Import.
 type Import struct {
 	// Counts Filas y productos del archivo; productos creados, actualizados y omitidos hasta ahora; errores.
@@ -2148,6 +2552,11 @@ type LoginRequest struct {
 	// TenantId Empresa elegida tras una respuesta 409 `tenant_selection_required`.
 	TenantId *openapi_types.UUID `json:"tenant_id,omitempty"`
 }
+
+// Margin Margen sobre el ingreso sin IVA, como fracción decimal con signo (`0.2500` es 25 %).
+//
+// Example: 0.2500
+type Margin = string
 
 // Me defines model for Me.
 type Me struct {
@@ -2637,6 +3046,115 @@ type ProductWithVariantsInput struct {
 	Variants     []ProductVariantInput `json:"variants"`
 }
 
+// ProductsReport defines model for ProductsReport.
+type ProductsReport struct {
+	Items  []ProductsReportRow `json:"items"`
+	Period ReportPeriod        `json:"period"`
+
+	// Total Cantidad de productos vendidos en el periodo.
+	Total int `json:"total"`
+
+	// Totals Ingreso sin IVA y, para quien ve costos, costo en el momento de la venta, utilidad y margen.
+	Totals ProfitFigures `json:"totals"`
+}
+
+// ProductsReportRow defines model for ProductsReportRow.
+type ProductsReportRow struct {
+	// Cost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Cost *Money `json:"cost,omitempty"`
+
+	// Margin Margen sobre el ingreso sin IVA, como fracción decimal con signo (`0.2500` es 25 %).
+	//
+	// Example: 0.2500
+	Margin    *Margin            `json:"margin,omitempty"`
+	Name      string             `json:"name"`
+	ProductId openapi_types.UUID `json:"product_id"`
+
+	// Profit Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Profit *SignedMoney `json:"profit,omitempty"`
+
+	// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	Quantity Quantity `json:"quantity"`
+
+	// Revenue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Revenue Money `json:"revenue"`
+
+	// UnitCode El código de la unidad base, en la que van las cantidades.
+	UnitCode string                  `json:"unit_code"`
+	Variants []ProductsReportVariant `json:"variants"`
+}
+
+// ProductsReportSort defines model for ProductsReportSort.
+type ProductsReportSort string
+
+// ProductsReportVariant defines model for ProductsReportVariant.
+type ProductsReportVariant struct {
+	// Cost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Cost *Money `json:"cost,omitempty"`
+
+	// Label Los valores de sus ejes (`Rojo · M`); vacío en un producto simple.
+	Label string `json:"label"`
+
+	// Margin Margen sobre el ingreso sin IVA, como fracción decimal con signo (`0.2500` es 25 %).
+	//
+	// Example: 0.2500
+	Margin *Margin `json:"margin,omitempty"`
+
+	// Profit Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Profit *SignedMoney `json:"profit,omitempty"`
+
+	// Quantity Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	Quantity Quantity `json:"quantity"`
+
+	// Revenue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Revenue   Money              `json:"revenue"`
+	Sku       string             `json:"sku"`
+	VariantId openapi_types.UUID `json:"variant_id"`
+}
+
+// ProfitFigures Ingreso sin IVA y, para quien ve costos, costo en el momento de la venta, utilidad y margen.
+type ProfitFigures struct {
+	// Cost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Cost *Money `json:"cost,omitempty"`
+
+	// Margin Margen sobre el ingreso sin IVA, como fracción decimal con signo (`0.2500` es 25 %).
+	//
+	// Example: 0.2500
+	Margin *Margin `json:"margin,omitempty"`
+
+	// Profit Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Profit *SignedMoney `json:"profit,omitempty"`
+
+	// Revenue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Revenue Money `json:"revenue"`
+}
+
 // Purchase defines model for Purchase.
 type Purchase struct {
 	// BalanceDue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
@@ -3024,6 +3542,21 @@ type ReorderRuleInput struct {
 	MinQuantity Quantity `json:"min_quantity"`
 }
 
+// ReportBucket Cada cuánto se agrupa una tendencia; la semana empieza el lunes.
+type ReportBucket string
+
+// ReportFormat defines model for ReportFormat.
+type ReportFormat string
+
+// ReportKind defines model for ReportKind.
+type ReportKind string
+
+// ReportPeriod defines model for ReportPeriod.
+type ReportPeriod struct {
+	From openapi_types.Date `json:"from"`
+	To   openapi_types.Date `json:"to"`
+}
+
 // ResetPasswordRequest defines model for ResetPasswordRequest.
 type ResetPasswordRequest struct {
 	Password string `json:"password"`
@@ -3226,6 +3759,47 @@ type SalePayment struct {
 	Method PaymentMethod `json:"method"`
 }
 
+// SaleProfitRow defines model for SaleProfitRow.
+type SaleProfitRow struct {
+	ConfirmedAt time.Time `json:"confirmed_at"`
+
+	// Cost Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Cost         *Money             `json:"cost,omitempty"`
+	LocationId   openapi_types.UUID `json:"location_id"`
+	LocationName string             `json:"location_name"`
+
+	// Margin Margen sobre el ingreso sin IVA, como fracción decimal con signo (`0.2500` es 25 %).
+	//
+	// Example: 0.2500
+	Margin *Margin `json:"margin,omitempty"`
+	Number int64   `json:"number"`
+
+	// Profit Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Profit *SignedMoney `json:"profit,omitempty"`
+
+	// Revenue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Revenue  Money              `json:"revenue"`
+	SaleId   openapi_types.UUID `json:"sale_id"`
+	UserId   openapi_types.UUID `json:"user_id"`
+	UserName string             `json:"user_name"`
+}
+
+// SaleProfitsReport defines model for SaleProfitsReport.
+type SaleProfitsReport struct {
+	Items  []SaleProfitRow `json:"items"`
+	Period ReportPeriod    `json:"period"`
+	Total  int             `json:"total"`
+
+	// Totals Ingreso sin IVA y, para quien ve costos, costo en el momento de la venta, utilidad y margen.
+	Totals ProfitFigures `json:"totals"`
+}
+
 // SaleStatus defines model for SaleStatus.
 type SaleStatus string
 
@@ -3282,6 +3856,59 @@ type SaleVoid struct {
 	// UserName Su nombre, en el detalle de la venta (`GET /sales/{saleId}`); no viene si el usuario ya no existe.
 	UserName *string   `json:"user_name,omitempty"`
 	VoidedAt time.Time `json:"voided_at"`
+}
+
+// SalesReport defines model for SalesReport.
+type SalesReport struct {
+	GroupBy SalesReportGroup  `json:"group_by"`
+	Items   []SalesReportRow  `json:"items"`
+	Period  ReportPeriod      `json:"period"`
+	Totals  SalesReportTotals `json:"totals"`
+}
+
+// SalesReportGroup defines model for SalesReportGroup.
+type SalesReportGroup string
+
+// SalesReportRow Un grupo de ventas. `key` es el día (`2026-11-03`), el ID del usuario, de la sede o de la categoría (vacío sin
+// categoría) o el medio de pago; `label` es su nombre. Por medio de pago no trae `net` ni `tax`.
+type SalesReportRow struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
+
+	// Net Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Net        *Money `json:"net,omitempty"`
+	SalesCount int    `json:"sales_count"`
+
+	// Tax Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Tax *Money `json:"tax,omitempty"`
+
+	// Total Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Total Money `json:"total"`
+}
+
+// SalesReportTotals defines model for SalesReportTotals.
+type SalesReportTotals struct {
+	// Net Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Net        Money `json:"net"`
+	SalesCount int   `json:"sales_count"`
+
+	// Tax Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Tax Money `json:"tax"`
+
+	// Total Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Total Money `json:"total"`
 }
 
 // SalesSettings Las reglas de venta de la empresa.
@@ -3348,6 +3975,50 @@ type SignedMoney = string
 //
 // Example: -3
 type SignedQuantity = string
+
+// StockAdjustmentsReport defines model for StockAdjustmentsReport.
+type StockAdjustmentsReport struct {
+	Adjustments int                         `json:"adjustments"`
+	GroupBy     StockAdjustmentsReportGroup `json:"group_by"`
+	Items       []StockAdjustmentsReportRow `json:"items"`
+	Period      ReportPeriod                `json:"period"`
+
+	// Value Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Value *SignedMoney `json:"value,omitempty"`
+}
+
+// StockAdjustmentsReportGroup defines model for StockAdjustmentsReportGroup.
+type StockAdjustmentsReportGroup string
+
+// StockAdjustmentsReportRow Un grupo de ajustes. `key` es el ID del usuario o de la variante; `label`, su nombre (el producto y los
+// valores de sus ejes). Las cantidades van en la unidad base (`unit_code`, solo por variante).
+type StockAdjustmentsReportRow struct {
+	Adjustments int    `json:"adjustments"`
+	Key         string `json:"key"`
+	Label       string `json:"label"`
+
+	// QuantityIn Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	QuantityIn Quantity `json:"quantity_in"`
+
+	// QuantityOut Cantidad como decimal en string (hasta 4 decimales), en la unidad base del producto salvo que el objeto diga
+	// otra unidad (`unit_id`, `unit_code`).
+	//
+	//
+	// Example: 2.5
+	QuantityOut Quantity `json:"quantity_out"`
+	UnitCode    *string  `json:"unit_code,omitempty"`
+
+	// Value Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	Value *SignedMoney `json:"value,omitempty"`
+}
 
 // StockCount Un conteo físico. Solo los aprobados traen `summary`.
 type StockCount struct {
@@ -3732,6 +4403,136 @@ type TaxResponsibility string
 // lleva IVA).
 type TaxTreatment string
 
+// TeamControlFigures defines model for TeamControlFigures.
+type TeamControlFigures struct {
+	Adjustments int `json:"adjustments"`
+
+	// AdjustmentsValue Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	AdjustmentsValue *SignedMoney `json:"adjustments_value,omitempty"`
+	CashDifferences  int          `json:"cash_differences"`
+
+	// CashOverage Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	CashOverage Money `json:"cash_overage"`
+
+	// CashShortage Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	CashShortage Money `json:"cash_shortage"`
+
+	// DiscountRate Margen sobre el ingreso sin IVA, como fracción decimal con signo (`0.2500` es 25 %).
+	//
+	// Example: 0.2500
+	DiscountRate *Margin `json:"discount_rate,omitempty"`
+	Discounts    int     `json:"discounts"`
+
+	// DiscountsAmount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	DiscountsAmount Money `json:"discounts_amount"`
+	PriceChanges    int   `json:"price_changes"`
+	Voids           int   `json:"voids"`
+
+	// VoidsTotal Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	VoidsTotal Money `json:"voids_total"`
+}
+
+// TeamControlPoint defines model for TeamControlPoint.
+type TeamControlPoint struct {
+	Adjustments int `json:"adjustments"`
+
+	// AdjustmentsValue Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	AdjustmentsValue *SignedMoney       `json:"adjustments_value,omitempty"`
+	BucketStart      openapi_types.Date `json:"bucket_start"`
+	CashDifferences  int                `json:"cash_differences"`
+
+	// CashOverage Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	CashOverage Money `json:"cash_overage"`
+
+	// CashShortage Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	CashShortage Money `json:"cash_shortage"`
+
+	// DiscountRate Margen sobre el ingreso sin IVA, como fracción decimal con signo (`0.2500` es 25 %).
+	//
+	// Example: 0.2500
+	DiscountRate *Margin `json:"discount_rate,omitempty"`
+	Discounts    int     `json:"discounts"`
+
+	// DiscountsAmount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	DiscountsAmount Money              `json:"discounts_amount"`
+	PriceChanges    int                `json:"price_changes"`
+	UserId          openapi_types.UUID `json:"user_id"`
+	Voids           int                `json:"voids"`
+
+	// VoidsTotal Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	VoidsTotal Money `json:"voids_total"`
+}
+
+// TeamControlReport defines model for TeamControlReport.
+type TeamControlReport struct {
+	// Bucket Cada cuánto se agrupa una tendencia; la semana empieza el lunes.
+	Bucket ReportBucket       `json:"bucket"`
+	Period ReportPeriod       `json:"period"`
+	Series []TeamControlPoint `json:"series"`
+	Users  []TeamControlUser  `json:"users"`
+}
+
+// TeamControlUser defines model for TeamControlUser.
+type TeamControlUser struct {
+	Adjustments int `json:"adjustments"`
+
+	// AdjustmentsValue Monto en pesos colombianos con signo, como decimal en string (hasta 4 decimales).
+	//
+	// Example: -4800.00
+	AdjustmentsValue *SignedMoney `json:"adjustments_value,omitempty"`
+	CashDifferences  int          `json:"cash_differences"`
+
+	// CashOverage Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	CashOverage Money `json:"cash_overage"`
+
+	// CashShortage Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	CashShortage Money `json:"cash_shortage"`
+
+	// DiscountRate Margen sobre el ingreso sin IVA, como fracción decimal con signo (`0.2500` es 25 %).
+	//
+	// Example: 0.2500
+	DiscountRate *Margin `json:"discount_rate,omitempty"`
+	Discounts    int     `json:"discounts"`
+
+	// DiscountsAmount Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	DiscountsAmount Money              `json:"discounts_amount"`
+	Name            string             `json:"name"`
+	PriceChanges    int                `json:"price_changes"`
+	UserId          openapi_types.UUID `json:"user_id"`
+	Voids           int                `json:"voids"`
+
+	// VoidsTotal Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	VoidsTotal Money `json:"voids_total"`
+}
+
 // Tenant La empresa (tenant) y su configuración.
 type Tenant struct {
 	// Address Dirección del negocio, para la tirilla y los documentos. Vacía si no se ha registrado.
@@ -4040,6 +4841,21 @@ type PurchaseId = openapi_types.UUID
 // RefreshCookie defines model for RefreshCookie.
 type RefreshCookie = string
 
+// ReportAttribute defines model for ReportAttribute.
+type ReportAttribute = string
+
+// ReportAttributeValue defines model for ReportAttributeValue.
+type ReportAttributeValue = string
+
+// ReportFrom defines model for ReportFrom.
+type ReportFrom = openapi_types.Date
+
+// ReportLocation defines model for ReportLocation.
+type ReportLocation = openapi_types.UUID
+
+// ReportTo defines model for ReportTo.
+type ReportTo = openapi_types.Date
+
 // ResolutionId defines model for ResolutionId.
 type ResolutionId = openapi_types.UUID
 
@@ -4075,6 +4891,9 @@ type InternalError = Error
 
 // InvalidCustomer Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type InvalidCustomer = Error
+
+// InvalidPeriod Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
+type InvalidPeriod = Error
 
 // InvalidSupplier Example: {"error":{"code":"insufficient_stock","message":"No hay stock suficiente de Producto X"}}
 type InvalidSupplier = Error
@@ -4262,6 +5081,10 @@ type ListProductsParams struct {
 	// Status Productos activos (por defecto), inactivos o todos.
 	Status *ListProductsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
+	// Sort El orden sin `q` (con `q`, por coincidencia): por nombre (por defecto), por el menor precio de sus
+	// variantes o por su menor margen. Ordenar por margen exige ver costos (`costs_hidden`).
+	Sort *ListProductsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+
 	// Ids Solo estos productos (hasta 100), por ejemplo los de una página de existencias. Se combina con los demás
 	// filtros: para traer también los inactivos, use `status=all`.
 	Ids *[]openapi_types.UUID `form:"ids,omitempty" json:"ids,omitempty"`
@@ -4275,6 +5098,9 @@ type ListProductsParams struct {
 
 // ListProductsParamsStatus defines parameters for ListProducts.
 type ListProductsParamsStatus string
+
+// ListProductsParamsSort defines parameters for ListProducts.
+type ListProductsParamsSort string
 
 // ListPurchasesParams defines parameters for ListPurchases.
 type ListPurchasesParams struct {
@@ -4302,11 +5128,168 @@ type ListPurchasesParamsStatus string
 
 // GetReceivablesAgingParams defines parameters for GetReceivablesAging.
 type GetReceivablesAgingParams struct {
+	// Sort Primero los que más deben vencido (por defecto), en total o a más de 90 días.
+	Sort *AgingSort `form:"sort,omitempty" json:"sort,omitempty"`
+
 	// Limit Cantidad máxima de resultados.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Offset Cantidad de resultados a saltar.
 	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// GetCashClosingsReportParams defines parameters for GetCashClosingsReport.
+type GetCashClosingsReportParams struct {
+	// From Primer día del periodo (incluido), en Colombia.
+	From ReportFrom `form:"from" json:"from"`
+
+	// To Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo.
+	To ReportTo `form:"to" json:"to"`
+
+	// LocationId Solo esta sede. Sin ella, todas.
+	LocationId *ReportLocation          `form:"location_id,omitempty" json:"location_id,omitempty"`
+	GroupBy    *CashClosingsReportGroup `form:"group_by,omitempty" json:"group_by,omitempty"`
+}
+
+// ExportReportParams defines parameters for ExportReport.
+type ExportReportParams struct {
+	Report ReportKind          `form:"report" json:"report"`
+	Format *ReportFormat       `form:"format,omitempty" json:"format,omitempty"`
+	From   *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+	To     *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+
+	// LocationId Solo esta sede. Sin ella, todas.
+	LocationId *ReportLocation `form:"location_id,omitempty" json:"location_id,omitempty"`
+
+	// GroupBy El agrupamiento del reporte (`sales`, `cash_closings` o `stock_adjustments`).
+	GroupBy    *ExportReportParamsGroupBy `form:"group_by,omitempty" json:"group_by,omitempty"`
+	Bucket     *ReportBucket              `form:"bucket,omitempty" json:"bucket,omitempty"`
+	CategoryId *openapi_types.UUID        `form:"category_id,omitempty" json:"category_id,omitempty"`
+
+	// Attribute Solo los productos con este atributo de la empresa (su `key`) igual a `attribute_value`.
+	Attribute *ReportAttribute `form:"attribute,omitempty" json:"attribute,omitempty"`
+
+	// AttributeValue El valor del atributo `attribute` (`true` o `false` en los de sí/no).
+	AttributeValue *ReportAttributeValue `form:"attribute_value,omitempty" json:"attribute_value,omitempty"`
+
+	// Sort El orden de `products` o de `receivables`.
+	Sort *ExportReportParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+	Days *int                    `form:"days,omitempty" json:"days,omitempty"`
+}
+
+// ExportReportParamsGroupBy defines parameters for ExportReport.
+type ExportReportParamsGroupBy string
+
+// ExportReportParamsSort defines parameters for ExportReport.
+type ExportReportParamsSort string
+
+// GetIdleStockReportParams defines parameters for GetIdleStockReport.
+type GetIdleStockReportParams struct {
+	// Days Días sin vender.
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+
+	// LocationId Solo esta sede. Sin ella, todas.
+	LocationId *ReportLocation `form:"location_id,omitempty" json:"location_id,omitempty"`
+
+	// CategoryId Solo los productos de esta categoría.
+	CategoryId *openapi_types.UUID `form:"category_id,omitempty" json:"category_id,omitempty"`
+
+	// Attribute Solo los productos con este atributo de la empresa (su `key`) igual a `attribute_value`.
+	Attribute *ReportAttribute `form:"attribute,omitempty" json:"attribute,omitempty"`
+
+	// AttributeValue El valor del atributo `attribute` (`true` o `false` en los de sí/no).
+	AttributeValue *ReportAttributeValue `form:"attribute_value,omitempty" json:"attribute_value,omitempty"`
+
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// GetProductsReportParams defines parameters for GetProductsReport.
+type GetProductsReportParams struct {
+	// From Primer día del periodo (incluido), en Colombia.
+	From ReportFrom `form:"from" json:"from"`
+
+	// To Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo.
+	To ReportTo `form:"to" json:"to"`
+
+	// LocationId Solo esta sede. Sin ella, todas.
+	LocationId *ReportLocation `form:"location_id,omitempty" json:"location_id,omitempty"`
+
+	// CategoryId Solo los productos de esta categoría.
+	CategoryId *openapi_types.UUID `form:"category_id,omitempty" json:"category_id,omitempty"`
+
+	// Attribute Solo los productos con este atributo de la empresa (su `key`) igual a `attribute_value`.
+	Attribute *ReportAttribute `form:"attribute,omitempty" json:"attribute,omitempty"`
+
+	// AttributeValue El valor del atributo `attribute` (`true` o `false` en los de sí/no).
+	AttributeValue *ReportAttributeValue `form:"attribute_value,omitempty" json:"attribute_value,omitempty"`
+	Sort           *ProductsReportSort   `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// GetSaleProfitsReportParams defines parameters for GetSaleProfitsReport.
+type GetSaleProfitsReportParams struct {
+	// From Primer día del periodo (incluido), en Colombia.
+	From ReportFrom `form:"from" json:"from"`
+
+	// To Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo.
+	To ReportTo `form:"to" json:"to"`
+
+	// LocationId Solo esta sede. Sin ella, todas.
+	LocationId *ReportLocation `form:"location_id,omitempty" json:"location_id,omitempty"`
+
+	// Limit Cantidad máxima de resultados.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Cantidad de resultados a saltar.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// GetSalesReportParams defines parameters for GetSalesReport.
+type GetSalesReportParams struct {
+	// From Primer día del periodo (incluido), en Colombia.
+	From ReportFrom `form:"from" json:"from"`
+
+	// To Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo.
+	To ReportTo `form:"to" json:"to"`
+
+	// LocationId Solo esta sede. Sin ella, todas.
+	LocationId *ReportLocation   `form:"location_id,omitempty" json:"location_id,omitempty"`
+	GroupBy    *SalesReportGroup `form:"group_by,omitempty" json:"group_by,omitempty"`
+}
+
+// GetStockAdjustmentsReportParams defines parameters for GetStockAdjustmentsReport.
+type GetStockAdjustmentsReportParams struct {
+	// From Primer día del periodo (incluido), en Colombia.
+	From ReportFrom `form:"from" json:"from"`
+
+	// To Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo.
+	To ReportTo `form:"to" json:"to"`
+
+	// LocationId Solo esta sede. Sin ella, todas.
+	LocationId *ReportLocation              `form:"location_id,omitempty" json:"location_id,omitempty"`
+	GroupBy    *StockAdjustmentsReportGroup `form:"group_by,omitempty" json:"group_by,omitempty"`
+}
+
+// GetTeamControlReportParams defines parameters for GetTeamControlReport.
+type GetTeamControlReportParams struct {
+	// From Primer día del periodo (incluido), en Colombia.
+	From ReportFrom `form:"from" json:"from"`
+
+	// To Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo.
+	To ReportTo `form:"to" json:"to"`
+
+	// LocationId Solo esta sede. Sin ella, todas.
+	LocationId *ReportLocation `form:"location_id,omitempty" json:"location_id,omitempty"`
+	Bucket     *ReportBucket   `form:"bucket,omitempty" json:"bucket,omitempty"`
 }
 
 // ListSalesParams defines parameters for ListSales.
@@ -4978,7 +5961,8 @@ type ClientInterface interface {
 	// Lista los clientes de la empresa. Con `q` busca por nombre o nombre comercial (cada palabra debe aparecer, sin
 	// importar tildes ni mayúsculas) o por el número de documento, que sale primero si coincide exacto. Sin `q`,
 	// ordena por nombre. Es la búsqueda del POS. Una venta sin cliente es a consumidor final: no hay un cliente
-	// guardado con ese nombre.
+	// guardado con ese nombre. Para quien ve la cartera, cada cliente trae lo que debe y lo vencido; para ordenar
+	// por lo que deben, la cartera por edades (`GET /receivables/aging?sort=total`).
 	//
 	// Corresponds with GET /api/v1/customers (the `ListCustomers` operationId).
 	ListCustomers(ctx context.Context, params *ListCustomersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5886,10 +6870,86 @@ type ClientInterface interface {
 	//
 	// Lo que deben los clientes, por edad: por vencer (vence hoy o después) y vencida de 1 a 30, de 31 a 60, de 61 a
 	// 90 y de más de 90 días, contados desde la fecha de vencimiento con el día de hoy en hora de Colombia. Los
-	// clientes con más cartera vencida van primero; `totals` suma todos los clientes, no solo la página.
+	// clientes con más cartera vencida van primero (`sort` cambia el orden); `totals` suma todos los clientes, no
+	// solo la página.
 	//
 	// Corresponds with GET /api/v1/receivables/aging (the `GetReceivablesAging` operationId).
 	GetReceivablesAging(ctx context.Context, params *GetReceivablesAgingParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetCashClosingsReport Cierres de caja
+	//
+	// Los cierres de caja del periodo (por el día del cierre), agrupados por cajero, sede o día: cuántos, lo vendido
+	// (como en el reporte de cierre, que no cambia si después se anula una venta), los faltantes, los sobrantes y la
+	// diferencia neta.
+	//
+	// Corresponds with GET /api/v1/reports/cash-closings (the `GetCashClosingsReport` operationId).
+	GetCashClosingsReport(ctx context.Context, params *GetCashClosingsReportParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ExportReport Exportar un reporte a Excel o CSV
+	//
+	// El reporte `report` con los mismos filtros que su consulta, como archivo. Exporta todas las filas (no una
+	// página), hasta 5.000. El CSV va separado por punto y coma, con BOM y coma decimal, como lo abre Excel en
+	// español. Las columnas de costo solo salen para quien ve costos; `sale_profits` exige verlos. `from` y `to`
+	// son obligatorios salvo en `idle_stock` y `receivables` (la cartera de hoy).
+	//
+	// Corresponds with GET /api/v1/reports/export (the `ExportReport` operationId).
+	ExportReport(ctx context.Context, params *ExportReportParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetIdleStockReport Productos sin movimiento
+	//
+	// Las variantes con existencias que no se venden hace `days` días o más (o nunca), agrupadas por producto, con
+	// la última venta y, para quien ve costos, lo que vale ese stock al costo promedio (la plata quieta). Los
+	// productos con más plata quieta van primero (por cantidad si no ve costos).
+	//
+	// Corresponds with GET /api/v1/reports/idle-stock (the `GetIdleStockReport` operationId).
+	GetIdleStockReport(ctx context.Context, params *GetIdleStockReportParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProductsReport Productos vendidos
+	//
+	// Lo vendido en el periodo por producto, con el detalle por variante: cantidad en la unidad base, ingreso sin
+	// IVA y, para quien ve costos, el costo (el promedio de cada variante en el momento de la venta, no el actual),
+	// la utilidad y el margen. Las ventas anuladas no cuentan. Ordenar por utilidad exige ver costos.
+	//
+	// Corresponds with GET /api/v1/reports/products (the `GetProductsReport` operationId).
+	GetProductsReport(ctx context.Context, params *GetProductsReportParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSaleProfitsReport Utilidad por venta
+	//
+	// Cada venta confirmada del periodo con su ingreso sin IVA, su costo en el momento de la venta, la utilidad y el
+	// margen, de la más reciente a la más antigua. Exige ver costos (`costs_hidden` si no).
+	//
+	// Corresponds with GET /api/v1/reports/sale-profits (the `GetSaleProfitsReport` operationId).
+	GetSaleProfitsReport(ctx context.Context, params *GetSaleProfitsReportParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSalesReport Ventas del periodo
+	//
+	// Las ventas confirmadas del periodo (las anuladas no cuentan), agrupadas por día, vendedor, medio de pago,
+	// categoría o sede. Por medio de pago suma lo pagado con cada uno (el efectivo sin el cambio) y no trae `net` ni
+	// `tax`; por categoría suma las líneas (la categoría actual del producto). `totals` es el de todas las ventas
+	// del periodo, sin importar el agrupamiento. Los días son de Colombia.
+	//
+	// Corresponds with GET /api/v1/reports/sales (the `GetSalesReport` operationId).
+	GetSalesReport(ctx context.Context, params *GetSalesReportParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetStockAdjustmentsReport Ajustes de inventario
+	//
+	// Los ajustes de inventario del periodo (manuales y de las tomas físicas), agrupados por usuario o por variante:
+	// cuántos, lo que entró y salió en la unidad base y, para quien ve costos, su valor al costo del momento (negativo
+	// si se perdió).
+	//
+	// Corresponds with GET /api/v1/reports/stock-adjustments (the `GetStockAdjustmentsReport` operationId).
+	GetStockAdjustmentsReport(ctx context.Context, params *GetStockAdjustmentsReportParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetTeamControlReport Control del equipo
+	//
+	// Por usuario, en el periodo: anulaciones (cuántas y el total de las ventas), descuentos (cuántos, el monto y el
+	// porcentaje promedio sobre lo descontado), cambios de precio, ajustes de inventario (valorizados al costo, para
+	// quien ve costos) y cierres de caja con diferencia (faltantes y sobrantes). Anulaciones, descuentos, cambios de
+	// precio y diferencias salen del registro de auditoría; los ajustes, del kardex. `series` es la tendencia por
+	// usuario en cada día, semana (desde el lunes) o mes, para comparar a cada uno con lo normal.
+	//
+	// Corresponds with GET /api/v1/reports/team-control (the `GetTeamControlReport` operationId).
+	GetTeamControlReport(ctx context.Context, params *GetTeamControlReportParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListSales Ventas del día
 	//
@@ -7060,7 +8120,8 @@ func (c *Client) RenameCustomerSegment(ctx context.Context, segmentId SegmentId,
 // Lista los clientes de la empresa. Con `q` busca por nombre o nombre comercial (cada palabra debe aparecer, sin
 // importar tildes ni mayúsculas) o por el número de documento, que sale primero si coincide exacto. Sin `q`,
 // ordena por nombre. Es la búsqueda del POS. Una venta sin cliente es a consumidor final: no hay un cliente
-// guardado con ese nombre.
+// guardado con ese nombre. Para quien ve la cartera, cada cliente trae lo que debe y lo vencido; para ordenar
+// por lo que deben, la cartera por edades (`GET /receivables/aging?sort=total`).
 //
 // Corresponds with GET /api/v1/customers (the `ListCustomers` operationId).
 func (c *Client) ListCustomers(ctx context.Context, params *ListCustomersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -8968,11 +10029,167 @@ func (c *Client) VoidPurchase(ctx context.Context, purchaseId PurchaseId, body V
 //
 // Lo que deben los clientes, por edad: por vencer (vence hoy o después) y vencida de 1 a 30, de 31 a 60, de 61 a
 // 90 y de más de 90 días, contados desde la fecha de vencimiento con el día de hoy en hora de Colombia. Los
-// clientes con más cartera vencida van primero; `totals` suma todos los clientes, no solo la página.
+// clientes con más cartera vencida van primero (`sort` cambia el orden); `totals` suma todos los clientes, no
+// solo la página.
 //
 // Corresponds with GET /api/v1/receivables/aging (the `GetReceivablesAging` operationId).
 func (c *Client) GetReceivablesAging(ctx context.Context, params *GetReceivablesAgingParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetReceivablesAgingRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetCashClosingsReport Cierres de caja
+//
+// Los cierres de caja del periodo (por el día del cierre), agrupados por cajero, sede o día: cuántos, lo vendido
+// (como en el reporte de cierre, que no cambia si después se anula una venta), los faltantes, los sobrantes y la
+// diferencia neta.
+//
+// Corresponds with GET /api/v1/reports/cash-closings (the `GetCashClosingsReport` operationId).
+func (c *Client) GetCashClosingsReport(ctx context.Context, params *GetCashClosingsReportParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetCashClosingsReportRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ExportReport Exportar un reporte a Excel o CSV
+//
+// El reporte `report` con los mismos filtros que su consulta, como archivo. Exporta todas las filas (no una
+// página), hasta 5.000. El CSV va separado por punto y coma, con BOM y coma decimal, como lo abre Excel en
+// español. Las columnas de costo solo salen para quien ve costos; `sale_profits` exige verlos. `from` y `to`
+// son obligatorios salvo en `idle_stock` y `receivables` (la cartera de hoy).
+//
+// Corresponds with GET /api/v1/reports/export (the `ExportReport` operationId).
+func (c *Client) ExportReport(ctx context.Context, params *ExportReportParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewExportReportRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetIdleStockReport Productos sin movimiento
+//
+// Las variantes con existencias que no se venden hace `days` días o más (o nunca), agrupadas por producto, con
+// la última venta y, para quien ve costos, lo que vale ese stock al costo promedio (la plata quieta). Los
+// productos con más plata quieta van primero (por cantidad si no ve costos).
+//
+// Corresponds with GET /api/v1/reports/idle-stock (the `GetIdleStockReport` operationId).
+func (c *Client) GetIdleStockReport(ctx context.Context, params *GetIdleStockReportParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetIdleStockReportRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetProductsReport Productos vendidos
+//
+// Lo vendido en el periodo por producto, con el detalle por variante: cantidad en la unidad base, ingreso sin
+// IVA y, para quien ve costos, el costo (el promedio de cada variante en el momento de la venta, no el actual),
+// la utilidad y el margen. Las ventas anuladas no cuentan. Ordenar por utilidad exige ver costos.
+//
+// Corresponds with GET /api/v1/reports/products (the `GetProductsReport` operationId).
+func (c *Client) GetProductsReport(ctx context.Context, params *GetProductsReportParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProductsReportRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSaleProfitsReport Utilidad por venta
+//
+// Cada venta confirmada del periodo con su ingreso sin IVA, su costo en el momento de la venta, la utilidad y el
+// margen, de la más reciente a la más antigua. Exige ver costos (`costs_hidden` si no).
+//
+// Corresponds with GET /api/v1/reports/sale-profits (the `GetSaleProfitsReport` operationId).
+func (c *Client) GetSaleProfitsReport(ctx context.Context, params *GetSaleProfitsReportParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSaleProfitsReportRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSalesReport Ventas del periodo
+//
+// Las ventas confirmadas del periodo (las anuladas no cuentan), agrupadas por día, vendedor, medio de pago,
+// categoría o sede. Por medio de pago suma lo pagado con cada uno (el efectivo sin el cambio) y no trae `net` ni
+// `tax`; por categoría suma las líneas (la categoría actual del producto). `totals` es el de todas las ventas
+// del periodo, sin importar el agrupamiento. Los días son de Colombia.
+//
+// Corresponds with GET /api/v1/reports/sales (the `GetSalesReport` operationId).
+func (c *Client) GetSalesReport(ctx context.Context, params *GetSalesReportParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSalesReportRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetStockAdjustmentsReport Ajustes de inventario
+//
+// Los ajustes de inventario del periodo (manuales y de las tomas físicas), agrupados por usuario o por variante:
+// cuántos, lo que entró y salió en la unidad base y, para quien ve costos, su valor al costo del momento (negativo
+// si se perdió).
+//
+// Corresponds with GET /api/v1/reports/stock-adjustments (the `GetStockAdjustmentsReport` operationId).
+func (c *Client) GetStockAdjustmentsReport(ctx context.Context, params *GetStockAdjustmentsReportParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetStockAdjustmentsReportRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetTeamControlReport Control del equipo
+//
+// Por usuario, en el periodo: anulaciones (cuántas y el total de las ventas), descuentos (cuántos, el monto y el
+// porcentaje promedio sobre lo descontado), cambios de precio, ajustes de inventario (valorizados al costo, para
+// quien ve costos) y cierres de caja con diferencia (faltantes y sobrantes). Anulaciones, descuentos, cambios de
+// precio y diferencias salen del registro de auditoría; los ajustes, del kardex. `series` es la tendencia por
+// usuario en cada día, semana (desde el lunes) o mes, para comparar a cada uno con lo normal.
+//
+// Corresponds with GET /api/v1/reports/team-control (the `GetTeamControlReport` operationId).
+func (c *Client) GetTeamControlReport(ctx context.Context, params *GetTeamControlReportParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetTeamControlReportRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -13429,6 +14646,18 @@ func NewListProductsRequest(server string, params *ListProductsParams) (*http.Re
 
 		}
 
+		if params.Sort != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sort", *params.Sort, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.Ids != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "ids", *params.Ids, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
@@ -14262,6 +15491,18 @@ func NewGetReceivablesAgingRequest(server string, params *GetReceivablesAgingPar
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
+		if params.Sort != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sort", *params.Sort, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.Limit != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
@@ -14277,6 +15518,878 @@ func NewGetReceivablesAgingRequest(server string, params *GetReceivablesAgingPar
 		if params.Offset != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetCashClosingsReportRequest constructs an http.Request for the GetCashClosingsReport method
+func NewGetCashClosingsReportRequest(server string, params *GetCashClosingsReportParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/reports/cash-closings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "from", params.From, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "to", params.To, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.LocationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "location_id", *params.LocationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GroupBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "group_by", *params.GroupBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewExportReportRequest constructs an http.Request for the ExportReport method
+func NewExportReportRequest(server string, params *ExportReportParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/reports/export")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "report", params.Report, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.Format != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "format", *params.Format, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.From != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "from", *params.From, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.To != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "to", *params.To, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.LocationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "location_id", *params.LocationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GroupBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "group_by", *params.GroupBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Bucket != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "bucket", *params.Bucket, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.CategoryId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "category_id", *params.CategoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Attribute != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "attribute", *params.Attribute, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.AttributeValue != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "attribute_value", *params.AttributeValue, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Sort != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sort", *params.Sort, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Days != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "days", *params.Days, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetIdleStockReportRequest constructs an http.Request for the GetIdleStockReport method
+func NewGetIdleStockReportRequest(server string, params *GetIdleStockReportParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/reports/idle-stock")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Days != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "days", *params.Days, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.LocationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "location_id", *params.LocationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.CategoryId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "category_id", *params.CategoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Attribute != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "attribute", *params.Attribute, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.AttributeValue != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "attribute_value", *params.AttributeValue, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetProductsReportRequest constructs an http.Request for the GetProductsReport method
+func NewGetProductsReportRequest(server string, params *GetProductsReportParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/reports/products")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "from", params.From, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "to", params.To, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.LocationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "location_id", *params.LocationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.CategoryId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "category_id", *params.CategoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Attribute != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "attribute", *params.Attribute, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.AttributeValue != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "attribute_value", *params.AttributeValue, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Sort != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sort", *params.Sort, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetSaleProfitsReportRequest constructs an http.Request for the GetSaleProfitsReport method
+func NewGetSaleProfitsReportRequest(server string, params *GetSaleProfitsReportParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/reports/sale-profits")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "from", params.From, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "to", params.To, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.LocationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "location_id", *params.LocationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetSalesReportRequest constructs an http.Request for the GetSalesReport method
+func NewGetSalesReportRequest(server string, params *GetSalesReportParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/reports/sales")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "from", params.From, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "to", params.To, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.LocationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "location_id", *params.LocationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GroupBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "group_by", *params.GroupBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetStockAdjustmentsReportRequest constructs an http.Request for the GetStockAdjustmentsReport method
+func NewGetStockAdjustmentsReportRequest(server string, params *GetStockAdjustmentsReportParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/reports/stock-adjustments")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "from", params.From, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "to", params.To, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.LocationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "location_id", *params.LocationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GroupBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "group_by", *params.GroupBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetTeamControlReportRequest constructs an http.Request for the GetTeamControlReport method
+func NewGetTeamControlReportRequest(server string, params *GetTeamControlReportParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/reports/team-control")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "from", params.From, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "to", params.To, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "date"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if params.LocationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "location_id", *params.LocationId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Bucket != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "bucket", *params.Bucket, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -16409,7 +18522,8 @@ type ClientWithResponsesInterface interface {
 	// Lista los clientes de la empresa. Con `q` busca por nombre o nombre comercial (cada palabra debe aparecer, sin
 	// importar tildes ni mayúsculas) o por el número de documento, que sale primero si coincide exacto. Sin `q`,
 	// ordena por nombre. Es la búsqueda del POS. Una venta sin cliente es a consumidor final: no hay un cliente
-	// guardado con ese nombre.
+	// guardado con ese nombre. Para quien ve la cartera, cada cliente trae lo que debe y lo vencido; para ordenar
+	// por lo que deben, la cartera por edades (`GET /receivables/aging?sort=total`).
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -17395,12 +19509,104 @@ type ClientWithResponsesInterface interface {
 	//
 	// Lo que deben los clientes, por edad: por vencer (vence hoy o después) y vencida de 1 a 30, de 31 a 60, de 61 a
 	// 90 y de más de 90 días, contados desde la fecha de vencimiento con el día de hoy en hora de Colombia. Los
-	// clientes con más cartera vencida van primero; `totals` suma todos los clientes, no solo la página.
+	// clientes con más cartera vencida van primero (`sort` cambia el orden); `totals` suma todos los clientes, no
+	// solo la página.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /api/v1/receivables/aging (the `GetReceivablesAging` operationId).
 	GetReceivablesAgingWithResponse(ctx context.Context, params *GetReceivablesAgingParams, reqEditors ...RequestEditorFn) (*GetReceivablesAgingResponse, error)
+
+	// GetCashClosingsReportWithResponse Cierres de caja
+	//
+	// Los cierres de caja del periodo (por el día del cierre), agrupados por cajero, sede o día: cuántos, lo vendido
+	// (como en el reporte de cierre, que no cambia si después se anula una venta), los faltantes, los sobrantes y la
+	// diferencia neta.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/reports/cash-closings (the `GetCashClosingsReport` operationId).
+	GetCashClosingsReportWithResponse(ctx context.Context, params *GetCashClosingsReportParams, reqEditors ...RequestEditorFn) (*GetCashClosingsReportResponse, error)
+
+	// ExportReportWithResponse Exportar un reporte a Excel o CSV
+	//
+	// El reporte `report` con los mismos filtros que su consulta, como archivo. Exporta todas las filas (no una
+	// página), hasta 5.000. El CSV va separado por punto y coma, con BOM y coma decimal, como lo abre Excel en
+	// español. Las columnas de costo solo salen para quien ve costos; `sale_profits` exige verlos. `from` y `to`
+	// son obligatorios salvo en `idle_stock` y `receivables` (la cartera de hoy).
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/reports/export (the `ExportReport` operationId).
+	ExportReportWithResponse(ctx context.Context, params *ExportReportParams, reqEditors ...RequestEditorFn) (*ExportReportResponse, error)
+
+	// GetIdleStockReportWithResponse Productos sin movimiento
+	//
+	// Las variantes con existencias que no se venden hace `days` días o más (o nunca), agrupadas por producto, con
+	// la última venta y, para quien ve costos, lo que vale ese stock al costo promedio (la plata quieta). Los
+	// productos con más plata quieta van primero (por cantidad si no ve costos).
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/reports/idle-stock (the `GetIdleStockReport` operationId).
+	GetIdleStockReportWithResponse(ctx context.Context, params *GetIdleStockReportParams, reqEditors ...RequestEditorFn) (*GetIdleStockReportResponse, error)
+
+	// GetProductsReportWithResponse Productos vendidos
+	//
+	// Lo vendido en el periodo por producto, con el detalle por variante: cantidad en la unidad base, ingreso sin
+	// IVA y, para quien ve costos, el costo (el promedio de cada variante en el momento de la venta, no el actual),
+	// la utilidad y el margen. Las ventas anuladas no cuentan. Ordenar por utilidad exige ver costos.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/reports/products (the `GetProductsReport` operationId).
+	GetProductsReportWithResponse(ctx context.Context, params *GetProductsReportParams, reqEditors ...RequestEditorFn) (*GetProductsReportResponse, error)
+
+	// GetSaleProfitsReportWithResponse Utilidad por venta
+	//
+	// Cada venta confirmada del periodo con su ingreso sin IVA, su costo en el momento de la venta, la utilidad y el
+	// margen, de la más reciente a la más antigua. Exige ver costos (`costs_hidden` si no).
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/reports/sale-profits (the `GetSaleProfitsReport` operationId).
+	GetSaleProfitsReportWithResponse(ctx context.Context, params *GetSaleProfitsReportParams, reqEditors ...RequestEditorFn) (*GetSaleProfitsReportResponse, error)
+
+	// GetSalesReportWithResponse Ventas del periodo
+	//
+	// Las ventas confirmadas del periodo (las anuladas no cuentan), agrupadas por día, vendedor, medio de pago,
+	// categoría o sede. Por medio de pago suma lo pagado con cada uno (el efectivo sin el cambio) y no trae `net` ni
+	// `tax`; por categoría suma las líneas (la categoría actual del producto). `totals` es el de todas las ventas
+	// del periodo, sin importar el agrupamiento. Los días son de Colombia.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/reports/sales (the `GetSalesReport` operationId).
+	GetSalesReportWithResponse(ctx context.Context, params *GetSalesReportParams, reqEditors ...RequestEditorFn) (*GetSalesReportResponse, error)
+
+	// GetStockAdjustmentsReportWithResponse Ajustes de inventario
+	//
+	// Los ajustes de inventario del periodo (manuales y de las tomas físicas), agrupados por usuario o por variante:
+	// cuántos, lo que entró y salió en la unidad base y, para quien ve costos, su valor al costo del momento (negativo
+	// si se perdió).
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/reports/stock-adjustments (the `GetStockAdjustmentsReport` operationId).
+	GetStockAdjustmentsReportWithResponse(ctx context.Context, params *GetStockAdjustmentsReportParams, reqEditors ...RequestEditorFn) (*GetStockAdjustmentsReportResponse, error)
+
+	// GetTeamControlReportWithResponse Control del equipo
+	//
+	// Por usuario, en el periodo: anulaciones (cuántas y el total de las ventas), descuentos (cuántos, el monto y el
+	// porcentaje promedio sobre lo descontado), cambios de precio, ajustes de inventario (valorizados al costo, para
+	// quien ve costos) y cierres de caja con diferencia (faltantes y sobrantes). Anulaciones, descuentos, cambios de
+	// precio y diferencias salen del registro de auditoría; los ajustes, del kardex. `series` es la tendencia por
+	// usuario en cada día, semana (desde el lunes) o mes, para comparar a cada uno con lo normal.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/reports/team-control (the `GetTeamControlReport` operationId).
+	GetTeamControlReportWithResponse(ctx context.Context, params *GetTeamControlReportParams, reqEditors ...RequestEditorFn) (*GetTeamControlReportResponse, error)
 
 	// ListSalesWithResponse Ventas del día
 	//
@@ -25079,6 +27285,600 @@ func (r GetReceivablesAgingResponse) ContentType() string {
 	return ""
 }
 
+type GetCashClosingsReportResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *CashClosingsReport
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *InvalidPeriod
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetCashClosingsReportResponse) GetJSON200() *CashClosingsReport {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetCashClosingsReportResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetCashClosingsReportResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetCashClosingsReportResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r GetCashClosingsReportResponse) GetJSON422() *InvalidPeriod {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetCashClosingsReportResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetCashClosingsReportResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetCashClosingsReportResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetCashClosingsReportResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetCashClosingsReportResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ExportReportResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *InvalidPeriod
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ExportReportResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ExportReportResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r ExportReportResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r ExportReportResponse) GetJSON422() *InvalidPeriod {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ExportReportResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r ExportReportResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ExportReportResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ExportReportResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ExportReportResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetIdleStockReportResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *IdleStockReport
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetIdleStockReportResponse) GetJSON200() *IdleStockReport {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetIdleStockReportResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetIdleStockReportResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetIdleStockReportResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetIdleStockReportResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetIdleStockReportResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetIdleStockReportResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetIdleStockReportResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetIdleStockReportResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetProductsReportResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ProductsReport
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *InvalidPeriod
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetProductsReportResponse) GetJSON200() *ProductsReport {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetProductsReportResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetProductsReportResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetProductsReportResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r GetProductsReportResponse) GetJSON422() *InvalidPeriod {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetProductsReportResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetProductsReportResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProductsReportResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProductsReportResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetProductsReportResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSaleProfitsReportResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SaleProfitsReport
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *InvalidPeriod
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSaleProfitsReportResponse) GetJSON200() *SaleProfitsReport {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetSaleProfitsReportResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetSaleProfitsReportResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetSaleProfitsReportResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r GetSaleProfitsReportResponse) GetJSON422() *InvalidPeriod {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetSaleProfitsReportResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSaleProfitsReportResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSaleProfitsReportResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSaleProfitsReportResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSaleProfitsReportResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSalesReportResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SalesReport
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *InvalidPeriod
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSalesReportResponse) GetJSON200() *SalesReport {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetSalesReportResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetSalesReportResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetSalesReportResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r GetSalesReportResponse) GetJSON422() *InvalidPeriod {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetSalesReportResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSalesReportResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSalesReportResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSalesReportResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSalesReportResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetStockAdjustmentsReportResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *StockAdjustmentsReport
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *InvalidPeriod
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetStockAdjustmentsReportResponse) GetJSON200() *StockAdjustmentsReport {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetStockAdjustmentsReportResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetStockAdjustmentsReportResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetStockAdjustmentsReportResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r GetStockAdjustmentsReportResponse) GetJSON422() *InvalidPeriod {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetStockAdjustmentsReportResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetStockAdjustmentsReportResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetStockAdjustmentsReportResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetStockAdjustmentsReportResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetStockAdjustmentsReportResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetTeamControlReportResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *TeamControlReport
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Forbidden
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *InvalidPeriod
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetTeamControlReportResponse) GetJSON200() *TeamControlReport {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetTeamControlReportResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetTeamControlReportResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetTeamControlReportResponse) GetJSON403() *Forbidden {
+	return r.JSON403
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r GetTeamControlReportResponse) GetJSON422() *InvalidPeriod {
+	return r.JSON422
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetTeamControlReportResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetTeamControlReportResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetTeamControlReportResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetTeamControlReportResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetTeamControlReportResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListSalesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -28493,7 +31293,8 @@ func (c *ClientWithResponses) RenameCustomerSegmentWithResponse(ctx context.Cont
 // Lista los clientes de la empresa. Con `q` busca por nombre o nombre comercial (cada palabra debe aparecer, sin
 // importar tildes ni mayúsculas) o por el número de documento, que sale primero si coincide exacto. Sin `q`,
 // ordena por nombre. Es la búsqueda del POS. Una venta sin cliente es a consumidor final: no hay un cliente
-// guardado con ese nombre.
+// guardado con ese nombre. Para quien ve la cartera, cada cliente trae lo que debe y lo vencido; para ordenar
+// por lo que deben, la cartera por edades (`GET /receivables/aging?sort=total`).
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -30079,7 +32880,8 @@ func (c *ClientWithResponses) VoidPurchaseWithResponse(ctx context.Context, purc
 //
 // Lo que deben los clientes, por edad: por vencer (vence hoy o después) y vencida de 1 a 30, de 31 a 60, de 61 a
 // 90 y de más de 90 días, contados desde la fecha de vencimiento con el día de hoy en hora de Colombia. Los
-// clientes con más cartera vencida van primero; `totals` suma todos los clientes, no solo la página.
+// clientes con más cartera vencida van primero (`sort` cambia el orden); `totals` suma todos los clientes, no
+// solo la página.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -30090,6 +32892,145 @@ func (c *ClientWithResponses) GetReceivablesAgingWithResponse(ctx context.Contex
 		return nil, err
 	}
 	return ParseGetReceivablesAgingResponse(rsp)
+}
+
+// GetCashClosingsReportWithResponse Cierres de caja
+//
+// Los cierres de caja del periodo (por el día del cierre), agrupados por cajero, sede o día: cuántos, lo vendido
+// (como en el reporte de cierre, que no cambia si después se anula una venta), los faltantes, los sobrantes y la
+// diferencia neta.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/reports/cash-closings (the `GetCashClosingsReport` operationId).
+func (c *ClientWithResponses) GetCashClosingsReportWithResponse(ctx context.Context, params *GetCashClosingsReportParams, reqEditors ...RequestEditorFn) (*GetCashClosingsReportResponse, error) {
+	rsp, err := c.GetCashClosingsReport(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetCashClosingsReportResponse(rsp)
+}
+
+// ExportReportWithResponse Exportar un reporte a Excel o CSV
+//
+// El reporte `report` con los mismos filtros que su consulta, como archivo. Exporta todas las filas (no una
+// página), hasta 5.000. El CSV va separado por punto y coma, con BOM y coma decimal, como lo abre Excel en
+// español. Las columnas de costo solo salen para quien ve costos; `sale_profits` exige verlos. `from` y `to`
+// son obligatorios salvo en `idle_stock` y `receivables` (la cartera de hoy).
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/reports/export (the `ExportReport` operationId).
+func (c *ClientWithResponses) ExportReportWithResponse(ctx context.Context, params *ExportReportParams, reqEditors ...RequestEditorFn) (*ExportReportResponse, error) {
+	rsp, err := c.ExportReport(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseExportReportResponse(rsp)
+}
+
+// GetIdleStockReportWithResponse Productos sin movimiento
+//
+// Las variantes con existencias que no se venden hace `days` días o más (o nunca), agrupadas por producto, con
+// la última venta y, para quien ve costos, lo que vale ese stock al costo promedio (la plata quieta). Los
+// productos con más plata quieta van primero (por cantidad si no ve costos).
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/reports/idle-stock (the `GetIdleStockReport` operationId).
+func (c *ClientWithResponses) GetIdleStockReportWithResponse(ctx context.Context, params *GetIdleStockReportParams, reqEditors ...RequestEditorFn) (*GetIdleStockReportResponse, error) {
+	rsp, err := c.GetIdleStockReport(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetIdleStockReportResponse(rsp)
+}
+
+// GetProductsReportWithResponse Productos vendidos
+//
+// Lo vendido en el periodo por producto, con el detalle por variante: cantidad en la unidad base, ingreso sin
+// IVA y, para quien ve costos, el costo (el promedio de cada variante en el momento de la venta, no el actual),
+// la utilidad y el margen. Las ventas anuladas no cuentan. Ordenar por utilidad exige ver costos.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/reports/products (the `GetProductsReport` operationId).
+func (c *ClientWithResponses) GetProductsReportWithResponse(ctx context.Context, params *GetProductsReportParams, reqEditors ...RequestEditorFn) (*GetProductsReportResponse, error) {
+	rsp, err := c.GetProductsReport(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProductsReportResponse(rsp)
+}
+
+// GetSaleProfitsReportWithResponse Utilidad por venta
+//
+// Cada venta confirmada del periodo con su ingreso sin IVA, su costo en el momento de la venta, la utilidad y el
+// margen, de la más reciente a la más antigua. Exige ver costos (`costs_hidden` si no).
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/reports/sale-profits (the `GetSaleProfitsReport` operationId).
+func (c *ClientWithResponses) GetSaleProfitsReportWithResponse(ctx context.Context, params *GetSaleProfitsReportParams, reqEditors ...RequestEditorFn) (*GetSaleProfitsReportResponse, error) {
+	rsp, err := c.GetSaleProfitsReport(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSaleProfitsReportResponse(rsp)
+}
+
+// GetSalesReportWithResponse Ventas del periodo
+//
+// Las ventas confirmadas del periodo (las anuladas no cuentan), agrupadas por día, vendedor, medio de pago,
+// categoría o sede. Por medio de pago suma lo pagado con cada uno (el efectivo sin el cambio) y no trae `net` ni
+// `tax`; por categoría suma las líneas (la categoría actual del producto). `totals` es el de todas las ventas
+// del periodo, sin importar el agrupamiento. Los días son de Colombia.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/reports/sales (the `GetSalesReport` operationId).
+func (c *ClientWithResponses) GetSalesReportWithResponse(ctx context.Context, params *GetSalesReportParams, reqEditors ...RequestEditorFn) (*GetSalesReportResponse, error) {
+	rsp, err := c.GetSalesReport(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSalesReportResponse(rsp)
+}
+
+// GetStockAdjustmentsReportWithResponse Ajustes de inventario
+//
+// Los ajustes de inventario del periodo (manuales y de las tomas físicas), agrupados por usuario o por variante:
+// cuántos, lo que entró y salió en la unidad base y, para quien ve costos, su valor al costo del momento (negativo
+// si se perdió).
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/reports/stock-adjustments (the `GetStockAdjustmentsReport` operationId).
+func (c *ClientWithResponses) GetStockAdjustmentsReportWithResponse(ctx context.Context, params *GetStockAdjustmentsReportParams, reqEditors ...RequestEditorFn) (*GetStockAdjustmentsReportResponse, error) {
+	rsp, err := c.GetStockAdjustmentsReport(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetStockAdjustmentsReportResponse(rsp)
+}
+
+// GetTeamControlReportWithResponse Control del equipo
+//
+// Por usuario, en el periodo: anulaciones (cuántas y el total de las ventas), descuentos (cuántos, el monto y el
+// porcentaje promedio sobre lo descontado), cambios de precio, ajustes de inventario (valorizados al costo, para
+// quien ve costos) y cierres de caja con diferencia (faltantes y sobrantes). Anulaciones, descuentos, cambios de
+// precio y diferencias salen del registro de auditoría; los ajustes, del kardex. `series` es la tendencia por
+// usuario en cada día, semana (desde el lunes) o mes, para comparar a cada uno con lo normal.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/reports/team-control (the `GetTeamControlReport` operationId).
+func (c *ClientWithResponses) GetTeamControlReportWithResponse(ctx context.Context, params *GetTeamControlReportParams, reqEditors ...RequestEditorFn) (*GetTeamControlReportResponse, error) {
+	rsp, err := c.GetTeamControlReport(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetTeamControlReportResponse(rsp)
 }
 
 // ListSalesWithResponse Ventas del día
@@ -36711,6 +39652,480 @@ func ParseGetReceivablesAgingResponse(rsp *http.Response) (*GetReceivablesAgingR
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetCashClosingsReportResponse parses an HTTP response from a GetCashClosingsReportWithResponse call
+func ParseGetCashClosingsReportResponse(rsp *http.Response) (*GetCashClosingsReportResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetCashClosingsReportResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CashClosingsReport
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest InvalidPeriod
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseExportReportResponse parses an HTTP response from a ExportReportWithResponse call
+func ParseExportReportResponse(rsp *http.Response) (*ExportReportResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ExportReportResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest InvalidPeriod
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetIdleStockReportResponse parses an HTTP response from a GetIdleStockReportWithResponse call
+func ParseGetIdleStockReportResponse(rsp *http.Response) (*GetIdleStockReportResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetIdleStockReportResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest IdleStockReport
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProductsReportResponse parses an HTTP response from a GetProductsReportWithResponse call
+func ParseGetProductsReportResponse(rsp *http.Response) (*GetProductsReportResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProductsReportResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProductsReport
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest InvalidPeriod
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSaleProfitsReportResponse parses an HTTP response from a GetSaleProfitsReportWithResponse call
+func ParseGetSaleProfitsReportResponse(rsp *http.Response) (*GetSaleProfitsReportResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSaleProfitsReportResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SaleProfitsReport
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest InvalidPeriod
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSalesReportResponse parses an HTTP response from a GetSalesReportWithResponse call
+func ParseGetSalesReportResponse(rsp *http.Response) (*GetSalesReportResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSalesReportResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SalesReport
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest InvalidPeriod
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetStockAdjustmentsReportResponse parses an HTTP response from a GetStockAdjustmentsReportWithResponse call
+func ParseGetStockAdjustmentsReportResponse(rsp *http.Response) (*GetStockAdjustmentsReportResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetStockAdjustmentsReportResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest StockAdjustmentsReport
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest InvalidPeriod
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetTeamControlReportResponse parses an HTTP response from a GetTeamControlReportWithResponse call
+func ParseGetTeamControlReportResponse(rsp *http.Response) (*GetTeamControlReportResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetTeamControlReportResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest TeamControlReport
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest InvalidPeriod
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalError

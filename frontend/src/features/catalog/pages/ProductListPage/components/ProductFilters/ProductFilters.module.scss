@@ -1,20 +1,23 @@
 @use '@/styles/abstracts' as *;
 
+// The search on its own row on a phone, with the selects two by two below;
+// all in one row from lg.
 .root {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
+  align-items: end;
 
-  @include respond-to(sm) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 12rem);
-    align-items: end;
+  @include respond-to(lg) {
+    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
   }
 }
 
 .search {
+  grid-column: 1 / -1;
   min-inline-size: 0;
-}
 
-.status {
-  min-inline-size: 0;
+  @include respond-to(lg) {
+    grid-column: auto;
+  }
 }

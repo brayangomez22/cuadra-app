@@ -19,6 +19,12 @@ const quantity = new Intl.NumberFormat(locale, { maximumFractionDigits: 4 });
 const signedQuantity = new Intl.NumberFormat(locale, { maximumFractionDigits: 4, signDisplay: 'exceptZero' });
 const rate = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 2 });
 const percent = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
+const marginRate = new Intl.NumberFormat(locale, {
+  style: 'percent',
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+const marginPercent = new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const time = new Intl.DateTimeFormat(locale, { timeZone, hour: 'numeric', minute: '2-digit' });
 const dateTime = new Intl.DateTimeFormat(locale, {
   timeZone,
@@ -39,19 +45,31 @@ export function formatQuantity(value: string, { signed = false } = {}): string {
   return (signed ? signedQuantity : quantity).format(value as NumericString);
 }
 
+// A fraction as the digits of its percent ("0.19" → "19"): es-CO glues the
+// sign to the number, and the screens separate it with a non-breaking space.
+function fractionAsPercent(format: Intl.NumberFormat, value: string): string {
+  return format
+    .formatToParts(value as NumericString)
+    .filter((part) => part.type !== 'percentSign' && part.type !== 'literal')
+    .map((part) => part.value)
+    .join('');
+}
+
 /**
  * A tax rate as a fraction ("0.19", kind rate) or a value already in percent
  * ("16.6667", kind percent) → "19 %", "16,67 %".
  */
 export function formatPercent(value: string, kind: 'rate' | 'percent'): string {
-  const number =
-    kind === 'rate'
-      ? rate
-          .formatToParts(value as NumericString)
-          .filter((part) => part.type !== 'percentSign' && part.type !== 'literal')
-          .map((part) => part.value)
-          .join('')
-      : percent.format(value as NumericString);
+  const number = kind === 'rate' ? fractionAsPercent(rate, value) : percent.format(value as NumericString);
+  return `${number}\u00a0%`;
+}
+
+/**
+ * A margin, always with one decimal so a column of them lines up: as a
+ * fraction ("0.1667", kind rate) or in percent ("16.6667") → "16,7 %".
+ */
+export function formatMargin(value: string, kind: 'rate' | 'percent'): string {
+  const number = kind === 'rate' ? fractionAsPercent(marginRate, value) : marginPercent.format(value as NumericString);
   return `${number}\u00a0%`;
 }
 

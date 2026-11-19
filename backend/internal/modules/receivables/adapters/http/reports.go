@@ -9,7 +9,7 @@ import (
 
 // ReportUseCases are the reports of the tenant's receivables.
 type ReportUseCases interface {
-	Aging(ctx context.Context, a app.Actor, limit, offset int) (app.AgingReport, error)
+	Aging(ctx context.Context, a app.Actor, q app.AgingQuery) (app.AgingReport, error)
 }
 
 // reportHandlers are the reports of the receivables.
@@ -18,7 +18,11 @@ type reportHandlers struct{ uc ReportUseCases }
 // GetReceivablesAging returns a page of the aging by customer.
 func (h *reportHandlers) GetReceivablesAging(ctx context.Context, req receivablesapi.GetReceivablesAgingRequestObject) (receivablesapi.GetReceivablesAgingResponseObject, error) {
 	limit, offset := page(req.Params.Limit, req.Params.Offset)
-	report, err := h.uc.Aging(ctx, actor(ctx), limit, offset)
+	q := app.AgingQuery{Limit: limit, Offset: offset}
+	if req.Params.Sort != nil {
+		q.Sort = string(*req.Params.Sort)
+	}
+	report, err := h.uc.Aging(ctx, actor(ctx), q)
 	if err != nil {
 		return nil, err
 	}

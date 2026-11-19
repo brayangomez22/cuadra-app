@@ -36,6 +36,12 @@ func (d Date) DaysSince(o Date) int { return int(d.t.Sub(o.t).Hours() / 24) }
 // Time returns the day at midnight UTC, for storage.
 func (d Date) Time() time.Time { return d.t }
 
+// Start returns the instant d starts in America/Bogota.
+func (d Date) Start() time.Time {
+	y, m, day := d.t.Date()
+	return time.Date(y, m, day, 0, 0, 0, 0, bogota)
+}
+
 // IsZero reports whether d is the zero Date.
 func (d Date) IsZero() bool { return d.t.IsZero() }
 

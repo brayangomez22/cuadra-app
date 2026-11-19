@@ -24,4 +24,8 @@ func TestDate(t *testing.T) {
 		require.True(t, d.Before(d.AddDays(1)))
 		require.False(t, d.Before(d))
 	})
+	t.Run("el día empieza a la medianoche de Colombia, las 5 de la mañana UTC", func(t *testing.T) {
+		d := calendar.NewDate(2026, time.November, 3)
+		require.Equal(t, time.Date(2026, time.November, 3, 5, 0, 0, 0, time.UTC), d.Start().UTC())
+	})
 }

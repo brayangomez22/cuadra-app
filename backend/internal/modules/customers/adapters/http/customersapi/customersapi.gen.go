@@ -123,8 +123,13 @@ func (e ListCustomersParamsStatus) Valid() bool {
 // Customer Un cliente de la empresa. `document_number` está en su forma canónica: el NIT con su dígito de verificación
 // (`900123456-8`), la cédula solo con dígitos y el pasaporte en mayúsculas.
 type Customer struct {
-	Active    bool      `json:"active"`
-	Address   *string   `json:"address,omitempty"`
+	Active  bool    `json:"active"`
+	Address *string `json:"address,omitempty"`
+
+	// Balance Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Balance   *Money    `json:"balance,omitempty"`
 	City      *string   `json:"city,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 
@@ -146,6 +151,11 @@ type Customer struct {
 
 	// Name Nombre completo o razón social.
 	Name string `json:"name"`
+
+	// Overdue Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+	//
+	// Example: 12500.00
+	Overdue *Money `json:"overdue,omitempty"`
 
 	// PersonType Persona natural (`natural`) o jurídica (`legal`). Una persona jurídica se identifica con NIT.
 	PersonType          PersonType          `json:"person_type"`
@@ -248,6 +258,11 @@ type ErrorDetail struct {
 	// Message Mensaje en español que se puede mostrar al usuario.
 	Message string `json:"message"`
 }
+
+// Money Monto en pesos colombianos, como decimal en string (hasta 4 decimales).
+//
+// Example: 12500.00
+type Money = string
 
 // Municipality Un municipio del catálogo DIVIPOLA del DANE.
 type Municipality struct {

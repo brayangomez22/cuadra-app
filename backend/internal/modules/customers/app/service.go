@@ -33,6 +33,9 @@ type Deps struct {
 	Customers      domain.CustomerRepository
 	Segments       domain.SegmentRepository
 	Municipalities domain.MunicipalityCatalog
+	// Balances is what the customers owe, from the receivables module; nil
+	// lists the customers without it.
+	Balances       CustomerBalances
 	Now            func() time.Time
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider

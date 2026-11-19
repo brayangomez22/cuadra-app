@@ -1379,7 +1379,8 @@ export interface paths {
          * @description Lista los clientes de la empresa. Con `q` busca por nombre o nombre comercial (cada palabra debe aparecer, sin
          *     importar tildes ni mayúsculas) o por el número de documento, que sale primero si coincide exacto. Sin `q`,
          *     ordena por nombre. Es la búsqueda del POS. Una venta sin cliente es a consumidor final: no hay un cliente
-         *     guardado con ese nombre.
+         *     guardado con ese nombre. Para quien ve la cartera, cada cliente trae lo que debe y lo vencido; para ordenar
+         *     por lo que deben, la cartera por edades (`GET /receivables/aging?sort=total`).
          */
         get: operations["listCustomers"];
         put?: never;
@@ -1504,7 +1505,8 @@ export interface paths {
          * Cartera por edades
          * @description Lo que deben los clientes, por edad: por vencer (vence hoy o después) y vencida de 1 a 30, de 31 a 60, de 61 a
          *     90 y de más de 90 días, contados desde la fecha de vencimiento con el día de hoy en hora de Colombia. Los
-         *     clientes con más cartera vencida van primero; `totals` suma todos los clientes, no solo la página.
+         *     clientes con más cartera vencida van primero (`sort` cambia el orden); `totals` suma todos los clientes, no
+         *     solo la página.
          */
         get: operations["getReceivablesAging"];
         put?: never;
@@ -2319,10 +2321,413 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ventas del periodo
+         * @description Las ventas confirmadas del periodo (las anuladas no cuentan), agrupadas por día, vendedor, medio de pago,
+         *     categoría o sede. Por medio de pago suma lo pagado con cada uno (el efectivo sin el cambio) y no trae `net` ni
+         *     `tax`; por categoría suma las líneas (la categoría actual del producto). `totals` es el de todas las ventas
+         *     del periodo, sin importar el agrupamiento. Los días son de Colombia.
+         */
+        get: operations["getSalesReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Productos vendidos
+         * @description Lo vendido en el periodo por producto, con el detalle por variante: cantidad en la unidad base, ingreso sin
+         *     IVA y, para quien ve costos, el costo (el promedio de cada variante en el momento de la venta, no el actual),
+         *     la utilidad y el margen. Las ventas anuladas no cuentan. Ordenar por utilidad exige ver costos.
+         */
+        get: operations["getProductsReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/sale-profits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Utilidad por venta
+         * @description Cada venta confirmada del periodo con su ingreso sin IVA, su costo en el momento de la venta, la utilidad y el
+         *     margen, de la más reciente a la más antigua. Exige ver costos (`costs_hidden` si no).
+         */
+        get: operations["getSaleProfitsReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/idle-stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Productos sin movimiento
+         * @description Las variantes con existencias que no se venden hace `days` días o más (o nunca), agrupadas por producto, con
+         *     la última venta y, para quien ve costos, lo que vale ese stock al costo promedio (la plata quieta). Los
+         *     productos con más plata quieta van primero (por cantidad si no ve costos).
+         */
+        get: operations["getIdleStockReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/cash-closings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cierres de caja
+         * @description Los cierres de caja del periodo (por el día del cierre), agrupados por cajero, sede o día: cuántos, lo vendido
+         *     (como en el reporte de cierre, que no cambia si después se anula una venta), los faltantes, los sobrantes y la
+         *     diferencia neta.
+         */
+        get: operations["getCashClosingsReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/team-control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Control del equipo
+         * @description Por usuario, en el periodo: anulaciones (cuántas y el total de las ventas), descuentos (cuántos, el monto y el
+         *     porcentaje promedio sobre lo descontado), cambios de precio, ajustes de inventario (valorizados al costo, para
+         *     quien ve costos) y cierres de caja con diferencia (faltantes y sobrantes). Anulaciones, descuentos, cambios de
+         *     precio y diferencias salen del registro de auditoría; los ajustes, del kardex. `series` es la tendencia por
+         *     usuario en cada día, semana (desde el lunes) o mes, para comparar a cada uno con lo normal.
+         */
+        get: operations["getTeamControlReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/stock-adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ajustes de inventario
+         * @description Los ajustes de inventario del periodo (manuales y de las tomas físicas), agrupados por usuario o por variante:
+         *     cuántos, lo que entró y salió en la unidad base y, para quien ve costos, su valor al costo del momento (negativo
+         *     si se perdió).
+         */
+        get: operations["getStockAdjustmentsReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exportar un reporte a Excel o CSV
+         * @description El reporte `report` con los mismos filtros que su consulta, como archivo. Exporta todas las filas (no una
+         *     página), hasta 5.000. El CSV va separado por punto y coma, con BOM y coma decimal, como lo abre Excel en
+         *     español. Las columnas de costo solo salen para quien ve costos; `sale_profits` exige verlos. `from` y `to`
+         *     son obligatorios salvo en `idle_stock` y `receivables` (la cartera de hoy).
+         */
+        get: operations["exportReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {string} */
+        ReportKind: "sales" | "products" | "sale_profits" | "idle_stock" | "cash_closings" | "team_control" | "stock_adjustments" | "receivables";
+        /**
+         * @default xlsx
+         * @enum {string}
+         */
+        ReportFormat: "xlsx" | "csv";
+        /**
+         * @description Cada cuánto se agrupa una tendencia; la semana empieza el lunes.
+         * @default week
+         * @enum {string}
+         */
+        ReportBucket: "day" | "week" | "month";
+        ReportPeriod: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+        };
+        /**
+         * @description Margen sobre el ingreso sin IVA, como fracción decimal con signo (`0.2500` es 25 %).
+         * @example 0.2500
+         */
+        Margin: string;
+        /**
+         * @default day
+         * @enum {string}
+         */
+        SalesReportGroup: "day" | "user" | "payment_method" | "category" | "location";
+        /**
+         * @description Un grupo de ventas. `key` es el día (`2026-11-03`), el ID del usuario, de la sede o de la categoría (vacío sin
+         *     categoría) o el medio de pago; `label` es su nombre. Por medio de pago no trae `net` ni `tax`.
+         */
+        SalesReportRow: {
+            key: string;
+            label: string;
+            sales_count: number;
+            net?: components["schemas"]["Money"];
+            tax?: components["schemas"]["Money"];
+            total: components["schemas"]["Money"];
+        };
+        SalesReportTotals: {
+            sales_count: number;
+            net: components["schemas"]["Money"];
+            tax: components["schemas"]["Money"];
+            total: components["schemas"]["Money"];
+        };
+        SalesReport: {
+            period: components["schemas"]["ReportPeriod"];
+            group_by: components["schemas"]["SalesReportGroup"];
+            items: components["schemas"]["SalesReportRow"][];
+            totals: components["schemas"]["SalesReportTotals"];
+        };
+        /** @description Ingreso sin IVA y, para quien ve costos, costo en el momento de la venta, utilidad y margen. */
+        ProfitFigures: {
+            revenue: components["schemas"]["Money"];
+            cost?: components["schemas"]["Money"];
+            profit?: components["schemas"]["SignedMoney"];
+            margin?: components["schemas"]["Margin"];
+        };
+        /**
+         * @default revenue
+         * @enum {string}
+         */
+        ProductsReportSort: "quantity" | "revenue" | "profit";
+        ProductsReportVariant: components["schemas"]["ProfitFigures"] & {
+            /** Format: uuid */
+            variant_id: string;
+            /** @description Los valores de sus ejes (`Rojo · M`); vacío en un producto simple. */
+            label: string;
+            sku: string;
+            quantity: components["schemas"]["Quantity"];
+        };
+        ProductsReportRow: components["schemas"]["ProfitFigures"] & {
+            /** Format: uuid */
+            product_id: string;
+            name: string;
+            /** @description El código de la unidad base, en la que van las cantidades. */
+            unit_code: string;
+            quantity: components["schemas"]["Quantity"];
+            variants: components["schemas"]["ProductsReportVariant"][];
+        };
+        ProductsReport: {
+            period: components["schemas"]["ReportPeriod"];
+            items: components["schemas"]["ProductsReportRow"][];
+            /** @description Cantidad de productos vendidos en el periodo. */
+            total: number;
+            totals: components["schemas"]["ProfitFigures"];
+        };
+        SaleProfitRow: components["schemas"]["ProfitFigures"] & {
+            /** Format: uuid */
+            sale_id: string;
+            /** Format: int64 */
+            number: number;
+            /** Format: uuid */
+            location_id: string;
+            location_name: string;
+            /** Format: uuid */
+            user_id: string;
+            user_name: string;
+            /** Format: date-time */
+            confirmed_at: string;
+        };
+        SaleProfitsReport: {
+            period: components["schemas"]["ReportPeriod"];
+            items: components["schemas"]["SaleProfitRow"][];
+            total: number;
+            totals: components["schemas"]["ProfitFigures"];
+        };
+        IdleStockVariant: {
+            /** Format: uuid */
+            variant_id: string;
+            label: string;
+            sku: string;
+            quantity: components["schemas"]["Quantity"];
+            value?: components["schemas"]["Money"];
+            /**
+             * Format: date-time
+             * @description La última venta de la variante; sin ella, nunca se ha vendido.
+             */
+            last_sold_at?: string;
+        };
+        IdleStockRow: {
+            /** Format: uuid */
+            product_id: string;
+            name: string;
+            unit_code: string;
+            quantity: components["schemas"]["Quantity"];
+            value?: components["schemas"]["Money"];
+            /** Format: date-time */
+            last_sold_at?: string;
+            variants: components["schemas"]["IdleStockVariant"][];
+        };
+        IdleStockReport: {
+            days: number;
+            /**
+             * Format: date
+             * @description Desde este día (incluido) no se han vendido.
+             */
+            since: string;
+            items: components["schemas"]["IdleStockRow"][];
+            total: number;
+            value?: components["schemas"]["Money"];
+        };
+        /**
+         * @default user
+         * @enum {string}
+         */
+        CashClosingsReportGroup: "user" | "location" | "day";
+        CashClosingFigures: {
+            closings: number;
+            /** @description Cierres con faltante o sobrante. */
+            with_difference: number;
+            sales_total: components["schemas"]["Money"];
+            shortage: components["schemas"]["Money"];
+            overage: components["schemas"]["Money"];
+            difference: components["schemas"]["SignedMoney"];
+        };
+        CashClosingsReportRow: components["schemas"]["CashClosingFigures"] & {
+            key: string;
+            label: string;
+        };
+        CashClosingsReport: {
+            period: components["schemas"]["ReportPeriod"];
+            group_by: components["schemas"]["CashClosingsReportGroup"];
+            items: components["schemas"]["CashClosingsReportRow"][];
+            totals: components["schemas"]["CashClosingFigures"];
+        };
+        TeamControlFigures: {
+            voids: number;
+            voids_total: components["schemas"]["Money"];
+            discounts: number;
+            discounts_amount: components["schemas"]["Money"];
+            /** @description Lo descontado sobre el valor de las ventas con descuento; sin descuentos, no viene. */
+            discount_rate?: components["schemas"]["Margin"];
+            price_changes: number;
+            adjustments: number;
+            adjustments_value?: components["schemas"]["SignedMoney"];
+            cash_differences: number;
+            cash_shortage: components["schemas"]["Money"];
+            cash_overage: components["schemas"]["Money"];
+        };
+        TeamControlUser: components["schemas"]["TeamControlFigures"] & {
+            /** Format: uuid */
+            user_id: string;
+            name: string;
+        };
+        TeamControlPoint: components["schemas"]["TeamControlFigures"] & {
+            /** Format: uuid */
+            user_id: string;
+            /** Format: date */
+            bucket_start: string;
+        };
+        TeamControlReport: {
+            period: components["schemas"]["ReportPeriod"];
+            bucket: components["schemas"]["ReportBucket"];
+            users: components["schemas"]["TeamControlUser"][];
+            series: components["schemas"]["TeamControlPoint"][];
+        };
+        /**
+         * @default user
+         * @enum {string}
+         */
+        StockAdjustmentsReportGroup: "user" | "variant";
+        /**
+         * @description Un grupo de ajustes. `key` es el ID del usuario o de la variante; `label`, su nombre (el producto y los
+         *     valores de sus ejes). Las cantidades van en la unidad base (`unit_code`, solo por variante).
+         */
+        StockAdjustmentsReportRow: {
+            key: string;
+            label: string;
+            unit_code?: string;
+            adjustments: number;
+            quantity_in: components["schemas"]["Quantity"];
+            quantity_out: components["schemas"]["Quantity"];
+            value?: components["schemas"]["SignedMoney"];
+        };
+        StockAdjustmentsReport: {
+            period: components["schemas"]["ReportPeriod"];
+            group_by: components["schemas"]["StockAdjustmentsReportGroup"];
+            items: components["schemas"]["StockAdjustmentsReportRow"][];
+            adjustments: number;
+            value?: components["schemas"]["SignedMoney"];
+        };
         /**
          * @example {
          *       "error": {
@@ -3416,6 +3821,10 @@ export interface components {
             active: boolean;
             /** Format: date-time */
             created_at: string;
+            /** @description Lo que debe a crédito. Solo viene en la lista de clientes y para quien ve la cartera (`receivables:read`). */
+            balance?: components["schemas"]["Money"];
+            /** @description Lo que debe vencido (vence antes de hoy en Colombia). Solo viene con `balance`. */
+            overdue?: components["schemas"]["Money"];
         };
         /**
          * @description Los datos de un cliente. El NIT se escribe con su dígito de verificación (con o sin guion y puntos). Los
@@ -3627,6 +4036,11 @@ export interface components {
             overdue: components["schemas"]["Money"];
             total: components["schemas"]["Money"];
         };
+        /**
+         * @default overdue
+         * @enum {string}
+         */
+        AgingSort: "overdue" | "total" | "over_90";
         AgingRow: {
             /** Format: uuid */
             customer_id: string;
@@ -4530,6 +4944,18 @@ export interface components {
         };
     };
     responses: {
+        /**
+         * @description El periodo no es válido (`invalid_period`: el último día es anterior al primero o pasa de 366 días) o falta un
+         *     filtro que el reporte exige (`invalid_filter`).
+         */
+        InvalidPeriod: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description La request no cumple el contrato (`code` = `invalid_request`). */
         BadRequest: {
             headers: {
@@ -4679,6 +5105,16 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Primer día del periodo (incluido), en Colombia. */
+        ReportFrom: string;
+        /** @description Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo. */
+        ReportTo: string;
+        /** @description Solo esta sede. Sin ella, todas. */
+        ReportLocation: string;
+        /** @description Solo los productos con este atributo de la empresa (su `key`) igual a `attribute_value`. */
+        ReportAttribute: string;
+        /** @description El valor del atributo `attribute` (`true` o `false` en los de sí/no). */
+        ReportAttributeValue: string;
         UserId: string;
         /** @description Cantidad máxima de resultados. */
         Limit: number;
@@ -5767,6 +6203,11 @@ export interface operations {
                 category_id?: string;
                 /** @description Productos activos (por defecto), inactivos o todos. */
                 status?: "active" | "inactive" | "all";
+                /**
+                 * @description El orden sin `q` (con `q`, por coincidencia): por nombre (por defecto), por el menor precio de sus
+                 *     variantes o por su menor margen. Ordenar por margen exige ver costos (`costs_hidden`).
+                 */
+                sort?: "name" | "price" | "margin";
                 /**
                  * @description Solo estos productos (hasta 100), por ejemplo los de una página de existencias. Se combina con los demás
                  *     filtros: para traer también los inactivos, use `status=all`.
@@ -7998,6 +8439,8 @@ export interface operations {
     getReceivablesAging: {
         parameters: {
             query?: {
+                /** @description Primero los que más deben vencido (por defecto), en total o a más de 90 días. */
+                sort?: components["schemas"]["AgingSort"];
                 /** @description Cantidad máxima de resultados. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Cantidad de resultados a saltar. */
@@ -9790,6 +10233,300 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getSalesReport: {
+        parameters: {
+            query: {
+                /** @description Primer día del periodo (incluido), en Colombia. */
+                from: components["parameters"]["ReportFrom"];
+                /** @description Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo. */
+                to: components["parameters"]["ReportTo"];
+                /** @description Solo esta sede. Sin ella, todas. */
+                location_id?: components["parameters"]["ReportLocation"];
+                group_by?: components["schemas"]["SalesReportGroup"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El reporte. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["InvalidPeriod"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getProductsReport: {
+        parameters: {
+            query: {
+                /** @description Primer día del periodo (incluido), en Colombia. */
+                from: components["parameters"]["ReportFrom"];
+                /** @description Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo. */
+                to: components["parameters"]["ReportTo"];
+                /** @description Solo esta sede. Sin ella, todas. */
+                location_id?: components["parameters"]["ReportLocation"];
+                /** @description Solo los productos de esta categoría. */
+                category_id?: string;
+                /** @description Solo los productos con este atributo de la empresa (su `key`) igual a `attribute_value`. */
+                attribute?: components["parameters"]["ReportAttribute"];
+                /** @description El valor del atributo `attribute` (`true` o `false` en los de sí/no). */
+                attribute_value?: components["parameters"]["ReportAttributeValue"];
+                sort?: components["schemas"]["ProductsReportSort"];
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página del reporte. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductsReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["InvalidPeriod"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getSaleProfitsReport: {
+        parameters: {
+            query: {
+                /** @description Primer día del periodo (incluido), en Colombia. */
+                from: components["parameters"]["ReportFrom"];
+                /** @description Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo. */
+                to: components["parameters"]["ReportTo"];
+                /** @description Solo esta sede. Sin ella, todas. */
+                location_id?: components["parameters"]["ReportLocation"];
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página del reporte. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleProfitsReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["InvalidPeriod"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getIdleStockReport: {
+        parameters: {
+            query?: {
+                /** @description Días sin vender. */
+                days?: number;
+                /** @description Solo esta sede. Sin ella, todas. */
+                location_id?: components["parameters"]["ReportLocation"];
+                /** @description Solo los productos de esta categoría. */
+                category_id?: string;
+                /** @description Solo los productos con este atributo de la empresa (su `key`) igual a `attribute_value`. */
+                attribute?: components["parameters"]["ReportAttribute"];
+                /** @description El valor del atributo `attribute` (`true` o `false` en los de sí/no). */
+                attribute_value?: components["parameters"]["ReportAttributeValue"];
+                /** @description Cantidad máxima de resultados. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Cantidad de resultados a saltar. */
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página del reporte. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdleStockReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getCashClosingsReport: {
+        parameters: {
+            query: {
+                /** @description Primer día del periodo (incluido), en Colombia. */
+                from: components["parameters"]["ReportFrom"];
+                /** @description Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo. */
+                to: components["parameters"]["ReportTo"];
+                /** @description Solo esta sede. Sin ella, todas. */
+                location_id?: components["parameters"]["ReportLocation"];
+                group_by?: components["schemas"]["CashClosingsReportGroup"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El reporte. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashClosingsReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["InvalidPeriod"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getTeamControlReport: {
+        parameters: {
+            query: {
+                /** @description Primer día del periodo (incluido), en Colombia. */
+                from: components["parameters"]["ReportFrom"];
+                /** @description Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo. */
+                to: components["parameters"]["ReportTo"];
+                /** @description Solo esta sede. Sin ella, todas. */
+                location_id?: components["parameters"]["ReportLocation"];
+                bucket?: components["schemas"]["ReportBucket"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El reporte. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamControlReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["InvalidPeriod"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getStockAdjustmentsReport: {
+        parameters: {
+            query: {
+                /** @description Primer día del periodo (incluido), en Colombia. */
+                from: components["parameters"]["ReportFrom"];
+                /** @description Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo. */
+                to: components["parameters"]["ReportTo"];
+                /** @description Solo esta sede. Sin ella, todas. */
+                location_id?: components["parameters"]["ReportLocation"];
+                group_by?: components["schemas"]["StockAdjustmentsReportGroup"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El reporte. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockAdjustmentsReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["InvalidPeriod"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    exportReport: {
+        parameters: {
+            query: {
+                report: components["schemas"]["ReportKind"];
+                format?: components["schemas"]["ReportFormat"];
+                from?: string;
+                to?: string;
+                /** @description Solo esta sede. Sin ella, todas. */
+                location_id?: components["parameters"]["ReportLocation"];
+                /** @description El agrupamiento del reporte (`sales`, `cash_closings` o `stock_adjustments`). */
+                group_by?: "day" | "user" | "payment_method" | "category" | "location" | "variant";
+                bucket?: components["schemas"]["ReportBucket"];
+                category_id?: string;
+                /** @description Solo los productos con este atributo de la empresa (su `key`) igual a `attribute_value`. */
+                attribute?: components["parameters"]["ReportAttribute"];
+                /** @description El valor del atributo `attribute` (`true` o `false` en los de sí/no). */
+                attribute_value?: components["parameters"]["ReportAttributeValue"];
+                /** @description El orden de `products` o de `receivables`. */
+                sort?: "quantity" | "revenue" | "profit" | "overdue" | "total" | "over_90";
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El archivo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    "text/csv": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["InvalidPeriod"];
             500: components["responses"]["InternalError"];
         };
     };

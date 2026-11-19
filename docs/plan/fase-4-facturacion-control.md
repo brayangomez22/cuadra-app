@@ -73,7 +73,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Pendientes que entran a esta tarea:** P08–P10, P172 y P176 (`docs/plan/pendientes.md`).
 **Tests primero:** solo `owner` y `admin` gestionan usuarios; un usuario desactivado pierde el acceso en su siguiente request; el dueño no puede quitarse su propio rol de owner si es el único.
 
-### [ ] T42 · Reportes
+### [x] T42 · Reportes
 **Depende de:** T38 (registro de auditoría, para el reporte de control del equipo).
 **Alcance:** reportes para el negocio (no confundir con Grafana): ventas por día, vendedor, medio de pago, categoría y sede; productos más vendidos; productos **sin movimiento** en N días (plata quieta); utilidad por producto y por venta (precio − costo promedio al momento de la venta); cartera por cobrar; cierres de caja. **Control del equipo** (agrega el registro de auditoría de T38): anulaciones por usuario y por sede, descuentos dados (cantidad, monto y porcentaje promedio por usuario), cambios de precio, ajustes de inventario por usuario y por variante (valorizados a costo) y diferencias de caja por usuario y por turno. Se muestran como tendencia en el tiempo y comparando usuarios, para que el dueño vea lo que se sale de lo normal. Filtros por rango de fechas y exportación a Excel/CSV. Las consultas pesadas usan índices o vistas materializadas justificadas con `EXPLAIN ANALYZE`. Los reportes de productos agregan por producto con detalle por variante (por ejemplo, ventas de una camiseta y su desglose por talla y color), y permiten filtrar por atributos del tenant.
 **Tests primero (integración):** la utilidad usa el costo vigente al momento de la venta, no el actual; los totales del reporte de ventas cuadran con la suma de los cierres de caja del mismo periodo; las anulaciones y diferencias de caja del reporte de control cuadran con los eventos de auditoría del mismo periodo y con las ventas anuladas y los cierres reales; los casos cubren al menos dos tipos de negocio.
@@ -81,7 +81,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T43 · Tablero del dueño
 **Depende de:** T28, T32, T42.
 **Alcance:** pantalla de inicio para `owner` y `admin`: ventas de hoy contra el mismo día de la semana anterior, ticket promedio, variantes por agotarse, cartera vencida, documentos DIAN con problemas, cajas abiertas y **alertas de control** de la semana (anulaciones, descuentos o diferencias de caja por encima de lo habitual de ese usuario), con enlace al detalle de T42 y a la auditoría de T41. Se actualiza solo cada pocos minutos.
-**Pendientes que entran a esta tarea:** P11 y P77 (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P11, P77, P127, P182 y P183 (`docs/plan/pendientes.md`).
 **Tests primero:** cada indicador coincide con su reporte detallado en T42.
 **Después:** `/impeccable critique`: lo más importante debe entenderse en 5 segundos.
 

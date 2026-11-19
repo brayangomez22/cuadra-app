@@ -107,6 +107,11 @@ tags:
       (con número, sin respuesta), `sent` (el proveedor espera a la DIAN), `accepted` (con CUDE o CUFE y QR) y
       `rejected` (con los motivos; no se reintenta solo). Un reintento nunca toma un número nuevo.
 
+  - name: reports
+    description: |
+      Reportes del negocio para el dueño y el administrador: ventas, productos, utilidad, plata quieta, cierres de
+      caja y control del equipo, con filtros por periodo y sede y exportación a Excel o CSV. Los costos y la
+      utilidad solo salen para quien ve costos.
   - name: audit
     description: |
       Registro de auditoría de la empresa: quién anuló, aplicó descuentos, cambió precios, ajustó inventario, cerró
@@ -1093,6 +1098,16 @@ paths:
             type: string
             enum: [active, inactive, all]
             default: active
+        - name: sort
+          in: query
+          description: |
+            El orden sin `q` (con `q`, por coincidencia): por nombre (por defecto), por el menor precio de sus
+            variantes o por su menor margen. Ordenar por margen exige ver costos (`costs_hidden`).
+          required: false
+          schema:
+            type: string
+            enum: [name, price, margin]
+            default: name
         - name: ids
           in: query
           description: |
@@ -2877,7 +2892,8 @@ paths:
         Lista los clientes de la empresa. Con `q` busca por nombre o nombre comercial (cada palabra debe aparecer, sin
         importar tildes ni mayúsculas) o por el número de documento, que sale primero si coincide exacto. Sin `q`,
         ordena por nombre. Es la búsqueda del POS. Una venta sin cliente es a consumidor final: no hay un cliente
-        guardado con ese nombre.
+        guardado con ese nombre. Para quien ve la cartera, cada cliente trae lo que debe y lo vencido; para ordenar
+        por lo que deben, la cartera por edades (`GET /receivables/aging?sort=total`).
       x-permission: customers:read
       parameters:
         - name: q
@@ -3179,9 +3195,16 @@ paths:
       description: |
         Lo que deben los clientes, por edad: por vencer (vence hoy o después) y vencida de 1 a 30, de 31 a 60, de 61 a
         90 y de más de 90 días, contados desde la fecha de vencimiento con el día de hoy en hora de Colombia. Los
-        clientes con más cartera vencida van primero; `totals` suma todos los clientes, no solo la página.
+        clientes con más cartera vencida van primero (`sort` cambia el orden); `totals` suma todos los clientes, no
+        solo la página.
       x-permission: receivables:read
       parameters:
+        - name: sort
+          in: query
+          description: Primero los que más deben vencido (por defecto), en total o a más de 90 días.
+          required: false
+          schema:
+            $ref: "#/components/schemas/AgingSort"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -4943,6 +4966,379 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/reports/sales:
+    get:
+      tags: [reports]
+      operationId: getSalesReport
+      summary: Ventas del periodo
+      description: |
+        Las ventas confirmadas del periodo (las anuladas no cuentan), agrupadas por día, vendedor, medio de pago,
+        categoría o sede. Por medio de pago suma lo pagado con cada uno (el efectivo sin el cambio) y no trae `net` ni
+        `tax`; por categoría suma las líneas (la categoría actual del producto). `totals` es el de todas las ventas
+        del periodo, sin importar el agrupamiento. Los días son de Colombia.
+      x-permission: reports:read
+      parameters:
+        - $ref: "#/components/parameters/ReportFrom"
+        - $ref: "#/components/parameters/ReportTo"
+        - $ref: "#/components/parameters/ReportLocation"
+        - name: group_by
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/SalesReportGroup"
+      responses:
+        "200":
+          description: El reporte.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/InvalidPeriod"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/reports/products:
+    get:
+      tags: [reports]
+      operationId: getProductsReport
+      summary: Productos vendidos
+      description: |
+        Lo vendido en el periodo por producto, con el detalle por variante: cantidad en la unidad base, ingreso sin
+        IVA y, para quien ve costos, el costo (el promedio de cada variante en el momento de la venta, no el actual),
+        la utilidad y el margen. Las ventas anuladas no cuentan. Ordenar por utilidad exige ver costos.
+      x-permission: reports:read
+      parameters:
+        - $ref: "#/components/parameters/ReportFrom"
+        - $ref: "#/components/parameters/ReportTo"
+        - $ref: "#/components/parameters/ReportLocation"
+        - name: category_id
+          in: query
+          description: Solo los productos de esta categoría.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/ReportAttribute"
+        - $ref: "#/components/parameters/ReportAttributeValue"
+        - name: sort
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ProductsReportSort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página del reporte.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductsReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/InvalidPeriod"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/reports/sale-profits:
+    get:
+      tags: [reports]
+      operationId: getSaleProfitsReport
+      summary: Utilidad por venta
+      description: |
+        Cada venta confirmada del periodo con su ingreso sin IVA, su costo en el momento de la venta, la utilidad y el
+        margen, de la más reciente a la más antigua. Exige ver costos (`costs_hidden` si no).
+      x-permission: reports:read
+      parameters:
+        - $ref: "#/components/parameters/ReportFrom"
+        - $ref: "#/components/parameters/ReportTo"
+        - $ref: "#/components/parameters/ReportLocation"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página del reporte.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaleProfitsReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/InvalidPeriod"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/reports/idle-stock:
+    get:
+      tags: [reports]
+      operationId: getIdleStockReport
+      summary: Productos sin movimiento
+      description: |
+        Las variantes con existencias que no se venden hace `days` días o más (o nunca), agrupadas por producto, con
+        la última venta y, para quien ve costos, lo que vale ese stock al costo promedio (la plata quieta). Los
+        productos con más plata quieta van primero (por cantidad si no ve costos).
+      x-permission: reports:read
+      parameters:
+        - name: days
+          in: query
+          description: Días sin vender.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+            default: 60
+        - $ref: "#/components/parameters/ReportLocation"
+        - name: category_id
+          in: query
+          description: Solo los productos de esta categoría.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/ReportAttribute"
+        - $ref: "#/components/parameters/ReportAttributeValue"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Una página del reporte.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdleStockReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/reports/cash-closings:
+    get:
+      tags: [reports]
+      operationId: getCashClosingsReport
+      summary: Cierres de caja
+      description: |
+        Los cierres de caja del periodo (por el día del cierre), agrupados por cajero, sede o día: cuántos, lo vendido
+        (como en el reporte de cierre, que no cambia si después se anula una venta), los faltantes, los sobrantes y la
+        diferencia neta.
+      x-permission: reports:read
+      parameters:
+        - $ref: "#/components/parameters/ReportFrom"
+        - $ref: "#/components/parameters/ReportTo"
+        - $ref: "#/components/parameters/ReportLocation"
+        - name: group_by
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/CashClosingsReportGroup"
+      responses:
+        "200":
+          description: El reporte.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashClosingsReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/InvalidPeriod"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/reports/team-control:
+    get:
+      tags: [reports]
+      operationId: getTeamControlReport
+      summary: Control del equipo
+      description: |
+        Por usuario, en el periodo: anulaciones (cuántas y el total de las ventas), descuentos (cuántos, el monto y el
+        porcentaje promedio sobre lo descontado), cambios de precio, ajustes de inventario (valorizados al costo, para
+        quien ve costos) y cierres de caja con diferencia (faltantes y sobrantes). Anulaciones, descuentos, cambios de
+        precio y diferencias salen del registro de auditoría; los ajustes, del kardex. `series` es la tendencia por
+        usuario en cada día, semana (desde el lunes) o mes, para comparar a cada uno con lo normal.
+      x-permission: reports:read
+      parameters:
+        - $ref: "#/components/parameters/ReportFrom"
+        - $ref: "#/components/parameters/ReportTo"
+        - $ref: "#/components/parameters/ReportLocation"
+        - name: bucket
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ReportBucket"
+      responses:
+        "200":
+          description: El reporte.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamControlReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/InvalidPeriod"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/reports/stock-adjustments:
+    get:
+      tags: [reports]
+      operationId: getStockAdjustmentsReport
+      summary: Ajustes de inventario
+      description: |
+        Los ajustes de inventario del periodo (manuales y de las tomas físicas), agrupados por usuario o por variante:
+        cuántos, lo que entró y salió en la unidad base y, para quien ve costos, su valor al costo del momento (negativo
+        si se perdió).
+      x-permission: reports:read
+      parameters:
+        - $ref: "#/components/parameters/ReportFrom"
+        - $ref: "#/components/parameters/ReportTo"
+        - $ref: "#/components/parameters/ReportLocation"
+        - name: group_by
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/StockAdjustmentsReportGroup"
+      responses:
+        "200":
+          description: El reporte.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockAdjustmentsReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/InvalidPeriod"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/reports/export:
+    get:
+      tags: [reports]
+      operationId: exportReport
+      summary: Exportar un reporte a Excel o CSV
+      description: |
+        El reporte `report` con los mismos filtros que su consulta, como archivo. Exporta todas las filas (no una
+        página), hasta 5.000. El CSV va separado por punto y coma, con BOM y coma decimal, como lo abre Excel en
+        español. Las columnas de costo solo salen para quien ve costos; `sale_profits` exige verlos. `from` y `to`
+        son obligatorios salvo en `idle_stock` y `receivables` (la cartera de hoy).
+      x-permission: reports:read
+      parameters:
+        - name: report
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/ReportKind"
+        - name: format
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ReportFormat"
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - $ref: "#/components/parameters/ReportLocation"
+        - name: group_by
+          in: query
+          description: El agrupamiento del reporte (`sales`, `cash_closings` o `stock_adjustments`).
+          required: false
+          schema:
+            type: string
+            enum: [day, user, payment_method, category, location, variant]
+        - name: bucket
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ReportBucket"
+        - name: category_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/ReportAttribute"
+        - $ref: "#/components/parameters/ReportAttributeValue"
+        - name: sort
+          in: query
+          description: El orden de `products` o de `receivables`.
+          required: false
+          schema:
+            type: string
+            enum: [quantity, revenue, profit, overdue, total, over_90]
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+            default: 60
+      responses:
+        "200":
+          description: El archivo.
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/InvalidPeriod"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   headers:
     SetRefreshCookie:
@@ -4959,6 +5355,47 @@ components:
       bearerFormat: JWT
 
   parameters:
+    ReportFrom:
+      name: from
+      in: query
+      description: Primer día del periodo (incluido), en Colombia.
+      required: true
+      schema:
+        type: string
+        format: date
+    ReportTo:
+      name: to
+      in: query
+      description: Último día del periodo (incluido), en Colombia. El periodo es de 366 días como máximo.
+      required: true
+      schema:
+        type: string
+        format: date
+    ReportLocation:
+      name: location_id
+      in: query
+      description: Solo esta sede. Sin ella, todas.
+      required: false
+      schema:
+        type: string
+        format: uuid
+    ReportAttribute:
+      name: attribute
+      in: query
+      description: Solo los productos con este atributo de la empresa (su `key`) igual a `attribute_value`.
+      required: false
+      schema:
+        type: string
+        pattern: '^[a-z][a-z0-9_]*$'
+        maxLength: 64
+    ReportAttributeValue:
+      name: attribute_value
+      in: query
+      description: El valor del atributo `attribute` (`true` o `false` en los de sí/no).
+      required: false
+      schema:
+        type: string
+        maxLength: 200
     UserId:
       name: userId
       in: path
@@ -5137,6 +5574,14 @@ components:
         maxLength: 200
 
   responses:
+    InvalidPeriod:
+      description: |
+        El periodo no es válido (`invalid_period`: el último día es anterior al primero o pasa de 366 días) o falta un
+        filtro que el reporte exige (`invalid_filter`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     BadRequest:
       description: La request no cumple el contrato (`code` = `invalid_request`).
       content:
@@ -5239,6 +5684,401 @@ components:
             $ref: "#/components/schemas/Error"
 
   schemas:
+    ReportKind:
+      type: string
+      enum: [sales, products, sale_profits, idle_stock, cash_closings, team_control, stock_adjustments, receivables]
+    ReportFormat:
+      type: string
+      enum: [xlsx, csv]
+      default: xlsx
+    ReportBucket:
+      type: string
+      enum: [day, week, month]
+      default: week
+      description: Cada cuánto se agrupa una tendencia; la semana empieza el lunes.
+    ReportPeriod:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+    Margin:
+      type: string
+      description: Margen sobre el ingreso sin IVA, como fracción decimal con signo (`0.2500` es 25 %).
+      pattern: '^-?\d{1,6}(\.\d{1,4})?$'
+      example: "0.2500"
+    SalesReportGroup:
+      type: string
+      enum: [day, user, payment_method, category, location]
+      default: day
+    SalesReportRow:
+      type: object
+      description: |
+        Un grupo de ventas. `key` es el día (`2026-11-03`), el ID del usuario, de la sede o de la categoría (vacío sin
+        categoría) o el medio de pago; `label` es su nombre. Por medio de pago no trae `net` ni `tax`.
+      required: [key, label, sales_count, total]
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        sales_count:
+          type: integer
+        net:
+          $ref: "#/components/schemas/Money"
+        tax:
+          $ref: "#/components/schemas/Money"
+        total:
+          $ref: "#/components/schemas/Money"
+    SalesReportTotals:
+      type: object
+      required: [sales_count, net, tax, total]
+      properties:
+        sales_count:
+          type: integer
+        net:
+          $ref: "#/components/schemas/Money"
+        tax:
+          $ref: "#/components/schemas/Money"
+        total:
+          $ref: "#/components/schemas/Money"
+    SalesReport:
+      type: object
+      required: [period, group_by, items, totals]
+      properties:
+        period:
+          $ref: "#/components/schemas/ReportPeriod"
+        group_by:
+          $ref: "#/components/schemas/SalesReportGroup"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesReportRow"
+        totals:
+          $ref: "#/components/schemas/SalesReportTotals"
+    ProfitFigures:
+      type: object
+      description: Ingreso sin IVA y, para quien ve costos, costo en el momento de la venta, utilidad y margen.
+      required: [revenue]
+      properties:
+        revenue:
+          $ref: "#/components/schemas/Money"
+        cost:
+          $ref: "#/components/schemas/Money"
+        profit:
+          $ref: "#/components/schemas/SignedMoney"
+        margin:
+          $ref: "#/components/schemas/Margin"
+    ProductsReportSort:
+      type: string
+      enum: [quantity, revenue, profit]
+      default: revenue
+    ProductsReportVariant:
+      allOf:
+        - $ref: "#/components/schemas/ProfitFigures"
+        - type: object
+          required: [variant_id, label, sku, quantity]
+          properties:
+            variant_id:
+              type: string
+              format: uuid
+            label:
+              type: string
+              description: Los valores de sus ejes (`Rojo · M`); vacío en un producto simple.
+            sku:
+              type: string
+            quantity:
+              $ref: "#/components/schemas/Quantity"
+    ProductsReportRow:
+      allOf:
+        - $ref: "#/components/schemas/ProfitFigures"
+        - type: object
+          required: [product_id, name, unit_code, quantity, variants]
+          properties:
+            product_id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            unit_code:
+              type: string
+              description: El código de la unidad base, en la que van las cantidades.
+            quantity:
+              $ref: "#/components/schemas/Quantity"
+            variants:
+              type: array
+              items:
+                $ref: "#/components/schemas/ProductsReportVariant"
+    ProductsReport:
+      type: object
+      required: [period, items, total, totals]
+      properties:
+        period:
+          $ref: "#/components/schemas/ReportPeriod"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductsReportRow"
+        total:
+          type: integer
+          description: Cantidad de productos vendidos en el periodo.
+        totals:
+          $ref: "#/components/schemas/ProfitFigures"
+    SaleProfitRow:
+      allOf:
+        - $ref: "#/components/schemas/ProfitFigures"
+        - type: object
+          required: [sale_id, number, location_id, location_name, user_id, user_name, confirmed_at]
+          properties:
+            sale_id:
+              type: string
+              format: uuid
+            number:
+              type: integer
+              format: int64
+            location_id:
+              type: string
+              format: uuid
+            location_name:
+              type: string
+            user_id:
+              type: string
+              format: uuid
+            user_name:
+              type: string
+            confirmed_at:
+              type: string
+              format: date-time
+    SaleProfitsReport:
+      type: object
+      required: [period, items, total, totals]
+      properties:
+        period:
+          $ref: "#/components/schemas/ReportPeriod"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleProfitRow"
+        total:
+          type: integer
+        totals:
+          $ref: "#/components/schemas/ProfitFigures"
+    IdleStockVariant:
+      type: object
+      required: [variant_id, label, sku, quantity]
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        sku:
+          type: string
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+        value:
+          $ref: "#/components/schemas/Money"
+        last_sold_at:
+          type: string
+          format: date-time
+          description: La última venta de la variante; sin ella, nunca se ha vendido.
+    IdleStockRow:
+      type: object
+      required: [product_id, name, unit_code, quantity, variants]
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        unit_code:
+          type: string
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+        value:
+          $ref: "#/components/schemas/Money"
+        last_sold_at:
+          type: string
+          format: date-time
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/IdleStockVariant"
+    IdleStockReport:
+      type: object
+      required: [days, since, items, total]
+      properties:
+        days:
+          type: integer
+        since:
+          type: string
+          format: date
+          description: Desde este día (incluido) no se han vendido.
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/IdleStockRow"
+        total:
+          type: integer
+        value:
+          $ref: "#/components/schemas/Money"
+    CashClosingsReportGroup:
+      type: string
+      enum: [user, location, day]
+      default: user
+    CashClosingFigures:
+      type: object
+      required: [closings, with_difference, sales_total, shortage, overage, difference]
+      properties:
+        closings:
+          type: integer
+        with_difference:
+          type: integer
+          description: Cierres con faltante o sobrante.
+        sales_total:
+          $ref: "#/components/schemas/Money"
+        shortage:
+          $ref: "#/components/schemas/Money"
+        overage:
+          $ref: "#/components/schemas/Money"
+        difference:
+          $ref: "#/components/schemas/SignedMoney"
+    CashClosingsReportRow:
+      allOf:
+        - $ref: "#/components/schemas/CashClosingFigures"
+        - type: object
+          required: [key, label]
+          properties:
+            key:
+              type: string
+            label:
+              type: string
+    CashClosingsReport:
+      type: object
+      required: [period, group_by, items, totals]
+      properties:
+        period:
+          $ref: "#/components/schemas/ReportPeriod"
+        group_by:
+          $ref: "#/components/schemas/CashClosingsReportGroup"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CashClosingsReportRow"
+        totals:
+          $ref: "#/components/schemas/CashClosingFigures"
+    TeamControlFigures:
+      type: object
+      required: [voids, voids_total, discounts, discounts_amount, price_changes, adjustments, cash_differences,
+        cash_shortage, cash_overage]
+      properties:
+        voids:
+          type: integer
+        voids_total:
+          $ref: "#/components/schemas/Money"
+        discounts:
+          type: integer
+        discounts_amount:
+          $ref: "#/components/schemas/Money"
+        discount_rate:
+          $ref: "#/components/schemas/Margin"
+          description: Lo descontado sobre el valor de las ventas con descuento; sin descuentos, no viene.
+        price_changes:
+          type: integer
+        adjustments:
+          type: integer
+        adjustments_value:
+          $ref: "#/components/schemas/SignedMoney"
+        cash_differences:
+          type: integer
+        cash_shortage:
+          $ref: "#/components/schemas/Money"
+        cash_overage:
+          $ref: "#/components/schemas/Money"
+    TeamControlUser:
+      allOf:
+        - $ref: "#/components/schemas/TeamControlFigures"
+        - type: object
+          required: [user_id, name]
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            name:
+              type: string
+    TeamControlPoint:
+      allOf:
+        - $ref: "#/components/schemas/TeamControlFigures"
+        - type: object
+          required: [user_id, bucket_start]
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            bucket_start:
+              type: string
+              format: date
+    TeamControlReport:
+      type: object
+      required: [period, bucket, users, series]
+      properties:
+        period:
+          $ref: "#/components/schemas/ReportPeriod"
+        bucket:
+          $ref: "#/components/schemas/ReportBucket"
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamControlUser"
+        series:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamControlPoint"
+    StockAdjustmentsReportGroup:
+      type: string
+      enum: [user, variant]
+      default: user
+    StockAdjustmentsReportRow:
+      type: object
+      description: |
+        Un grupo de ajustes. `key` es el ID del usuario o de la variante; `label`, su nombre (el producto y los
+        valores de sus ejes). Las cantidades van en la unidad base (`unit_code`, solo por variante).
+      required: [key, label, adjustments, quantity_in, quantity_out]
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        unit_code:
+          type: string
+        adjustments:
+          type: integer
+        quantity_in:
+          $ref: "#/components/schemas/Quantity"
+        quantity_out:
+          $ref: "#/components/schemas/Quantity"
+        value:
+          $ref: "#/components/schemas/SignedMoney"
+    StockAdjustmentsReport:
+      type: object
+      required: [period, group_by, items, adjustments]
+      properties:
+        period:
+          $ref: "#/components/schemas/ReportPeriod"
+        group_by:
+          $ref: "#/components/schemas/StockAdjustmentsReportGroup"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockAdjustmentsReportRow"
+        adjustments:
+          type: integer
+        value:
+          $ref: "#/components/schemas/SignedMoney"
     Error:
       type: object
       required: [error]
@@ -6963,6 +7803,14 @@ components:
         created_at:
           type: string
           format: date-time
+        balance:
+          $ref: "#/components/schemas/Money"
+          description: |
+            Lo que debe a crédito. Solo viene en la lista de clientes y para quien ve la cartera (`receivables:read`).
+        overdue:
+          $ref: "#/components/schemas/Money"
+          description: |
+            Lo que debe vencido (vence antes de hoy en Colombia). Solo viene con `balance`.
     CustomerInput:
       type: object
       description: |
@@ -7296,6 +8144,10 @@ components:
           $ref: "#/components/schemas/Money"
         total:
           $ref: "#/components/schemas/Money"
+    AgingSort:
+      type: string
+      enum: [overdue, total, over_90]
+      default: overdue
     AgingRow:
       type: object
       required: [customer_id, name, buckets]

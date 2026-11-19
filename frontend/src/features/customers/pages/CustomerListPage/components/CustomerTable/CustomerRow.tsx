@@ -1,8 +1,9 @@
 import { paths } from '@/app/routes/paths';
-import { Badge, ButtonLink, TableCell, TableNarrow, TableRow, TextLink } from '@/shared/ui';
+import { Badge, TableCell, TableNarrow, TableRow, TextLink } from '@/shared/ui';
 import type { Customer } from '../../../../api/types';
 import { documentLabel } from '../../../../model/documentLabel';
 import { phoneLabel } from '../../../../model/phoneLabel';
+import { CreditCells } from '../CreditCells/CreditCells';
 import styles from './CustomerTable.module.scss';
 
 type Props = {
@@ -50,17 +51,7 @@ export function CustomerRow({ customer, segment, canWrite, canReadCredit }: Prop
               </span>
             ))}
       </TableCell>
-      {canReadCredit && (
-        <TableCell className={styles.account}>
-          <ButtonLink
-            variant="ghost"
-            to={paths.receivables.account(customer.id)}
-            aria-label={`Cuenta de ${customer.name}`}
-          >
-            Cuenta
-          </ButtonLink>
-        </TableCell>
-      )}
+      {canReadCredit && <CreditCells customer={customer} />}
     </TableRow>
   );
 }

@@ -36,10 +36,24 @@ type ProductFilter struct {
 	// Active, when set, keeps only active (true) or inactive (false) products.
 	Active *bool
 	// IDs, when not nil, keeps only these products.
-	IDs    []uuid.UUID
+	IDs []uuid.UUID
+	// Sort orders a list without Query (a search orders by match).
+	Sort   ProductSort
 	Limit  int
 	Offset int
 }
+
+// ProductSort orders a product list: by name (the default), by the lowest
+// price of its active variants, or by their lowest margin, both from the
+// lowest.
+type ProductSort string
+
+// The product list's orders.
+const (
+	SortByName   ProductSort = "name"
+	SortByPrice  ProductSort = "price"
+	SortByMargin ProductSort = "margin"
+)
 
 // ProductPage is one page of a search and how many products match in total.
 type ProductPage struct {
