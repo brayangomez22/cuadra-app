@@ -1,6 +1,7 @@
 import { QueryState } from '@/shared/query';
-import { EmptyState, IconBox, Page, Spinner } from '@/shared/ui';
+import { Page, Spinner } from '@/shared/ui';
 import { useLocations } from '../../api/locations';
+import { NoLocationsYet } from '../../components/NoLocationsYet/NoLocationsYet';
 import { LocationReorder } from './components/LocationReorder/LocationReorder';
 import { ReorderFilters } from './components/ReorderFilters/ReorderFilters';
 import { useReorderParams } from './hooks/useReorderParams';
@@ -20,13 +21,7 @@ export function ReorderPage() {
         errorTitle="No pudimos cargar las sedes"
         loading={<Spinner label="Cargando sedes…" className={styles.loading} />}
         isEmpty={list.length === 0}
-        empty={
-          <EmptyState
-            icon={<IconBox />}
-            title="Aún no hay sedes"
-            description="Cree una sede en el inventario para llevar sus existencias y sus mínimos."
-          />
-        }
+        empty={<NoLocationsYet title="Aún no hay sedes" reason="Las existencias y sus mínimos se llevan por sede." />}
       >
         <ReorderFilters locations={list} params={params} />
         <LocationReorder

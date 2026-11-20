@@ -31,16 +31,25 @@ type salesFlow struct {
 // units of its product.
 func newSalesFlow(t *testing.T) *salesFlow {
 	t.Helper()
+	return newSalesFlowOf(t, "ana@ventas.co")
+}
+
+// newSalesFlowOf is newSalesFlow with the owner's email. The tests share one
+// database and a login looks among at most 10 companies per email
+// (login_candidates), so a test that builds several flows gives each owner
+// its own email.
+func newSalesFlowOf(t *testing.T, ownerEmail string) *salesFlow {
+	t.Helper()
 	f := &salesFlow{}
 	f.handler, f.tokens = newAPI(t)
-	return f.setUp(t)
+	return f.setUp(t, ownerEmail)
 }
 
 // setUp signs up a hardware store with a product of 10 units in stock at a
 // location, and tokens of its cashier and its warehouse keeper.
-func (f *salesFlow) setUp(t *testing.T) *salesFlow {
+func (f *salesFlow) setUp(t *testing.T, ownerEmail string) *salesFlow {
 	t.Helper()
-	f.ownerToken, f.tenantID = f.signup(t, "ana@ventas.co")
+	f.ownerToken, f.tenantID = f.signup(t, ownerEmail)
 	f.cashierToken = joinStaff(t, f.do, f.ownerToken, "cashier").Token
 	f.warehouseToken = joinStaff(t, f.do, f.ownerToken, "warehouse").Token
 

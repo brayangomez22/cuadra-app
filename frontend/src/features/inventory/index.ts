@@ -3,6 +3,8 @@
 // of the home screen.
 export { inventoryKeys } from './api/keys';
 export { useLocations } from './api/locations';
+/** The empty state of a screen without a location: the owner goes to create one, anyone else asks the owner. */
+export { NoLocationsYet } from './components/NoLocationsYet/NoLocationsYet';
 export type { Location } from './api/types';
 
 /** How many products reached their minimum stock in every location, with a link to the list, for the home screen. */

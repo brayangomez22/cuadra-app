@@ -38,6 +38,8 @@ export const signUpSchema = z.object({
     .max(72, 'La contraseña puede tener máximo 72 caracteres'),
   // An unchecked radio group gives null.
   business_template: z.string('Elija el tipo de negocio').min(1, 'Elija el tipo de negocio'),
+  // Ley 1581: unchecked unless the owner checks it.
+  analytics_consent: z.boolean(),
 });
 
 export type SignUpValues = z.infer<typeof signUpSchema>;

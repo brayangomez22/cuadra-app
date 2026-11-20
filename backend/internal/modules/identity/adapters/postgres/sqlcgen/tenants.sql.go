@@ -14,8 +14,9 @@ import (
 )
 
 const createTenant = `-- name: CreateTenant :exec
-INSERT INTO tenants (id, name, nit, status, business_template, default_tax_rate, address, city, phone, demo, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO tenants (id, name, nit, status, business_template, default_tax_rate, address, city, phone, demo, created_at,
+                     analytics_consent)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 `
 
 type CreateTenantParams struct {
@@ -30,6 +31,7 @@ type CreateTenantParams struct {
 	Phone            string
 	Demo             bool
 	CreatedAt        time.Time
+	AnalyticsConsent bool
 }
 
 func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) error {
@@ -45,6 +47,7 @@ func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) erro
 		arg.Phone,
 		arg.Demo,
 		arg.CreatedAt,
+		arg.AnalyticsConsent,
 	)
 	return err
 }

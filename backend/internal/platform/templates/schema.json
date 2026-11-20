@@ -5,13 +5,19 @@
   "description": "Lo que siembra una plantilla al registrar una empresa (backend/templates/business/*.yaml). El ID de la plantilla es el nombre del archivo.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["name", "description", "modules", "default_tax_rate", "units", "categories", "attributes", "variant_axes", "customer_segments"],
+  "required": ["name", "description", "modules", "default_tax_rate", "units", "categories", "attributes", "variant_axes", "customer_segments", "getting_started"],
   "properties": {
     "name": { "$ref": "#/$defs/text", "description": "Nombre que ve quien se registra." },
     "description": { "type": "string", "minLength": 1, "maxLength": 300 },
     "fallback": {
       "description": "Marca la plantilla para quien no encaja en ninguna otra: se lista primero.",
       "type": "boolean"
+    },
+    "getting_started": {
+      "description": "Pasos de la lista de primeros pasos, en orden; el módulo onboarding valida que existan.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" }
     },
     "modules": {
       "description": "Módulos activos desde el registro; deben estar registrados y traer sus dependencias.",

@@ -1,4 +1,4 @@
-import { startAnalytics, stopAnalytics, track } from './tracker';
+import { startAnalytics, stopAnalytics, track, trackOnStart } from './tracker';
 
 // The PostHog client the tracker loads, replaced by mocks.
 const posthog = vi.hoisted(() => ({
@@ -65,7 +65,7 @@ describe('tracker', () => {
     await track('sale_confirmed', { lines: 3, with_customer: true, customer_name: 'Ana Gómez' } as never);
 
     expect(posthog.capture).toHaveBeenCalledWith('sale_confirmed', {
-      catalog_version: 1,
+      catalog_version: 2,
       lines: 3,
       with_customer: true,
     });
@@ -80,5 +80,37 @@ describe('tracker', () => {
 
     expect(posthog.reset).toHaveBeenCalled();
     expect(posthog.capture).not.toHaveBeenCalled();
+  });
+
+  it('un evento pendiente se envía cuando arranca la sesión de analítica (el registro con consentimiento)', async () => {
+    vi.stubEnv('VITE_POSTHOG_KEY', 'phc_test');
+
+    await trackOnStart('signup_completed', { business_template: 'ropa_calzado' });
+    expect(posthog.capture).not.toHaveBeenCalled();
+    await startAnalytics(session);
+
+    expect(posthog.capture).toHaveBeenCalledWith('signup_completed', {
+      catalog_version: 2,
+      business_template: 'ropa_calzado',
+    });
+  });
+
+  it('un evento pendiente se descarta si la sesión no arranca (sin consentimiento)', async () => {
+    vi.stubEnv('VITE_POSTHOG_KEY', 'phc_test');
+
+    await trackOnStart('signup_completed', { business_template: 'ferreteria' });
+    await stopAnalytics();
+    await startAnalytics(session);
+
+    expect(posthog.capture).not.toHaveBeenCalled();
+  });
+
+  it('con la sesión ya iniciada, un evento pendiente se envía enseguida', async () => {
+    vi.stubEnv('VITE_POSTHOG_KEY', 'phc_test');
+    await startAnalytics(session);
+
+    await trackOnStart('signup_completed', { business_template: 'ferreteria' });
+
+    expect(posthog.capture).toHaveBeenCalledTimes(1);
   });
 });

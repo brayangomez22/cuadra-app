@@ -14,7 +14,7 @@ import (
 
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/templates"
-	"github.com/brayangomez22/cuadra-app/backend/templates/business"
+	"github.com/brayangomez22/cuadra-app/backend/internal/server/ports"
 )
 
 // TestSignUpTemplates signs a business up with each business template
@@ -243,7 +243,7 @@ func businessTemplates(t *testing.T) *templates.Catalog {
 	t.Helper()
 	registry, err := modules.NewRegistry(modules.Builtin()...)
 	require.NoError(t, err)
-	catalogs, err := templates.Load(business.FS, registry.CheckSet)
+	catalogs, err := ports.LoadTemplates(registry)
 	require.NoError(t, err)
 	return catalogs
 }

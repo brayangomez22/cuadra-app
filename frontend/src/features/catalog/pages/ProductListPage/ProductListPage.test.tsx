@@ -105,6 +105,18 @@ describe('ProductListPage', () => {
     expect(screen.getAllByRole('link', { name: 'Nuevo producto' })).not.toHaveLength(0);
   });
 
+  it('el catálogo vacío ofrece importar los productos desde Excel', async () => {
+    fakeApi({ ...signedIn(), 'GET /api/v1/products': json(200, page([])) });
+    renderApp('/productos');
+
+    const empty = (await screen.findByRole('heading', { name: 'Aún no hay productos' })).parentElement!;
+    expect(within(empty).getByText(/Impórtelos desde Excel/)).toBeInTheDocument();
+    expect(within(empty).getByRole('link', { name: 'Importar desde Excel' })).toHaveAttribute(
+      'href',
+      '/productos/importar',
+    );
+  });
+
   it('un producto con variantes muestra cuántas tiene y el precio desde el menor', async () => {
     const garment = aGarment();
     garment.variants[5]!.active = false; // L, Azul

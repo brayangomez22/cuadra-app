@@ -15,13 +15,17 @@ import (
 )
 
 // builtinModules checks a template's modules against Cuadra's registry, as
-// cmd/api does at startup.
-func builtinModules(t *testing.T) func([]string) error {
+// cmd/api does at startup; any getting-started step passes (the onboarding
+// module checks them, in internal/server/ports).
+func builtinModules(t *testing.T) templates.Checks {
 	t.Helper()
 	registry, err := modules.NewRegistry(modules.Builtin()...)
 	require.NoError(t, err)
-	return registry.CheckSet
+	return templates.Checks{Modules: registry.CheckSet, Steps: anySteps}
 }
+
+// anySteps accepts any getting-started steps.
+func anySteps([]string) error { return nil }
 
 // TestBusinessTemplates validates the templates the API embeds: it is what
 // checks every YAML against its schema in CI.
@@ -123,18 +127,19 @@ attributes:
 variant_axes:
   - {name: talla, values: [S, M]}
 customer_segments: [Público, Mayorista]
+getting_started: [products, first_sale]
 `
 
 func TestLoad(t *testing.T) {
-	load := func(files map[string]string, checkModules func([]string) error) error {
+	load := func(files map[string]string, checks templates.Checks) error {
 		fsys := fstest.MapFS{}
 		for name, content := range files {
 			fsys[name] = &fstest.MapFile{Data: []byte(content)}
 		}
-		_, err := templates.Load(fsys, checkModules)
+		_, err := templates.Load(fsys, checks)
 		return err
 	}
-	allModules := func([]string) error { return nil }
+	allModules := templates.Checks{Modules: func([]string) error { return nil }, Steps: anySteps}
 
 	t.Run("carga una plantilla válida con todos sus datos", func(t *testing.T) {
 		catalog, err := templates.Load(fstest.MapFS{"prueba.yaml": {Data: []byte(valid)}}, allModules)
@@ -153,6 +158,7 @@ func TestLoad(t *testing.T) {
 			},
 			VariantAxes:      []templates.Axis{{Name: "talla", Values: []string{"S", "M"}}},
 			CustomerSegments: []string{"Público", "Mayorista"},
+			GettingStarted:   []string{"products", "first_sale"},
 		}, tpl)
 		require.Equal(t, []templates.Template{tpl}, catalog.List())
 	})
@@ -204,6 +210,8 @@ func TestLoad(t *testing.T) {
 			{name: "eje repetido", files: map[string]string{"prueba.yaml": replace(valid, "  - {name: talla, values: [S, M]}\n", "  - {name: talla, values: [S, M]}\n  - {name: Talla, values: [L]}\n")}},
 			{name: "segmento repetido", files: map[string]string{"prueba.yaml": replace(valid, "[Público, Mayorista]", "[Público, Público]")}},
 			{name: "fallback que no es sí/no", files: map[string]string{"prueba.yaml": valid + "fallback: si\n"}},
+			{name: "sin primeros pasos", files: map[string]string{"prueba.yaml": replace(valid, "getting_started: [products, first_sale]\n", "")}},
+			{name: "primeros pasos vacíos", files: map[string]string{"prueba.yaml": replace(valid, "[products, first_sale]", "[]")}},
 			{name: "nombre de archivo que no es un ID", files: map[string]string{"Ropa-Calzado.yaml": valid}},
 		}
 		for _, tt := range tests {
@@ -222,10 +230,23 @@ func TestLoad(t *testing.T) {
 	t.Run("rechaza una plantilla con un módulo no registrado o sin su dependencia", func(t *testing.T) {
 		boom := errors.New("modules: unknown module")
 		var got []string
-		err := load(map[string]string{"prueba.yaml": valid}, func(ids []string) error { got = ids; return boom })
+		err := load(map[string]string{"prueba.yaml": valid}, templates.Checks{
+			Modules: func(ids []string) error { got = ids; return boom }, Steps: anySteps,
+		})
 		require.ErrorIs(t, err, boom)
 		require.ErrorContains(t, err, "prueba")
 		require.Equal(t, []string{"variants"}, got)
+	})
+
+	t.Run("rechaza una plantilla con un primer paso que no existe", func(t *testing.T) {
+		boom := errors.New("onboarding: unknown getting-started step")
+		var got []string
+		err := load(map[string]string{"prueba.yaml": valid}, templates.Checks{
+			Modules: allModules.Modules, Steps: func(ids []string) error { got = ids; return boom },
+		})
+		require.ErrorIs(t, err, boom)
+		require.ErrorContains(t, err, "prueba")
+		require.Equal(t, []string{"products", "first_sale"}, got)
 	})
 
 	t.Run("con el registro de Cuadra, rechaza un módulo que no existe", func(t *testing.T) {

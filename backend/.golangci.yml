@@ -85,6 +85,8 @@ linters:
               desc: app depends on domain and interfaces, never on adapters
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/reports/adapters
               desc: app depends on domain and interfaces, never on adapters
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding/adapters
+              desc: app depends on domain and interfaces, never on adapters
             - pkg: github.com/jackc/pgx
               desc: the database lives in adapters/postgres
             - pkg: net/http
@@ -95,6 +97,8 @@ linters:
           files:
             - "**/internal/modules/audit/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog
@@ -121,6 +125,8 @@ linters:
           files:
             - "**/internal/modules/feedback/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog
@@ -147,6 +153,8 @@ linters:
           files:
             - "**/internal/modules/catalog/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
@@ -173,6 +181,8 @@ linters:
           files:
             - "**/internal/modules/identity/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
@@ -199,6 +209,8 @@ linters:
           files:
             - "**/internal/modules/inventory/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
@@ -225,6 +237,8 @@ linters:
           files:
             - "**/internal/modules/sales/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
@@ -251,6 +265,8 @@ linters:
           files:
             - "**/internal/modules/imports/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
@@ -277,6 +293,8 @@ linters:
           files:
             - "**/internal/modules/customers/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
@@ -303,6 +321,8 @@ linters:
           files:
             - "**/internal/modules/receivables/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
@@ -329,6 +349,8 @@ linters:
           files:
             - "**/internal/modules/purchases/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
@@ -355,6 +377,8 @@ linters:
           files:
             - "**/internal/modules/invoicing/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
@@ -381,6 +405,36 @@ linters:
           files:
             - "**/internal/modules/reports/**"
           deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/onboarding
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/catalog
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/identity
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/inventory
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/sales
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/imports
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/customers
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/receivables
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/purchases
+              desc: a module does not import another one; cmd/api wires them through ports
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/invoicing
+              desc: a module does not import another one; cmd/api wires them through ports
+        onboarding:
+          files:
+            - "**/internal/modules/onboarding/**"
+          deny:
+            - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/reports
+              desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/audit
               desc: a module does not import another one; cmd/api wires them through ports
             - pkg: github.com/brayangomez22/cuadra-app/backend/internal/modules/feedback

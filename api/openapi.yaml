@@ -86,6 +86,10 @@ tags:
     description: |
       Comentarios que los usuarios envían desde la app («Danos tu opinión»), con la pantalla y la versión. Cualquier
       usuario con sesión puede enviar uno; el equipo de Cuadra recibe un aviso.
+  - name: onboarding
+    description: |
+      Lista de primeros pasos de una empresa nueva, calculada con sus datos reales y no con clics. Los pasos salen de su
+      plantilla de tipo de negocio y cada usuario ve solo los que su rol puede resolver.
   - name: cash
     description: |
       Caja del cajero: apertura con base, ingresos y egresos con motivo, y cierre con arqueo por denominación. Cada
@@ -1055,6 +1059,52 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "422":
           description: El comentario está vacío (`invalid_feedback`), o la pantalla o la versión no son válidas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/onboarding/checklist:
+    get:
+      tags: [onboarding]
+      operationId: getOnboardingChecklist
+      summary: Ver los primeros pasos
+      description: |
+        Los primeros pasos de la empresa que el usuario puede resolver, en el orden de su plantilla, cada uno completo
+        solo si el dato existe (por ejemplo, una venta confirmada). Un paso de un módulo inactivo no aparece, y el de
+        la facturación electrónica solo aparece con la emisión activa. `visible` dice si la app muestra la lista: falta
+        algo y el usuario no la ocultó, o la ocultó y después falta un paso crítico que antes estaba completo (la
+        resolución de numeración se venció). Cualquier usuario con sesión la consulta; sin pasos para su rol, la lista
+        viene vacía y no visible.
+      responses:
+        "200":
+          description: Los primeros pasos del usuario.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingChecklist"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/onboarding/checklist/dismissal:
+    put:
+      tags: [onboarding]
+      operationId: dismissOnboardingChecklist
+      summary: Ocultar los primeros pasos
+      description: |
+        Oculta la lista para el usuario y recuerda qué pasos faltaban: vuelve a aparecer solo si después falta un paso
+        crítico que en ese momento no faltaba. Ocultarla otra vez reemplaza lo anterior.
+      responses:
+        "204":
+          description: La lista quedó oculta para el usuario.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: El usuario no tiene pasos que ocultar (`nothing_to_dismiss`).
           content:
             application/json:
               schema:
@@ -6181,6 +6231,56 @@ components:
             categorías, atributos, ejes de variante, módulos e IVA por defecto de la empresa.
           pattern: "^[a-z][a-z0-9_]{0,63}$"
           example: generica
+        analytics_consent:
+          type: boolean
+          default: false
+          description: |
+            Si el dueño acepta compartir datos de uso seudónimos para mejorar Cuadra (Ley 1581: apagado por defecto). Es
+            el mismo consentimiento que se cambia después en la configuración de la empresa.
+    OnboardingChecklist:
+      type: object
+      required: [visible, dismissed, completed, total, steps]
+      additionalProperties: false
+      properties:
+        visible:
+          type: boolean
+          description: Si la app muestra la lista.
+        dismissed:
+          type: boolean
+          description: Si el usuario la ocultó.
+        completed:
+          type: integer
+          minimum: 0
+          description: Cuántos pasos están completos.
+        total:
+          type: integer
+          minimum: 0
+          description: Cuántos pasos tiene la lista del usuario.
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnboardingStep"
+    OnboardingStep:
+      type: object
+      required: [id, done, critical]
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/OnboardingStepId"
+        done:
+          type: boolean
+        critical:
+          type: boolean
+          description: Si su falta vuelve a mostrar la lista oculta.
+    OnboardingStepId:
+      type: string
+      description: |
+        `business_profile` (dirección, ciudad y teléfono), `invoicing` (resolución de numeración vigente),
+        `products` (el primer producto), `alternate_units` (una unidad de venta alternativa), `variant_products` (un
+        producto con variantes), `initial_stock` (el primer movimiento de inventario), `reorder_rules` (un mínimo de
+        stock), `customer_credit` (un cliente con cupo), `invite_team` (otro usuario o una invitación vigente) y
+        `first_sale` (la primera venta).
+      enum: [business_profile, invoicing, products, alternate_units, variant_products, initial_stock, reorder_rules, customer_credit, invite_team, first_sale]
     BusinessTemplate:
       type: object
       required: [id, name, description]

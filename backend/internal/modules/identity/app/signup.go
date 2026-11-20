@@ -24,6 +24,9 @@ type SignUpInput struct {
 	BusinessTemplate string
 	// ClientIP keys the limit of sign-ups per connection.
 	ClientIP string
+	// AnalyticsConsent is the owner's yes to share the app's usage
+	// analytics, asked at sign-up so the funnel starts there (P177).
+	AnalyticsConsent bool
 }
 
 // SignUp creates the tenant and its owner, and prepares the tenant's initial
@@ -102,6 +105,7 @@ func (s *Service) newTenantWithOwner(in SignUpInput, d signUpData, now time.Time
 	if err != nil {
 		return nil, nil, err
 	}
+	tenant.SetAnalyticsConsent(in.AnalyticsConsent)
 	hash, err := s.Hasher.Hash(in.Password)
 	if err != nil {
 		return nil, nil, err

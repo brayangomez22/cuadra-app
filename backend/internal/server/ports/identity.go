@@ -13,7 +13,6 @@ import (
 	identitydomain "github.com/brayangomez22/cuadra-app/backend/internal/modules/identity/domain"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/templates"
-	"github.com/brayangomez22/cuadra-app/backend/templates/business"
 )
 
 // TenantSetup satisfies identityapp.TenantSetup with the business templates
@@ -28,15 +27,10 @@ type TenantSetup struct {
 	modules   *modules.Service
 }
 
-// NewTenantSetup loads the embedded templates, checking their modules
-// against registry. It fails, so the API does not start, if a template is
-// invalid.
-func NewTenantSetup(registry *modules.Registry, c *catalog.Module, cu *customers.Module, m *modules.Service) (TenantSetup, error) {
-	catalogs, err := templates.Load(business.FS, registry.CheckSet)
-	if err != nil {
-		return TenantSetup{}, err
-	}
-	return TenantSetup{templates: catalogs, catalog: c, customers: cu, modules: m}, nil
+// NewTenantSetup signs tenants up with the templates of catalogs (see
+// LoadTemplates).
+func NewTenantSetup(catalogs *templates.Catalog, c *catalog.Module, cu *customers.Module, m *modules.Service) TenantSetup {
+	return TenantSetup{templates: catalogs, catalog: c, customers: cu, modules: m}
 }
 
 // Templates lists the embedded templates, in the order the sign-up offers them.

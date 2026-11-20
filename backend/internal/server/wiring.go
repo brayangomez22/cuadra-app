@@ -13,6 +13,7 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/analytics"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/flags"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
+	"github.com/brayangomez22/cuadra-app/backend/internal/platform/templates"
 	"github.com/brayangomez22/cuadra-app/backend/internal/server/ports"
 )
 
@@ -21,6 +22,7 @@ import (
 type wiring struct {
 	Config
 	registry      *modules.Registry
+	templates     *templates.Catalog
 	moduleService *modules.Service
 	flagService   *flags.Service
 	permissions   *identity.Permissions
@@ -38,7 +40,11 @@ func newWiring(cfg Config) (*wiring, error) {
 	if err != nil {
 		return nil, err
 	}
-	w := &wiring{Config: cfg, registry: registry}
+	catalogs, err := ports.LoadTemplates(registry)
+	if err != nil {
+		return nil, err
+	}
+	w := &wiring{Config: cfg, registry: registry, templates: catalogs}
 	auditModule, err := w.auditLog()
 	if err != nil {
 		return nil, err
@@ -89,10 +95,6 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 		return nil, err
 	}
 	balances.Receivables = sell.receivables
-	reportsModule, err := w.reports(sell.receivables)
-	if err != nil {
-		return nil, err
-	}
 	importsModule, err := w.imports(catalogModule, identityModule, inventoryModule)
 	if err != nil {
 		return nil, err
@@ -101,17 +103,16 @@ func (w *wiring) modules() ([]func(*http.ServeMux), error) {
 	if err != nil {
 		return nil, err
 	}
-	feedbackModule, err := w.feedback()
+	following, err := w.following(sell)
 	if err != nil {
 		return nil, err
 	}
-	return []func(*http.ServeMux){
+	return append([]func(*http.ServeMux){
 		identityModule.RegisterRoutes, catalogModule.RegisterRoutes, customersModule.RegisterRoutes,
 		inventoryModule.RegisterRoutes, sell.sales.RegisterRoutes, sell.receivables.RegisterRoutes,
 		sell.invoicing.RegisterRoutes, importsModule.RegisterRoutes, purchasesModule.RegisterRoutes, moduleRoutes(w.moduleService, w.Log),
-		w.auditor.Audit.RegisterRoutes, flagRoutes(w.flagService, w.Log), feedbackModule.RegisterRoutes,
-		reportsModule.RegisterRoutes,
-	}, nil
+		w.auditor.Audit.RegisterRoutes, flagRoutes(w.flagService, w.Log),
+	}, following...), nil
 }
 
 func (w *wiring) catalog(history *ports.CatalogHistory) (*catalog.Module, error) {
@@ -162,10 +163,7 @@ func (w *wiring) customers(balances *ports.CustomerBalances) (*customers.Module,
 // identity signs tenants up with the catalog, the customer segments and the
 // modules of their business template.
 func (w *wiring) identity(c *catalog.Module, cu *customers.Module) (*identity.Module, error) {
-	setup, err := ports.NewTenantSetup(w.registry, c, cu, w.moduleService)
-	if err != nil {
-		return nil, err
-	}
+	setup := ports.NewTenantSetup(w.templates, c, cu, w.moduleService)
 	return identity.New(identity.Config{
 		DB:             w.DB,
 		Issuer:         w.Tokens,

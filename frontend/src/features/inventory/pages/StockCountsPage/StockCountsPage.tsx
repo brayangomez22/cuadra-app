@@ -1,6 +1,7 @@
 import { QueryState } from '@/shared/query';
-import { EmptyState, Field, IconBox, Page, Select, Spinner } from '@/shared/ui';
+import { Field, Page, Select, Spinner } from '@/shared/ui';
 import { useLocations } from '../../api/locations';
+import { NoLocationsYet } from '../../components/NoLocationsYet/NoLocationsYet';
 import { useStockLocation } from '../../hooks/useStockLocation';
 import { locationOptions } from '../../model/shownLocation';
 import { LocationCounts } from './components/LocationCounts/LocationCounts';
@@ -22,13 +23,7 @@ export function StockCountsPage() {
         errorTitle="No pudimos cargar las sedes"
         loading={<Spinner label="Cargando sedes…" className={styles.loading} />}
         isEmpty={!location}
-        empty={
-          <EmptyState
-            icon={<IconBox />}
-            title="Aún no hay sedes"
-            description="Cree una sede en el inventario para poder contar sus existencias."
-          />
-        }
+        empty={<NoLocationsYet title="Aún no hay sedes" reason="Se cuentan las existencias de una sede." />}
       >
         {() =>
           location && (

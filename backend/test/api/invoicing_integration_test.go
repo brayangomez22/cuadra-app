@@ -117,7 +117,7 @@ func startJobs(t *testing.T, f *salesFlow) {
 	t.Helper()
 	handler, tokens, jobClient := newAPIWithJobs(t)
 	f.handler, f.tokens = handler, tokens
-	f.setUp(t)
+	f.setUp(t, "ana@ventas.co")
 	require.NoError(t, jobClient.Start(t.Context()))
 	t.Cleanup(func() { _ = jobClient.Stop(t.Context()) })
 }
