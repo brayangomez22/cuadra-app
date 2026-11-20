@@ -31,7 +31,7 @@ export function ProductListPage() {
         errorTitle="No pudimos cargar los productos"
         loading={<Spinner label="Cargando productos…" className={styles.loading} />}
         isEmpty={products.data?.items.length === 0}
-        empty={<NoProducts q={q} status={status} canWrite={canWrite} />}
+        empty={<NoProducts q={q} status={status} canWrite={canWrite} canImport={canImport} />}
       >
         {() =>
           products.data && (

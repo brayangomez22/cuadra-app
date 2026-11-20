@@ -25,3 +25,5 @@ attributes:
   - {key: marca, label: Marca, type: text}
 variant_axes: []
 customer_segments: [Público, Mayorista]
+# Pasos de la lista de primeros pasos, en orden (catálogo en internal/modules/onboarding/domain/step.go).
+getting_started: [business_profile, invoicing, products, alternate_units, initial_stock, reorder_rules, invite_team, first_sale]

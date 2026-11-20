@@ -1,5 +1,6 @@
 import { paths } from '@/app/routes/paths';
-import { ButtonLink, EmptyState, IconBox, IconCash } from '@/shared/ui';
+import { NoLocationsYet } from '@/features/inventory';
+import { ButtonLink, EmptyState, IconCash } from '@/shared/ui';
 
 type Props = { reason: 'cash_required' | 'no_locations' };
 
@@ -16,10 +17,6 @@ export function PosUnavailable({ reason }: Props) {
     );
   }
   return (
-    <EmptyState
-      icon={<IconBox />}
-      title="No hay sedes activas para vender"
-      description="Las ventas descuentan el stock de una sede. Pida al dueño que cree o active una en Inventario."
-    />
+    <NoLocationsYet title="No hay sedes activas para vender" reason="Las ventas descuentan el stock de una sede." />
   );
 }

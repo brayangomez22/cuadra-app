@@ -26,6 +26,21 @@ func signUpInput() app.SignUpInput {
 }
 
 func TestSignUp(t *testing.T) {
+	t.Run("guarda el consentimiento de la analítica solo si el dueño lo acepta", func(t *testing.T) {
+		for _, consent := range []bool{true, false} {
+			e := newEnv(t)
+			in := signUpInput()
+			in.AnalyticsConsent = consent
+
+			session, err := e.svc.SignUp(t.Context(), in)
+			require.NoError(t, err)
+
+			stored, err := e.tenants.GetByID(t.Context(), session.Profile.Tenant.ID())
+			require.NoError(t, err)
+			require.Equal(t, consent, stored.AnalyticsConsent())
+		}
+	})
+
 	t.Run("crea el tenant y el usuario owner y devuelve la sesión", func(t *testing.T) {
 		e := newEnv(t)
 

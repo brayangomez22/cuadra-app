@@ -42,6 +42,19 @@ func TestSignUp(t *testing.T) {
 		require.Equal(t, "ropa_calzado", got.BusinessTemplate)
 	})
 
+	t.Run("pasa el consentimiento de la analítica, apagado si no viene", func(t *testing.T) {
+		var got app.SignUpInput
+		uc := &stubUseCases{signUp: func(in app.SignUpInput) (app.Session, error) { got = in; return session(t), nil }}
+
+		rec := serve(t, uc, post("/api/v1/auth/signup", strings.Replace(body, `{`, `{"analytics_consent":true,`, 1)))
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		require.True(t, got.AnalyticsConsent)
+
+		rec = serve(t, uc, post("/api/v1/auth/signup", body))
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		require.False(t, got.AnalyticsConsent)
+	})
+
 	t.Run("traduce los errores de validación del dominio a 422 con su código", func(t *testing.T) {
 		tests := []struct {
 			err  error

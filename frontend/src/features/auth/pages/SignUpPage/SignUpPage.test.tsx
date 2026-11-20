@@ -7,13 +7,15 @@ import { businessTemplates as templates, signUpApi } from '../../testing/authApi
 async function fillSignUp({
   password = 'clave-segura',
   template = 'Ferretería',
-}: { password?: string; template?: string | null } = {}) {
+  consent = false,
+}: { password?: string; template?: string | null; consent?: boolean } = {}) {
   await userEvent.type(await screen.findByLabelText('Nombre de la empresa'), 'Ferretería El Tornillo');
   await userEvent.type(screen.getByLabelText('NIT'), '900123456-7');
   await userEvent.type(screen.getByLabelText('Su nombre'), 'Ana Gómez');
   await userEvent.type(screen.getByLabelText('Correo'), 'ana@eltornillo.co');
   await userEvent.type(screen.getByLabelText('Contraseña'), password);
   if (template) await userEvent.click(await screen.findByRole('radio', { name: new RegExp(`^${template}`) }));
+  if (consent) await userEvent.click(screen.getByRole('checkbox', { name: 'Compartir con Cuadra cómo se usa la app' }));
   await userEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 }
 
@@ -132,9 +134,21 @@ describe('SignUpPage', () => {
         email: 'ana@eltornillo.co',
         password: 'clave-segura',
         business_template: t.id,
+        analytics_consent: false,
       });
       // The next case starts from a fresh screen.
       cleanup();
     }
+  });
+
+  it('pregunta el consentimiento de la analítica, desmarcado, y lo envía solo si el dueño lo marca', async () => {
+    const api = signUpApi({ 'POST /api/v1/auth/signup': json(201, anAuthSession()) });
+    const { router } = renderApp('/registro');
+
+    expect(await screen.findByRole('checkbox', { name: 'Compartir con Cuadra cómo se usa la app' })).not.toBeChecked();
+    await fillSignUp({ consent: true });
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    expect(await api.calls('POST /api/v1/auth/signup')[0]?.json()).toMatchObject({ analytics_consent: true });
   });
 });

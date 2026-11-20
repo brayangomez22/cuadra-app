@@ -1,6 +1,7 @@
 -- name: CreateTenant :exec
-INSERT INTO tenants (id, name, nit, status, business_template, default_tax_rate, address, city, phone, demo, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+INSERT INTO tenants (id, name, nit, status, business_template, default_tax_rate, address, city, phone, demo, created_at,
+                     analytics_consent)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
 
 -- name: GetTenant :one
 SELECT id, name, nit, status, business_template, default_tax_rate, address, city, phone, municipality_code, demo, created_at,

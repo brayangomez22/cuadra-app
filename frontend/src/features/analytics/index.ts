@@ -3,4 +3,4 @@
 // may send: without a session they go nowhere.
 export type { EventName, EventProps } from './model/catalog';
 export { useAnalyticsSession } from './hooks/useAnalyticsSession';
-export { track } from './tracker/tracker';
+export { track, trackOnStart } from './tracker/tracker';

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { Alert, Button, Field, Input, PasswordInput } from '@/shared/ui';
+import { Alert, Button, Checkbox, Field, Input, PasswordInput } from '@/shared/ui';
 import { signUpSchema, type SignUpValues } from '../../../../model/schemas';
 import { useSignUp } from '../../hooks/useSignUp';
 import { BusinessTypeField } from '../BusinessTypeField/BusinessTypeField';
@@ -13,6 +13,7 @@ const emptyValues: SignUpValues = {
   email: '',
   password: '',
   business_template: '',
+  analytics_consent: false,
 };
 
 export function SignUpForm() {
@@ -50,6 +51,12 @@ export function SignUpForm() {
         className={styles.wide}
         error={errors.business_template?.message}
         {...register('business_template')}
+      />
+      <Checkbox
+        className={styles.wide}
+        label="Compartir con Cuadra cómo se usa la app"
+        hint="Qué pantallas y acciones se usan, sin nombres, correos, documentos ni datos de sus clientes. Nos ayuda a saber qué mejorar. Puede quitarlo cuando quiera en la configuración."
+        {...register('analytics_consent')}
       />
       <Button type="submit" size="lg" className={styles.submit} loading={isSubmitting}>
         Crear cuenta

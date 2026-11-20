@@ -23,3 +23,10 @@ func (m *Module) RegisterSale(ctx context.Context, tenantID, userID uuid.UUID, i
 func (m *Module) HasDocument(ctx context.Context, tenantID, userID, saleID uuid.UUID) (bool, error) {
 	return m.service.HasDocument(ctx, app.Actor{TenantID: tenantID, UserID: userID}, saleID)
 }
+
+// Readiness is whether the tenant's electronic invoicing is on and has a
+// resolution in force (see app.Service.Readiness), for the getting-started
+// checklist.
+func (m *Module) Readiness(ctx context.Context, tenantID, userID uuid.UUID) (app.Readiness, error) {
+	return m.service.Readiness(ctx, app.Actor{TenantID: tenantID, UserID: userID})
+}

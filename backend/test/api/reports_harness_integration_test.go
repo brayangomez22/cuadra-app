@@ -24,7 +24,13 @@ type reportsFlow struct {
 
 func newReportsFlow(t *testing.T) *reportsFlow {
 	t.Helper()
-	f := &reportsFlow{salesFlow: newSalesFlow(t)}
+	return newReportsFlowOf(t, newSalesFlow(t))
+}
+
+// newReportsFlowOf opens the cashier's cash session on the sales flow sf.
+func newReportsFlowOf(t *testing.T, sf *salesFlow) *reportsFlow {
+	t.Helper()
+	f := &reportsFlow{salesFlow: sf}
 	today := time.Now().In(bogota).Format(time.DateOnly)
 	f.period = "from=" + today + "&to=" + today
 	rec := f.do(t, http.MethodPost, "/api/v1/cash-sessions", `{"location_id":"`+f.locationID+`","opening_float":"100000"}`, f.cashierToken)

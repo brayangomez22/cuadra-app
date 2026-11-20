@@ -77,6 +77,7 @@ func createTenant(ctx context.Context, q *sqlcgen.Queries, t *domain.Tenant) err
 		Phone:            t.Contact().Phone(),
 		Demo:             t.IsDemo(),
 		CreatedAt:        t.CreatedAt(),
+		AnalyticsConsent: t.AnalyticsConsent(),
 	})
 }
 

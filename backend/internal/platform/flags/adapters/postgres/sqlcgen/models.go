@@ -332,6 +332,13 @@ type NumberingResolution struct {
 	CreatedAt    time.Time
 }
 
+type OnboardingDismissal struct {
+	TenantID     uuid.UUID
+	UserID       uuid.UUID
+	DismissedAt  time.Time
+	PendingSteps []string
+}
+
 type PasswordReset struct {
 	ID        uuid.UUID
 	TenantID  uuid.UUID

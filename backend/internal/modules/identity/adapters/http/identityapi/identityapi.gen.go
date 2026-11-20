@@ -367,6 +367,10 @@ type ResetPasswordRequest struct {
 
 // SignUpRequest defines model for SignUpRequest.
 type SignUpRequest struct {
+	// AnalyticsConsent Si el dueño acepta compartir datos de uso seudónimos para mejorar Cuadra (Ley 1581: apagado por defecto). Es
+	// el mismo consentimiento que se cambia después en la configuración de la empresa.
+	AnalyticsConsent *bool `json:"analytics_consent,omitempty"`
+
 	// BusinessTemplate Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Siembra las unidades,
 	// categorías, atributos, ejes de variante, módulos e IVA por defecto de la empresa.
 	//

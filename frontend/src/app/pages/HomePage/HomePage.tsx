@@ -1,6 +1,7 @@
 import { paths } from '@/app/routes/paths';
 import { useAuth, useCan } from '@/features/auth';
 import { ReorderSummary } from '@/features/inventory';
+import { GettingStarted } from '@/features/onboarding';
 import { OverdueSummary } from '@/features/receivables';
 import { TeamAlerts, TodaySales } from '@/features/reports';
 import { OpenCashSessions } from '@/features/sales';
@@ -11,7 +12,9 @@ import styles from './HomePage.module.scss';
  * The home screen. Whoever reads the reports (the owner and the admin) gets
  * the dashboard: today's sales on top, then what to act on and the team's
  * week. Each card loads, fails and refreshes on its own. Everyone else gets a
- * greeting, what to reorder if they see inventory and the way to sell.
+ * greeting, what to reorder if they see inventory and the way to sell. The
+ * getting-started checklist goes first for anyone with steps to resolve,
+ * while the tenant is setting up.
  */
 export function HomePage() {
   const auth = useAuth();
@@ -22,6 +25,7 @@ export function HomePage() {
   if (!can('reports:read')) {
     return (
       <Page title={title}>
+        <GettingStarted />
         <ReorderSummary />
         <EmptyState
           icon={<IconHome />}
@@ -41,6 +45,7 @@ export function HomePage() {
   return (
     <Page title={title} description="Así va el negocio hoy. Las cifras se actualizan solas cada 5 minutos.">
       <div className={styles.root}>
+        <GettingStarted />
         <TodaySales />
         <div className={styles.attention}>
           <OpenCashSessions />

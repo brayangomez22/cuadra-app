@@ -12,7 +12,7 @@ import (
 	"github.com/brayangomez22/cuadra-app/backend/internal/demo"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/modules"
 	"github.com/brayangomez22/cuadra-app/backend/internal/platform/templates"
-	business "github.com/brayangomez22/cuadra-app/backend/templates/business"
+	"github.com/brayangomez22/cuadra-app/backend/internal/server/ports"
 )
 
 func variants(s demo.Scenario) []demo.Variant {
@@ -98,7 +98,7 @@ func TestScenarioCatalog(t *testing.T) {
 		t.Run("el perfil usa solo unidades, categorías, atributos y ejes de su plantilla: "+template, func(t *testing.T) {
 			registry, err := modules.NewRegistry(modules.Builtin()...)
 			require.NoError(t, err)
-			catalog, err := templates.Load(business.FS, registry.CheckSet)
+			catalog, err := ports.LoadTemplates(registry)
 			require.NoError(t, err)
 			tpl, ok := catalog.Get(template)
 			require.True(t, ok)

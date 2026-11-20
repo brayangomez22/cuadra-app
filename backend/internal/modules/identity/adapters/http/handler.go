@@ -92,6 +92,7 @@ func (h *Handler) SignUp(ctx context.Context, req identityapi.SignUpRequestObjec
 
 		BusinessTemplate: req.Body.BusinessTemplate,
 		ClientIP:         clientIP(ctx),
+		AnalyticsConsent: req.Body.AnalyticsConsent != nil && *req.Body.AnalyticsConsent,
 	}
 	session, err := h.uc.SignUp(ctx, in)
 	var limited *app.RateLimitError

@@ -589,6 +589,48 @@ func (e MeRole) Valid() bool {
 	}
 }
 
+// Defines values for OnboardingStepId.
+const (
+	OnboardingStepIdAlternateUnits  OnboardingStepId = "alternate_units"
+	OnboardingStepIdBusinessProfile OnboardingStepId = "business_profile"
+	OnboardingStepIdCustomerCredit  OnboardingStepId = "customer_credit"
+	OnboardingStepIdFirstSale       OnboardingStepId = "first_sale"
+	OnboardingStepIdInitialStock    OnboardingStepId = "initial_stock"
+	OnboardingStepIdInviteTeam      OnboardingStepId = "invite_team"
+	OnboardingStepIdInvoicing       OnboardingStepId = "invoicing"
+	OnboardingStepIdProducts        OnboardingStepId = "products"
+	OnboardingStepIdReorderRules    OnboardingStepId = "reorder_rules"
+	OnboardingStepIdVariantProducts OnboardingStepId = "variant_products"
+)
+
+// Valid indicates whether the value is a known member of the OnboardingStepId enum.
+func (e OnboardingStepId) Valid() bool {
+	switch e {
+	case OnboardingStepIdAlternateUnits:
+		return true
+	case OnboardingStepIdBusinessProfile:
+		return true
+	case OnboardingStepIdCustomerCredit:
+		return true
+	case OnboardingStepIdFirstSale:
+		return true
+	case OnboardingStepIdInitialStock:
+		return true
+	case OnboardingStepIdInviteTeam:
+		return true
+	case OnboardingStepIdInvoicing:
+		return true
+	case OnboardingStepIdProducts:
+		return true
+	case OnboardingStepIdReorderRules:
+		return true
+	case OnboardingStepIdVariantProducts:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PaymentMethod.
 const (
 	PaymentMethodCard      PaymentMethod = "card"
@@ -774,34 +816,34 @@ func (e ReportFormat) Valid() bool {
 
 // Defines values for ReportKind.
 const (
-	CashClosings     ReportKind = "cash_closings"
-	IdleStock        ReportKind = "idle_stock"
-	Products         ReportKind = "products"
-	Receivables      ReportKind = "receivables"
-	SaleProfits      ReportKind = "sale_profits"
-	Sales            ReportKind = "sales"
-	StockAdjustments ReportKind = "stock_adjustments"
-	TeamControl      ReportKind = "team_control"
+	ReportKindCashClosings     ReportKind = "cash_closings"
+	ReportKindIdleStock        ReportKind = "idle_stock"
+	ReportKindProducts         ReportKind = "products"
+	ReportKindReceivables      ReportKind = "receivables"
+	ReportKindSaleProfits      ReportKind = "sale_profits"
+	ReportKindSales            ReportKind = "sales"
+	ReportKindStockAdjustments ReportKind = "stock_adjustments"
+	ReportKindTeamControl      ReportKind = "team_control"
 )
 
 // Valid indicates whether the value is a known member of the ReportKind enum.
 func (e ReportKind) Valid() bool {
 	switch e {
-	case CashClosings:
+	case ReportKindCashClosings:
 		return true
-	case IdleStock:
+	case ReportKindIdleStock:
 		return true
-	case Products:
+	case ReportKindProducts:
 		return true
-	case Receivables:
+	case ReportKindReceivables:
 		return true
-	case SaleProfits:
+	case ReportKindSaleProfits:
 		return true
-	case Sales:
+	case ReportKindSales:
 		return true
-	case StockAdjustments:
+	case ReportKindStockAdjustments:
 		return true
-	case TeamControl:
+	case ReportKindTeamControl:
 		return true
 	default:
 		return false
@@ -2753,6 +2795,43 @@ type NumberingResolutionInput struct {
 	ValidTo      openapi_types.Date `json:"valid_to"`
 }
 
+// OnboardingChecklist defines model for OnboardingChecklist.
+type OnboardingChecklist struct {
+	// Completed Cuántos pasos están completos.
+	Completed int `json:"completed"`
+
+	// Dismissed Si el usuario la ocultó.
+	Dismissed bool             `json:"dismissed"`
+	Steps     []OnboardingStep `json:"steps"`
+
+	// Total Cuántos pasos tiene la lista del usuario.
+	Total int `json:"total"`
+
+	// Visible Si la app muestra la lista.
+	Visible bool `json:"visible"`
+}
+
+// OnboardingStep defines model for OnboardingStep.
+type OnboardingStep struct {
+	// Critical Si su falta vuelve a mostrar la lista oculta.
+	Critical bool `json:"critical"`
+	Done     bool `json:"done"`
+
+	// Id `business_profile` (dirección, ciudad y teléfono), `invoicing` (resolución de numeración vigente),
+	// `products` (el primer producto), `alternate_units` (una unidad de venta alternativa), `variant_products` (un
+	// producto con variantes), `initial_stock` (el primer movimiento de inventario), `reorder_rules` (un mínimo de
+	// stock), `customer_credit` (un cliente con cupo), `invite_team` (otro usuario o una invitación vigente) y
+	// `first_sale` (la primera venta).
+	Id OnboardingStepId `json:"id"`
+}
+
+// OnboardingStepId `business_profile` (dirección, ciudad y teléfono), `invoicing` (resolución de numeración vigente),
+// `products` (el primer producto), `alternate_units` (una unidad de venta alternativa), `variant_products` (un
+// producto con variantes), `initial_stock` (el primer movimiento de inventario), `reorder_rules` (un mínimo de
+// stock), `customer_credit` (un cliente con cupo), `invite_team` (otro usuario o una invitación vigente) y
+// `first_sale` (la primera venta).
+type OnboardingStepId string
+
 // OpenCashSessionInput defines model for OpenCashSessionInput.
 type OpenCashSessionInput struct {
 	// LocationId Sede de la caja; las ventas de la caja son de esta sede.
@@ -3955,6 +4034,10 @@ type SalesSettingsUpdate struct {
 
 // SignUpRequest defines model for SignUpRequest.
 type SignUpRequest struct {
+	// AnalyticsConsent Si el dueño acepta compartir datos de uso seudónimos para mejorar Cuadra (Ley 1581: apagado por defecto). Es
+	// el mismo consentimiento que se cambia después en la configuración de la empresa.
+	AnalyticsConsent *bool `json:"analytics_consent,omitempty"`
+
 	// BusinessTemplate Plantilla de tipo de negocio (`GET /api/v1/business-templates`). Siembra las unidades,
 	// categorías, atributos, ejes de variante, módulos e IVA por defecto de la empresa.
 	//
@@ -6530,6 +6613,26 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /api/v1/municipalities (the `ListMunicipalities` operationId).
 	ListMunicipalities(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetOnboardingChecklist Ver los primeros pasos
+	//
+	// Los primeros pasos de la empresa que el usuario puede resolver, en el orden de su plantilla, cada uno completo
+	// solo si el dato existe (por ejemplo, una venta confirmada). Un paso de un módulo inactivo no aparece, y el de
+	// la facturación electrónica solo aparece con la emisión activa. `visible` dice si la app muestra la lista: falta
+	// algo y el usuario no la ocultó, o la ocultó y después falta un paso crítico que antes estaba completo (la
+	// resolución de numeración se venció). Cualquier usuario con sesión la consulta; sin pasos para su rol, la lista
+	// viene vacía y no visible.
+	//
+	// Corresponds with GET /api/v1/onboarding/checklist (the `GetOnboardingChecklist` operationId).
+	GetOnboardingChecklist(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DismissOnboardingChecklist Ocultar los primeros pasos
+	//
+	// Oculta la lista para el usuario y recuerda qué pasos faltaban: vuelve a aparecer solo si después falta un paso
+	// crítico que en ese momento no faltaba. Ocultarla otra vez reemplaza lo anterior.
+	//
+	// Corresponds with PUT /api/v1/onboarding/checklist/dismissal (the `DismissOnboardingChecklist` operationId).
+	DismissOnboardingChecklist(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListPayables Cuentas por pagar
 	//
@@ -9291,6 +9394,46 @@ func (c *Client) SetModuleActive(ctx context.Context, moduleId ModuleId, body Se
 // Corresponds with GET /api/v1/municipalities (the `ListMunicipalities` operationId).
 func (c *Client) ListMunicipalities(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListMunicipalitiesRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetOnboardingChecklist Ver los primeros pasos
+//
+// Los primeros pasos de la empresa que el usuario puede resolver, en el orden de su plantilla, cada uno completo
+// solo si el dato existe (por ejemplo, una venta confirmada). Un paso de un módulo inactivo no aparece, y el de
+// la facturación electrónica solo aparece con la emisión activa. `visible` dice si la app muestra la lista: falta
+// algo y el usuario no la ocultó, o la ocultó y después falta un paso crítico que antes estaba completo (la
+// resolución de numeración se venció). Cualquier usuario con sesión la consulta; sin pasos para su rol, la lista
+// viene vacía y no visible.
+//
+// Corresponds with GET /api/v1/onboarding/checklist (the `GetOnboardingChecklist` operationId).
+func (c *Client) GetOnboardingChecklist(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOnboardingChecklistRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DismissOnboardingChecklist Ocultar los primeros pasos
+//
+// Oculta la lista para el usuario y recuerda qué pasos faltaban: vuelve a aparecer solo si después falta un paso
+// crítico que en ese momento no faltaba. Ocultarla otra vez reemplaza lo anterior.
+//
+// Corresponds with PUT /api/v1/onboarding/checklist/dismissal (the `DismissOnboardingChecklist` operationId).
+func (c *Client) DismissOnboardingChecklist(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDismissOnboardingChecklistRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -14242,6 +14385,60 @@ func NewListMunicipalitiesRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewGetOnboardingChecklistRequest constructs an http.Request for the GetOnboardingChecklist method
+func NewGetOnboardingChecklistRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/onboarding/checklist")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDismissOnboardingChecklistRequest constructs an http.Request for the DismissOnboardingChecklist method
+func NewDismissOnboardingChecklistRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/onboarding/checklist/dismissal")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListPayablesRequest constructs an http.Request for the ListPayables method
 func NewListPayablesRequest(server string, params *ListPayablesParams) (*http.Request, error) {
 	var err error
@@ -19169,6 +19366,30 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /api/v1/municipalities (the `ListMunicipalities` operationId).
 	ListMunicipalitiesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListMunicipalitiesResponse, error)
+
+	// GetOnboardingChecklistWithResponse Ver los primeros pasos
+	//
+	// Los primeros pasos de la empresa que el usuario puede resolver, en el orden de su plantilla, cada uno completo
+	// solo si el dato existe (por ejemplo, una venta confirmada). Un paso de un módulo inactivo no aparece, y el de
+	// la facturación electrónica solo aparece con la emisión activa. `visible` dice si la app muestra la lista: falta
+	// algo y el usuario no la ocultó, o la ocultó y después falta un paso crítico que antes estaba completo (la
+	// resolución de numeración se venció). Cualquier usuario con sesión la consulta; sin pasos para su rol, la lista
+	// viene vacía y no visible.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/v1/onboarding/checklist (the `GetOnboardingChecklist` operationId).
+	GetOnboardingChecklistWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetOnboardingChecklistResponse, error)
+
+	// DismissOnboardingChecklistWithResponse Ocultar los primeros pasos
+	//
+	// Oculta la lista para el usuario y recuerda qué pasos faltaban: vuelve a aparecer solo si después falta un paso
+	// crítico que en ese momento no faltaba. Ocultarla otra vez reemplaza lo anterior.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /api/v1/onboarding/checklist/dismissal (the `DismissOnboardingChecklist` operationId).
+	DismissOnboardingChecklistWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DismissOnboardingChecklistResponse, error)
 
 	// ListPayablesWithResponse Cuentas por pagar
 	//
@@ -25255,6 +25476,116 @@ func (r ListMunicipalitiesResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListMunicipalitiesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetOnboardingChecklistResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *OnboardingChecklist
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetOnboardingChecklistResponse) GetJSON200() *OnboardingChecklist {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetOnboardingChecklistResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetOnboardingChecklistResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetOnboardingChecklistResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetOnboardingChecklistResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetOnboardingChecklistResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetOnboardingChecklistResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DismissOnboardingChecklistResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON409 the response for an HTTP 409 `application/json` response
+	JSON409 *Error
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalError
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DismissOnboardingChecklistResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON409 returns the response for an HTTP 409 `application/json` response
+func (r DismissOnboardingChecklistResponse) GetJSON409() *Error {
+	return r.JSON409
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DismissOnboardingChecklistResponse) GetJSON500() *InternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r DismissOnboardingChecklistResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DismissOnboardingChecklistResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DismissOnboardingChecklistResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DismissOnboardingChecklistResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -32308,6 +32639,42 @@ func (c *ClientWithResponses) ListMunicipalitiesWithResponse(ctx context.Context
 	return ParseListMunicipalitiesResponse(rsp)
 }
 
+// GetOnboardingChecklistWithResponse Ver los primeros pasos
+//
+// Los primeros pasos de la empresa que el usuario puede resolver, en el orden de su plantilla, cada uno completo
+// solo si el dato existe (por ejemplo, una venta confirmada). Un paso de un módulo inactivo no aparece, y el de
+// la facturación electrónica solo aparece con la emisión activa. `visible` dice si la app muestra la lista: falta
+// algo y el usuario no la ocultó, o la ocultó y después falta un paso crítico que antes estaba completo (la
+// resolución de numeración se venció). Cualquier usuario con sesión la consulta; sin pasos para su rol, la lista
+// viene vacía y no visible.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/v1/onboarding/checklist (the `GetOnboardingChecklist` operationId).
+func (c *ClientWithResponses) GetOnboardingChecklistWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetOnboardingChecklistResponse, error) {
+	rsp, err := c.GetOnboardingChecklist(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetOnboardingChecklistResponse(rsp)
+}
+
+// DismissOnboardingChecklistWithResponse Ocultar los primeros pasos
+//
+// Oculta la lista para el usuario y recuerda qué pasos faltaban: vuelve a aparecer solo si después falta un paso
+// crítico que en ese momento no faltaba. Ocultarla otra vez reemplaza lo anterior.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /api/v1/onboarding/checklist/dismissal (the `DismissOnboardingChecklist` operationId).
+func (c *ClientWithResponses) DismissOnboardingChecklistWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DismissOnboardingChecklistResponse, error) {
+	rsp, err := c.DismissOnboardingChecklist(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDismissOnboardingChecklistResponse(rsp)
+}
+
 // ListPayablesWithResponse Cuentas por pagar
 //
 // Lo que la empresa debe a cada proveedor por sus compras a crédito abiertas, con lo vencido (antes de hoy en
@@ -38025,6 +38392,89 @@ func ParseListMunicipalitiesResponse(rsp *http.Response) (*ListMunicipalitiesRes
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetOnboardingChecklistResponse parses an HTTP response from a GetOnboardingChecklistWithResponse call
+func ParseGetOnboardingChecklistResponse(rsp *http.Response) (*GetOnboardingChecklistResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetOnboardingChecklistResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OnboardingChecklist
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDismissOnboardingChecklistResponse parses an HTTP response from a DismissOnboardingChecklistWithResponse call
+func ParseDismissOnboardingChecklistResponse(rsp *http.Response) (*DismissOnboardingChecklistResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DismissOnboardingChecklistResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalError

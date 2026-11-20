@@ -43,7 +43,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 ### [ ] T36c · Pantallas de la facturación electrónica
 **Depende de:** T36, T36b, T36d.
 **Alcance:** en el frontend, sobre el contrato de T36 (`/invoicing/*`): activar la emisión y el tipo por defecto, registrar y borrar resoluciones con el aviso de fin de rango, el **panel de documentos** por estado con sus motivos y el reintento manual, el estado, el CUDE y el QR del documento en `/ventas/:id` y en la tirilla (`docs/dian.md` §5, regla 6: esperar unos segundos o imprimir "pendiente de validación"), y pedir factura en el POS (`document_kind`). Después, `/impeccable critique`.
-**Pendientes que entran a esta tarea:** P158, P163, P165 y P185 (la tarjeta de documentos con problemas en el tablero del dueño de T43) (`docs/plan/pendientes.md`).
+**Pendientes que entran a esta tarea:** P158, P163, P165, P185 (la tarjeta de documentos con problemas en el tablero del dueño de T43) y P189 (el paso de la facturación en los primeros pasos de T44) (`docs/plan/pendientes.md`).
 **Tests primero:** el cajero ve el documento de la venta pero no reenvía; un documento rechazado muestra sus motivos y el botón de reenviar; pedir factura sin cliente muestra el error junto al cliente; responsive de 360 a 1920 px.
 
 ### [ ] T37 · Notas crédito y anulaciones
@@ -85,7 +85,7 @@ Cada tarea: `/tarea TXX`. Las tareas van en orden de ejecución.
 **Tests primero:** cada indicador coincide con su reporte detallado en T42.
 **Después:** `/impeccable critique`: lo más importante debe entenderse en 5 segundos.
 
-### [ ] T44 · Lista de primeros pasos
+### [x] T44 · Lista de primeros pasos
 **Depende de:** T29, T36, T41.
 **Alcance:** guía dentro de la app para un tenant nuevo, calculada a partir del **estado real** y no de clics: 1) datos del negocio, 2) resolución de facturación DIAN, 3) importar productos, 4) cargar inventario inicial, 5) invitar al equipo, 6) abrir caja y hacer la primera venta. Los pasos se toman de la **plantilla del tipo de negocio** (por ejemplo, una droguería con `lots_expiry` tiene el paso "registra lotes y vencimientos"). Muestra el progreso y se puede ocultar, pero vuelve a aparecer si falta algo crítico (por ejemplo, la resolución DIAN vencida). Estados vacíos de cada pantalla con la acción siguiente ("Aún no tienes productos: impórtalos desde Excel"). Evento de analítica por paso completado (T40).
 **Pendientes que entran a esta tarea:** P12 y P177 (`docs/plan/pendientes.md`).

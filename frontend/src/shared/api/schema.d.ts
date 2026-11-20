@@ -581,6 +581,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/onboarding/checklist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ver los primeros pasos
+         * @description Los primeros pasos de la empresa que el usuario puede resolver, en el orden de su plantilla, cada uno completo
+         *     solo si el dato existe (por ejemplo, una venta confirmada). Un paso de un módulo inactivo no aparece, y el de
+         *     la facturación electrónica solo aparece con la emisión activa. `visible` dice si la app muestra la lista: falta
+         *     algo y el usuario no la ocultó, o la ocultó y después falta un paso crítico que antes estaba completo (la
+         *     resolución de numeración se venció). Cualquier usuario con sesión la consulta; sin pasos para su rol, la lista
+         *     viene vacía y no visible.
+         */
+        get: operations["getOnboardingChecklist"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/checklist/dismissal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Ocultar los primeros pasos
+         * @description Oculta la lista para el usuario y recuerda qué pasos faltaban: vuelve a aparecer solo si después falta un paso
+         *     crítico que en ese momento no faltaba. Ocultarla otra vez reemplaza lo anterior.
+         */
+        put: operations["dismissOnboardingChecklist"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/products": {
         parameters: {
             query?: never;
@@ -2791,7 +2837,39 @@ export interface components {
              * @example generica
              */
             business_template: string;
+            /**
+             * @description Si el dueño acepta compartir datos de uso seudónimos para mejorar Cuadra (Ley 1581: apagado por defecto). Es
+             *     el mismo consentimiento que se cambia después en la configuración de la empresa.
+             * @default false
+             */
+            analytics_consent: boolean;
         };
+        OnboardingChecklist: {
+            /** @description Si la app muestra la lista. */
+            visible: boolean;
+            /** @description Si el usuario la ocultó. */
+            dismissed: boolean;
+            /** @description Cuántos pasos están completos. */
+            completed: number;
+            /** @description Cuántos pasos tiene la lista del usuario. */
+            total: number;
+            steps: components["schemas"]["OnboardingStep"][];
+        };
+        OnboardingStep: {
+            id: components["schemas"]["OnboardingStepId"];
+            done: boolean;
+            /** @description Si su falta vuelve a mostrar la lista oculta. */
+            critical: boolean;
+        };
+        /**
+         * @description `business_profile` (dirección, ciudad y teléfono), `invoicing` (resolución de numeración vigente),
+         *     `products` (el primer producto), `alternate_units` (una unidad de venta alternativa), `variant_products` (un
+         *     producto con variantes), `initial_stock` (el primer movimiento de inventario), `reorder_rules` (un mínimo de
+         *     stock), `customer_credit` (un cliente con cupo), `invite_team` (otro usuario o una invitación vigente) y
+         *     `first_sale` (la primera venta).
+         * @enum {string}
+         */
+        OnboardingStepId: "business_profile" | "invoicing" | "products" | "alternate_units" | "variant_products" | "initial_stock" | "reorder_rules" | "customer_credit" | "invite_team" | "first_sale";
         BusinessTemplate: {
             /** @example generica */
             id: string;
@@ -6182,6 +6260,57 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             /** @description El comentario está vacío (`invalid_feedback`), o la pantalla o la versión no son válidas. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getOnboardingChecklist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Los primeros pasos del usuario. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingChecklist"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    dismissOnboardingChecklist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La lista quedó oculta para el usuario. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description El usuario no tiene pasos que ocultar (`nothing_to_dismiss`). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

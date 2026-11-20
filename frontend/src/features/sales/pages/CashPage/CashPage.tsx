@@ -1,6 +1,6 @@
-import { useLocations } from '@/features/inventory';
+import { NoLocationsYet, useLocations } from '@/features/inventory';
 import { QueryState } from '@/shared/query';
-import { EmptyState, IconBox, Page, Spinner } from '@/shared/ui';
+import { Page, Spinner } from '@/shared/ui';
 import { useCurrentCashSession } from '../../api/cashSessions';
 import styles from './CashPage.module.scss';
 import { OpenCashForm } from './components/OpenCashForm/OpenCashForm';
@@ -41,11 +41,7 @@ export function CashPage() {
   if (active.length === 0) {
     return (
       <Page title={title}>
-        <EmptyState
-          icon={<IconBox />}
-          title="No hay sedes activas"
-          description="La caja se abre en una sede. Pida al dueño que cree o active una en Inventario."
-        />
+        <NoLocationsYet title="No hay sedes activas" reason="La caja se abre en una sede." />
       </Page>
     );
   }

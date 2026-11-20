@@ -74,7 +74,7 @@ Un value object puro que validan los `domain/` de más de un módulo vive en `in
 | `domain` | importar algo que no sea la librería estándar, `uuid`, `decimal` o `internal/kernel` (tampoco `net/http`) |
 | `kernel` | que `internal/kernel` importe algo fuera de la librería estándar |
 | `app` | importar `adapters`, `pgx`, `net/http` o el SDK de OpenTelemetry (`otel/sdk`) |
-| `audit`, `catalog`, `customers`, `feedback`, `identity`, `imports`, `inventory`, `invoicing`, `purchases`, `receivables`, `reports`, `sales` | importar otro módulo |
+| `audit`, `catalog`, `customers`, `feedback`, `identity`, `imports`, `inventory`, `invoicing`, `onboarding`, `purchases`, `receivables`, `reports`, `sales` | importar otro módulo |
 | `platform` | importar cualquier módulo |
 | `demo` | que `internal/demo` (el generador de la demo) importe un módulo: escribe por la API (`internal/server`) |
 | `composition` | que `cmd/` o `test/api` importen un módulo: solo `internal/server` (y su `ports/`) los une, y los demás usan `server.New` |
@@ -187,7 +187,7 @@ Un contexto nuevo del negocio (clientes, compras...) es un módulo del core, con
 7. **Observabilidad:** un span por caso de uso con `s.startSpan` y los contadores de sus hechos de negocio con `usecase.Counter` (`cuadra.<modulo>.<cosa>`). Lo verifican los tests de `internal/modules/`.
 8. **Tests:** dominio y casos de uso con tests primero (fakes en `fake_<algo>_test.go`, entorno en `env_test.go`), los repositorios con integración y un `t.Run("aislamiento: ...")` por repositorio (el tenant B no ve ni modifica lo del A), casos de al menos dos tipos de negocio en el core, y su flujo de punta a punta en `test/api/<modulo>_integration_test.go` sobre `newAPI`.
 
-**Un módulo de solo lectura** (`reports`, T42) no es dueño de ninguna tabla: lee con SQL de sqlc las de otros módulos, siempre en `WithTenantTx`, porque agregar por puertos multiplicaría las consultas. No escribe nada, no importa ningún módulo en Go y lo que necesita con reglas propias de otro módulo (la cartera por edades) lo pide por un puerto. Sus repositorios se prueban de punta a punta en `test/api`, con datos creados por la API real (incluido el aislamiento entre tenants).
+**Un módulo de solo lectura** (`reports`, T42) no es dueño de ninguna tabla: lee con SQL de sqlc las de otros módulos, siempre en `WithTenantTx`, porque agregar por puertos multiplicaría las consultas. No escribe nada, no importa ningún módulo en Go y lo que necesita con reglas propias de otro módulo (la cartera por edades) lo pide por un puerto. Sus repositorios se prueban de punta a punta en `test/api`, con datos creados por la API real (incluido el aislamiento entre tenants). `onboarding` (T44) lee igual los datos de los demás para calcular los primeros pasos, y además es dueño de una tabla propia (quién ocultó su lista), con su repositorio y su test de aislamiento.
 
 Un **módulo activable** (`variants`, `lots_expiry`...) además se registra en `platform/modules/builtin.go` con su ID, sus dependencias y sus permisos, sus rutas van con `x-module` y, si tiene carpeta propia, su ruta pasa a `ExcludePaths` de `lint-neutral` (P48).
 

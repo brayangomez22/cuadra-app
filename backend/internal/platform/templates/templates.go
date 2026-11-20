@@ -65,6 +65,9 @@ type Template struct {
 	VariantAxes []Axis
 	// CustomerSegments are the groups the tenant's customers start in.
 	CustomerSegments []string
+	// GettingStarted are the steps of the tenant's getting-started
+	// checklist, in order.
+	GettingStarted []string
 }
 
 // Unit is a unit of measure of a template. DIANCode is its UN/ECE Rec 20
@@ -105,6 +108,7 @@ type file struct {
 	Attributes       []Attribute `yaml:"attributes"`
 	VariantAxes      []Axis      `yaml:"variant_axes"`
 	CustomerSegments []string    `yaml:"customer_segments"`
+	GettingStarted   []string    `yaml:"getting_started"`
 }
 
 // Catalog is the set of loaded templates. It never changes after Load.
@@ -113,9 +117,9 @@ type Catalog struct {
 }
 
 // Load reads every *.yaml at the root of fsys as a template and validates
-// it; checkModules validates each template's modules (the module registry's
-// CheckSet). It fails if there is no template or any of them is invalid.
-func Load(fsys fs.FS, checkModules func([]string) error) (*Catalog, error) {
+// it, also with checks. It fails if there is no template or any of them is
+// invalid.
+func Load(fsys fs.FS, checks Checks) (*Catalog, error) {
 	schema, err := compileSchema()
 	if err != nil {
 		return nil, err
@@ -133,8 +137,8 @@ func Load(fsys fs.FS, checkModules func([]string) error) (*Catalog, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := checkModules(t.Modules); err != nil {
-			return nil, fmt.Errorf("templates: %s: %w", t.ID, err)
+		if err := checks.check(t); err != nil {
+			return nil, err
 		}
 		c.list = append(c.list, t)
 	}
@@ -203,6 +207,7 @@ func load(fsys fs.FS, name string, schema *jsonschema.Schema) (Template, error) 
 	t := Template{
 		ID: id, Name: f.Name, Description: f.Description, Fallback: f.Fallback, Modules: f.Modules, DefaultTaxRate: rate, Units: f.Units,
 		Categories: f.Categories, Attributes: f.Attributes, VariantAxes: f.VariantAxes, CustomerSegments: f.CustomerSegments,
+		GettingStarted: f.GettingStarted,
 	}
 	if err := checkUnique(t); err != nil {
 		return Template{}, invalid("%v", err)

@@ -1,6 +1,6 @@
 /**
  * The analytics events and the only properties each one may carry
- * (docs/eventos.md, version 1). A property outside its list is dropped
+ * (docs/eventos.md, version 2). A property outside its list is dropped
  * before sending: never names, emails, documents, prices of a customer or
  * what the user typed. Adding an event or a property is a change of the
  * catalog and of docs/eventos.md.
@@ -12,10 +12,11 @@ export const eventCatalog = {
   search_no_results: ['screen'],
   error_shown: ['code', 'screen'],
   feedback_sent: ['screen'],
+  getting_started_step_completed: ['step'],
 } as const satisfies Record<string, readonly string[]>;
 
 /** The catalog's version, sent with every event so a change shows in the dashboards. */
-export const catalogVersion = 1;
+export const catalogVersion = 2;
 
 export type EventName = keyof typeof eventCatalog;
 

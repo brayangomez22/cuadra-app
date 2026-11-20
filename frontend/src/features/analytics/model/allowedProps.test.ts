@@ -23,20 +23,20 @@ describe('allowedProps', () => {
 
   it('deja pasar las propiedades del catálogo', () => {
     expect(allowedProps('sale_confirmed', { lines: 3, payment_methods: 2, with_customer: true })).toEqual({
-      catalog_version: 1,
+      catalog_version: 2,
       lines: 3,
       payment_methods: 2,
       with_customer: true,
     });
     expect(allowedProps('signup_completed', { business_template: 'ropa_calzado' })).toEqual({
-      catalog_version: 1,
+      catalog_version: 2,
       business_template: 'ropa_calzado',
     });
   });
 
   it('descarta un texto largo aunque su llave esté permitida', () => {
     expect(allowedProps('error_shown', { code: 'x'.repeat(65), screen: '/vender' })).toEqual({
-      catalog_version: 1,
+      catalog_version: 2,
       screen: '/vender',
     });
   });
